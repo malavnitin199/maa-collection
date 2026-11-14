@@ -288,8 +288,8 @@ export function DesignForm({
             <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={mrp || 'same as MRP'} className={input} />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Cost price (₹)
-            <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="optional" className={input} />
+            Purchase price (₹)
+            <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="code price, optional" className={input} />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
             Pieces each
@@ -297,7 +297,7 @@ export function DesignForm({
           </label>
         </div>
         <p className={`text-xs ${muted}`}>
-          &ldquo;Pieces each&rdquo; = pieces of every size in every colour. Cost is admin-only; salesmen never see it.
+          &ldquo;Pieces each&rdquo; = pieces of every size in every colour. Purchase (code) price is admin-only; salesmen never see it.
         </p>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Supplier bill no. (optional)
@@ -315,7 +315,7 @@ export function DesignForm({
               <strong>{combos}</strong> new item{combos === 1 ? '' : 's'} ({allColors.length} colour{allColors.length === 1 ? '' : 's'} ×{' '}
               {sizes.length} size{sizes.length === 1 ? '' : 's'}), each with its own barcode
               {category && ` and SKU MAA-${category.code}-…`}. <strong>{combos * qty}</strong> pieces in total
-              {costPaise !== null && costPaise > 0 && <> · cost {formatPaise(combos * qty * costPaise)}</>}.
+              {costPaise !== null && costPaise > 0 && <> · purchase value {formatPaise(combos * qty * costPaise)}</>}.
             </p>
             {mrpPaise !== null && pricePaise !== null && pricePaise > mrpPaise && (
               <p className="text-sm text-red-600">Selling price is above MRP.</p>

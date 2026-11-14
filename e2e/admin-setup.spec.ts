@@ -86,7 +86,7 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await page.getByRole('button', { name: 'Add colour' }).click();
   await page.getByLabel('MRP (₹)').fill('1499');
   await page.getByLabel('Selling price (₹)').fill('1399');
-  await page.getByLabel('Cost price (₹)').fill('800');
+  await page.getByLabel('Purchase price (₹)').fill('800');
   await page.getByLabel('Pieces each').fill('2');
   await page.getByLabel('Supplier bill no. (optional)').fill('INV-42');
   await expect(page.getByTestId('design-preview')).toContainText('4 new items (2 colours × 2 sizes)');
@@ -169,4 +169,40 @@ test('owner restocks existing items by scanning each piece and by name search', 
   // Stock went up by exactly 3.
   await page.goto('/admin/products?q=MAA-SH-001');
   await expect(page.getByTestId('product-list')).toContainText(String(Number(before) + 3));
+});
+
+test('a salesman cannot add companies, categories, products, stock or change rates', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByText('Pradeep', { exact: true }).click();
+  await page.getByLabel('PIN').fill(PIN);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  for (const path of ['/admin/suppliers', '/admin/categories', '/admin/stock/new', '/admin/stock/receive', '/admin/products', '/admin/products/new', '/admin/more', '/admin/labels']) {
+    await page.goto(path);
+    await expect(page, `${path} must be blocked`).toHaveURL(/\/pos$/);
+  }
+  // At the counter the only price a salesman sets is this sale's price (max MRP).
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await page.keyboard.type('MAA-TS-002', { delay: 5 });
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('item-details')).not.toContainText(/cost|purchase/i);
+});
+
+test('owner sets a code word; labels print the purchase price in code and the decoder reads it', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/settings');
+  await page.getByLabel('Code word (10 different letters)').fill('blackhorse');
+  await expect(page.getByTestId('code-key')).toContainText('B');
+  await expect(page.getByText('Example: purchase price ₹450 prints as CKE.')).toBeVisible();
+  await page.getByLabel('Print the purchase price in this code on barcode labels').check();
+  await page.getByRole('button', { name: 'Save code price settings' }).click();
+  await expect(page.getByText('Saved.')).toBeVisible();
+  await page.reload();
+  await page.getByLabel('Decode a tag').fill('lss');
+  await expect(page.getByTestId('decoded')).toHaveText('= ₹299');
+
+  // Classic Crew Tee M Black: purchase ₹299 → "LSS" on its label.
+  await page.goto('/admin/products?q=MAA-TS-001');
+  await page.getByTestId('product-list').getByRole('link').first().click();
+  await expect(page.getByTestId('price-code')).toHaveText('LSS');
 });

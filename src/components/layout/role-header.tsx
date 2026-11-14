@@ -18,6 +18,7 @@ const ADMIN_LINKS = [
   { href: '/admin/staff', label: 'Staff' },
   { href: '/admin/activity', label: 'Activity' },
   { href: '/admin/labels', label: 'Labels' },
+  { href: '/admin/settings', label: 'Settings' },
 ];
 
 async function HeaderContent() {

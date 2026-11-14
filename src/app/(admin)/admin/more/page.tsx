@@ -17,6 +17,7 @@ const GROUPS = [
     title: 'Shop',
     links: [
       { href: '/admin/staff', label: 'Staff', hint: 'People, roles and PINs' },
+      { href: '/admin/settings', label: 'Settings', hint: 'Code price on tags (secret purchase price)' },
       { href: '/admin/activity', label: 'Activity', hint: 'Every sale and exchange' },
     ],
   },

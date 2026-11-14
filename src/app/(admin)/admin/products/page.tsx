@@ -69,7 +69,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
                 </span>
                 <span className="block text-xs">
                   {formatPaise(p.pricePaise)} <span className={muted}>· MRP {formatPaise(p.mrpPaise)}</span>
-                  {p.costPaise !== null && <span className={muted}> · cost {formatPaise(p.costPaise)}</span>}
+                  {p.costPaise !== null && <span className={muted}> · purchase {formatPaise(p.costPaise)}</span>}
                 </span>
               </span>
               <span

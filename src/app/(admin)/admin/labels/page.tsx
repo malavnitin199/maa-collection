@@ -6,15 +6,18 @@ import { PrintButton } from '@/features/catalog/print-button';
 import { STORE_ID } from '@/lib/app-config';
 import { requireAdmin } from '@/server/auth';
 import { listProducts } from '@/server/services/products';
+import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
 
 async function Labels() {
   await requireAdmin();
-  const items = (await listProducts(await requestDb(), STORE_ID)).filter((p) => p.active);
+  const db = await requestDb();
+  const [all, settings] = await Promise.all([listProducts(db, STORE_ID), getStoreSettings(db, STORE_ID)]);
+  const items = all.filter((p) => p.active);
   return (
     <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
       {items.map((item) => (
         <li key={item.id}>
-          <BarcodeLabel product={item} />
+          <BarcodeLabel product={item} priceCode={labelPriceCode(settings, item.costPaise)} />
         </li>
       ))}
     </ul>

@@ -18,6 +18,7 @@ import {
   updateProduct,
   type ProductInput,
 } from '@/server/services/products';
+import { updatePriceCode } from '@/server/services/settings';
 import { createStaff, setStaffActive, setStaffPin } from '@/server/services/staff';
 
 export type FormState = { error?: string; message?: string };
@@ -319,6 +320,22 @@ export async function updateDesignRatesAction(productId: string, _prev: FormStat
     });
     revalidatePath('/admin', 'layout');
     return { message: `Rates updated for ${count} item${count === 1 ? '' : 's'}.` };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// ------------------------------------------------------------------ settings
+
+export async function updatePriceCodeAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  try {
+    await updatePriceCode(await getDb(), STORE_ID, {
+      priceCodeWord: text(formData, 'priceCodeWord'),
+      printPriceCode: formData.get('printPriceCode') === 'on',
+    });
+    revalidatePath('/admin', 'layout');
+    return { message: 'Saved.' };
   } catch (error) {
     return failure(error);
   }

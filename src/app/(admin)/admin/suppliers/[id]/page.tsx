@@ -66,7 +66,7 @@ async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
                   {time.format(r.createdAt)}
                   {r.billNumber && ` · bill ${r.billNumber}`}
                   <span className={`block text-xs ${muted}`}>
-                    {r.lines} items · {r.units} pcs · cost {formatPaise(r.costValuePaise)} · by {r.staffName}
+                    {r.lines} items · {r.units} pcs · purchase {formatPaise(r.costValuePaise)} · by {r.staffName}
                   </span>
                 </span>
                 <Link href={`/admin/labels/print?receipt=${r.id}`} className={`shrink-0 ${link}`}>

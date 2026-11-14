@@ -129,7 +129,7 @@ export function DesignRatesForm({
           <input name="price" inputMode="decimal" defaultValue={initial.price} className={input} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Cost (₹)
+          Purchase (₹)
           <input name="cost" inputMode="decimal" defaultValue={initial.cost} placeholder="—" className={input} />
         </label>
       </div>

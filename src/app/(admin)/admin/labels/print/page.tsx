@@ -8,6 +8,7 @@ import { STORE_ID } from '@/lib/app-config';
 import { requireAdmin } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { getReceiptForLabels } from '@/server/services/products';
+import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
 
 type Search = { receipt?: string; each?: string; created?: string };
 const time = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
@@ -16,7 +17,8 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
   await requireAdmin();
   const { receipt: receiptId, each, created } = await searchParams;
   if (!receiptId || !/^[0-9a-f-]{36}$/i.test(receiptId)) notFound();
-  const receipt = await getReceiptForLabels(await requestDb(), STORE_ID, receiptId);
+  const db = await requestDb();
+  const [receipt, settings] = await Promise.all([getReceiptForLabels(db, STORE_ID, receiptId), getStoreSettings(db, STORE_ID)]);
   if (!receipt) notFound();
   const onePerItem = each === 'item';
   const pieces = receipt.lines.reduce((n, l) => n + Math.max(l.quantity, 0), 0);
@@ -66,7 +68,7 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
       <ul data-testid="label-sheet" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 print:mt-0 print:grid-cols-3 print:gap-1">
         {labels.map(({ key, line }) => (
           <li key={key}>
-            <BarcodeLabel product={line} compact />
+            <BarcodeLabel product={line} compact priceCode={labelPriceCode(settings, line.costPaise)} />
           </li>
         ))}
       </ul>

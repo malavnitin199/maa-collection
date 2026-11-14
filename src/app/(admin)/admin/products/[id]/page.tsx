@@ -13,6 +13,7 @@ import { requireAdmin } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 import { getProduct, listDesignVariants, listMovements } from '@/server/services/products';
+import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
 
 const REASONS: Record<string, string> = {
   opening: 'Opening stock',
@@ -31,11 +32,12 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const db = await requestDb();
   const product = await getProduct(db, STORE_ID, id);
   if (!product) notFound();
-  const [movements, variants, categoryRows, supplierRows] = await Promise.all([
+  const [movements, variants, categoryRows, supplierRows, settings] = await Promise.all([
     listMovements(db, STORE_ID, id),
     listDesignVariants(db, STORE_ID, id),
     listCategories(db, STORE_ID),
     listSuppliers(db, STORE_ID),
+    getStoreSettings(db, STORE_ID),
   ]);
   const supplier = supplierRows.find((s) => s.id === product.supplierId);
 
@@ -53,7 +55,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <div className="mx-auto w-60 sm:mx-0">
-          <BarcodeLabel product={product} />
+          <BarcodeLabel product={product} priceCode={labelPriceCode(settings, product.costPaise)} />
         </div>
         <div className="flex flex-col gap-1 print:hidden">
           <h1 className="text-2xl font-semibold">{product.name}</h1>
@@ -71,7 +73,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
           )}
           <p className="text-sm">
             {formatPaise(product.pricePaise)} <span className={muted}>· MRP {formatPaise(product.mrpPaise)}</span>
-            {product.costPaise !== null && <span className={muted}> · cost {formatPaise(product.costPaise)}</span>}
+            {product.costPaise !== null && <span className={muted}> · purchase {formatPaise(product.costPaise)}</span>}
           </p>
           <p data-testid="product-stock" className="text-lg font-semibold">
             {product.stock} in stock

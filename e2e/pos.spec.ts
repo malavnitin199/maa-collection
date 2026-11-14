@@ -23,7 +23,7 @@ async function addProduct(page: Page, { name, size, mrp, price, stock }: { name:
   await page.getByLabel('Colour').fill('Blue');
   await page.getByLabel('MRP (₹)').fill(mrp);
   await page.getByLabel('Selling price (₹)').fill(price);
-  await page.getByLabel(/Cost price/).fill('500');
+  await page.getByLabel(/Purchase price/).fill('500');
   await page.getByLabel('Opening stock (pieces)').fill(stock);
   await page.getByRole('button', { name: 'Add product and generate label' }).click();
   const status = page.getByRole('status');
@@ -70,7 +70,7 @@ test('admin adds a product with a generated barcode, receives stock; salesman se
   await scan(page, barcode);
   await expect(page.getByTestId('item-details')).toContainText(`Test Kurta ${run}`);
   await expect(page.getByTestId('details-stock')).toHaveText('5');
-  await expect(page.getByTestId('item-details')).not.toContainText('500'); // no cost price at the counter
+  await expect(page.getByTestId('item-details')).not.toContainText('₹500.00'); // no purchase price at the counter
   await page.getByRole('button', { name: 'Sell this item' }).click();
   await expect(page.getByLabel(/Sale price/)).toHaveValue('1199');
   await page.getByLabel('Quantity').fill('2');

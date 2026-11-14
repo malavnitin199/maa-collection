@@ -94,12 +94,12 @@ export function ProductForm({ action, mode, initial, categories, suppliers }: Pr
           hint="Prefilled at the counter; staff can bargain lower. Must be ≤ MRP."
         />
         <Field
-          label="Cost price (₹, optional)"
+          label="Purchase price / code price (₹, optional)"
           name="cost"
           inputMode="decimal"
           required={false}
           defaultValue={initial?.cost}
-          hint="Admin only. Used for profit; never shown to salesmen."
+          hint="What you paid. Admin only, never shown to salesmen; can print on tags as a letter code (Settings)."
         />
         {mode === 'new' && <Field label="Opening stock (pieces)" name="openingStock" inputMode="numeric" defaultValue="0" />}
       </div>

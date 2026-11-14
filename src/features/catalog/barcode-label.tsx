@@ -8,7 +8,16 @@ type LabelProduct = { sku: string; barcode: string; name: string; size: string; 
  * Printable tag: shop, name, size, colour, MRP and the EAN-13 barcode.
  * `compact` is the sheet version (smaller padding, for printing many per page).
  */
-export function BarcodeLabel({ product, compact = false }: { product: LabelProduct; compact?: boolean }) {
+export function BarcodeLabel({
+  product,
+  compact = false,
+  priceCode = null,
+}: {
+  product: LabelProduct;
+  compact?: boolean;
+  /** Purchase price in the owner's letter code (shown bottom-right), if enabled. */
+  priceCode?: string | null;
+}) {
   return (
     <div
       className={`flex flex-col items-center text-center text-zinc-900 break-inside-avoid border border-zinc-200 bg-white dark:border-zinc-800 ${
@@ -31,7 +40,10 @@ export function BarcodeLabel({ product, compact = false }: { product: LabelProdu
       ) : (
         <p className="font-mono text-sm">{product.barcode}</p>
       )}
-      <p className={`font-mono ${compact ? 'text-[10px]' : 'text-xs'} text-zinc-600`}>{product.sku}</p>
+      <p className={`flex w-full justify-between gap-2 font-mono ${compact ? 'text-[10px]' : 'text-xs'} text-zinc-600`}>
+        <span className={priceCode ? '' : 'mx-auto'}>{product.sku}</span>
+        {priceCode && <span data-testid="price-code">{priceCode}</span>}
+      </p>
     </div>
   );
 }
