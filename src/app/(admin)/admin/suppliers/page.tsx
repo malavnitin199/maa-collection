@@ -10,6 +10,18 @@ import { listSuppliers } from '@/server/services/catalog';
 
 const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' });
 
+async function AddSupplier() {
+  await requirePermission('catalog');
+  return (
+    <details className={card}>
+        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">+ Add supplier</summary>
+        <div className="mt-3">
+          <SupplierForm action={createSupplierAction} submitLabel="Add supplier" />
+        </div>
+      </details>
+  );
+}
+
 async function SupplierList() {
   await requirePermission('catalog');
   const rows = await listSuppliers(await requestDb(), STORE_ID);
@@ -51,12 +63,9 @@ export default function SuppliersPage() {
         <h1 className="text-2xl font-semibold">Suppliers</h1>
         <p className={`text-sm ${muted}`}>Companies you buy stock from.</p>
       </div>
-      <details className={card}>
-        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">+ Add supplier</summary>
-        <div className="mt-3">
-          <SupplierForm action={createSupplierAction} submitLabel="Add supplier" />
-        </div>
-      </details>
+      <Suspense fallback={null}>
+        <AddSupplier />
+      </Suspense>
       <section className="flex flex-col gap-2">
         <h2 className={sectionTitle}>All suppliers</h2>
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>

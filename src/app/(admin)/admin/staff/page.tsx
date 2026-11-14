@@ -12,6 +12,11 @@ async function StaffList() {
   const me = await requireAdmin();
   const people = await listStaff(await requestDb(), STORE_ID);
   return (
+    <>
+    <section className={`${card} flex flex-col gap-3`}>
+      <h2 className={sectionTitle}>Add a person</h2>
+      <AddStaffForm action={createStaffAction} />
+    </section>
     <ul data-testid="staff-list" className="flex flex-col gap-2">
       {people.map((person) => (
         <li key={person.id} className={`${card} flex flex-col gap-3 py-3`}>
@@ -51,6 +56,7 @@ async function StaffList() {
         </li>
       ))}
     </ul>
+    </>
   );
 }
 
@@ -65,10 +71,6 @@ export default function StaffPage() {
           everything.
         </p>
       </div>
-      <section className={`${card} flex flex-col gap-3`}>
-        <h2 className={sectionTitle}>Add a person</h2>
-        <AddStaffForm action={createStaffAction} />
-      </section>
       <Suspense fallback={<p className="text-sm text-zinc-500">Loading staff…</p>}>
         <StaffList />
       </Suspense>

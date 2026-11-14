@@ -8,6 +8,18 @@ import { requirePermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories } from '@/server/services/catalog';
 
+async function AddCategory() {
+  await requirePermission('catalog');
+  return (
+    <details className={card}>
+        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">+ Add category</summary>
+        <div className="mt-3">
+          <CategoryForm action={createCategoryAction} submitLabel="Add category" />
+        </div>
+      </details>
+  );
+}
+
 async function CategoryList() {
   await requirePermission('catalog');
   const rows = await listCategories(await requestDb(), STORE_ID);
@@ -49,12 +61,9 @@ export default function CategoriesPage() {
         <h1 className="text-2xl font-semibold">Categories</h1>
         <p className={`text-sm ${muted}`}>The kinds of items you sell. Each has a short code used in SKUs.</p>
       </div>
-      <details className={card}>
-        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">+ Add category</summary>
-        <div className="mt-3">
-          <CategoryForm action={createCategoryAction} submitLabel="Add category" />
-        </div>
-      </details>
+      <Suspense fallback={null}>
+        <AddCategory />
+      </Suspense>
       <section className="flex flex-col gap-2">
         <h2 className={sectionTitle}>All categories</h2>
         <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
