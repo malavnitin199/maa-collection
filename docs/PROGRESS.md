@@ -32,6 +32,7 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 - Also found: the zxing fallback (used where the browser has no `BarcodeDetector`, e.g. iPhone Safari) did not benefit from TRY_HARDER. Root cause in `@zxing/browser` 0.2.1: `HTMLCanvasElementLuminanceSource.rotate()` rotates the pixels but keeps the old width/height, so its rotated retry decodes garbage; and it only ever decodes the full, unzoomed frame.
 - Fix (`camera-scanner.tsx`): our own frame loop for the zxing path, cycling three views per tick — full frame, the guide-box band zoomed 2×, and the frame rotated 90° (rotated correctly by us) — decoded with `reader.decodeFromCanvas`.
 - Verified in full Chromium (has `BarcodeDetector`) on both paths: native 5/6, zxing 3/6 → 5/6 on the hard-image set; all 8 label barcodes + QR read on both paths. lint, typecheck, 28 unit, 9 e2e, build PASS. Still unverified on a physical phone.
+- Deployed to production (`maa-collection-ef3bdpo0h…`, aliased to https://maa-collection-pi.vercel.app). Live check: labels page is barcode-only; live camera scan read barcodes on both the native and the zxing path, including a sideways barcode.
 
 ## One code per item: barcode-only labels (2026-11-15)
 - Owner decision: each item carries **one** scannable code, not a QR code plus a barcode. Chosen: **EAN-13 barcode** (matches clothing tags and manufacturer barcodes, works with any cheap 1D USB/Bluetooth scanner; phone camera reads it too).
