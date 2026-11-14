@@ -40,7 +40,7 @@
 - [x] **P3-02** Owner creates product/design and size/colour SKUs with stable unique barcode. **Done:** variant uniqueness prevents duplicates. (Done 2026-11-15 in simplified form: one product row per size/colour; generated SKU + unique in-store EAN-13 or manufacturer barcode; duplicates rejected — unit-tested.)
 - [ ] **P3-03** Owner edits MRP, cost and low-stock threshold; changes are audited. **Done:** cashier cannot fetch cost fields. **Partial (2026-11-15):** admin edits MRP, selling price, cost; salesmen never receive cost. Low-stock threshold is one global value; edits are not audited yet.
 - [ ] **P3-04** Implement read-only cross-location stock lookup for staff with price, size and colour. **Done:** results show correct quantities and `last_updated`.
-- [ ] **P3-05** Build stock-receipt screen and **atomic** receipt service with movement ledger. **Done:** receive 10 units once even if request retried. **Partial (2026-11-15):** atomic stock-in with movement ledger. **Missing:** retry protection (no `operation_id` on stock-in yet), so a repeated submit could add twice.
+- [x] **P3-05** Build stock-receipt screen and **atomic** receipt service with movement ledger. **Done:** receive 10 units once even if request retried. (Done 2026-11-15: `stock_receipts` with `operation_id`; restock screen and product stock-in both retry-safe — unit-tested.)
 - [ ] **P3-06** Record stock positions by location and quarantine status; optional stock transfer service. **Done:** movement reconciliation passes.
 - [x] **P3-07** Generate Code 128 tags and browser print view with shop, design, size, colour, MRP. **Done:** correct barcode resolves to SKU on tested scanner. (Done 2026-11-15, **deviation:** EAN-13 instead of Code 128 (owner decision ADR-005); print view with name, size, colour, MRP; scans resolve to the product via camera.)
 - [x] **P3-08** Allow label reprint without stock receipt re-post. **Done:** printing twice changes zero inventory quantities. (Done 2026-11-15: labels print from product data; printing never touches stock.)
@@ -128,10 +128,10 @@
 - [x] **V2-02** Salesman dashboard `/pos/my-sales`: own today/month totals, sales recorded for others, recent activity.
 - [x] **V2-03** Admin staff management: add people, set PINs, activate/deactivate; last active admin protected.
 - [x] **V2-04** Admin activity log of all sales and exchanges.
+- [x] **V2-05** Owner stock workflow: suppliers, categories, sizes × colours entry with generated barcodes, per-piece labels, scan-to-restock, design-wide rates, phone tab bar.
 
 ## Suggested next tasks
 
-1. **P3-05 gap:** add `operation_id` retry protection to stock-in.
 2. **P0-02 / P0-03 → P4-07, P4-08:** GST rules, receipt numbering, payment method (cash/UPI), receipts.
 3. **P5-01 / P5-02:** owner decision D-EX-1 / D-RF-1, then refunds and the exchange time limit.
 4. **P1-03:** shadcn/ui shared components once screens settle.

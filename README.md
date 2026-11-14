@@ -39,7 +39,11 @@ It starts as a tool for one shop (Maa Collection). The plan is to grow it into a
 | Exchange | `/pos/exchange` | Salesman, Admin | Scan the returned item → pick the original sale → scan the new item → "customer pays / give back" → confirm |
 | My sales | `/pos/my-sales` | Salesman, Admin | Own sales **today** and **this month** (Indian time), sales recorded for others, recent activity |
 | Dashboard | `/admin/dashboard` | Admin | Today / month net revenue, units, estimated profit, exchanges, sales by salesperson, stock value, low stock, latest activity |
-| Products | `/admin/products` | Admin | Search all products; add a product (SKU + barcode generated); per product: label, edit prices, **receive stock**, stock history |
+| New stock | `/admin/stock/new` | Admin | **New items from a supplier:** one design in sizes × colours → every combination gets its own SKU + barcode → label sheet (one label per piece) |
+| Restock | `/admin/stock/receive` | Admin | Scan or search existing items (scanning a tag again = +1 piece), supplier + bill no., save once → labels |
+| Suppliers | `/admin/suppliers` | Admin | Companies you buy from: contact, tap-to-call, deliveries (with labels), their products |
+| Categories | `/admin/categories` | Admin | Kurta, Saree… each with a 2–3 letter SKU code |
+| Products | `/admin/products` | Admin | Cards with search + supplier/category filters; product page: label, the design's sizes/colours, **rates for the whole design**, receive stock, edit, history (supplier + bill) |
 | Staff | `/admin/staff` | Admin | Add people, set PINs, activate / deactivate |
 | Activity | `/admin/activity` | Admin | Every sale and exchange: credited to whom, recorded by whom |
 | Labels | `/admin/labels` | Admin | Printable barcode label for every product |
@@ -178,12 +182,14 @@ Never commit `.env*` files; they are git-ignored. **Don't put the production `DA
 
 ## Using the app
 
-1. **Admin:** log in as Owner → **Products → + Add product**. Fill in name, brand, category, size, colour, MRP, selling price, optional cost and opening stock. Choose **generate a barcode** or type the manufacturer's barcode already on the tag. You land on the product page with a **printable label**.
-2. **Receive stock:** on a product page, **Receive stock → Pieces received → Add stock**.
-3. **Sell:** log in as a salesman → scan the label → **Sell this item** → price → **Credit sale to** (yourself or a colleague) → **Record sale**.
-4. **Exchange:** **Exchange** → scan the returned item → **Choose** the original sale → scan the new item → check "Customer pays / Give back" → **Confirm exchange**.
-5. **Track:** salesmen open **My sales**; the admin opens **Dashboard** and **Activity**.
-6. **Staff:** **Staff** → add a person with a PIN, change a PIN, or deactivate someone who left.
+1. **Set up once (admin):** **More → Suppliers → + Add supplier** (e.g. "XYZ Textiles"); check **Categories** (Kurta, Saree… with their SKU codes) and add any missing.
+2. **A delivery with new items:** tap **+ Stock** → supplier → category → design name → tap the **sizes** → add the **colours** → MRP, selling price, cost → pieces each → **Save … and print labels**. Every size/colour gets its own SKU and barcode; the label sheet has one label per piece.
+3. **More of existing items:** dashboard **Restock** (or the supplier page) → scan each piece or search by name → **Receive … pieces and print labels**.
+4. **Change prices:** open any product → **Rates for the whole design** → applies to all its sizes/colours (past sales keep their prices). A single item with a manufacturer barcode: **More → Add a single product**.
+5. **Sell:** log in as a salesman → scan the label → **Sell this item** → price → **Credit sale to** (yourself or a colleague) → **Record sale**.
+6. **Exchange:** **Exchange** → scan the returned item → **Choose** the original sale → scan the new item → check "Customer pays / Give back" → **Confirm exchange**.
+7. **Track:** salesmen open **My sales**; the admin opens **Dashboard** and **Activity**.
+8. **Staff:** **Staff** → add a person with a PIN, change a PIN, or deactivate someone who left.
 
 ### Demo catalog (seeded)
 
@@ -250,7 +256,7 @@ The full chain above is the quality gate; every change must pass it.
 ## Database
 
 - Schema: `src/db/schema/index.ts`. Migrations: `drizzle/`. Seed: `src/db/seed.ts`.
-- Tables: `stores`, `staff`, `products`, `stock_movements`, `sales`, `exchanges`. Every table has `store_id`, and money is integer paise.
+- Tables: `stores`, `staff`, `suppliers`, `categories`, `products`, `stock_receipts` (one per delivery), `stock_movements`, `sales`, `exchanges`. Every table has `store_id`, and money is integer paise.
 - `sales`, `exchanges` and `stock_movements` are **append-only**. `products.stock` is the running total, updated in the same transaction with a `stock >= quantity` guard. Each sale or exchange carries a unique `operation_id`, so a retried tap never sells twice.
 
 **Changing the schema:**
@@ -367,7 +373,7 @@ vercel deploy --prod                 # production
 
 ## Project status and roadmap
 
-**Done:** project setup and quality gate; camera, hardware-scanner and typed scanning; barcode labels; shared PostgreSQL database; name + PIN login with roles; products with generated SKUs and barcodes; stock-in; sales with bargaining and "on behalf of"; exchanges; salesman and admin dashboards; staff management; activity log.
+**Done:** project setup and quality gate; owner stock workflow (suppliers, categories, sizes × colours entry with generated barcodes, per-piece label sheets, scan-to-restock, design-wide rates, phone tab bar); camera, hardware-scanner and typed scanning; barcode labels; shared PostgreSQL database; name + PIN login with roles; products with generated SKUs and barcodes; stock-in; sales with bargaining and "on behalf of"; exchanges; salesman and admin dashboards; staff management; activity log.
 
 **Next** (see [`docs/TASK_BACKLOG.md`](docs/TASK_BACKLOG.md) and the open decisions in the plan):
 - GST per item and receipts, payment method (cash / UPI)

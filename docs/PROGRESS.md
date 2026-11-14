@@ -27,7 +27,15 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Plan v2: shared database, admin console, salesman dashboard, exchanges (2026-11-15, latest)
+## Owner stock workflow: suppliers, categories, sizes × colours, labels, restock, rates (2026-11-15, latest)
+- Owner request: admin-side flow for goods from a company — add the company, define categories, generate barcodes, set rates, maintain it; phone-first. Delivered in 4 deployed checkpoints.
+- Data: `suppliers`, `categories` (SKU code), `stock_receipts` (one per delivery, `operation_id` retry-safe), `products.supplier_id/category_id`; migration 0001 backfills categories from existing products (applied to Neon).
+- Screens: `/admin/suppliers` (+ detail), `/admin/categories`, `/admin/stock/new` (design in sizes × colours → SKUs + `200…` barcodes, preview, duplicate guard), `/admin/labels/print?receipt=` (one label per piece / per item), `/admin/stock/receive` (scan each piece = +1, name search), product page rebuilt (design variants, design-wide rates, history with supplier/bill), product cards with filters, phone bottom tab bar + More page, dashboard quick actions.
+- Fixed: stock-in double-add gap (P3-05) — every stock arrival is a receipt with an idempotency key; label SVG announced twice to screen readers.
+- Issue hit: the long-running local dev server kept its PGlite connection from before the new migration (stale schema → server errors); restarting `pnpm dev` applies new migrations. Production is unaffected (migrations run before deploy).
+- Verified: lint, typecheck, **57 unit tests**, build, **17 Playwright tests now run at desktop and phone (Pixel 7) size**. Live (read-only, phone size): tab bar, migrated categories, new-stock form + preview, product page with design variants and rates, restock page — no page errors. No test data written to production this round; production has no suppliers yet.
+
+## Plan v2: shared database, admin console, salesman dashboard, exchanges (2026-11-15)
 - Plan: `docs/PLAN_V2_SHOP_OPERATIONS.md` (owner request). Decisions ADR-005…008; open questions D-EX-1, D-ST-1, D-PR-1, D-RF-1.
 - Neon Postgres (free, `sin1`) provisioned via the Vercel Marketplace (owner accepted terms) and connected to the project; Vercel functions pinned to `sin1`; `SESSION_SECRET` added for production + preview.
 - Built: Drizzle schema + migration; PGlite for local/tests (auto-migrate + seed, PIN 1234); services (products with generated SKU + `200…` EAN-13 or manufacturer barcode, stock-in, idempotent sales with sold_by/recorded_by, exchanges valued at price paid with return limits, staff, dashboards in IST); name + PIN login, signed sessions, proxy guard, server-side role checks; screens: login, counter sale with "credit sale to", exchange, my sales, admin dashboard, products (add/edit/stock-in/label/history), staff, activity, labels from DB. Browser-only demo store removed.
