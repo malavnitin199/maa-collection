@@ -6,16 +6,14 @@ import {
   findByBarcodeOrSku,
   type CatalogItem,
 } from '@/features/catalog/dummy-catalog';
-import {
-  recordSale,
-  useInventory,
-} from '@/features/inventory/dummy-store';
+import { recordSale, useInventory } from '@/features/inventory/dummy-store';
 import {
   LOW_STOCK_THRESHOLD,
   rupeesToPaise,
   saleTotalPaise,
   validateSaleDraft,
 } from '@/features/inventory/inventory';
+import { CameraScanner } from '@/features/scanning/camera-scanner';
 import { formatPaise } from '@/lib/money';
 
 const SALESPEOPLE = ['Ravi', 'Priya'];
@@ -47,6 +45,7 @@ function chooseSalesperson(name: string) {
 }
 
 type Message = { kind: 'ok' | 'error'; text: string };
+type Pending = { item: CatalogItem; step: 'details' | 'sell' };
 
 const emptySubscribe = () => () => {};
 /** False during SSR/hydration, true once React is interactive. */
@@ -58,6 +57,13 @@ function useHydrated(): boolean {
   );
 }
 
+const inputClass =
+  'rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900';
+const primaryButtonClass =
+  'rounded-lg bg-emerald-600 px-5 py-2 font-medium text-white hover:bg-emerald-700 disabled:opacity-50';
+const secondaryButtonClass =
+  'rounded-lg border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900';
+
 export function PosScreen() {
   const { stock, sales } = useInventory();
   const salesperson = useSyncExternalStore(
@@ -66,7 +72,8 @@ export function PosScreen() {
     () => SALESPEOPLE[0],
   );
   const [scanValue, setScanValue] = useState('');
-  const [pending, setPending] = useState<CatalogItem | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [qtyText, setQtyText] = useState('1');
   const [priceText, setPriceText] = useState('');
   const [message, setMessage] = useState<Message | null>(null);
@@ -80,6 +87,7 @@ export function PosScreen() {
   function handleScan(raw: string) {
     const code = raw.trim();
     setScanValue('');
+    setCameraOpen(false);
     if (!code) return;
     const item = findByBarcodeOrSku(code);
     if (!item) {
@@ -87,23 +95,29 @@ export function PosScreen() {
       setMessage({ kind: 'error', text: `No item found for "${code}".` });
       return;
     }
-    const available = stock[item.sku] ?? 0;
+    setPending({ item, step: 'details' });
+    setMessage(null);
+  }
+
+  function startSell() {
+    if (!pending) return;
+    const available = stock[pending.item.sku] ?? 0;
     if (available <= 0) {
-      setPending(null);
       setMessage({
         kind: 'error',
-        text: `${item.design} (${item.size}, ${item.color}) is out of stock.`,
+        text: `${pending.item.design} (${pending.item.size}, ${pending.item.color}) is out of stock.`,
       });
       return;
     }
-    setPending(item);
     setQtyText('1');
-    setPriceText((item.mrpPaise / 100).toString());
+    setPriceText((pending.item.mrpPaise / 100).toString());
     setMessage(null);
+    setPending({ item: pending.item, step: 'sell' });
   }
 
   function handleRecordSale() {
     if (!pending) return;
+    const { item } = pending;
     const quantity = /^\d+$/.test(qtyText.trim()) ? Number(qtyText.trim()) : NaN;
     const unitPricePaise = rupeesToPaise(priceText);
     if (unitPricePaise === null) {
@@ -112,20 +126,20 @@ export function PosScreen() {
     }
     const error = validateSaleDraft(
       { quantity, unitPricePaise },
-      { stock: stock[pending.sku] ?? 0, mrpPaise: pending.mrpPaise },
+      { stock: stock[item.sku] ?? 0, mrpPaise: item.mrpPaise },
     );
     if (error) {
       setMessage({ kind: 'error', text: error });
       return;
     }
-    const result = recordSale({ item: pending, quantity, unitPricePaise, salesperson });
+    const result = recordSale({ item, quantity, unitPricePaise, salesperson });
     if (!result.ok) {
       setMessage({ kind: 'error', text: result.error });
       return;
     }
     setMessage({
       kind: 'ok',
-      text: `Sold ${quantity} × ${pending.design} (${pending.size}, ${pending.color}) @ ${formatPaise(unitPricePaise)} each — by ${salesperson}. Stock left: ${result.stockLeft}.`,
+      text: `Sold ${quantity} × ${item.design} (${item.size}, ${item.color}) @ ${formatPaise(unitPricePaise)} each — by ${salesperson}. Stock left: ${result.stockLeft}.`,
     });
     setPending(null);
     scanRef.current?.focus();
@@ -153,7 +167,7 @@ export function PosScreen() {
           <select
             value={salesperson}
             onChange={(e) => chooseSalesperson(e.target.value)}
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            className={inputClass}
           >
             {SALESPEOPLE.map((name) => (
               <option key={name}>{name}</option>
@@ -180,21 +194,31 @@ export function PosScreen() {
             autoComplete="off"
             value={scanValue}
             onChange={(e) => setScanValue(e.target.value)}
-            placeholder="Point the scanner here, or type a code and press Enter"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-3 text-base dark:border-zinc-700 dark:bg-zinc-900"
+            placeholder="Scanner types here, or enter a code"
+            className={`w-full text-base ${inputClass}`}
           />
-          <button
-            type="submit"
-            disabled={!hydrated}
-            className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
-          >
+          <button type="submit" disabled={!hydrated} className={primaryButtonClass}>
             Find
           </button>
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          A USB/Bluetooth scanner types the code and presses Enter by itself.
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={!hydrated}
+            onClick={() => setCameraOpen((open) => !open)}
+            className={secondaryButtonClass}
+          >
+            {cameraOpen ? 'Stop camera' : 'Scan with camera'}
+          </button>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            A USB/Bluetooth scanner types the code and presses Enter by itself.
+          </p>
+        </div>
       </form>
+
+      {cameraOpen && (
+        <CameraScanner onDecode={handleScan} onClose={() => setCameraOpen(false)} />
+      )}
 
       {message && (
         <p
@@ -209,16 +233,67 @@ export function PosScreen() {
         </p>
       )}
 
-      {pending && (
+      {pending && pending.step === 'details' && (
+        <section
+          data-testid="item-details"
+          className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
+        >
+          <h2 className="text-lg font-semibold">{pending.item.design}</h2>
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">SKU</dt>
+              <dd className="font-mono">{pending.item.sku}</dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Barcode</dt>
+              <dd className="font-mono">{pending.item.barcode}</dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Brand</dt>
+              <dd>{pending.item.brand}</dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Category</dt>
+              <dd>{pending.item.category}</dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Size / Colour</dt>
+              <dd>
+                {pending.item.size} · {pending.item.color}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">MRP</dt>
+              <dd>{formatPaise(pending.item.mrpPaise)}</dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">In stock</dt>
+              <dd data-testid="details-stock" className="font-semibold">
+                {stock[pending.item.sku] ?? 0}
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={cancelPending} className={secondaryButtonClass}>
+              Cancel
+            </button>
+            <button type="button" onClick={startSell} className={primaryButtonClass}>
+              Sell this item
+            </button>
+          </div>
+        </section>
+      )}
+
+      {pending && pending.step === 'sell' && (
         <section className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
           <h2 className="text-lg font-semibold">
-            {pending.design}{' '}
+            Sell {pending.item.design}{' '}
             <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400">
-              {pending.brand} · {pending.category} · {pending.size} · {pending.color}
+              {pending.item.sku} · {pending.item.size} · {pending.item.color}
             </span>
           </h2>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {stock[pending.sku] ?? 0} in stock · MRP {formatPaise(pending.mrpPaise)}
+            {stock[pending.item.sku] ?? 0} in stock · MRP {formatPaise(pending.item.mrpPaise)}
           </p>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
@@ -226,10 +301,10 @@ export function PosScreen() {
               <input
                 type="number"
                 min={1}
-                max={stock[pending.sku] ?? 0}
+                max={stock[pending.item.sku] ?? 0}
                 value={qtyText}
                 onChange={(e) => setQtyText(e.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                className={inputClass}
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
@@ -238,7 +313,7 @@ export function PosScreen() {
                 inputMode="decimal"
                 value={priceText}
                 onChange={(e) => setPriceText(e.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                className={inputClass}
               />
               <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
                 Bargained price allowed, up to MRP.
@@ -250,18 +325,10 @@ export function PosScreen() {
               Total: {pendingTotal !== null ? formatPaise(pendingTotal) : '—'}
             </p>
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={cancelPending}
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-              >
+              <button type="button" onClick={cancelPending} className={secondaryButtonClass}>
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleRecordSale}
-                className="rounded-lg bg-emerald-600 px-5 py-2 font-medium text-white hover:bg-emerald-700"
-              >
+              <button type="button" onClick={handleRecordSale} className={primaryButtonClass}>
                 Record sale
               </button>
             </div>
@@ -289,7 +356,7 @@ export function PosScreen() {
                     </span>
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {item.barcode} · MRP {formatPaise(item.mrpPaise)} ·{' '}
+                    {item.sku} · MRP {formatPaise(item.mrpPaise)} ·{' '}
                     <span
                       data-testid={`stock-${item.sku}`}
                       className={
@@ -307,7 +374,7 @@ export function PosScreen() {
                 <button
                   type="button"
                   disabled={!hydrated}
-                  onClick={() => handleScan(item.barcode)}
+                  onClick={() => handleScan(item.sku)}
                   className="shrink-0 rounded-lg border border-emerald-600 px-3 py-1.5 font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
                 >
                   Scan
