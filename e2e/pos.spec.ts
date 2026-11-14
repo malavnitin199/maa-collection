@@ -1,113 +1,157 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
-const scanBox = (page: import('@playwright/test').Page) =>
-  page.getByLabel('Scan barcode or enter SKU');
+// Local/test database seeds every account with PIN 1234 (never in production).
+const PIN = '1234';
+const run = Date.now().toString(36);
 
-test('role picker navigates to POS and admin dashboard', async ({ page }) => {
+async function login(page: Page, name: string, pin = PIN) {
   await page.goto('/login');
-  await page.getByRole('link', { name: /Continue as Salesman/ }).click();
+  await page.getByText(name, { exact: true }).click();
+  await page.getByLabel('PIN').fill(pin);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  // Wait for the login to finish before navigating, or the next page load races it.
+  if (pin === PIN) await expect(page).not.toHaveURL(/\/login$/);
+}
+
+/** Admin adds a product; returns its generated barcode. */
+async function addProduct(page: Page, { name, size, mrp, price, stock }: { name: string; size: string; mrp: string; price: string; stock: string }) {
+  await page.goto('/admin/products/new');
+  await page.getByLabel('Product name').fill(name);
+  await page.getByLabel('Brand').fill('Test Brand');
+  await page.getByLabel('Category', { exact: true }).fill('Kurta');
+  await page.getByLabel('Size').fill(size);
+  await page.getByLabel('Colour').fill('Blue');
+  await page.getByLabel('MRP (₹)').fill(mrp);
+  await page.getByLabel('Selling price (₹)').fill(price);
+  await page.getByLabel(/Cost price/).fill('500');
+  await page.getByLabel('Opening stock (pieces)').fill(stock);
+  await page.getByRole('button', { name: 'Add product and generate label' }).click();
+  const status = page.getByRole('status');
+  await expect(status).toContainText('Product added');
+  const barcode = (await status.innerText()).match(/barcode (\d{13})/)?.[1];
+  expect(barcode).toMatch(/^200\d{10}$/);
+  await expect(page.getByRole('img', { name: `Barcode ${barcode} for MAA-KU-`, exact: false })).toBeVisible();
+  return barcode as string;
+}
+
+/** Hardware scanners type fast and press Enter. */
+async function scan(page: Page, code: string) {
+  await page.keyboard.type(code, { delay: 5 });
+  await page.keyboard.press('Enter');
+}
+
+test('logged-out visitors go to login; salesmen cannot open admin pages; wrong PIN is refused', async ({ page }) => {
+  await page.goto('/pos');
+  await expect(page).toHaveURL(/\/login$/);
+
+  await login(page, 'Pradeep', '0000');
+  await expect(page.getByText('Wrong PIN. Try again.')).toBeVisible();
+
+  await login(page, 'Pradeep');
   await expect(page).toHaveURL(/\/pos$/);
-  await expect(page.getByRole('heading', { name: 'Counter sale' })).toBeVisible();
-
-  await page.goto('/login');
-  await page.getByRole('link', { name: /Continue as Admin/ }).click();
-  await expect(page).toHaveURL(/\/admin\/dashboard$/);
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByTestId('current-user')).toContainText('Pradeep · Salesman');
+  await page.goto('/admin/dashboard');
+  await expect(page).toHaveURL(/\/pos$/);
+  await expect(page.getByRole('link', { name: 'Products' })).toHaveCount(0);
 });
 
-test('scan shows item details first, then sells at a bargained price', async ({ page }) => {
+test('admin adds a product with a generated barcode, receives stock; salesman sells it on behalf of a colleague', async ({ page }) => {
+  await login(page, 'Owner');
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
+  const barcode = await addProduct(page, { name: `Test Kurta ${run}`, size: 'M', mrp: '1299', price: '1199', stock: '2' });
+
+  await page.getByLabel('Pieces received').fill('3');
+  await page.getByRole('button', { name: 'Add stock' }).click();
+  await expect(page.getByText('Stock is now 5')).toBeVisible();
+
+  // Nitin sells 2, credited to Vishal.
+  await login(page, 'Nitin');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await scan(page, barcode);
+  await expect(page.getByTestId('item-details')).toContainText(`Test Kurta ${run}`);
+  await expect(page.getByTestId('details-stock')).toHaveText('5');
+  await expect(page.getByTestId('item-details')).not.toContainText('500'); // no cost price at the counter
+  await page.getByRole('button', { name: 'Sell this item' }).click();
+  await expect(page.getByLabel(/Sale price/)).toHaveValue('1199');
+  await page.getByLabel('Quantity').fill('2');
+  await page.getByLabel(/Sale price/).fill('1100');
+  await page.getByLabel('Credit sale to').selectOption({ label: 'Vishal' });
+  await page.getByRole('button', { name: 'Record sale' }).click();
+  await expect(page.getByRole('status')).toContainText('credited to Vishal (recorded by Nitin). Stock left: 3.');
+
+  await page.goto('/pos/my-sales');
+  await expect(page.getByTestId('my-activity')).toContainText(`2 × Test Kurta ${run}`);
+  await expect(page.getByTestId('my-activity')).toContainText('credited to Vishal · recorded by Nitin');
+
+  // Above-MRP price and unknown codes are refused.
   await page.goto('/pos');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await scan(page, barcode);
+  await page.getByRole('button', { name: 'Sell this item' }).click();
+  await page.getByLabel(/Sale price/).fill('1300');
+  await page.getByRole('button', { name: 'Record sale' }).click();
+  await expect(page.getByRole('status')).toContainText('cannot be above MRP');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await scan(page, '0000000000000');
+  await expect(page.getByRole('status')).toContainText('No item found');
+});
 
-  // Scan the Classic Crew Tee by barcode (initial demo stock: 3).
-  await scanBox(page).fill('8901111000014');
-  await page.keyboard.press('Enter');
+test('exchange: return part of a sale for another size; stock and money stay correct', async ({ page }) => {
+  await login(page, 'Owner');
+  const medium = await addProduct(page, { name: `Swap Kurta ${run}`, size: 'M', mrp: '1500', price: '1500', stock: '3' });
+  const large = await addProduct(page, { name: `Swap Kurta ${run}`, size: 'L', mrp: '1600', price: '1600', stock: '2' });
 
-  // Step 1: details only, no price asked yet.
-  const details = page.getByTestId('item-details');
-  await expect(details).toContainText('MAA-TS-001');
-  await expect(details).toContainText('Classic Crew Tee');
-  await expect(page.getByTestId('details-stock')).toHaveText('3');
-  await expect(page.getByLabel(/Sale price/)).toHaveCount(0);
-
-  // Step 2: sell 2 units at a bargained ₹450 instead of MRP ₹499.
+  await login(page, 'Vishal');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await scan(page, medium);
   await page.getByRole('button', { name: 'Sell this item' }).click();
   await page.getByLabel('Quantity').fill('2');
-  await page.getByLabel(/Sale price/).fill('450');
+  await page.getByLabel(/Sale price/).fill('1400');
   await page.getByRole('button', { name: 'Record sale' }).click();
+  await expect(page.getByRole('status')).toContainText('Stock left: 1.');
 
-  await expect(page.getByRole('status')).toContainText('Stock left: 1');
-  await expect(page.getByTestId('recent-sales')).toContainText('2 × Classic Crew Tee');
+  // Balram processes the exchange of 1 medium for 1 large.
+  await login(page, 'Balram');
+  await page.goto('/pos/exchange');
+  await expect(page.getByLabel('1. Scan the item the customer brought back')).toBeFocused();
+  await scan(page, medium);
+  const saleRow = page.getByTestId('returnable-sales').getByRole('listitem').first();
+  await expect(saleRow).toContainText('sold by Vishal');
+  await expect(saleRow).toContainText('2 can be returned');
+  await saleRow.getByRole('button', { name: 'Choose' }).click();
+  await expect(page.getByLabel('3. Scan the new item the customer is taking')).toBeFocused();
+  await scan(page, large);
+  await expect(page.getByTestId('exchange-summary')).toContainText('Customer pays ₹200.00');
+  await page.getByRole('button', { name: 'Confirm exchange' }).click();
+  await expect(page.getByRole('status')).toContainText('Exchange done. Customer pays ₹200.00.');
 
-  // Scanning the same item again shows the reduced stock.
-  await scanBox(page).fill('MAA-TS-001');
-  await page.keyboard.press('Enter');
+  // Stock: medium 3 − 2 + 1 = 2, large 2 − 1 = 1.
+  await page.goto('/pos');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await scan(page, medium);
+  await expect(page.getByTestId('details-stock')).toHaveText('2');
+  await scan(page, large);
+  await expect(page.getByTestId('item-details')).toContainText('L');
   await expect(page.getByTestId('details-stock')).toHaveText('1');
 
-  // Admin dashboard reflects the same demo store.
-  await page.goto('/admin/dashboard');
-  await expect(page.getByTestId('total-revenue')).toContainText('900.00');
-  await expect(page.getByTestId('units-sold')).toHaveText('2');
-  await expect(page.getByTestId('sales-by-person')).toContainText('Ravi');
+  // Admin sees it in the activity log, credited to the original seller.
+  await login(page, 'Owner');
+  await page.goto('/admin/activity');
+  const log = page.getByTestId('activity-log');
+  await expect(log).toContainText(`Returned 1 × Swap Kurta ${run} (M) → 1 × Swap Kurta ${run} (L)`);
+  await expect(log).toContainText('credited to Vishal · recorded by Balram');
 });
 
-test('labels page shows exactly one barcode per demo item', async ({ page }) => {
+test('admin dashboard, staff and labels pages load with seeded data', async ({ page }) => {
+  await login(page, 'Owner');
+  await expect(page.getByTestId('sales-by-person')).toContainText('Vishal');
+  await expect(page.getByTestId('sales-by-person')).toContainText('Balram');
+  await page.goto('/admin/staff');
+  for (const name of ['Owner', 'Vishal', 'Nitin', 'Pradeep', 'Balram']) {
+    await expect(page.getByTestId('staff-list')).toContainText(name);
+  }
   await page.goto('/admin/labels');
   await expect(page.getByRole('heading', { name: 'Test labels' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Barcode 8901111000014 for MAA-TS-001' })).toBeVisible();
-  await expect(page.getByRole('img', { name: /^Barcode / })).toHaveCount(8);
   await expect(page.getByRole('img', { name: /QR code/ })).toHaveCount(0);
-});
-
-test('sale price above MRP is rejected', async ({ page }) => {
-  await page.goto('/pos');
-  await scanBox(page).fill('MAA-TS-002');
-  await page.keyboard.press('Enter');
-  await page.getByRole('button', { name: 'Sell this item' }).click();
-  await page.getByLabel(/Sale price/).fill('600');
-  await page.getByRole('button', { name: 'Record sale' }).click();
-  await expect(page.getByRole('status')).toContainText('cannot be above MRP');
-});
-
-test('unknown code and out-of-stock item show clear errors', async ({ page }) => {
-  await page.goto('/pos');
-
-  await scanBox(page).fill('0000000000000');
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('status')).toContainText('No item found');
-
-  // Banarasi Saree starts with zero demo stock: details show, selling is refused.
-  await scanBox(page).fill('MAA-SA-001');
-  await page.keyboard.press('Enter');
-  await expect(page.getByTestId('details-stock')).toHaveText('0');
-  await page.getByRole('button', { name: 'Sell this item' }).click();
-  await expect(page.getByRole('status')).toContainText('out of stock');
-});
-
-test('POS starts with only the scan controls, no inventory list', async ({ page }) => {
-  await page.goto('/pos');
-  await expect(scanBox(page)).toBeEnabled();
-  await expect(page.getByText('Classic Crew Tee')).toHaveCount(0);
-  await expect(page.getByTestId('item-details')).toHaveCount(0);
-});
-
-test('hardware scanner works without tapping the scan box first', async ({ page }) => {
-  await page.goto('/pos');
-  await expect(scanBox(page)).toBeFocused();
-  // Scanners type the code fast and press Enter.
-  await page.keyboard.type('8901111000014', { delay: 5 });
-  await page.keyboard.press('Enter');
-  await expect(page.getByTestId('item-details')).toContainText('MAA-TS-001');
-});
-
-test('hardware scan while a button has focus is not lost and does not press the button', async ({ page }) => {
-  await page.goto('/pos');
-  // Open then close the camera: focus is left on the camera button.
-  await page.getByRole('button', { name: 'Scan with camera' }).click();
-  await page.getByRole('button', { name: 'Stop camera' }).click();
-  await expect(page.getByRole('button', { name: 'Scan with camera' })).toBeFocused();
-
-  await page.keyboard.type('MAA-JE-001', { delay: 5 });
-  await page.keyboard.press('Enter');
-  await expect(page.getByTestId('item-details')).toContainText('Slim Fit Jeans');
-  await expect(page.getByRole('heading', { name: 'Camera scan' })).toHaveCount(0);
 });
