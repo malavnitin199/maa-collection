@@ -4,6 +4,8 @@ Mobile-first retail clothing **inventory + POS + billing** web app (installable 
 
 Business intent: start with one shop, later expand into a product usable by many retailers. Build single-store now, but keep `store_id` on every record and keep tax/receipt/shop settings data-driven — never hardcoded.
 
+Sales flow (owner decision 2026-11-15, ADR-004): **scan → see stock → salesperson enters quantity and the bargained per-customer price (≤ MRP) → stock deducts → sale attributed to that salesperson.** No multi-item cart in the MVP. Every customer pays a different negotiated price, so the entered price is the record of truth, with MRP snapshotted alongside.
+
 ## Documents (read in this order per session)
 
 1. `docs/PROJECT_CONTEXT.md` — short living product reference
@@ -70,4 +72,4 @@ Empty folders hold `.gitkeep`; they are the agreed blueprint skeleton — fill t
 
 ## Status
 
-**P1-01 (bootstrap) done.** Next task: **P1-02** — `(auth)`/`(admin)`/`(pos)` route shells with responsive placeholder layouts. No DB, auth, or business logic yet.
+**P1-01 (bootstrap) and P1-02 (route shells) done**, plus a dummy scan-to-sell demo: `/login` fake role picker → `/pos` (scan, bargained price, deduct, attribute to salesperson) and `/admin/dashboard` (stock, revenue, sales by salesperson). Dummy data lives in `src/features/catalog/dummy-catalog.ts` and the localStorage `src/features/inventory/dummy-store.ts` — both throwaway until P2/P3. No real auth or DB yet. Next: **P1-03** per backlog, or pull **P2-01** (PostgreSQL) forward to replace the dummy store.

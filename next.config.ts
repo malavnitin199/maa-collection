@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Dev assets/HMR are blocked for origins other than localhost; without this,
+  // opening http://127.0.0.1:3000 renders HTML but never hydrates.
+  allowedDevOrigins: ["127.0.0.1"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

@@ -16,7 +16,7 @@
 ## P1 - Application foundation
 
 - [x] **P1-01** Bootstrap Next.js/TS/Tailwind/pnpm Git repository and tests. **Done:** dev/build/lint/typecheck/unit smoke all pass; initial commit. (Completed 2026-11-14; see PROGRESS.md verification log.)
-- [ ] **P1-02** Create basic `(auth)`, `(admin)` and `(pos)` route shells and responsive layouts. **Done:** `/login`, `/admin/dashboard`, `/pos` navigate on mobile and desktop, using placeholder data only.
+- [x] **P1-02** Create basic `(auth)`, `(admin)` and `(pos)` route shells and responsive layouts. **Done:** `/login`, `/admin/dashboard`, `/pos` navigate on mobile and desktop, using placeholder data only. (Completed 2026-11-15 with dummy scan-to-sell demo; see PROGRESS.md.)
 - [ ] **P1-03** Initialize shadcn/ui, typography/tokens and shared form/table/modal patterns. **Done:** design tokens and accessible mobile navigation used in both panels.
 - [ ] **P1-04** Add environment schema, app configuration, logging/Error boundaries and error convention. **Done:** missing required server env fails clearly.
 - [ ] **P1-05** Add CI workflow: lint, typecheck, tests and production build. **Done:** failing tests block merge.
