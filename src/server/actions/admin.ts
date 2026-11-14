@@ -7,6 +7,7 @@ import { rupeesToPaise } from '@/features/inventory/inventory';
 import { STORE_ID } from '@/lib/app-config';
 import { requireAdmin } from '@/server/auth';
 import { DomainError } from '@/server/services/errors';
+import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import { createProduct, stockIn, updateProduct, type ProductInput } from '@/server/services/products';
 import { createStaff, setStaffActive, setStaffPin } from '@/server/services/staff';
 
@@ -81,12 +82,14 @@ export async function stockInAction(productId: string, _prev: FormState, formDat
     const raw = text(formData, 'quantity');
     if (!/^\d+$/.test(raw)) throw new DomainError('Quantity must be a whole number.');
     const updated = await stockIn(await getDb(), STORE_ID, {
+      operationId: text(formData, 'operationId'),
       productId,
       quantity: Number(raw),
       staffId: admin.id,
       note: text(formData, 'note'),
     });
     revalidatePath('/admin', 'layout');
+    if (updated.duplicate) return { message: `Already saved. Stock is ${updated.stock}.` };
     return { message: `Added ${raw}. Stock is now ${updated.stock}.` };
   } catch (error) {
     return failure(error);
@@ -122,6 +125,68 @@ export async function setStaffActiveAction(staffId: string, active: boolean): Pr
     await setStaffActive(await getDb(), STORE_ID, staffId, active, admin.id);
     revalidatePath('/admin/staff');
     return { message: active ? 'Activated.' : 'Deactivated.' };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// ---------------------------------------------------------------- suppliers
+
+function supplierInput(formData: FormData): SupplierInput {
+  return {
+    name: text(formData, 'name'),
+    contactName: text(formData, 'contactName'),
+    phone: text(formData, 'phone'),
+    gstin: text(formData, 'gstin'),
+    notes: text(formData, 'notes'),
+  };
+}
+
+export async function createSupplierAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  try {
+    const created = await createSupplier(await getDb(), STORE_ID, supplierInput(formData));
+    revalidatePath('/admin', 'layout');
+    return { message: `${created.name} added.` };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function updateSupplierAction(supplierId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  try {
+    await updateSupplier(await getDb(), STORE_ID, supplierId, { ...supplierInput(formData), active: formData.get('active') === 'on' });
+    revalidatePath('/admin', 'layout');
+    return { message: 'Saved.' };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// --------------------------------------------------------------- categories
+
+export async function createCategoryAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  try {
+    const created = await createCategory(await getDb(), STORE_ID, { name: text(formData, 'name'), code: text(formData, 'code') });
+    revalidatePath('/admin', 'layout');
+    return { message: `${created.name} added with code ${created.code}.` };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function updateCategoryAction(categoryId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  try {
+    await updateCategory(await getDb(), STORE_ID, categoryId, {
+      name: text(formData, 'name'),
+      code: text(formData, 'code'),
+      active: formData.get('active') === 'on',
+    });
+    revalidatePath('/admin', 'layout');
+    return { message: 'Saved.' };
   } catch (error) {
     return failure(error);
   }

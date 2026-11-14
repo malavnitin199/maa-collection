@@ -3,7 +3,11 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   use: { baseURL: 'http://localhost:3000' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Staff use phones: run every flow at phone size too.
+    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+  ],
   webServer: {
     command: 'pnpm dev',
     url: 'http://localhost:3000',

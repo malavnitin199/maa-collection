@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 import { requestDb } from '@/server/request-db';
 import { staff } from '@/db/schema';
 import { STORE_ID } from '@/lib/app-config';
@@ -15,8 +16,8 @@ import {
 
 export type CurrentStaff = { id: string; name: string; role: Role };
 
-/** The logged-in staff member, re-checked against the database (still active). */
-export async function getCurrentStaff(): Promise<CurrentStaff | null> {
+/** The logged-in staff member, re-checked against the database (still active). Cached per request. */
+export const getCurrentStaff = cache(async function getCurrentStaff(): Promise<CurrentStaff | null> {
   // requestDb() first: it marks the render as request-time before the expiry check reads the clock.
   const db = await requestDb();
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
@@ -28,7 +29,7 @@ export async function getCurrentStaff(): Promise<CurrentStaff | null> {
     .where(and(eq(staff.storeId, STORE_ID), eq(staff.id, session.sid), eq(staff.active, true)))
     .limit(1);
   return person ?? null;
-}
+});
 
 /** For pages and actions: logged-in staff, or redirect to /login. */
 export async function requireStaff(): Promise<CurrentStaff> {

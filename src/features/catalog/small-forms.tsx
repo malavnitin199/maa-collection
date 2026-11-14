@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useRef } from 'react';
 import { errorBox, input, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import type { FormState } from '@/server/actions/admin';
 
@@ -12,10 +12,28 @@ function Feedback({ state }: { state: FormState }) {
   return null;
 }
 
+/**
+ * Wraps a server action with an idempotency key: the same id is sent until the
+ * form is edited, so a double tap or a retried request is applied only once.
+ */
+export function useOperationId() {
+  const ref = useRef<string | null>(null);
+  return {
+    stamp: (formData: FormData) => formData.set('operationId', (ref.current ??= crypto.randomUUID())),
+    reset: () => {
+      ref.current = null;
+    },
+  };
+}
+
 export function StockInForm({ action }: { action: Action }) {
-  const [state, formAction, pending] = useActionState(action, {});
+  const op = useOperationId();
+  const [state, formAction, pending] = useActionState((prev: FormState, formData: FormData) => {
+    op.stamp(formData);
+    return action(prev, formData);
+  }, {});
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form action={formAction} onChange={op.reset} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium">
           Pieces received
