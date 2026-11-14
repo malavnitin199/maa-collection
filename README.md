@@ -227,7 +227,6 @@ Full guide: **[`docs/SCANNING.md`](docs/SCANNING.md)**.
 | `pnpm db:generate` | Create a SQL migration in `drizzle/` after changing `src/db/schema` |
 | `pnpm db:migrate` | Apply migrations to `DATABASE_URL` |
 | `pnpm db:seed` | Seed an **empty** Postgres with the shop, staff and demo products; prints one random PIN per person |
-| `pnpm labels:generate` | Regenerate the static barcode SVGs in `public/barcodes/` for the demo catalog |
 
 ---
 
@@ -296,7 +295,7 @@ maa-collection/
 │   └── lib/                         Money formatting, app config (store id, time zone)
 ├── drizzle/                         SQL migrations
 ├── e2e/                             Playwright tests
-├── scripts/                         db-seed.ts, generate-labels.ts
+├── scripts/                         db-seed.ts (production seeding)
 └── docs/                            Plans, decisions, progress, scanning guide
 ```
 

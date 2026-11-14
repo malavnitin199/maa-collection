@@ -44,10 +44,9 @@ Type a SKU (`MAA-TS-001`) or barcode (`8901111000014`) into the scan box and pre
 
 Every demo item has **one** label, an EAN-13 barcode (the same kind printed on clothing tags). Scanning it, by camera or by a hardware scanner, finds the item (owner decision: one code per item, no separate QR code).
 
-- **EAN-13 barcode** encoding the item's barcode number: `public/barcodes/<SKU>.svg`. Drawn by our own code (`ean13Svg` in `src/features/scanning/ean13.ts`); every one was checked by scanning it through the POS camera.
-- Page: **Admin → Labels** (`/admin/labels`) shows the barcode for all eight items with name, size, colour and MRP. Open it on a laptop and scan it with the phone camera from the POS screen, or print it.
-- Ready-made sheet: `Maa-Collection-test-labels.pdf` / `.png` in the starter folder (one level above the app).
-- Regenerate after changing the catalog: `pnpm labels:generate` (script in `scripts/generate-labels.ts`).
+- **EAN-13 barcode** encoding the item's barcode number, drawn on the fly from the database by our own code (`ean13Svg` in `src/features/scanning/ean13.ts`, rendered by `BarcodeLabel`). The demo barcodes were each checked by scanning them through the POS camera.
+- Page: **Admin → Labels** (`/admin/labels`) shows the label for every active product (name, size, colour, MRP, barcode); each product's own page shows its single label. Open it on a laptop and scan it with the phone camera from the POS screen, or print it.
+- Ready-made sheet of the 8 demo items: `Maa-Collection-test-labels.pdf` / `.png` in the starter folder (one level above the app). For new products, print from the app.
 
 | SKU | Barcode | Item | Demo stock |
 |---|---|---|---|
