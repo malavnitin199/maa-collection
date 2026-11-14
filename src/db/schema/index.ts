@@ -20,6 +20,10 @@ export const stores = pgTable('stores', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   timezone: text('timezone').notNull().default('Asia/Kolkata'),
+  /** Owner's secret 10-letter word for the code price on tags (letters = 1…9,0). */
+  priceCodeWord: text('price_code_word'),
+  /** Print the purchase price, in code, on barcode labels. */
+  printPriceCode: boolean('print_price_code').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

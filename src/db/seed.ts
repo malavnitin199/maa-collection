@@ -3,7 +3,7 @@ import { DUMMY_CATALOG } from '../features/catalog/dummy-catalog.ts';
 import { STORE_ID, STORE_NAME, STORE_TIMEZONE } from '../lib/app-config.ts';
 import { hashPin, randomPin } from '../server/security/pin.ts';
 import type { Db } from './client.ts';
-import { categories, products, staff, stockMovements, stores } from './schema/index.ts';
+import { categories, products, staff, stockMovements, stores, suppliers } from './schema/index.ts';
 
 /** Owner's staff list (plan v2, D-ST-1). The admin can add more in the app. */
 export const SEED_STAFF = [
@@ -103,4 +103,36 @@ export async function seedDemoData(
     }
   });
   return { seeded: true, pins: issuedPins };
+}
+
+/** Sample companies and extra categories so the owner can try the stock screens (plan: owner request 2026-11-15). */
+export const SAMPLE_SUPPLIERS = [
+  { name: 'Shree Ganesh Textiles', contactName: 'Mahesh Agarwal', phone: '98250 11111', notes: 'Surat · sarees and dress material' },
+  { name: 'Laxmi Fashion House', contactName: 'Sunita Jain', phone: '98290 22222', notes: 'Jaipur · kurtis and suits' },
+  { name: 'Royal Garments', contactName: 'Harpreet Singh', phone: '98140 33333', notes: 'Ludhiana · shirts, tees, winter wear' },
+  { name: 'Kalyan Silk Mills', contactName: 'Ravi Kalyan', phone: '94150 44444', notes: 'Varanasi · Banarasi silk' },
+  { name: 'Jaipur Prints Co.', contactName: 'Anil Sharma', phone: '94140 55555', notes: 'Jaipur · block-print cotton' },
+] as const;
+
+export const SAMPLE_CATEGORIES = [
+  { name: 'Kurti', code: 'KR' },
+  { name: 'Lehenga', code: 'LE' },
+  { name: 'Dupatta', code: 'DU' },
+  { name: 'Leggings', code: 'LG' },
+  { name: 'Night Suit', code: 'NS' },
+] as const;
+
+/** Adds the sample suppliers/categories that don't exist yet; safe to run repeatedly. */
+export async function addSampleCatalog(db: Db): Promise<{ suppliers: number; categories: number }> {
+  const addedSuppliers = await db
+    .insert(suppliers)
+    .values(SAMPLE_SUPPLIERS.map((s) => ({ storeId: STORE_ID, ...s })))
+    .onConflictDoNothing()
+    .returning({ id: suppliers.id });
+  const addedCategories = await db
+    .insert(categories)
+    .values(SAMPLE_CATEGORIES.map((c) => ({ storeId: STORE_ID, ...c })))
+    .onConflictDoNothing()
+    .returning({ id: categories.id });
+  return { suppliers: addedSuppliers.length, categories: addedCategories.length };
 }

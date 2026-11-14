@@ -153,3 +153,14 @@ describe('rates for a whole design', () => {
     await expect(updateDesignRates(db, STORE_ID, created[0].id, { mrpPaise: 1000, pricePaise: 2000, costPaise: null })).rejects.toThrow(/above MRP/);
   });
 });
+
+describe('code price setting', () => {
+  it('saves a valid code word, refuses bad ones, and needs a word to print', async () => {
+    const { getStoreSettings, updatePriceCode } = await import('./settings');
+    expect((await getStoreSettings(db, STORE_ID)).printPriceCode).toBe(false);
+    await expect(updatePriceCode(db, STORE_ID, { priceCodeWord: 'AABBCCDDEE', printPriceCode: true })).rejects.toThrow(/different/);
+    await expect(updatePriceCode(db, STORE_ID, { priceCodeWord: '', printPriceCode: true })).rejects.toThrow(/Set a code word/);
+    const saved = await updatePriceCode(db, STORE_ID, { priceCodeWord: ' black horse ', printPriceCode: true });
+    expect(saved).toMatchObject({ priceCodeWord: 'BLACKHORSE', printPriceCode: true });
+  });
+});

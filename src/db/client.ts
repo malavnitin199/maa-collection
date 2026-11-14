@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import * as schema from './schema/index.ts';
-import { seedDemoData } from './seed.ts';
+import { addSampleCatalog, seedDemoData } from './seed.ts';
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
@@ -28,13 +28,13 @@ async function createDb(url: string | undefined): Promise<Db> {
     return drizzle(client, { schema }) as unknown as Db;
   }
   const dataDir = url?.startsWith('pglite:') ? url.slice('pglite:'.length) : './.pglite';
-  return createPgliteDb(dataDir === 'memory' ? undefined : dataDir, { seed: 'demo' });
+  return createPgliteDb(dataDir === 'memory' ? undefined : dataDir, { seed: 'demo+samples' });
 }
 
 /** Embedded Postgres with migrations applied; used for local dev and tests. */
 export async function createPgliteDb(
   dataDir?: string,
-  options: { seed?: 'demo' | 'none' } = {},
+  options: { seed?: 'demo' | 'demo+samples' | 'none' } = {},
 ): Promise<Db> {
   const { PGlite } = await import('@electric-sql/pglite');
   const { drizzle } = await import('drizzle-orm/pglite');
@@ -43,6 +43,8 @@ export async function createPgliteDb(
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: path.join(process.cwd(), 'drizzle') });
   const typed = db as unknown as Db;
-  if (options.seed === 'demo') await seedDemoData(typed, { pins: 'dev' });
+  if (options.seed === 'demo' || options.seed === 'demo+samples') await seedDemoData(typed, { pins: 'dev' });
+  // Sample companies/categories for trying the app locally; unit tests use plain 'demo'.
+  if (options.seed === 'demo+samples') await addSampleCatalog(typed);
   return typed;
 }

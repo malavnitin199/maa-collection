@@ -15,6 +15,13 @@
       "when": 1794696447111,
       "tag": "0001_suppliers_categories_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794698422858,
+      "tag": "0002_store_price_code",
+      "breakpoints": true
     }
   ]
 }
