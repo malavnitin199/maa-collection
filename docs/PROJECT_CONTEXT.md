@@ -30,9 +30,11 @@ The 12-page uploaded *Retail Shop Stock, Sales & Billing System* PRD is the prod
 - At completion, show commands executed, actual results, modified files, gaps and the next task.
 - Update `docs/PROGRESS.md` and check off backlog ONLY when acceptance criteria pass.
 
-## Current status (2026-11-15, plan v2 live)
-- Done: P1-01, P1-02, scanning (camera / hardware / typed), barcode labels, and plan v2 (`docs/PLAN_V2_SHOP_OPERATIONS.md`): shared Postgres (Neon), name + PIN login with admin / salesman roles, products with generated SKU + EAN-13, stock-in, sales with "credit to" (on behalf of), exchanges, salesman and admin dashboards, staff management, activity log.
-- Not yet: GST/receipts, payments, refunds, day-close, offline billing.
+## Current status (2026-11-15, plan v3 live)
+- Live app with shared Postgres (Neon): name + PIN login; owner (admin) and salesmen; **owner-granted rights** per salesman: Catalog (catalog / QC person), Prices, Stock, Purchase price.
+- Owner/catalog: companies, categories, add stock (quick add, sizes × colours, restock), **Tag old stock** with photos, product photos, design-wide rates, code price on tags, labels (per delivery / today's).
+- Counter: scan (camera / hardware / typed) with product photo, bargained price ≤ MRP, sale on behalf, exchanges, my sales.
+- In-app Help (`/help`) and `docs/USER_GUIDE.md`.
+- Not yet: GST/receipts, payments, refunds, day-close, offline billing, Vercel Blob for photos (D-IMG-1).
+- Plans: `docs/PLAN_V2_SHOP_OPERATIONS.md`, `docs/PLAN_V3_CATALOG_TEAM.md`. Decisions: `docs/DECISION_LOG.md` (ADR-001…012), open questions `docs/DECISIONS.md`. Log: `docs/PROGRESS.md`.
 - Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavnitin199/maa-collection
-- Open decisions: `docs/DECISIONS.md` (D-EX-1, D-ST-1, D-PR-1, D-RF-1 and P0 items).
-- Setup and run guide: `README.md`. Detailed log: `docs/PROGRESS.md`.

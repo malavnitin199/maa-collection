@@ -52,3 +52,10 @@ Evidence (shop walkthrough, printer model, sample invoice):
 | D-ST-1 | Six staff were mentioned; names given: Vishal, Nitin, Pradeep, Nitin, Balram. Who else, and who should be admin? | Seeded Owner (admin) + Vishal, Nitin, Pradeep, Balram; admin can add more |
 | D-PR-1 | Is there a minimum price (floor) below which salesmen may not bargain? | Any price from ₹0.01 up to MRP (relates to D-08) |
 | D-RF-1 | Returns without taking another item (refund only)? | Not supported yet |
+
+## Open questions from plan v3 (2026-11-15)
+
+| ID | Question | Current behaviour until decided |
+|---|---|---|
+| D-PERM-1 | Should a catalog person without the *Prices* right be allowed to set prices when **creating** an item (needed to tag old stock)? | Yes when creating; existing prices can't be changed without *Prices* |
+| D-IMG-1 | Move photos to Vercel Blob (needs the owner to approve creating a Blob store on the Vercel account)? | Photos in Postgres; switch before ~5k photos |

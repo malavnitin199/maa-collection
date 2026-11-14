@@ -5,7 +5,7 @@ Mobile-first **inventory + point-of-sale (POS)** web app for an Indian clothing 
 It starts as a tool for one shop (Maa Collection). The plan is to grow it into a product many retailers can use, so every record carries a `store_id` and shop settings are data-driven.
 
 - **Live:** https://maa-collection-pi.vercel.app
-- **Status:** working app on a shared PostgreSQL database (Neon). Not yet built: GST/receipts, payments, offline billing, day-close. See [Project status and roadmap](#project-status-and-roadmap) and the plan in [`docs/PLAN_V2_SHOP_OPERATIONS.md`](docs/PLAN_V2_SHOP_OPERATIONS.md).
+- **Status:** working app on a shared PostgreSQL database (Neon). **New users: read [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) or tap Help in the app.** Not yet built: GST/receipts, payments, offline billing, day-close. See [Project status and roadmap](#project-status-and-roadmap) and the plan in [`docs/PLAN_V2_SHOP_OPERATIONS.md`](docs/PLAN_V2_SHOP_OPERATIONS.md).
 
 ---
 
@@ -39,6 +39,8 @@ It starts as a tool for one shop (Maa Collection). The plan is to grow it into a
 | Exchange | `/pos/exchange` | Salesman, Admin | Scan the returned item → pick the original sale → scan the new item → "customer pays / give back" → confirm |
 | My sales | `/pos/my-sales` | Salesman, Admin | Own sales **today** and **this month** (Indian time), sales recorded for others, recent activity |
 | Dashboard | `/admin/dashboard` | Admin | Today / month net revenue, units, estimated profit, exchanges, sales by salesperson, stock value, low stock, latest activity |
+| Tag old stock | `/admin/stock/old` | Catalog | Items already in the shop: 📷 photo → category, name, size, colour → MRP, price, pieces → barcode + label → Next item; **print today's labels** |
+| Help | `/help` | Everyone | Guide for new users and each role, required vs optional, tips, problems & fixes |
 | Add stock hub | `/admin/stock` | Admin | **+ Stock** tab: choose Many different products · One design in sizes × colours · More of existing items |
 | Quick add | `/admin/stock/quick` | Admin | **Same company + category, many products:** each card has name, MRP, selling price (shown), purchase price (code), pieces; Copy / Remove; one save → barcodes + labels |
 | Settings | `/admin/settings` | Admin | **Code price:** a secret 10-letter word (e.g. BLACKHORSE: B=1 … E=0); optionally print the purchase price on tags in code; decoder |
@@ -93,6 +95,8 @@ The customer brings back part of an earlier sale and takes something else, for e
 | Receive stock | ✅ | ❌ |
 | See cost price | ✅ | ❌ (never sent to salesman screens) |
 | Manage staff and PINs | ✅ | ❌ |
+
+**Owner-granted rights (Staff & permissions):** a salesman can also get **Catalog** (catalog / QC person: products, photos, categories, companies, barcodes, labels, tag old stock), **Prices** (change MRP / selling price), **Stock** (receive stock) and **Purchase price** (see/enter the code price). Screens marked *Admin* in the table above are open to salesmen who hold the matching right; dashboard, staff, activity and settings stay owner-only.
 
 The server checks every action; hiding a button is never the only protection. Initial staff: **Owner** (admin) plus **Vishal, Nitin, Pradeep, Balram** (salesmen). The admin can add more people.
 
@@ -261,7 +265,7 @@ The full chain above is the quality gate; every change must pass it.
 ## Database
 
 - Schema: `src/db/schema/index.ts`. Migrations: `drizzle/`. Seed: `src/db/seed.ts`.
-- Tables: `stores`, `staff`, `suppliers`, `categories`, `products`, `stock_receipts` (one per delivery), `stock_movements`, `sales`, `exchanges`. Every table has `store_id`, and money is integer paise.
+- Tables: `stores`, `staff` (with `permissions`), `suppliers`, `categories`, `products`, `product_images` (photos), `stock_receipts` (one per delivery / old-stock entry), `stock_movements`, `sales`, `exchanges`. Every table has `store_id`, and money is integer paise.
 - `sales`, `exchanges` and `stock_movements` are **append-only**. `products.stock` is the running total, updated in the same transaction with a `stock >= quantity` guard. Each sale or exchange carries a unique `operation_id`, so a retried tap never sells twice.
 
 **Changing the schema:**
@@ -345,6 +349,8 @@ vercel deploy --prod                 # production
 
 | Document | Read it for |
 |---|---|
+| [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) | **How to use the app** (all roles): new users, selling, catalog & old stock, owner set-up, tips, fixes |
+| [`docs/PLAN_V3_CATALOG_TEAM.md`](docs/PLAN_V3_CATALOG_TEAM.md) | Plan v3: permissions, photos, old-stock tagging, help |
 | [`CLAUDE.md`](CLAUDE.md) | Single source of truth: product, stack, core rules, workflow, status |
 | [`docs/PLAN_V2_SHOP_OPERATIONS.md`](docs/PLAN_V2_SHOP_OPERATIONS.md) | The current plan: roles, flows, data model, architecture, open decisions |
 | [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) | Short product reference and current status |

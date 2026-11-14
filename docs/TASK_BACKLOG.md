@@ -128,6 +128,7 @@
 - [x] **V2-02** Salesman dashboard `/pos/my-sales`: own today/month totals, sales recorded for others, recent activity.
 - [x] **V2-03** Admin staff management: add people, set PINs, activate/deactivate; last active admin protected.
 - [x] **V2-04** Admin activity log of all sales and exchanges.
+- [x] **V2-06** Plan v3: owner-granted permissions (catalog/QC, prices, stock, purchase price), product photos, Tag old stock with today's labels, in-app help + user guide.
 - [x] **V2-05** Owner stock workflow: suppliers, categories, sizes × colours entry with generated barcodes, per-piece labels, scan-to-restock, design-wide rates, phone tab bar.
 
 ## Suggested next tasks

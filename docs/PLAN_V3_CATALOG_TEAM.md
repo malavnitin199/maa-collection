@@ -1,6 +1,6 @@
 # Plan v3: catalog team, permissions, product photos, old-stock tagging, in-app help
 
-Status: **requested by owner 2026-11-15, being implemented** · Builds on plan v2 and the owner stock workflow.
+Status: **implemented and live 2026-11-15** · Builds on plan v2 and the owner stock workflow.
 
 ## 1. Why
 
