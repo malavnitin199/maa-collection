@@ -96,20 +96,96 @@ async function startDecoding(
     };
   }
 
+  // Fallback (e.g. iPhone Safari): zxing, fed with our own frames. We don't use
+  // zxing's own video loop because its TRY_HARDER rotation is broken in
+  // @zxing/browser 0.2.1 (it rotates the pixels but keeps the old width/height),
+  // and it decodes only the full, unzoomed frame.
   const { BrowserMultiFormatReader, BarcodeFormat } = await import('@zxing/browser');
   const hints = new Map<number, unknown>([
     [
       HINT_POSSIBLE_FORMATS,
       [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.CODE_128, BarcodeFormat.QR_CODE],
     ],
-    // Scan many rows and also try the image rotated: finds small, tilted or sideways barcodes.
+    // Scan many rows of each frame, not just a few.
     [HINT_TRY_HARDER, true],
   ]);
-  const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 100 });
-  const controls = await reader.decodeFromVideoElement(video, (result) => {
-    if (result) onText(result.getText());
-  });
-  return { engine: 'zxing', stop: () => controls.stop() };
+  const reader = new BrowserMultiFormatReader(hints);
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvas is not available.');
+
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let attempt = 0;
+  const tick = () => {
+    if (stopped) return;
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (width && height) {
+      // Rotate through three views, one per tick, to keep each tick fast.
+      drawView(context, canvas, video, width, height, FRAME_VIEWS[attempt++ % FRAME_VIEWS.length]);
+      try {
+        onText(reader.decodeFromCanvas(canvas).getText());
+      } catch {
+        // Nothing found in this view; try the next one.
+      }
+    }
+    if (!stopped) timer = setTimeout(tick, 50);
+  };
+  tick();
+  return {
+    engine: 'zxing',
+    stop: () => {
+      stopped = true;
+      clearTimeout(timer);
+    },
+  };
+}
+
+// full: the whole frame. zoom: the guide-box band, enlarged 2× so small or
+// distant barcodes have wider bars. sideways: the frame turned 90°, for a
+// barcode held vertically.
+const FRAME_VIEWS = ['full', 'zoom', 'sideways'] as const;
+type FrameView = (typeof FRAME_VIEWS)[number];
+const MAX_CANVAS_SIDE = 2400;
+
+function drawView(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  video: HTMLVideoElement,
+  width: number,
+  height: number,
+  view: FrameView,
+) {
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  if (view === 'full') {
+    canvas.width = width;
+    canvas.height = height;
+    context.drawImage(video, 0, 0);
+  } else if (view === 'zoom') {
+    const cropWidth = width * 0.9;
+    const cropHeight = Math.min(height, width * 0.45);
+    const scale = Math.min(2, MAX_CANVAS_SIDE / cropWidth);
+    canvas.width = Math.round(cropWidth * scale);
+    canvas.height = Math.round(cropHeight * scale);
+    context.drawImage(
+      video,
+      (width - cropWidth) / 2,
+      (height - cropHeight) / 2,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+  } else {
+    canvas.width = height;
+    canvas.height = width;
+    context.translate(height, 0);
+    context.rotate(Math.PI / 2);
+    context.drawImage(video, 0, 0);
+  }
 }
 
 /** Uses the rear camera to read QR codes and 1D barcodes; closes after one decode. */

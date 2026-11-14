@@ -27,7 +27,19 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Documentation + fresh-clone fix (2026-11-15, latest)
+## Phone scan failure: not deployed + iPhone reader fix (2026-11-15, latest)
+- Owner report: still can't scan with the phone. **Main cause: the live site was never redeployed** after the camera fix and barcode-only labels; production (deployment 60 min old) still served the old camera code and the old QR-only labels page.
+- Also found: the zxing fallback (used where the browser has no `BarcodeDetector`, e.g. iPhone Safari) did not benefit from TRY_HARDER. Root cause in `@zxing/browser` 0.2.1: `HTMLCanvasElementLuminanceSource.rotate()` rotates the pixels but keeps the old width/height, so its rotated retry decodes garbage; and it only ever decodes the full, unzoomed frame.
+- Fix (`camera-scanner.tsx`): our own frame loop for the zxing path, cycling three views per tick — full frame, the guide-box band zoomed 2×, and the frame rotated 90° (rotated correctly by us) — decoded with `reader.decodeFromCanvas`.
+- Verified in full Chromium (has `BarcodeDetector`) on both paths: native 5/6, zxing 3/6 → 5/6 on the hard-image set; all 8 label barcodes + QR read on both paths. lint, typecheck, 28 unit, 9 e2e, build PASS. Still unverified on a physical phone.
+
+## One code per item: barcode-only labels (2026-11-15)
+- Owner decision: each item carries **one** scannable code, not a QR code plus a barcode. Chosen: **EAN-13 barcode** (matches clothing tags and manufacturer barcodes, works with any cheap 1D USB/Bluetooth scanner; phone camera reads it too).
+- `/admin/labels` shows one barcode per item; QR images (`public/qr/`) and the `qrcode` / `@types/qrcode` dev dependencies removed; `scripts/generate-qr.ts` → `scripts/generate-labels.ts`; `pnpm qr:generate` removed (use `pnpm labels:generate`). Scan box label is now "Scan barcode or enter SKU".
+- The camera still decodes QR codes, so an item that ever carries one still works.
+- Printable sheet regenerated: `../Maa-Collection-test-labels.pdf` / `.png`.
+
+## Documentation + fresh-clone fix (2026-11-15)
 - README rewritten: features, install/run guide (Node 26, pnpm 12.18 via `npm i -g`, since Corepack is no longer bundled with Node), scripts, tests, structure, deployment, docs index, troubleshooting, roadmap. `PROJECT_CONTEXT.md` status and `CLAUDE.md` stack/status brought up to date.
 - Verified the guide on a fresh clone from GitHub: install, lint, unit tests, build, `pnpm start` all OK.
 - Found and fixed: `pnpm typecheck` failed on a fresh clone (`Cannot find name 'LayoutProps'`). Next's global route types live in git-ignored `.next/types` and only appear after `dev`/`build`. The script is now `next typegen && tsc --noEmit`; verified on the fresh clone with `.next` removed.
@@ -36,7 +48,7 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 - Owner report: phone camera pointed at a barcode never read it.
 - Causes found: no resolution requested (many phones default to 640×480, too coarse for EAN-13 bars on a screen); zxing ran without TRY_HARDER (few rows, no rotation); every format enabled.
 - `camera-scanner.tsx` now: requests 1920×1080 ideal + continuous focus; uses native `BarcodeDetector` when available (Chrome Android) else zxing with formats limited to EAN-13/EAN-8/UPC-A/Code 128/QR and TRY_HARDER, 100 ms between attempts; manages the stream itself; on-screen guide box; shows which reader is active.
-- Hard-image benchmark (640×480 fake camera, zxing path): 3/6 → 5/6 (now reads tiny 1.2px/bar and sideways barcodes). All 8 label barcodes + QR still read. lint, typecheck, 28 unit, 9 e2e, build PASS. Not verified on a real phone yet; needs deploy.
+- Hard-image benchmark (640×480 fake camera): 3/6 → 5/6. **Correction (later the same day):** this run was actually on the native `BarcodeDetector` path, not zxing (the earlier "headless has no BarcodeDetector" check ran on about:blank, which is not a secure context). The zxing path was still 3/6; fixed in the next entry. All 8 label barcodes + QR still read. lint, typecheck, 28 unit, 9 e2e, build PASS. Not verified on a real phone yet; needs deploy.
 
 ## Barcode test labels (2026-11-15)
 - Owner request: scannable barcode images for the dummy items to test the phone app.
