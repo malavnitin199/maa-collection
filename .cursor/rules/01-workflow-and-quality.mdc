@@ -1,0 +1,7 @@
+---
+description: Task-by-task implementation, tests and documentation handoff
+alwaysApply: true
+---
+Work on exactly one explicitly requested task ID unless told otherwise. Before changes: inspect current files, summarize acceptance criteria, and propose a small plan. Do not mark a task complete based on assumed test results.
+For every completed task: implement relevant tests; run available lint, typecheck, tests and build as appropriate; report exactly what ran/pass/fail, changed files, and limitations. Update `docs/PROGRESS.md`. Check `docs/TASK_BACKLOG.md` only when acceptance criteria actually pass. Update `docs/DECISION_LOG.md` for approved architecture/business decisions. Never overwrite user changes without inspecting them.
+When user asks to continue, read `docs/PROJECT_CONTEXT.md`, `docs/PROGRESS.md`, and the next open task before coding.

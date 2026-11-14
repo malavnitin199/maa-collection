@@ -1,0 +1,5 @@
+---
+description: Secure backend and retail POS transaction conventions
+alwaysApply: false
+---
+Domain invariants: no cashiers receiving wholesale purchase cost, profit or supplier financial fields (server enforce). Record completed sales, payments, stock movements and returns as immutable business events with correction documents. Preserve price snapshots. All stock-changing transactions use server-side authorization, transactional database enforcement, uniqueness constraints, and idempotency keys. Distinguish draft, provisional-offline, submitted, confirmed, and conflict statuses. Never mark offline payment as verified without trusted confirmation. No naïve last-write-wins on financial or inventory transactions. Use exact integer paise / decimal monetary types; never floating-point currency. Add test cases for duplicate checkout, last-unit race, offline replay, access controls and rollback.

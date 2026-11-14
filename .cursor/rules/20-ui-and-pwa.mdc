@@ -1,0 +1,5 @@
+---
+description: Mobile-first React cashier/admin UI and PWA conventions
+alwaysApply: false
+---
+Use Next.js App Router + TypeScript with accessible responsive Tailwind UI. Keep live barcode scanning, cart, offline outbox and device interactions in client components/hooks; keep sensitive server-side operations in protected server handlers/services. Prefer business-domain feature folders and shared UI components. Camera scan is a fallback to keyboard-wedge scanners. Test actual browser/device compatibility for printer and scanner; browsers may lack Web Bluetooth or Background Sync. Persist an active cart and pending transactions in IndexedDB (Dexie); implement foreground online/on-resume sync with backoff even where Background Sync is unavailable. UI must clearly label provisional offline bills and sync conflicts. Do not add dependencies until a task needs them.

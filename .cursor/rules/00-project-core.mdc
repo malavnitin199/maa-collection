@@ -1,0 +1,8 @@
+---
+description: Core product context and scope for Maa Collection
+alwaysApply: true
+---
+This repository is **Maa Collection**, a mobile-first retail clothing inventory, POS and billing application with Owner/Admin and Cashier panels.
+Requirements source: `docs/SOURCE_PRD.pdf` (once copied in). Detailed implementation proposal: `docs/PROJECT_BLUEPRINT.md`. Short context: `docs/PROJECT_CONTEXT.md`.
+Before implementing a task, read `docs/PROGRESS.md` and the corresponding item in `docs/TASK_BACKLOG.md`. Read additional source docs when relevant. Treat the PRD as requirements and the blueprint as recommendations; distinguish unknowns explicitly.
+Do not implement unrelated features. Keep explanations compact and flag decisions that need product approval. Never expose secrets in docs or commits.
