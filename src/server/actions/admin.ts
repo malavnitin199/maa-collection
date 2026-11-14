@@ -8,7 +8,7 @@ import { STORE_ID } from '@/lib/app-config';
 import { requireAdmin } from '@/server/auth';
 import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
-import { createDesign, createProduct, stockIn, updateProduct, type ProductInput } from '@/server/services/products';
+import { createDesign, createProduct, listProducts, receiveStock, stockIn, updateProduct, type ProductInput } from '@/server/services/products';
 import { createStaff, setStaffActive, setStaffPin } from '@/server/services/staff';
 
 export type FormState = { error?: string; message?: string };
@@ -243,5 +243,53 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
   } catch (error) {
     const state = failure(error);
     return { ok: false, error: state.error ?? 'Something went wrong.' };
+  }
+}
+
+// ------------------------------------------------------- restock existing items
+
+export type RestockItem = { id: string; sku: string; barcode: string; name: string; size: string; color: string; stock: number; supplierName: string | null };
+
+/** Admin search for the restock screen: by scanned code, SKU, name or colour. */
+export async function findRestockItemsAction(term: string): Promise<RestockItem[]> {
+  await requireAdmin();
+  const query = String(term).trim().slice(0, 64);
+  if (!query) return [];
+  const rows = await listProducts(await getDb(), STORE_ID, { search: query });
+  const exact = rows.filter((p) => p.barcode === query || p.sku.toUpperCase() === query.toUpperCase());
+  return (exact.length > 0 ? exact : rows).slice(0, 10).map((p) => ({
+    id: p.id,
+    sku: p.sku,
+    barcode: p.barcode,
+    name: p.name,
+    size: p.size,
+    color: p.color,
+    stock: p.stock,
+    supplierName: p.supplierName,
+  }));
+}
+
+export type ReceiveActionResult = { ok: true; receiptId: string } | { ok: false; error: string };
+
+export async function receiveStockAction(input: {
+  operationId: string;
+  supplierId: string;
+  billNumber: string;
+  lines: { productId: string; quantity: number }[];
+}): Promise<ReceiveActionResult> {
+  const admin = await requireAdmin();
+  try {
+    const lines = (Array.isArray(input.lines) ? input.lines : []).map((l) => ({ productId: String(l.productId), quantity: Number(l.quantity) }));
+    const result = await receiveStock(await getDb(), STORE_ID, {
+      operationId: String(input.operationId).slice(0, 100),
+      supplierId: input.supplierId ? String(input.supplierId) : null,
+      billNumber: String(input.billNumber ?? ''),
+      lines,
+      staffId: admin.id,
+    });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, receiptId: result.receipt.id };
+  } catch (error) {
+    return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
   }
 }

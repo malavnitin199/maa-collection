@@ -83,7 +83,7 @@ export function ean13Svg(code: string, moduleWidth = 3): string {
     }>${value}</text>`;
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width * moduleWidth}" height="${height * moduleWidth}" viewBox="0 0 ${width} ${height}" role="img" aria-label="EAN-13 barcode ${code}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width * moduleWidth}" height="${height * moduleWidth}" viewBox="0 0 ${width} ${height}" aria-hidden="true" focusable="false">`,
     `<rect width="${width}" height="${height}" fill="#fff"/>`,
     `<g fill="#000">${bars.join('')}</g>`,
     `<g fill="#000" font-family="ui-monospace, Menlo, monospace" font-size="9">`,

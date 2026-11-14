@@ -127,3 +127,35 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await expect(page.getByTestId('details-stock')).toHaveText('2');
   await expect(page.getByTestId('item-details')).toContainText('₹1,399.00');
 });
+
+test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/stock/receive');
+  const scanBox = page.getByLabel('Scan a tag, or type SKU / name');
+  await expect(scanBox).toBeFocused();
+  // Oxford Shirt scanned three times = 3 pieces.
+  for (let i = 0; i < 3; i++) {
+    await page.keyboard.type('8905555000012', { delay: 5 });
+    await page.keyboard.press('Enter');
+    await expect(page.getByLabel('Pieces of Oxford Shirt Sky Blue 40')).toHaveValue(String(i + 1));
+  }
+  const shirtLine = page.getByTestId('restock-lines').getByRole('listitem').filter({ hasText: 'Oxford Shirt' });
+  const [, before] = (await shirtLine.innerText()).match(/now (\d+) →/) ?? [];
+
+  // Name search with several matches → pick one, then bump with +.
+  await scanBox.fill('Crew Tee');
+  await page.keyboard.press('Enter');
+  await page.getByTestId('restock-choices').getByRole('button', { name: /White · L/ }).click();
+  await page.getByRole('button', { name: 'One more Classic Crew Tee L' }).click();
+  await expect(page.getByLabel('Pieces of Classic Crew Tee White L')).toHaveValue('2');
+
+  await page.getByLabel('Supplier bill no. (optional)').fill('RS-1');
+  await page.getByRole('button', { name: 'Receive 5 pieces and print labels' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+  await expect(page.getByTestId('label-sheet').getByRole('img')).toHaveCount(5);
+  await expect(page.getByText(/bill RS-1/)).toBeVisible();
+
+  // Stock went up by exactly 3.
+  await page.goto('/admin/products?q=MAA-SH-001');
+  await expect(page.getByTestId('product-list')).toContainText(String(Number(before) + 3));
+});

@@ -48,6 +48,12 @@ async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
       <Link href={`/admin/stock/new?supplier=${supplier.id}`} className={`${primaryButton} py-3 text-center`}>
         + New items from {supplier.name}
       </Link>
+      <Link
+        href={`/admin/stock/receive?supplier=${supplier.id}`}
+        className="rounded-lg border border-emerald-600 px-5 py-3 text-center font-medium text-emerald-700 dark:text-emerald-400"
+      >
+        Receive more of existing items
+      </Link>
       <section className="flex flex-col gap-2">
         <h2 className={sectionTitle}>Deliveries</h2>
         {receipts.length === 0 ? (
