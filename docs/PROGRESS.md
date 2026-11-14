@@ -27,7 +27,15 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Owner stock workflow: suppliers, categories, sizes × colours, labels, restock, rates (2026-11-15, latest)
+## Quick add, code price, sample catalogue, salesman permission check (2026-11-15, latest)
+- Owner asked: can a salesman add prices/companies? **No** — audited all 14 admin server actions (each calls `requireAdmin`) and the `/admin` route guard; new E2E bounces a salesman from 8 admin pages and checks the counter never shows a purchase price. At the counter a salesman only sets that sale's price (≤ MRP).
+- Sample data: 5 suppliers (Shree Ganesh Textiles, Laxmi Fashion House, Royal Garments, Kalyan Silk Mills, Jaipur Prints Co.) + 5 categories (Kurti KR, Lehenga LE, Dupatta DU, Leggings LG, Night Suit NS) via idempotent `addSampleCatalog`; added to production with `pnpm db:sample`; local dev seeds them; unit tests use the plain demo seed.
+- Two prices as the owner describes them: **purchase price = code price** (admin-only, stored as cost) and **selling price** (shown), plus MRP; admin UI renamed. Optional code price on tags: `/admin/settings` code word (10 different letters = 1…9,0), print switch, decoder; migration 0002 (`stores.price_code_word`, `print_price_code`), applied to Neon.
+- **Quick add** (`/admin/stock/quick`, `createProductsBatch`): one company + category, many products with their own name/MRP/selling/purchase/pieces → one receipt → labels. Shares `insertNewProducts` with the sizes × colours flow. "+ Stock" tab opens a 3-way hub.
+- Verified: lint, typecheck, **62 unit tests**, build, **23 Playwright tests (desktop + phone)**. Live: salesman bounced from supplier/quick-add/settings, quick add lists all 5 companies and 11 categories, summary maths, settings page — no page errors. No products created in production.
+- Assumption to confirm with the owner: they wrote "QR code" but chose barcode-only labels earlier; labels remain EAN-13 barcodes.
+
+## Owner stock workflow: suppliers, categories, sizes × colours, labels, restock, rates (2026-11-15)
 - Owner request: admin-side flow for goods from a company — add the company, define categories, generate barcodes, set rates, maintain it; phone-first. Delivered in 4 deployed checkpoints.
 - Data: `suppliers`, `categories` (SKU code), `stock_receipts` (one per delivery, `operation_id` retry-safe), `products.supplier_id/category_id`; migration 0001 backfills categories from existing products (applied to Neon).
 - Screens: `/admin/suppliers` (+ detail), `/admin/categories`, `/admin/stock/new` (design in sizes × colours → SKUs + `200…` barcodes, preview, duplicate guard), `/admin/labels/print?receipt=` (one label per piece / per item), `/admin/stock/receive` (scan each piece = +1, name search), product page rebuilt (design variants, design-wide rates, history with supplier/bill), product cards with filters, phone bottom tab bar + More page, dashboard quick actions.

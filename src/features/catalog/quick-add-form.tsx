@@ -151,10 +151,26 @@ export function QuickAddForm({
               className={input}
             />
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <input aria-label={`Product ${index + 1} MRP`} inputMode="decimal" value={row.mrp} onChange={(e) => update(row.key, { mrp: e.target.value })} placeholder="MRP ₹" className={input} />
-              <input aria-label={`Product ${index + 1} selling price`} inputMode="decimal" value={row.price} onChange={(e) => update(row.key, { price: e.target.value })} placeholder={row.mrp ? `Sell ₹${row.mrp}` : 'Selling ₹'} className={input} />
-              <input aria-label={`Product ${index + 1} purchase price`} inputMode="decimal" value={row.cost} onChange={(e) => update(row.key, { cost: e.target.value })} placeholder="Purchase ₹ (code)" className={input} />
-              <input aria-label={`Product ${index + 1} pieces`} inputMode="numeric" value={row.quantity} onChange={(e) => update(row.key, { quantity: e.target.value })} placeholder="Pieces" className={input} />
+              {(
+                [
+                  ['mrp', 'MRP ₹', 'MRP', 'decimal', '0'],
+                  ['price', 'Selling ₹ (shown)', 'selling price', 'decimal', row.mrp || 'same as MRP'],
+                  ['cost', 'Purchase ₹ (code)', 'purchase price', 'decimal', 'optional'],
+                  ['quantity', 'Pieces', 'pieces', 'numeric', '0'],
+                ] as const
+              ).map(([field, title, aria, mode, placeholder]) => (
+                <label key={field} className={`flex flex-col gap-0.5 text-xs font-medium ${muted}`}>
+                  {title}
+                  <input
+                    aria-label={`Product ${index + 1} ${aria}`}
+                    inputMode={mode}
+                    value={row[field]}
+                    onChange={(e) => update(row.key, { [field]: e.target.value })}
+                    placeholder={placeholder}
+                    className={`${input} text-zinc-900 dark:text-zinc-100`}
+                  />
+                </label>
+              ))}
             </div>
             {row.more ? (
               <div className="grid grid-cols-2 gap-2">

@@ -39,7 +39,10 @@ It starts as a tool for one shop (Maa Collection). The plan is to grow it into a
 | Exchange | `/pos/exchange` | Salesman, Admin | Scan the returned item → pick the original sale → scan the new item → "customer pays / give back" → confirm |
 | My sales | `/pos/my-sales` | Salesman, Admin | Own sales **today** and **this month** (Indian time), sales recorded for others, recent activity |
 | Dashboard | `/admin/dashboard` | Admin | Today / month net revenue, units, estimated profit, exchanges, sales by salesperson, stock value, low stock, latest activity |
-| New stock | `/admin/stock/new` | Admin | **New items from a supplier:** one design in sizes × colours → every combination gets its own SKU + barcode → label sheet (one label per piece) |
+| Add stock hub | `/admin/stock` | Admin | **+ Stock** tab: choose Many different products · One design in sizes × colours · More of existing items |
+| Quick add | `/admin/stock/quick` | Admin | **Same company + category, many products:** each card has name, MRP, selling price (shown), purchase price (code), pieces; Copy / Remove; one save → barcodes + labels |
+| Settings | `/admin/settings` | Admin | **Code price:** a secret 10-letter word (e.g. BLACKHORSE: B=1 … E=0); optionally print the purchase price on tags in code; decoder |
+| New design | `/admin/stock/new` | Admin | **New items from a supplier:** one design in sizes × colours → every combination gets its own SKU + barcode → label sheet (one label per piece) |
 | Restock | `/admin/stock/receive` | Admin | Scan or search existing items (scanning a tag again = +1 piece), supplier + bill no., save once → labels |
 | Suppliers | `/admin/suppliers` | Admin | Companies you buy from: contact, tap-to-call, deliveries (with labels), their products |
 | Categories | `/admin/categories` | Admin | Kurta, Saree… each with a 2–3 letter SKU code |
@@ -183,13 +186,14 @@ Never commit `.env*` files; they are git-ignored. **Don't put the production `DA
 ## Using the app
 
 1. **Set up once (admin):** **More → Suppliers → + Add supplier** (e.g. "XYZ Textiles"); check **Categories** (Kurta, Saree… with their SKU codes) and add any missing.
-2. **A delivery with new items:** tap **+ Stock** → supplier → category → design name → tap the **sizes** → add the **colours** → MRP, selling price, cost → pieces each → **Save … and print labels**. Every size/colour gets its own SKU and barcode; the label sheet has one label per piece.
-3. **More of existing items:** dashboard **Restock** (or the supplier page) → scan each piece or search by name → **Receive … pieces and print labels**.
-4. **Change prices:** open any product → **Rates for the whole design** → applies to all its sizes/colours (past sales keep their prices). A single item with a manufacturer barcode: **More → Add a single product**.
-5. **Sell:** log in as a salesman → scan the label → **Sell this item** → price → **Credit sale to** (yourself or a colleague) → **Record sale**.
-6. **Exchange:** **Exchange** → scan the returned item → **Choose** the original sale → scan the new item → check "Customer pays / Give back" → **Confirm exchange**.
-7. **Track:** salesmen open **My sales**; the admin opens **Dashboard** and **Activity**.
-8. **Staff:** **Staff** → add a person with a PIN, change a PIN, or deactivate someone who left.
+2. **Several different products from one company:** **+ Stock → Many different products** → company → category → one card per product (name, MRP, selling price, purchase price, pieces; **Copy** for similar items) → **Save … and print labels**. Hand the labels to the seller; scanning one shows the selling price, and the purchase price never appears at the counter.
+3. **One design in many sizes/colours:** **+ Stock → One design in sizes × colours** → supplier → category → design name → tap the **sizes** → add the **colours** → MRP, selling price, cost → pieces each → **Save … and print labels**. Every size/colour gets its own SKU and barcode; the label sheet has one label per piece.
+4. **More of existing items:** **+ Stock → More of existing items** (or dashboard **Restock**) (or the supplier page) → scan each piece or search by name → **Receive … pieces and print labels**.
+5. **Change prices:** open any product → **Rates for the whole design** → applies to all its sizes/colours (past sales keep their prices). A single item with a manufacturer barcode: **More → Add a single product**.
+6. **Sell:** log in as a salesman → scan the label → **Sell this item** → price → **Credit sale to** (yourself or a colleague) → **Record sale**.
+7. **Exchange:** **Exchange** → scan the returned item → **Choose** the original sale → scan the new item → check "Customer pays / Give back" → **Confirm exchange**.
+8. **Track:** salesmen open **My sales**; the admin opens **Dashboard** and **Activity**.
+9. **Staff:** **Staff** → add a person with a PIN, change a PIN, or deactivate someone who left.
 
 ### Demo catalog (seeded)
 
@@ -232,6 +236,7 @@ Full guide: **[`docs/SCANNING.md`](docs/SCANNING.md)**.
 | `pnpm test:e2e` | End-to-end tests (Playwright). Starts a dev server with an in-memory database, or reuses one already on port 3000 |
 | `pnpm db:generate` | Create a SQL migration in `drizzle/` after changing `src/db/schema` |
 | `pnpm db:migrate` | Apply migrations to `DATABASE_URL` |
+| `pnpm db:sample` | Add the 5 sample companies and 5 extra categories to a database (skips existing ones) |
 | `pnpm db:seed` | Seed an **empty** Postgres with the shop, staff and demo products; prints one random PIN per person |
 
 ---
