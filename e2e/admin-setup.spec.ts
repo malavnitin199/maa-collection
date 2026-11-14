@@ -55,7 +55,7 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
   await expect(page).toHaveURL(/\/admin\/stock$/);
   await expect(page.getByRole('link', { name: /Many different products/ })).toBeVisible();
   await tabs.getByRole('link', { name: 'More' }).click();
-  await page.getByRole('link', { name: /^Suppliers/ }).click();
+  await page.getByRole('link', { name: /^Companies/ }).click();
   await expect(page).toHaveURL(/\/admin\/suppliers$/);
   await tabs.getByRole('link', { name: 'More' }).click();
   await page.getByRole('link', { name: /Categories/ }).click();
@@ -257,4 +257,37 @@ test('quick add: one company + category, several products with their own prices 
   await expect(details).not.toContainText('₹1,400.00');
   await page.getByRole('button', { name: 'Sell this item' }).click();
   await expect(page.getByLabel(/Sale price/)).toHaveValue('2200');
+});
+
+test('owner makes a salesman a catalog person; they get catalog screens but not costs, staff or dashboard', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/staff');
+  const nitin = page.getByTestId('staff-list').getByRole('listitem').filter({ hasText: /^Nitin/ });
+  await nitin.getByText(/^Permissions:/).click();
+  const form = page.getByRole('form', { name: 'Permissions for Nitin' });
+  await form.getByLabel('Catalog for Nitin').check();
+  await form.getByLabel('Prices for Nitin').check();
+  await form.getByLabel('Stock for Nitin').check();
+  await form.getByLabel('Purchase price for Nitin').uncheck();
+  await form.getByRole('button', { name: 'Save permissions' }).click();
+  await expect(form.getByRole('status')).toHaveText('Saved: catalog, prices, stock.');
+
+  await page.goto('/login');
+  await page.getByText('Nitin', { exact: true }).click();
+  await page.getByLabel('PIN').fill(PIN);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  await page.goto('/admin/more');
+  await expect(page.getByRole('link', { name: /Tag old stock/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Staff & permissions/ })).toHaveCount(0);
+  await page.goto('/admin/categories');
+  await expect(page.getByRole('heading', { name: 'Categories', level: 1 })).toBeVisible();
+  // No purchase (code) price field without the "Purchase price" right.
+  await page.goto('/admin/stock/quick');
+  await expect(page.getByLabel('Product 1 MRP')).toBeVisible();
+  await expect(page.getByLabel('Product 1 purchase price')).toHaveCount(0);
+  for (const path of ['/admin/dashboard', '/admin/staff', '/admin/settings', '/admin/activity']) {
+    await page.goto(path);
+    await expect(page, `${path} is owner-only`).toHaveURL(/\/pos$/);
+  }
 });

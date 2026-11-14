@@ -39,10 +39,13 @@ export function DesignForm({
   suppliers,
   categories,
   initialSupplierId,
+  showCost = true,
 }: {
   suppliers: Option[];
   categories: CategoryOption[];
   initialSupplierId?: string;
+  /** Purchase (code) price field — only with the "costs" right. */
+  showCost?: boolean;
 }) {
   const router = useRouter();
   const [supplierId, setSupplierId] = useState(initialSupplierId ?? '');
@@ -287,10 +290,12 @@ export function DesignForm({
             Selling price (₹)
             <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={mrp || 'same as MRP'} className={input} />
           </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Purchase price (₹)
-            <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="code price, optional" className={input} />
-          </label>
+          {showCost && (
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Purchase price (₹)
+              <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="code price, optional" className={input} />
+            </label>
+          )}
           <label className="flex flex-col gap-1 text-sm font-medium">
             Pieces each
             <input inputMode="numeric" value={quantityEach} onChange={(e) => setQuantityEach(e.target.value)} className={input} />

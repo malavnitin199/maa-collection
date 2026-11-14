@@ -5,12 +5,14 @@ import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { STORE_ID } from '@/lib/app-config';
-import { requireAdmin } from '@/server/auth';
+import { can } from '@/lib/permissions';
+import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
 import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   createDesign,
   createProductsBatch,
+  getProduct,
   createProduct,
   listProducts,
   receiveStock,
@@ -20,7 +22,7 @@ import {
   type ProductInput,
 } from '@/server/services/products';
 import { updatePriceCode } from '@/server/services/settings';
-import { createStaff, setStaffActive, setStaffPin } from '@/server/services/staff';
+import { createStaff, setStaffActive, setStaffPermissions, setStaffPin } from '@/server/services/staff';
 
 export type FormState = { error?: string; message?: string };
 
@@ -52,6 +54,11 @@ function productInput(formData: FormData): ProductInput & { categoryId: string; 
   };
 }
 
+/** Drops the purchase price for people without the "costs" right. */
+function withoutCost<T extends { costPaise: number | null }>(input: T, me: CurrentStaff): T {
+  return can(me, 'costs') ? input : { ...input, costPaise: null };
+}
+
 function failure(error: unknown): FormState {
   if (error instanceof DomainError) return { error: error.message };
   console.error(error);
@@ -59,13 +66,13 @@ function failure(error: unknown): FormState {
 }
 
 export async function createProductAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const admin = await requireAdmin();
+  const admin = await requirePermission('catalog');
   let createdId: string;
   try {
     const openingRaw = text(formData, 'openingStock') || '0';
     if (!/^\d+$/.test(openingRaw)) throw new DomainError('Opening stock must be a whole number.');
     const created = await createProduct(await getDb(), STORE_ID, {
-      ...productInput(formData),
+      ...withoutCost(productInput(formData), admin),
       manufacturerBarcode: formData.get('barcodeMode') === 'manufacturer' ? text(formData, 'barcode') : null,
       openingStock: Number(openingRaw),
       createdBy: admin.id,
@@ -79,10 +86,18 @@ export async function createProductAction(_prev: FormState, formData: FormData):
 }
 
 export async function updateProductAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  const me = await requirePermission('catalog');
   try {
-    await updateProduct(await getDb(), STORE_ID, productId, {
-      ...productInput(formData),
+    const db = await getDb();
+    const current = await getProduct(db, STORE_ID, productId);
+    if (!current) throw new DomainError('Product not found.');
+    const input = productInput(formData);
+    await updateProduct(db, STORE_ID, productId, {
+      ...input,
+      // Without the "prices" right the current rates stay; without "costs" the purchase price stays.
+      mrpPaise: can(me, 'prices') ? input.mrpPaise : current.mrpPaise,
+      pricePaise: can(me, 'prices') ? input.pricePaise : current.pricePaise,
+      costPaise: can(me, 'costs') ? input.costPaise : current.costPaise,
       active: formData.get('active') === 'on',
     });
   } catch (error) {
@@ -93,7 +108,7 @@ export async function updateProductAction(productId: string, _prev: FormState, f
 }
 
 export async function stockInAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  const admin = await requireAdmin();
+  const admin = await requirePermission('stock');
   try {
     const raw = text(formData, 'quantity');
     if (!/^\d+$/.test(raw)) throw new DomainError('Quantity must be a whole number.');
@@ -159,7 +174,7 @@ function supplierInput(formData: FormData): SupplierInput {
 }
 
 export async function createSupplierAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  await requirePermission('catalog');
   try {
     const created = await createSupplier(await getDb(), STORE_ID, supplierInput(formData));
     revalidatePath('/admin', 'layout');
@@ -170,7 +185,7 @@ export async function createSupplierAction(_prev: FormState, formData: FormData)
 }
 
 export async function updateSupplierAction(supplierId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  await requirePermission('catalog');
   try {
     await updateSupplier(await getDb(), STORE_ID, supplierId, { ...supplierInput(formData), active: formData.get('active') === 'on' });
     revalidatePath('/admin', 'layout');
@@ -183,7 +198,7 @@ export async function updateSupplierAction(supplierId: string, _prev: FormState,
 // --------------------------------------------------------------- categories
 
 export async function createCategoryAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  await requirePermission('catalog');
   try {
     const created = await createCategory(await getDb(), STORE_ID, { name: text(formData, 'name'), code: text(formData, 'code') });
     revalidatePath('/admin', 'layout');
@@ -194,7 +209,7 @@ export async function createCategoryAction(_prev: FormState, formData: FormData)
 }
 
 export async function updateCategoryAction(categoryId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  await requirePermission('catalog');
   try {
     await updateCategory(await getDb(), STORE_ID, categoryId, {
       name: text(formData, 'name'),
@@ -228,7 +243,7 @@ export type DesignActionInput = {
 export type DesignActionResult = { ok: true; receiptId: string; created: number } | { ok: false; error: string };
 
 export async function createDesignAction(input: DesignActionInput): Promise<DesignActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requirePermission('catalog');
   try {
     const toPaise = (raw: string, label: string, optional = false) => {
       if (!raw.trim() && optional) return null;
@@ -249,7 +264,7 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
       colors: Array.isArray(input.colors) ? input.colors.map(String) : [],
       mrpPaise,
       pricePaise: input.price.trim() ? (toPaise(input.price, 'selling price') as number) : mrpPaise,
-      costPaise: toPaise(input.cost, 'cost price', true),
+      costPaise: can(admin, 'costs') ? toPaise(input.cost, 'cost price', true) : null,
       quantityEach: Number(qty),
       billNumber: input.billNumber,
       staffId: admin.id,
@@ -268,7 +283,7 @@ export type RestockItem = { id: string; sku: string; barcode: string; name: stri
 
 /** Admin search for the restock screen: by scanned code, SKU, name or colour. */
 export async function findRestockItemsAction(term: string): Promise<RestockItem[]> {
-  await requireAdmin();
+  await requirePermission('stock');
   const query = String(term).trim().slice(0, 64);
   if (!query) return [];
   const rows = await listProducts(await getDb(), STORE_ID, { search: query });
@@ -293,7 +308,7 @@ export async function receiveStockAction(input: {
   billNumber: string;
   lines: { productId: string; quantity: number }[];
 }): Promise<ReceiveActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requirePermission('stock');
   try {
     const lines = (Array.isArray(input.lines) ? input.lines : []).map((l) => ({ productId: String(l.productId), quantity: Number(l.quantity) }));
     const result = await receiveStock(await getDb(), STORE_ID, {
@@ -311,13 +326,14 @@ export async function receiveStockAction(input: {
 }
 
 export async function updateDesignRatesAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  const me = await requirePermission('prices');
   try {
     const mrpPaise = money(formData, 'mrp', 'MRP') as number;
     const count = await updateDesignRates(await getDb(), STORE_ID, productId, {
       mrpPaise,
       pricePaise: text(formData, 'price') ? (money(formData, 'price', 'selling price') as number) : mrpPaise,
-      costPaise: money(formData, 'cost', 'cost price', { optional: true }),
+      // undefined = keep each item's purchase price (no "costs" right).
+      costPaise: can(me, 'costs') ? money(formData, 'cost', 'cost price', { optional: true }) : undefined,
     });
     revalidatePath('/admin', 'layout');
     return { message: `Rates updated for ${count} item${count === 1 ? '' : 's'}.` };
@@ -354,7 +370,7 @@ export type QuickActionInput = {
 };
 
 export async function createQuickAction(input: QuickActionInput): Promise<DesignActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requirePermission('catalog');
   try {
     const rows = (Array.isArray(input.rows) ? input.rows : [])
       .filter((row) => String(row.name ?? '').trim())
@@ -365,7 +381,7 @@ export async function createQuickAction(input: QuickActionInput): Promise<Design
         const pricePaise = String(row.price ?? '').trim() ? rupeesToPaise(String(row.price)) : mrpPaise;
         if (pricePaise === null) throw new DomainError(`${label}: enter a valid selling price.`);
         const costRaw = String(row.cost ?? '').trim();
-        const costPaise = costRaw ? rupeesToPaise(costRaw) : null;
+        const costPaise = costRaw && can(admin, 'costs') ? rupeesToPaise(costRaw) : null;
         if (costRaw && costPaise === null) throw new DomainError(`${label}: enter a valid purchase price.`);
         const qty = String(row.quantity ?? '').trim() || '0';
         if (!/^\d+$/.test(qty)) throw new DomainError(`${label}: pieces must be a whole number.`);
@@ -384,5 +400,17 @@ export async function createQuickAction(input: QuickActionInput): Promise<Design
     return { ok: true, receiptId: result.receipt.id, created: result.products.length };
   } catch (error) {
     return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
+  }
+}
+
+/** Owner ticks which extra rights a salesman has. */
+export async function setStaffPermissionsAction(staffId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  try {
+    const granted = await setStaffPermissions(await getDb(), STORE_ID, staffId, formData.getAll('permissions').map(String));
+    revalidatePath('/admin', 'layout');
+    return { message: granted.length ? `Saved: ${granted.join(', ')}.` : 'Saved: counter only.' };
+  } catch (error) {
+    return failure(error);
   }
 }

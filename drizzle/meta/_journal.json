@@ -22,6 +22,13 @@
       "when": 1794698422858,
       "tag": "0002_store_price_code",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794699296998,
+      "tag": "0003_staff_permissions",
+      "breakpoints": true
     }
   ]
 }

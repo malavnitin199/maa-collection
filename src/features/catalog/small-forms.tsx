@@ -111,15 +111,17 @@ export function DesignRatesForm({
   action,
   initial,
   count,
+  showCost = true,
 }: {
   action: Action;
   initial: { mrp: string; price: string; cost: string };
   count: number;
+  showCost?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${showCost ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <label className="flex flex-col gap-1 text-sm font-medium">
           MRP (₹)
           <input name="mrp" inputMode="decimal" required defaultValue={initial.mrp} className={input} />
@@ -128,15 +130,61 @@ export function DesignRatesForm({
           Price (₹)
           <input name="price" inputMode="decimal" defaultValue={initial.price} className={input} />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Purchase (₹)
-          <input name="cost" inputMode="decimal" defaultValue={initial.cost} placeholder="—" className={input} />
-        </label>
+        {showCost && (
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Purchase (₹)
+            <input name="cost" inputMode="decimal" defaultValue={initial.cost} placeholder="—" className={input} />
+          </label>
+        )}
       </div>
       <Feedback state={state} />
       <button type="submit" disabled={pending} className={primaryButton}>
         {pending ? 'Saving…' : `Apply to all ${count} size${count === 1 ? '' : 's'}/colour${count === 1 ? '' : 's'}`}
       </button>
+    </form>
+  );
+}
+
+export function PermissionsForm({
+  action,
+  granted,
+  name,
+  options,
+}: {
+  action: Action;
+  granted: string[];
+  name: string;
+  options: { value: string; label: string; description: string }[];
+}) {
+  const [state, formAction, pending] = useActionState(action, {});
+  return (
+    <form action={formAction} className="flex flex-col gap-2" aria-label={`Permissions for ${name}`}>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-medium">What may {name} do besides selling?</legend>
+        {options.map((option) => (
+          <label key={option.value} className="flex items-start gap-3 rounded-lg border border-zinc-200 p-2 text-sm dark:border-zinc-800">
+            <input
+              type="checkbox"
+              name="permissions"
+              value={option.value}
+              defaultChecked={granted.includes(option.value)}
+              aria-label={`${option.label} for ${name}`}
+              className="mt-0.5 h-5 w-5 shrink-0"
+            />
+            <span>
+              <span className="font-medium">{option.label}</span>
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">{option.description}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      <div className="flex items-center gap-3">
+        <button type="submit" disabled={pending} className={`${primaryButton} py-1.5`}>
+          {pending ? 'Saving…' : 'Save permissions'}
+        </button>
+        {state.error && <span className="text-xs text-red-600">{state.error}</span>}
+        {state.message && <span role="status" className="text-xs text-emerald-700">{state.message}</span>}
+      </div>
     </form>
   );
 }

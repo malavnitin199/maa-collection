@@ -739,14 +739,18 @@ export async function updateDesignRates(
   db: Db,
   storeId: string,
   productId: string,
-  rates: { mrpPaise: number; pricePaise: number; costPaise: number | null },
+  rates: { mrpPaise: number; pricePaise: number; costPaise: number | null | undefined },
 ): Promise<number> {
-  validatePrices(rates);
+  validatePrices({ ...rates, costPaise: rates.costPaise ?? null });
   const ids = (await listDesignVariants(db, storeId, productId)).map((p) => p.id);
   if (ids.length === 0) throw new DomainError('Product not found.');
   const updated = await db
     .update(products)
-    .set({ mrpPaise: rates.mrpPaise, pricePaise: rates.pricePaise, costPaise: rates.costPaise })
+    .set({
+      mrpPaise: rates.mrpPaise,
+      pricePaise: rates.pricePaise,
+      ...(rates.costPaise !== undefined ? { costPaise: rates.costPaise } : {}),
+    })
     .where(and(eq(products.storeId, storeId), inArray(products.id, ids)))
     .returning({ id: products.id });
   return updated.length;

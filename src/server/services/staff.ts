@@ -1,11 +1,12 @@
 import { and, asc, eq } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { staff, type Staff } from '@/db/schema';
+import { cleanPermissions } from '@/lib/permissions';
 import { hashPin, isValidPin, verifyPin } from '@/server/security/pin';
 import { DomainError, isUniqueViolation } from './errors';
 
-export type StaffSummary = Pick<Staff, 'id' | 'name' | 'role' | 'active'>;
-const summaryColumns = { id: staff.id, name: staff.name, role: staff.role, active: staff.active };
+export type StaffSummary = Pick<Staff, 'id' | 'name' | 'role' | 'active' | 'permissions'>;
+const summaryColumns = { id: staff.id, name: staff.name, role: staff.role, active: staff.active, permissions: staff.permissions };
 
 export async function listStaff(db: Db, storeId: string, { activeOnly = false } = {}): Promise<StaffSummary[]> {
   return db
@@ -23,7 +24,7 @@ export async function verifyLogin(db: Db, storeId: string, staffId: string, pin:
     .where(and(eq(staff.storeId, storeId), eq(staff.id, staffId), eq(staff.active, true)))
     .limit(1);
   if (!person || !verifyPin(pin, person.pinHash)) return null;
-  return { id: person.id, name: person.name, role: person.role, active: person.active };
+  return { id: person.id, name: person.name, role: person.role, active: person.active, permissions: person.permissions };
 }
 
 export async function createStaff(
@@ -77,4 +78,16 @@ export async function setStaffActive(
     .update(staff)
     .set({ active })
     .where(and(eq(staff.storeId, storeId), eq(staff.id, staffId)));
+}
+
+/** Owner sets which extra rights a salesman has (catalog, prices, stock, costs). */
+export async function setStaffPermissions(db: Db, storeId: string, staffId: string, permissions: readonly string[]): Promise<string[]> {
+  const cleaned = cleanPermissions(permissions);
+  const [updated] = await db
+    .update(staff)
+    .set({ permissions: cleaned })
+    .where(and(eq(staff.storeId, storeId), eq(staff.id, staffId)))
+    .returning({ permissions: staff.permissions, role: staff.role });
+  if (!updated) throw new DomainError('Staff member not found.');
+  return updated.permissions;
 }

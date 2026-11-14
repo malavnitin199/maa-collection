@@ -4,14 +4,14 @@ import { card, muted, sectionTitle } from '@/components/ui/styles';
 import { SupplierForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import { createSupplierAction } from '@/server/actions/admin';
-import { requireAdmin } from '@/server/auth';
+import { requirePermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listSuppliers } from '@/server/services/catalog';
 
 const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' });
 
 async function SupplierList() {
-  await requireAdmin();
+  await requirePermission('catalog');
   const rows = await listSuppliers(await requestDb(), STORE_ID);
   if (rows.length === 0) {
     return <p className={`text-sm ${muted}`}>No suppliers yet. Add the first company you buy from above.</p>;

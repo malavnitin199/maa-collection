@@ -2,12 +2,12 @@ import { Suspense } from 'react';
 import { muted } from '@/components/ui/styles';
 import { RestockForm } from '@/features/catalog/restock-form';
 import { STORE_ID } from '@/lib/app-config';
-import { requireAdmin } from '@/server/auth';
+import { requirePermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listSuppliers } from '@/server/services/catalog';
 
 async function Receive({ searchParams }: { searchParams: Promise<{ supplier?: string }> }) {
-  await requireAdmin();
+  await requirePermission('stock');
   const [{ supplier }, db] = await Promise.all([searchParams, requestDb()]);
   const rows = await listSuppliers(db, STORE_ID, { activeOnly: true });
   return (

@@ -24,9 +24,10 @@ function isActive(pathname: string, href: string) {
 }
 
 /** Phone navigation: fixed tab bar at the bottom of the screen (hidden on larger screens). */
-export function BottomNav({ role }: { role: 'admin' | 'salesman' }) {
+export function BottomNav({ role, catalogAccess = false }: { role: 'admin' | 'salesman'; catalogAccess?: boolean }) {
   const pathname = usePathname();
-  const tabs = role === 'admin' ? ADMIN_TABS : SALES_TABS;
+  // A salesman the owner made a catalog/stock person gets a Catalog tab (the filtered menu).
+  const tabs = role === 'admin' ? ADMIN_TABS : catalogAccess ? [...SALES_TABS, { href: '/admin/more', label: 'Catalog', icon: '▦' }] : SALES_TABS;
   return (
     <nav
       aria-label="Main"

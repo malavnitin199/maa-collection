@@ -15,7 +15,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   if (!pin) return { error: 'Enter your PIN.' };
   const person = await verifyLogin(await getDb(), STORE_ID, staffId, pin);
   if (!person) return { error: 'Wrong PIN. Try again.' };
-  await startSession({ id: person.id, name: person.name, role: person.role });
+  await startSession({ id: person.id, name: person.name, role: person.role, permissions: person.permissions });
   redirect(person.role === 'admin' ? '/admin/dashboard' : '/pos');
 }
 

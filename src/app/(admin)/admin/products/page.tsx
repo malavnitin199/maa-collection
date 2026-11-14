@@ -3,7 +3,8 @@ import { Suspense } from 'react';
 import { card, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
-import { requireAdmin } from '@/server/auth';
+import { can } from '@/lib/permissions';
+import { requireAnyPermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 import { listProducts } from '@/server/services/products';
@@ -12,7 +13,7 @@ type Search = { q?: string; supplier?: string; category?: string };
 const uuid = (v?: string) => (v && /^[0-9a-f-]{36}$/i.test(v) ? v : undefined);
 
 async function ProductList({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireAdmin();
+  const me = await requireAnyPermission(['catalog', 'prices', 'stock']);
   const params = await searchParams;
   const q = params.q ?? '';
   const supplierId = uuid(params.supplier);
@@ -69,7 +70,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
                 </span>
                 <span className="block text-xs">
                   {formatPaise(p.pricePaise)} <span className={muted}>· MRP {formatPaise(p.mrpPaise)}</span>
-                  {p.costPaise !== null && <span className={muted}> · purchase {formatPaise(p.costPaise)}</span>}
+                  {can(me, 'costs') && p.costPaise !== null && <span className={muted}> · purchase {formatPaise(p.costPaise)}</span>}
                 </span>
               </span>
               <span
@@ -94,8 +95,8 @@ export default function ProductsPage(props: PageProps<'/admin/products'>) {
     <main className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Products</h1>
-        <Link href="/admin/products/new" className={primaryButton}>
-          + Add product
+        <Link href="/admin/stock" className={primaryButton}>
+          + Add stock
         </Link>
       </div>
       <Suspense fallback={<p className="text-sm text-zinc-500">Loading products…</p>}>

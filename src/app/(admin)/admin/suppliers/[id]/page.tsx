@@ -6,7 +6,8 @@ import { SupplierForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { updateSupplierAction } from '@/server/actions/admin';
-import { requireAdmin } from '@/server/auth';
+import { can } from '@/lib/permissions';
+import { requirePermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { getSupplier, listReceipts } from '@/server/services/catalog';
 import { listProducts } from '@/server/services/products';
@@ -14,7 +15,7 @@ import { listProducts } from '@/server/services/products';
 const time = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
 async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const me = await requirePermission('catalog');
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = await requestDb();
@@ -72,7 +73,7 @@ async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
                   {time.format(r.createdAt)}
                   {r.billNumber && ` · bill ${r.billNumber}`}
                   <span className={`block text-xs ${muted}`}>
-                    {r.lines} items · {r.units} pcs · purchase {formatPaise(r.costValuePaise)} · by {r.staffName}
+                    {r.lines} items · {r.units} pcs{can(me, 'costs') && ` · purchase ${formatPaise(r.costValuePaise)}`} · by {r.staffName}
                   </span>
                 </span>
                 <Link href={`/admin/labels/print?receipt=${r.id}`} className={`shrink-0 ${link}`}>

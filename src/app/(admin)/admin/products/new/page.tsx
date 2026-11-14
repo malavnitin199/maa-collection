@@ -5,11 +5,12 @@ import { requestDb } from '@/server/request-db';
 import { ProductForm } from '@/features/catalog/product-form';
 import { STORE_ID } from '@/lib/app-config';
 import { createProductAction } from '@/server/actions/admin';
-import { requireAdmin } from '@/server/auth';
+import { can } from '@/lib/permissions';
+import { requirePermission } from '@/server/auth';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 
 async function NewProduct() {
-  await requireAdmin();
+  const me = await requirePermission('catalog');
   const db = await requestDb();
   const [categoryRows, supplierRows] = await Promise.all([
     listCategories(db, STORE_ID, { activeOnly: true }),
@@ -21,6 +22,7 @@ async function NewProduct() {
       action={createProductAction}
       categories={categoryRows.map(({ id, name, code }) => ({ id, name, code }))}
       suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
+      showCost={can(me, 'costs')}
     />
   );
 }

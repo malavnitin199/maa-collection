@@ -10,7 +10,7 @@ import { recordExchange, findReturnableSales } from './exchanges';
 import { createProduct, findProductByCode, stockIn, toCounterProduct } from './products';
 import { shopDashboard, staffDashboard } from './reports';
 import { recordSale } from './sales';
-import { createStaff, listStaff, setStaffActive, verifyLogin } from './staff';
+import { createStaff, listStaff, setStaffActive, setStaffPermissions, verifyLogin } from './staff';
 
 let db: Db;
 let people: Record<string, string>;
@@ -37,6 +37,12 @@ describe('seed and staff', () => {
   it('logs in with the right PIN only', async () => {
     expect((await verifyLogin(db, STORE_ID, people.Vishal, DEV_PIN))?.name).toBe('Vishal');
     expect(await verifyLogin(db, STORE_ID, people.Vishal, '0000')).toBeNull();
+  });
+
+  it('owner grants permissions; unknown names are dropped; login returns them', async () => {
+    expect(await setStaffPermissions(db, STORE_ID, people.Nitin, ['catalog', 'costs', 'root', 'catalog'])).toEqual(['catalog', 'costs']);
+    expect((await verifyLogin(db, STORE_ID, people.Nitin, DEV_PIN))?.permissions).toEqual(['catalog', 'costs']);
+    expect(await setStaffPermissions(db, STORE_ID, people.Nitin, [])).toEqual([]);
   });
 
   it('blocks deactivating the last admin, and inactive staff cannot log in', async () => {

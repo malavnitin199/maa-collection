@@ -18,10 +18,13 @@ export function QuickAddForm({
   suppliers,
   categories,
   initialSupplierId,
+  showCost = true,
 }: {
   suppliers: Option[];
   categories: (Option & { code: string })[];
   initialSupplierId?: string;
+  /** Purchase (code) price field — only with the "costs" right. */
+  showCost?: boolean;
 }) {
   const router = useRouter();
   const [supplierId, setSupplierId] = useState(initialSupplierId ?? '');
@@ -155,7 +158,7 @@ export function QuickAddForm({
                 [
                   ['mrp', 'MRP ₹', 'MRP', 'decimal', '0'],
                   ['price', 'Selling ₹ (shown)', 'selling price', 'decimal', row.mrp || 'same as MRP'],
-                  ['cost', 'Purchase ₹ (code)', 'purchase price', 'decimal', 'optional'],
+                  ...(showCost ? ([['cost', 'Purchase ₹ (code)', 'purchase price', 'decimal', 'optional']] as const) : []),
                   ['quantity', 'Pieces', 'pieces', 'numeric', '0'],
                 ] as const
               ).map(([field, title, aria, mode, placeholder]) => (

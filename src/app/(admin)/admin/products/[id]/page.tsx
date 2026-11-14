@@ -9,7 +9,8 @@ import { DesignRatesForm, StockInForm } from '@/features/catalog/small-forms';
 import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { stockInAction, updateDesignRatesAction, updateProductAction } from '@/server/actions/admin';
-import { requireAdmin } from '@/server/auth';
+import { can } from '@/lib/permissions';
+import { requireAnyPermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 import { getProduct, listDesignVariants, listMovements } from '@/server/services/products';
@@ -26,7 +27,7 @@ const time = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 
 const rupees = (paise: number | null) => (paise === null ? '' : (paise / 100).toString());
 
 async function ProductDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
-  await requireAdmin();
+  const me = await requireAnyPermission(['catalog', 'prices', 'stock']);
   const [{ id }, { created }] = await Promise.all([params, searchParams]);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = await requestDb();
@@ -73,19 +74,23 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
           )}
           <p className="text-sm">
             {formatPaise(product.pricePaise)} <span className={muted}>· MRP {formatPaise(product.mrpPaise)}</span>
-            {product.costPaise !== null && <span className={muted}> · purchase {formatPaise(product.costPaise)}</span>}
+            {can(me, 'costs') && product.costPaise !== null && (
+              <span className={muted}> · purchase {formatPaise(product.costPaise)}</span>
+            )}
           </p>
           <p data-testid="product-stock" className="text-lg font-semibold">
             {product.stock} in stock
           </p>
           <div className="mt-1 flex flex-wrap gap-2">
             <PrintButton label="Print label" />
+            {can(me, 'stock') && (
             <Link
               href={`/admin/stock/receive${supplier ? `?supplier=${supplier.id}` : ''}`}
               className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
             >
               Restock
             </Link>
+            )}
           </div>
         </div>
       </div>
@@ -120,21 +125,27 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
         </section>
       )}
 
+      {can(me, 'prices') && (
       <section className={`${card} flex flex-col gap-3 print:hidden`}>
         <h2 className={sectionTitle}>Rates{variants.length > 1 ? ' for the whole design' : ''}</h2>
         <DesignRatesForm
           action={updateDesignRatesAction.bind(null, product.id)}
           count={variants.length}
-          initial={{ mrp: rupees(product.mrpPaise), price: rupees(product.pricePaise), cost: rupees(product.costPaise) }}
+          showCost={can(me, 'costs')}
+          initial={{ mrp: rupees(product.mrpPaise), price: rupees(product.pricePaise), cost: can(me, 'costs') ? rupees(product.costPaise) : '' }}
         />
         <p className={`text-xs ${muted}`}>Past sales keep the prices they were sold at.</p>
       </section>
+      )}
 
-      <section className={`${card} flex flex-col gap-3 print:hidden`}>
-        <h2 className={sectionTitle}>Receive stock of this item</h2>
-        <StockInForm action={stockInAction.bind(null, product.id)} />
-      </section>
+      {can(me, 'stock') && (
+        <section className={`${card} flex flex-col gap-3 print:hidden`}>
+          <h2 className={sectionTitle}>Receive stock of this item</h2>
+          <StockInForm action={stockInAction.bind(null, product.id)} />
+        </section>
+      )}
 
+      {can(me, 'catalog') && (
       <details className={`${card} print:hidden`}>
         <summary className="cursor-pointer font-medium">Edit details (name, size, colour, category, supplier)</summary>
         <div className="mt-3">
@@ -152,12 +163,15 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
               color: product.color,
               mrp: rupees(product.mrpPaise),
               price: rupees(product.pricePaise),
-              cost: rupees(product.costPaise),
+              cost: can(me, 'costs') ? rupees(product.costPaise) : '',
               active: product.active,
             }}
+            showCost={can(me, 'costs')}
           />
+          {!can(me, 'prices') && <p className={`mt-2 text-xs ${muted}`}>Price changes here are ignored: ask the owner for the &ldquo;Prices&rdquo; right.</p>}
         </div>
       </details>
+      )}
 
       <section className="flex flex-col gap-2 print:hidden">
         <h2 className={sectionTitle}>Stock history</h2>

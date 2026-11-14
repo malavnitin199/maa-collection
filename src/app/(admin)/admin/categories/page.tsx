@@ -4,12 +4,12 @@ import { card, link, muted, sectionTitle } from '@/components/ui/styles';
 import { CategoryForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import { createCategoryAction, updateCategoryAction } from '@/server/actions/admin';
-import { requireAdmin } from '@/server/auth';
+import { requirePermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories } from '@/server/services/catalog';
 
 async function CategoryList() {
-  await requireAdmin();
+  await requirePermission('catalog');
   const rows = await listCategories(await requestDb(), STORE_ID);
   return (
     <ul data-testid="category-list" className="flex flex-col gap-2">

@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { requestDb } from '@/server/request-db';
 import { staff } from '@/db/schema';
 import { STORE_ID } from '@/lib/app-config';
+import { can, canAny, type Permission } from '@/lib/permissions';
 import {
   SESSION_COOKIE,
   SESSION_TTL_SECONDS,
@@ -14,7 +15,7 @@ import {
   type Role,
 } from './security/session';
 
-export type CurrentStaff = { id: string; name: string; role: Role };
+export type CurrentStaff = { id: string; name: string; role: Role; permissions: string[] };
 
 /** The logged-in staff member, re-checked against the database (still active). Cached per request. */
 export const getCurrentStaff = cache(async function getCurrentStaff(): Promise<CurrentStaff | null> {
@@ -24,7 +25,7 @@ export const getCurrentStaff = cache(async function getCurrentStaff(): Promise<C
   const session = verifySession(token, sessionSecret());
   if (!session) return null;
   const [person] = await db
-    .select({ id: staff.id, name: staff.name, role: staff.role })
+    .select({ id: staff.id, name: staff.name, role: staff.role, permissions: staff.permissions })
     .from(staff)
     .where(and(eq(staff.storeId, STORE_ID), eq(staff.id, session.sid), eq(staff.active, true)))
     .limit(1);
@@ -42,6 +43,20 @@ export async function requireStaff(): Promise<CurrentStaff> {
 export async function requireAdmin(): Promise<CurrentStaff> {
   const current = await requireStaff();
   if (current.role !== 'admin') redirect('/pos');
+  return current;
+}
+
+/** Admin, or a salesman the owner granted `permission`; otherwise back to the counter. */
+export async function requirePermission(permission: Permission): Promise<CurrentStaff> {
+  const current = await requireStaff();
+  if (!can(current, permission)) redirect('/pos');
+  return current;
+}
+
+/** Admin, or a salesman with at least one of `permissions`. */
+export async function requireAnyPermission(permissions: readonly Permission[]): Promise<CurrentStaff> {
+  const current = await requireStaff();
+  if (!canAny(current, permissions)) redirect('/pos');
   return current;
 }
 

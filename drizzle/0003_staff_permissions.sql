@@ -1,0 +1,1 @@
+ALTER TABLE "staff" ADD COLUMN "permissions" text[] DEFAULT '{}'::text[] NOT NULL;

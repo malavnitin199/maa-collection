@@ -2,12 +2,13 @@ import { Suspense } from 'react';
 import { muted } from '@/components/ui/styles';
 import { DesignForm } from '@/features/catalog/design-form';
 import { STORE_ID } from '@/lib/app-config';
-import { requireAdmin } from '@/server/auth';
+import { can } from '@/lib/permissions';
+import { requirePermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 
 async function NewStock({ searchParams }: { searchParams: Promise<{ supplier?: string }> }) {
-  await requireAdmin();
+  const me = await requirePermission('catalog');
   const [{ supplier }, db] = await Promise.all([searchParams, requestDb()]);
   const [supplierRows, categoryRows] = await Promise.all([
     listSuppliers(db, STORE_ID, { activeOnly: true }),
@@ -18,6 +19,7 @@ async function NewStock({ searchParams }: { searchParams: Promise<{ supplier?: s
       suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
       categories={categoryRows.map(({ id, name, code }) => ({ id, name, code }))}
       initialSupplierId={supplierRows.some((s) => s.id === supplier) ? supplier : undefined}
+      showCost={can(me, 'costs')}
     />
   );
 }

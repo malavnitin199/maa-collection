@@ -4,12 +4,12 @@ import { requestDb } from '@/server/request-db';
 import { BarcodeLabel } from '@/features/catalog/barcode-label';
 import { PrintButton } from '@/features/catalog/print-button';
 import { STORE_ID } from '@/lib/app-config';
-import { requireAdmin } from '@/server/auth';
+import { requireAnyPermission } from '@/server/auth';
 import { listProducts } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
 
 async function Labels() {
-  await requireAdmin();
+  await requireAnyPermission(['catalog', 'stock']);
   const db = await requestDb();
   const [all, settings] = await Promise.all([listProducts(db, STORE_ID), getStoreSettings(db, STORE_ID)]);
   const items = all.filter((p) => p.active);

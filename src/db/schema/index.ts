@@ -34,6 +34,8 @@ export const staff = pgTable(
     storeId: text('store_id').notNull().references(() => stores.id),
     name: text('name').notNull(),
     role: text('role', { enum: ['admin', 'salesman'] }).notNull(),
+    /** Extra rights the owner grants a salesman: catalog, prices, stock, costs (admins have all). */
+    permissions: text('permissions').array().notNull().default(sql`'{}'::text[]`),
     pinHash: text('pin_hash').notNull(),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

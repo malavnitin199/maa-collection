@@ -23,6 +23,8 @@ type Props = {
   initial?: ProductFormValues;
   categories: { id: string; name: string; code: string }[];
   suppliers: { id: string; name: string }[];
+  /** Show the purchase (code) price field — only for people with the "costs" right. */
+  showCost?: boolean;
 };
 
 function Field({ label, name, defaultValue, hint, inputMode, required = true }: {
@@ -50,7 +52,7 @@ function Field({ label, name, defaultValue, hint, inputMode, required = true }: 
   );
 }
 
-export function ProductForm({ action, mode, initial, categories, suppliers }: Props) {
+export function ProductForm({ action, mode, initial, categories, suppliers, showCost = true }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const [barcodeMode, setBarcodeMode] = useState<'generate' | 'manufacturer'>('generate');
 
@@ -93,14 +95,16 @@ export function ProductForm({ action, mode, initial, categories, suppliers }: Pr
           defaultValue={initial?.price}
           hint="Prefilled at the counter; staff can bargain lower. Must be ≤ MRP."
         />
-        <Field
-          label="Purchase price / code price (₹, optional)"
-          name="cost"
-          inputMode="decimal"
-          required={false}
-          defaultValue={initial?.cost}
-          hint="What you paid. Admin only, never shown to salesmen; can print on tags as a letter code (Settings)."
-        />
+        {showCost && (
+          <Field
+            label="Purchase price / code price (₹, optional)"
+            name="cost"
+            inputMode="decimal"
+            required={false}
+            defaultValue={initial?.cost}
+            hint="What you paid. Admin only, never shown to salesmen; can print on tags as a letter code (Settings)."
+          />
+        )}
         {mode === 'new' && <Field label="Opening stock (pieces)" name="openingStock" inputMode="numeric" defaultValue="0" />}
       </div>
 

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { logoutAction } from '@/server/actions/auth';
+import { canAny } from '@/lib/permissions';
 import { getCurrentStaff } from '@/server/auth';
 import { BottomNav } from './bottom-nav';
 
@@ -23,7 +24,8 @@ const ADMIN_LINKS = [
 
 async function HeaderContent() {
   const me = await getCurrentStaff();
-  const links = me?.role === 'admin' ? [...ADMIN_LINKS, ...SALES_LINKS] : SALES_LINKS;
+  const catalogAccess = me?.role !== 'admin' && canAny(me, ['catalog', 'stock', 'prices']);
+  const links = me?.role === 'admin' ? [...ADMIN_LINKS, ...SALES_LINKS] : catalogAccess ? [...SALES_LINKS, { href: '/admin/more', label: 'Catalog' }] : SALES_LINKS;
   return (
     <>
       <div className="flex items-center justify-between gap-3">
@@ -63,7 +65,7 @@ async function HeaderContent() {
 
 async function BottomNavForUser() {
   const me = await getCurrentStaff();
-  return me ? <BottomNav role={me.role} /> : null;
+  return me ? <BottomNav role={me.role} catalogAccess={canAny(me, ['catalog', 'stock', 'prices'])} /> : null;
 }
 
 export function RoleHeader() {

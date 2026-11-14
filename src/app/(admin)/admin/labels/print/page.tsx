@@ -5,7 +5,7 @@ import { link, muted, okBox } from '@/components/ui/styles';
 import { BarcodeLabel } from '@/features/catalog/barcode-label';
 import { PrintButton } from '@/features/catalog/print-button';
 import { STORE_ID } from '@/lib/app-config';
-import { requireAdmin } from '@/server/auth';
+import { requireAnyPermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { getReceiptForLabels } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
@@ -14,7 +14,7 @@ type Search = { receipt?: string; each?: string; created?: string };
 const time = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
 async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireAdmin();
+  await requireAnyPermission(['catalog', 'stock']);
   const { receipt: receiptId, each, created } = await searchParams;
   if (!receiptId || !/^[0-9a-f-]{36}$/i.test(receiptId)) notFound();
   const db = await requestDb();
