@@ -8,6 +8,13 @@
       "when": 1794693501921,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794696447111,
+      "tag": "0001_suppliers_categories_receipts",
+      "breakpoints": true
     }
   ]
 }

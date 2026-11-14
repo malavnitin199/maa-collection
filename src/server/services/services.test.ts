@@ -77,9 +77,12 @@ describe('products and barcodes', () => {
     await expect(createProduct(db, STORE_ID, { ...base, pricePaise: 100000 })).rejects.toThrow(/above MRP/);
   });
 
-  it('stock-in adds stock with a movement', async () => {
+  it('stock-in adds stock once, even if the save is retried', async () => {
     const saree = await product('MAA-SA-001');
-    expect((await stockIn(db, STORE_ID, { productId: saree.id, quantity: 4, staffId: people.Owner })).stock).toBe(4);
+    expect((await stockIn(db, STORE_ID, { operationId: 'in-1', productId: saree.id, quantity: 4, staffId: people.Owner })).stock).toBe(4);
+    // A retried save adds nothing the second time.
+    expect((await stockIn(db, STORE_ID, { operationId: 'in-1', productId: saree.id, quantity: 4, staffId: people.Owner })).duplicate).toBe(true);
+    expect((await product('MAA-SA-001')).stock).toBe(4);
   });
 });
 

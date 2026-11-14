@@ -3,7 +3,7 @@ import { DUMMY_CATALOG } from '../features/catalog/dummy-catalog.ts';
 import { STORE_ID, STORE_NAME, STORE_TIMEZONE } from '../lib/app-config.ts';
 import { hashPin, randomPin } from '../server/security/pin.ts';
 import type { Db } from './client.ts';
-import { products, staff, stockMovements, stores } from './schema/index.ts';
+import { categories, products, staff, stockMovements, stores } from './schema/index.ts';
 
 /** Owner's staff list (plan v2, D-ST-1). The admin can add more in the app. */
 export const SEED_STAFF = [
@@ -54,6 +54,19 @@ export async function seedDemoData(
       )
       .returning();
     const owner = people.find((p) => p.role === 'admin');
+    const categoryNames = [...new Set(DUMMY_CATALOG.map((item) => item.category))];
+    const categoryRows = await tx
+      .insert(categories)
+      .values(
+        categoryNames.map((name) => ({
+          storeId: STORE_ID,
+          name,
+          // Matches the demo SKUs: T-Shirt → TS, Kurta → KU, …
+          code: (name.toUpperCase().replace(/[^A-Z]/g, '') + 'XX').slice(0, 2),
+        })),
+      )
+      .returning();
+    const categoryId = (name: string) => categoryRows.find((c) => c.name === name)?.id;
     const inserted = await tx
       .insert(products)
       .values(
@@ -64,6 +77,7 @@ export async function seedDemoData(
           name: item.design,
           brand: item.brand,
           category: item.category,
+          categoryId: categoryId(item.category),
           size: item.size,
           color: item.color,
           mrpPaise: item.mrpPaise,

@@ -37,6 +37,40 @@ export const staff = pgTable(
   (t) => [uniqueIndex('staff_store_name_uq').on(t.storeId, t.name)],
 );
 
+/** Companies the shop buys from (e.g. "XYZ Textiles"). */
+export const suppliers = pgTable(
+  'suppliers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    name: text('name').notNull(),
+    contactName: text('contact_name'),
+    phone: text('phone'),
+    gstin: text('gstin'),
+    notes: text('notes'),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('suppliers_store_name_uq').on(t.storeId, t.name)],
+);
+
+/** Shop-defined categories; `code` (2–3 letters) goes into generated SKUs. */
+export const categories = pgTable(
+  'categories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    name: text('name').notNull(),
+    code: text('code').notNull(),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('categories_store_name_uq').on(t.storeId, t.name),
+    uniqueIndex('categories_store_code_uq').on(t.storeId, t.code),
+  ],
+);
+
 export const products = pgTable(
   'products',
   {
@@ -46,7 +80,10 @@ export const products = pgTable(
     barcode: text('barcode').notNull(),
     name: text('name').notNull(),
     brand: text('brand').notNull(),
+    /** Category name snapshot (display/search); categoryId links to `categories`. */
     category: text('category').notNull(),
+    categoryId: uuid('category_id').references(() => categories.id),
+    supplierId: uuid('supplier_id').references(() => suppliers.id),
     size: text('size').notNull(),
     color: text('color').notNull(),
     mrpPaise: integer('mrp_paise').notNull(),
@@ -64,6 +101,29 @@ export const products = pgTable(
     uniqueIndex('products_store_barcode_uq').on(t.storeId, t.barcode),
     check('products_stock_nonnegative', sql`${t.stock} >= 0`),
     check('products_price_le_mrp', sql`${t.pricePaise} > 0 AND ${t.pricePaise} <= ${t.mrpPaise}`),
+  ],
+);
+
+/**
+ * One stock arrival (purchase entry): who it came from, their bill number, who
+ * entered it. Its lines are the stock_movements with ref_id = receipt id.
+ * operation_id makes a retried "Save" add the stock only once.
+ */
+export const stockReceipts = pgTable(
+  'stock_receipts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    operationId: text('operation_id').notNull(),
+    supplierId: uuid('supplier_id').references(() => suppliers.id),
+    billNumber: text('bill_number'),
+    note: text('note'),
+    staffId: uuid('staff_id').notNull().references(() => staff.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('stock_receipts_store_operation_uq').on(t.storeId, t.operationId),
+    index('stock_receipts_supplier_idx').on(t.supplierId, t.createdAt),
   ],
 );
 
@@ -156,6 +216,9 @@ export const exchanges = pgTable(
 );
 
 export type Staff = typeof staff.$inferSelect;
+export type Supplier = typeof suppliers.$inferSelect;
+export type Category = typeof categories.$inferSelect;
+export type StockReceipt = typeof stockReceipts.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Sale = typeof sales.$inferSelect;
 export type Exchange = typeof exchanges.$inferSelect;

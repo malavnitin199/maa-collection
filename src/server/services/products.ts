@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, ilike, like, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
-import { products, staff, stockMovements, type Product } from '@/db/schema';
+import { categories, products, staff, stockMovements, stockReceipts, suppliers, type Product, type StockReceipt } from '@/db/schema';
 import { inStoreEan13, isValidEan13 } from '@/features/scanning/ean13';
 import { DomainError, isUniqueViolation } from './errors';
 
@@ -62,22 +62,36 @@ export async function getProduct(db: Db, storeId: string, id: string): Promise<P
   return row ?? null;
 }
 
-export async function listProducts(db: Db, storeId: string, search = ''): Promise<Product[]> {
+export type ProductListFilter = { search?: string; supplierId?: string; categoryId?: string };
+export type ProductListRow = Product & { supplierName: string | null };
+
+export async function listProducts(db: Db, storeId: string, filter: ProductListFilter | string = {}): Promise<ProductListRow[]> {
+  const { search = '', supplierId, categoryId } = typeof filter === 'string' ? { search: filter } : filter;
   const term = search.trim();
-  const filter = term
+  const textFilter = term
     ? or(
         ilike(products.name, `%${term}%`),
         ilike(products.sku, `%${term}%`),
         ilike(products.brand, `%${term}%`),
         ilike(products.category, `%${term}%`),
+        ilike(products.color, `%${term}%`),
         eq(products.barcode, term),
       )
     : undefined;
-  return db
-    .select()
+  const rows = await db
+    .select({ product: products, supplierName: suppliers.name })
     .from(products)
-    .where(and(eq(products.storeId, storeId), filter))
-    .orderBy(asc(products.sku));
+    .leftJoin(suppliers, eq(suppliers.id, products.supplierId))
+    .where(
+      and(
+        eq(products.storeId, storeId),
+        textFilter,
+        supplierId ? eq(products.supplierId, supplierId) : undefined,
+        categoryId ? eq(products.categoryId, categoryId) : undefined,
+      ),
+    )
+    .orderBy(asc(products.name), asc(products.color), asc(products.size));
+  return rows.map((r) => ({ ...r.product, supplierName: r.supplierName }));
 }
 
 export type ProductInput = {
@@ -91,10 +105,7 @@ export type ProductInput = {
   costPaise: number | null;
 };
 
-function validateProductInput(input: ProductInput) {
-  for (const field of ['name', 'brand', 'category', 'size', 'color'] as const) {
-    if (!input[field].trim()) throw new DomainError(`Enter the ${field === 'name' ? 'product name' : field}.`);
-  }
+function validatePrices(input: { mrpPaise: number; pricePaise: number; costPaise: number | null }) {
   if (!Number.isSafeInteger(input.mrpPaise) || input.mrpPaise <= 0) throw new DomainError('Enter a valid MRP.');
   if (!Number.isSafeInteger(input.pricePaise) || input.pricePaise <= 0) {
     throw new DomainError('Enter a valid selling price.');
@@ -105,43 +116,83 @@ function validateProductInput(input: ProductInput) {
   }
 }
 
-/** "Kurta" → "KU"; letters only, padded with X. */
-export function skuPrefix(category: string): string {
-  const letters = category.toUpperCase().replace(/[^A-Z]/g, '');
-  return `MAA-${(letters + 'XX').slice(0, 2)}-`;
+function validateProductInput(input: ProductInput) {
+  for (const field of ['name', 'brand', 'category', 'size', 'color'] as const) {
+    if (!input[field].trim()) throw new DomainError(`Enter the ${field === 'name' ? 'product name' : field}.`);
+  }
+  validatePrices(input);
 }
 
-async function nextSku(db: Db, storeId: string, category: string): Promise<string> {
-  const prefix = skuPrefix(category);
+/** SKU prefix from a category code ("KU") or, for legacy calls, a category name ("Kurta"). */
+export function skuPrefix(codeOrCategory: string): string {
+  const letters = codeOrCategory.toUpperCase().replace(/[^A-Z]/g, '');
+  const code = /^[A-Z]{2,3}$/.test(codeOrCategory.trim()) ? codeOrCategory.trim() : (letters + 'XX').slice(0, 2);
+  return `MAA-${code}-`;
+}
+
+async function highestSkuNumber(db: Db, storeId: string, prefix: string): Promise<number> {
   const rows = await db
     .select({ sku: products.sku })
     .from(products)
     .where(and(eq(products.storeId, storeId), like(products.sku, `${prefix}%`)));
-  const max = rows.reduce((highest, row) => {
+  return rows.reduce((highest, row) => {
     const n = Number(row.sku.slice(prefix.length));
     return Number.isInteger(n) && n > highest ? n : highest;
   }, 0);
-  return `${prefix}${String(max + 1).padStart(3, '0')}`;
 }
 
-async function nextInStoreBarcode(db: Db, storeId: string): Promise<string> {
+async function highestInStoreBarcode(db: Db, storeId: string): Promise<number> {
   const [row] = await db
     .select({ max: sql<string | null>`max(substring(${products.barcode} from 4 for 9))` })
     .from(products)
     .where(and(eq(products.storeId, storeId), like(products.barcode, '200%')));
-  return inStoreEan13(Number(row?.max ?? 0) + 1);
+  return Number(row?.max ?? 0);
+}
+
+async function resolveCategory(db: Db, storeId: string, categoryId: string) {
+  const [category] = await db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.storeId, storeId), eq(categories.id, categoryId), eq(categories.active, true)))
+    .limit(1);
+  if (!category) throw new DomainError('Choose an active category.');
+  return category;
+}
+
+async function resolveSupplier(db: Db, storeId: string, supplierId: string) {
+  const [supplier] = await db
+    .select()
+    .from(suppliers)
+    .where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, supplierId), eq(suppliers.active, true)))
+    .limit(1);
+  if (!supplier) throw new DomainError('Choose an active supplier.');
+  return supplier;
 }
 
 /**
- * Admin adds a product. SKU is generated; the barcode is generated (in-store
+ * Admin adds one product. SKU is generated; the barcode is generated (in-store
  * "200…" EAN-13) unless the manufacturer's barcode is given.
  */
 export async function createProduct(
   db: Db,
   storeId: string,
-  input: ProductInput & { manufacturerBarcode?: string | null; openingStock: number; createdBy: string },
+  input: ProductInput & {
+    manufacturerBarcode?: string | null;
+    openingStock: number;
+    createdBy: string;
+    categoryId?: string | null;
+    supplierId?: string | null;
+  },
 ): Promise<Product> {
-  validateProductInput(input);
+  let category = input.category;
+  let prefix = skuPrefix(input.category);
+  if (input.categoryId) {
+    const row = await resolveCategory(db, storeId, input.categoryId);
+    category = row.name;
+    prefix = skuPrefix(row.code);
+  }
+  if (input.supplierId) await resolveSupplier(db, storeId, input.supplierId);
+  validateProductInput({ ...input, category });
   if (!Number.isInteger(input.openingStock) || input.openingStock < 0) {
     throw new DomainError('Opening stock must be 0 or more.');
   }
@@ -154,15 +205,19 @@ export async function createProduct(
     try {
       return await db.transaction(async (tx) => {
         const txDb = tx as unknown as Db;
+        const sku = `${prefix}${String((await highestSkuNumber(txDb, storeId, prefix)) + 1).padStart(3, '0')}`;
+        const barcode = manual ?? inStoreEan13((await highestInStoreBarcode(txDb, storeId)) + 1);
         const [created] = await tx
           .insert(products)
           .values({
             storeId,
-            sku: await nextSku(txDb, storeId, input.category),
-            barcode: manual ?? (await nextInStoreBarcode(txDb, storeId)),
+            sku,
+            barcode,
             name: input.name.trim(),
             brand: input.brand.trim(),
-            category: input.category.trim(),
+            category,
+            categoryId: input.categoryId ?? null,
+            supplierId: input.supplierId ?? null,
             size: input.size.trim(),
             color: input.color.trim(),
             mrpPaise: input.mrpPaise,
@@ -192,19 +247,160 @@ export async function createProduct(
   throw new DomainError('Could not generate a unique SKU/barcode. Try again.');
 }
 
+/** Trims, drops blanks and case-insensitive duplicates, keeping the first spelling. */
+function cleanList(values: string[]): string[] {
+  const seen = new Set<string>();
+  return values
+    .map((v) => v.trim())
+    .filter((v) => v && !seen.has(v.toLowerCase()) && seen.add(v.toLowerCase()));
+}
+
+export type DesignInput = {
+  operationId: string;
+  supplierId: string;
+  categoryId: string;
+  name: string;
+  brand: string;
+  sizes: string[];
+  colors: string[];
+  mrpPaise: number;
+  pricePaise: number;
+  costPaise: number | null;
+  /** Pieces received per size/colour combination (0 = add to catalogue only). */
+  quantityEach: number;
+  billNumber?: string | null;
+  staffId: string;
+};
+
+export type DesignResult = { receipt: StockReceipt; products: Product[]; duplicate: boolean };
+
+/**
+ * New stock from a supplier: one design in several sizes × colours. Creates one
+ * product (SKU + in-store barcode) per combination and one stock receipt, in a
+ * single transaction. Retrying the same operationId returns the first result.
+ */
+export async function createDesign(db: Db, storeId: string, input: DesignInput): Promise<DesignResult> {
+  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
+  const existing = await findReceiptByOperation(db, storeId, input.operationId);
+  if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
+
+  const name = input.name.trim();
+  const brand = input.brand.trim();
+  if (!name) throw new DomainError('Enter the design / product name.');
+  if (!brand) throw new DomainError('Enter the brand.');
+  const sizes = cleanList(input.sizes);
+  const colors = cleanList(input.colors);
+  if (sizes.length === 0) throw new DomainError('Pick at least one size.');
+  if (colors.length === 0) throw new DomainError('Add at least one colour.');
+  if (sizes.length * colors.length > 60) throw new DomainError('Too many combinations at once (max 60). Split the entry.');
+  validatePrices(input);
+  if (!Number.isInteger(input.quantityEach) || input.quantityEach < 0 || input.quantityEach > 10_000) {
+    throw new DomainError('Pieces per size/colour must be 0 or more.');
+  }
+  const category = await resolveCategory(db, storeId, input.categoryId);
+  await resolveSupplier(db, storeId, input.supplierId);
+
+  const clash = await db
+    .select({ size: products.size, color: products.color, sku: products.sku })
+    .from(products)
+    .where(
+      and(
+        eq(products.storeId, storeId),
+        sql`lower(${products.name}) = lower(${name})`,
+        sql`lower(${products.brand}) = lower(${brand})`,
+        eq(products.categoryId, category.id),
+        inArray(sql`lower(${products.size})`, sizes.map((s) => s.toLowerCase())),
+        inArray(sql`lower(${products.color})`, colors.map((c) => c.toLowerCase())),
+      ),
+    );
+  if (clash.length > 0) {
+    const list = clash.map((c) => `${c.color} ${c.size} (${c.sku})`).join(', ');
+    throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`);
+  }
+
+  const prefix = skuPrefix(category.code);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await db.transaction(async (tx) => {
+        const txDb = tx as unknown as Db;
+        let skuNumber = await highestSkuNumber(txDb, storeId, prefix);
+        let barcodeNumber = await highestInStoreBarcode(txDb, storeId);
+        const [receipt] = await tx
+          .insert(stockReceipts)
+          .values({
+            storeId,
+            operationId: input.operationId,
+            supplierId: input.supplierId,
+            billNumber: input.billNumber?.trim() || null,
+            note: `New design: ${name}`,
+            staffId: input.staffId,
+          })
+          .returning();
+        const created = await tx
+          .insert(products)
+          .values(
+            colors.flatMap((color) =>
+              sizes.map((size) => ({
+                storeId,
+                sku: `${prefix}${String(++skuNumber).padStart(3, '0')}`,
+                barcode: inStoreEan13(++barcodeNumber),
+                name,
+                brand,
+                category: category.name,
+                categoryId: category.id,
+                supplierId: input.supplierId,
+                size,
+                color,
+                mrpPaise: input.mrpPaise,
+                pricePaise: input.pricePaise,
+                costPaise: input.costPaise,
+                stock: input.quantityEach,
+                createdBy: input.staffId,
+              })),
+            ),
+          )
+          .returning();
+        // One movement per product (0 when only cataloguing) links each product to this receipt.
+        await tx.insert(stockMovements).values(
+          created.map((p) => ({
+            storeId,
+            productId: p.id,
+            quantityChange: input.quantityEach,
+            reason: 'opening' as const,
+            refId: receipt.id,
+            staffId: input.staffId,
+          })),
+        );
+        return { receipt, products: created, duplicate: false };
+      });
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      const again = await findReceiptByOperation(db, storeId, input.operationId);
+      if (again) return { ...(await receiptWithProducts(db, storeId, again)), duplicate: true };
+      // SKU/barcode taken by a concurrent save: retry with fresh numbers.
+    }
+  }
+  throw new DomainError('Could not generate unique SKUs/barcodes. Try again.');
+}
+
 export async function updateProduct(
   db: Db,
   storeId: string,
   id: string,
-  input: ProductInput & { active: boolean },
+  input: ProductInput & { active: boolean; categoryId?: string | null; supplierId?: string | null },
 ): Promise<Product> {
-  validateProductInput(input);
+  let category = input.category;
+  if (input.categoryId) category = (await resolveCategory(db, storeId, input.categoryId)).name;
+  if (input.supplierId) await resolveSupplier(db, storeId, input.supplierId);
+  validateProductInput({ ...input, category });
   const [updated] = await db
     .update(products)
     .set({
       name: input.name.trim(),
       brand: input.brand.trim(),
-      category: input.category.trim(),
+      category,
+      ...(input.categoryId !== undefined ? { categoryId: input.categoryId } : {}),
+      ...(input.supplierId !== undefined ? { supplierId: input.supplierId } : {}),
       size: input.size.trim(),
       color: input.color.trim(),
       mrpPaise: input.mrpPaise,
@@ -218,32 +414,141 @@ export async function updateProduct(
   return updated;
 }
 
-/** Admin receives new stock: +quantity, recorded as an append-only movement. */
+export type ReceiveStockInput = {
+  operationId: string;
+  supplierId?: string | null;
+  billNumber?: string | null;
+  note?: string | null;
+  lines: { productId: string; quantity: number }[];
+  staffId: string;
+};
+
+/**
+ * Stock arrives for existing products (restock). One receipt + one movement per
+ * line, atomically. Retrying the same operationId adds nothing the second time.
+ */
+export async function receiveStock(
+  db: Db,
+  storeId: string,
+  input: ReceiveStockInput,
+): Promise<{ receipt: StockReceipt; products: Product[]; duplicate: boolean }> {
+  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
+  const existing = await findReceiptByOperation(db, storeId, input.operationId);
+  if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
+  const lines = input.lines.filter((l) => l.quantity !== 0);
+  if (lines.length === 0) throw new DomainError('Add at least one item with a quantity.');
+  for (const line of lines) {
+    if (!Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 100_000) {
+      throw new DomainError('Quantity must be a whole number, at least 1.');
+    }
+  }
+  if (new Set(lines.map((l) => l.productId)).size !== lines.length) throw new DomainError('An item is listed twice.');
+  if (input.supplierId) await resolveSupplier(db, storeId, input.supplierId);
+
+  try {
+    return await db.transaction(async (tx) => {
+      const [receipt] = await tx
+        .insert(stockReceipts)
+        .values({
+          storeId,
+          operationId: input.operationId,
+          supplierId: input.supplierId ?? null,
+          billNumber: input.billNumber?.trim() || null,
+          note: input.note?.trim() || null,
+          staffId: input.staffId,
+        })
+        .returning();
+      const updated: Product[] = [];
+      for (const line of lines) {
+        const [row] = await tx
+          .update(products)
+          .set({ stock: sql`${products.stock} + ${line.quantity}` })
+          .where(and(eq(products.storeId, storeId), eq(products.id, line.productId)))
+          .returning();
+        if (!row) throw new DomainError('Product not found.');
+        updated.push(row);
+      }
+      await tx.insert(stockMovements).values(
+        lines.map((line) => ({
+          storeId,
+          productId: line.productId,
+          quantityChange: line.quantity,
+          reason: 'stock_in' as const,
+          refId: receipt.id,
+          staffId: input.staffId,
+          note: input.note?.trim() || null,
+        })),
+      );
+      return { receipt, products: updated, duplicate: false };
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      const again = await findReceiptByOperation(db, storeId, input.operationId);
+      if (again) return { ...(await receiptWithProducts(db, storeId, again)), duplicate: true };
+    }
+    throw error;
+  }
+}
+
+/** Single-product stock-in (product page). Same guarantees as receiveStock. */
 export async function stockIn(
   db: Db,
   storeId: string,
-  input: { productId: string; quantity: number; staffId: string; note?: string },
-): Promise<Product> {
+  input: { operationId: string; productId: string; quantity: number; staffId: string; note?: string; supplierId?: string | null },
+): Promise<Product & { duplicate: boolean }> {
   if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 100_000) {
     throw new DomainError('Quantity must be a whole number, at least 1.');
   }
-  return db.transaction(async (tx) => {
-    const [updated] = await tx
-      .update(products)
-      .set({ stock: sql`${products.stock} + ${input.quantity}` })
-      .where(and(eq(products.storeId, storeId), eq(products.id, input.productId)))
-      .returning();
-    if (!updated) throw new DomainError('Product not found.');
-    await tx.insert(stockMovements).values({
-      storeId,
-      productId: input.productId,
-      quantityChange: input.quantity,
-      reason: 'stock_in',
-      staffId: input.staffId,
-      note: input.note?.trim() || null,
-    });
-    return updated;
+  const result = await receiveStock(db, storeId, {
+    operationId: input.operationId,
+    supplierId: input.supplierId,
+    note: input.note,
+    lines: [{ productId: input.productId, quantity: input.quantity }],
+    staffId: input.staffId,
   });
+  const product = result.products.find((p) => p.id === input.productId) ?? (await getProduct(db, storeId, input.productId));
+  if (!product) throw new DomainError('Product not found.');
+  return { ...product, duplicate: result.duplicate };
+}
+
+async function findReceiptByOperation(db: Db, storeId: string, operationId: string) {
+  const [row] = await db
+    .select()
+    .from(stockReceipts)
+    .where(and(eq(stockReceipts.storeId, storeId), eq(stockReceipts.operationId, operationId)))
+    .limit(1);
+  return row ?? null;
+}
+
+async function receiptWithProducts(db: Db, storeId: string, receipt: StockReceipt) {
+  const rows = await db
+    .select({ product: products })
+    .from(stockMovements)
+    .innerJoin(products, eq(products.id, stockMovements.productId))
+    .where(and(eq(stockMovements.storeId, storeId), eq(stockMovements.refId, receipt.id)));
+  return { receipt, products: rows.map((r) => r.product) };
+}
+
+export type ReceiptLabelLine = Product & { quantity: number };
+
+/** A receipt with its items and quantities — for printing one label per piece. */
+export async function getReceiptForLabels(db: Db, storeId: string, receiptId: string) {
+  const [receipt] = await db
+    .select({ receipt: stockReceipts, supplierName: suppliers.name, staffName: staff.name })
+    .from(stockReceipts)
+    .innerJoin(staff, eq(staff.id, stockReceipts.staffId))
+    .leftJoin(suppliers, eq(suppliers.id, stockReceipts.supplierId))
+    .where(and(eq(stockReceipts.storeId, storeId), eq(stockReceipts.id, receiptId)))
+    .limit(1);
+  if (!receipt) return null;
+  const movementLines = await db
+    .select({ product: products, quantity: stockMovements.quantityChange })
+    .from(stockMovements)
+    .innerJoin(products, eq(products.id, stockMovements.productId))
+    .where(and(eq(stockMovements.storeId, storeId), eq(stockMovements.refId, receiptId)))
+    .orderBy(asc(products.name), asc(products.color), asc(products.size));
+  const lines: ReceiptLabelLine[] = movementLines.map((l) => ({ ...l.product, quantity: l.quantity }));
+  return { ...receipt.receipt, supplierName: receipt.supplierName, staffName: receipt.staffName, lines };
 }
 
 export async function listMovements(db: Db, storeId: string, productId: string) {
@@ -255,9 +560,13 @@ export async function listMovements(db: Db, storeId: string, productId: string) 
       note: stockMovements.note,
       createdAt: stockMovements.createdAt,
       staffName: staff.name,
+      billNumber: stockReceipts.billNumber,
+      supplierName: suppliers.name,
     })
     .from(stockMovements)
     .leftJoin(staff, eq(staff.id, stockMovements.staffId))
+    .leftJoin(stockReceipts, eq(stockReceipts.id, stockMovements.refId))
+    .leftJoin(suppliers, eq(suppliers.id, stockReceipts.supplierId))
     .where(and(eq(stockMovements.storeId, storeId), eq(stockMovements.productId, productId)))
     .orderBy(desc(stockMovements.createdAt))
     .limit(50);
