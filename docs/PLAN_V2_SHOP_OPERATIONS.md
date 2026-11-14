@@ -1,6 +1,6 @@
 # Plan v2: shared database, admin console, salesman dashboard, exchanges
 
-Status: **approved by owner 2026-11-15, being implemented** · Author: engineering · Replaces the browser-only demo store.
+Status: **approved by owner and implemented 2026-11-15 (live)** · Author: engineering · Replaces the browser-only demo store.
 
 ## 1. Goals
 

@@ -42,3 +42,13 @@ Evidence (shop walkthrough, printer model, sample invoice):
 6. Two registers attempt the final same piece online: only one succeeds.
 7. Register loses connectivity, records an approved provisional sale, restarts, reconnects and resolves its sync status.
 8. Owner sees correct cash/UPI records, gross profit and low-stock list; staff cannot see cost.
+
+
+## Open questions from plan v2 (2026-11-15)
+
+| ID | Question | Current behaviour until decided |
+|---|---|---|
+| D-EX-1 | On an exchange, may money be given back to the customer? Is there a time limit (e.g. 7 days)? | Allowed both ways, no time limit; the difference is recorded |
+| D-ST-1 | Six staff were mentioned; names given: Vishal, Nitin, Pradeep, Nitin, Balram. Who else, and who should be admin? | Seeded Owner (admin) + Vishal, Nitin, Pradeep, Balram; admin can add more |
+| D-PR-1 | Is there a minimum price (floor) below which salesmen may not bargain? | Any price from ₹0.01 up to MRP (relates to D-08) |
+| D-RF-1 | Returns without taking another item (refund only)? | Not supported yet |

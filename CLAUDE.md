@@ -4,7 +4,7 @@ Mobile-first retail clothing **inventory + POS + billing** web app (installable 
 
 Business intent: start with one shop, later expand into a product usable by many retailers. Build single-store now, but keep `store_id` on every record and keep tax/receipt/shop settings data-driven — never hardcoded.
 
-Sales flow (owner decision 2026-11-15, ADR-004): **scan → see stock → salesperson enters quantity and the bargained per-customer price (≤ MRP) → stock deducts → sale attributed to that salesperson.** No multi-item cart in the MVP. Every customer pays a different negotiated price, so the entered price is the record of truth, with MRP snapshotted alongside.
+Sales flow (owner decision 2026-11-15, ADR-004/008): **scan → see stock → salesperson enters quantity and the bargained per-customer price (≤ MRP) and who the sale is credited to (themselves or a colleague) → stock deducts → sale stored with `sold_by` and `recorded_by`.** No multi-item cart in the MVP. Every customer pays a different negotiated price, so the entered price is the record of truth, with MRP snapshotted alongside.
 
 ## Documents (read in this order per session)
 
@@ -23,7 +23,9 @@ Sales flow (owner decision 2026-11-15, ADR-004): **scan → see stock → salesp
 - Tests: **Vitest** (`pnpm test`, jsdom, `src/**/*.{test,spec}.{ts,tsx}`) + **Playwright** (`pnpm test:e2e`, `e2e/`, Chromium, auto-starts dev server)
 - Quality gate for every task: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
 - Scanning: `@zxing/browser` (installed) + native `BarcodeDetector` when available; labels are EAN-13 barcodes only (owner decision: one code per item), drawn by our own `src/features/scanning/ean13.ts`
-- Planned, NOT yet installed (add only in the phase that needs them): PostgreSQL + Drizzle, Better Auth, Zod + React Hook Form, shadcn/ui, TanStack Query, Zustand, Dexie
+- Data: **PostgreSQL** via **Drizzle ORM** (`src/db/`), Neon in production (`DATABASE_URL`), PGlite embedded Postgres when unset (local dev, tests; `pglite:memory` for e2e). Migrations in `drizzle/` (`pnpm db:generate`, `pnpm db:migrate`), seed `pnpm db:seed`. **Never put the Neon URL in `.env.local`** (dev/tests would write to production); keep it in `.env.neon` for migrate/seed only.
+- Auth: name + PIN (scrypt), HMAC-signed session cookie (`SESSION_SECRET`), `requireStaff` / `requireAdmin` in every page and action, `src/proxy.ts` guard. Zod validates action input. Pages read data through `requestDb()` (request-time).
+- Planned, NOT yet installed (add only in the phase that needs them): Better Auth (if email/multi-shop accounts are needed), React Hook Form, shadcn/ui, TanStack Query, Zustand, Dexie
 - Next.js 16 has breaking changes vs older training data — consult `node_modules/next/dist/docs/` before writing framework code (see `AGENTS.md`)
 
 ## Project structure
@@ -73,4 +75,4 @@ Empty folders hold `.gitkeep`; they are the agreed blueprint skeleton — fill t
 
 ## Status
 
-**P1-01 (bootstrap) and P1-02 (route shells) done**, plus a dummy scan-to-sell demo: `/login` fake role picker → `/pos` (scan by camera, hardware scanner or typed code → item details → bargained price → deduct, attributed to salesperson), `/admin/dashboard` (stock, revenue, sales by salesperson) and `/admin/labels` (one EAN-13 barcode per demo item; regenerate with `pnpm labels:generate`). POS screen starts with scan controls only (no inventory list, owner request). Deployed at https://maa-collection-pi.vercel.app (Vercel CLI; repo not Git-connected). Code: https://github.com/malavnitin199/maa-collection. Setup/run guide: `README.md`. Scanning details: `docs/SCANNING.md`. Dummy data lives in `src/features/catalog/dummy-catalog.ts` and the localStorage `src/features/inventory/dummy-store.ts` — both throwaway until P2/P3. No real auth or DB yet. Next: **P1-03** per backlog, or pull **P2-01** (PostgreSQL) forward to replace the dummy store.
+**Plan v2 implemented and live** (`docs/PLAN_V2_SHOP_OPERATIONS.md`): shared Postgres (Neon, Singapore), staff login by name + PIN, roles admin / salesman. Salesman: `/pos` counter sale with "credit sale to" (on behalf of a colleague; stores `sold_by` + `recorded_by`), `/pos/exchange`, `/pos/my-sales` (today / month in IST). Admin: `/admin/dashboard`, `/admin/products` (add with generated SKU + in-store EAN-13 `200…` or manufacturer barcode, label, edit, stock-in, history), `/admin/staff`, `/admin/activity`, `/admin/labels`. Business rules in `src/server/services/` with tests on PGlite. Seed staff: Owner (admin), Vishal, Nitin, Pradeep, Balram; local PIN 1234, production PINs random (given to the owner, not stored). Deployed at https://maa-collection-pi.vercel.app (Vercel CLI; repo not Git-connected; previews share the production DB). Code: https://github.com/malavnitin199/maa-collection. Guides: `README.md`, `docs/SCANNING.md`. Open decisions: D-EX-1, D-ST-1, D-PR-1, D-RF-1 in `docs/DECISIONS.md`. Next: GST/receipts and payments per backlog.

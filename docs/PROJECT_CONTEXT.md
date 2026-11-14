@@ -30,9 +30,9 @@ The 12-page uploaded *Retail Shop Stock, Sales & Billing System* PRD is the prod
 - At completion, show commands executed, actual results, modified files, gaps and the next task.
 - Update `docs/PROGRESS.md` and check off backlog ONLY when acceptance criteria pass.
 
-## Current status (2026-11-15)
-- Done: P1-01 bootstrap, P1-02 route shells, and an owner-requested demo of the scan-to-sell flow on dummy data (camera / hardware scanner / typed scanning, bargained price up to MRP, sales per salesperson, admin dashboard, QR + EAN-13 test labels).
-- Demo data is browser-only (`localStorage`); no database, real auth, GST or receipts yet.
+## Current status (2026-11-15, plan v2 live)
+- Done: P1-01, P1-02, scanning (camera / hardware / typed), barcode labels, and plan v2 (`docs/PLAN_V2_SHOP_OPERATIONS.md`): shared Postgres (Neon), name + PIN login with admin / salesman roles, products with generated SKU + EAN-13, stock-in, sales with "credit to" (on behalf of), exchanges, salesman and admin dashboards, staff management, activity log.
+- Not yet: GST/receipts, payments, refunds, day-close, offline billing.
 - Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavnitin199/maa-collection
-- Next: P1-03 per backlog, or pull P2-01 (PostgreSQL) forward. Policy questions P0 remain open (`docs/DECISIONS.md`).
+- Open decisions: `docs/DECISIONS.md` (D-EX-1, D-ST-1, D-PR-1, D-RF-1 and P0 items).
 - Setup and run guide: `README.md`. Detailed log: `docs/PROGRESS.md`.

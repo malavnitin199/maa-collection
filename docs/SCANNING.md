@@ -1,6 +1,6 @@
 # Scanning guide — how to scan items and record a sale
 
-This explains how scanning works today (dummy data, no database yet), how to test it on a phone, and how it will change when the database arrives.
+This explains how scanning works, how to test it on a phone, and how scanned codes map to products in the shared database.
 
 ## 1. The sale flow
 
@@ -60,27 +60,19 @@ Every demo item has **one** label, an EAN-13 barcode (the same kind printed on c
 | MAA-SA-001 | 8904444000010 | Banarasi Saree, Free, Green | 0 (out of stock) |
 | MAA-DR-001 | 8906666000014 | A-Line Dress, S, Maroon | 8 |
 
-Stock numbers are the starting values; they go down as you record sales. **Admin → Dashboard → Reset demo data** restores them.
+Stock numbers are the seeded starting values; they go down as you sell and up when the admin receives stock. New products added by the admin get their own generated barcode (prefix `200`) and a printable label on the product page.
 
 ## 4. Testing on your phone, step by step
 
-1. Open `https://maa-collection-pi.vercel.app/login` on the phone.
-2. Tap **Continue as Salesman**.
-3. On a laptop, open `https://maa-collection-pi.vercel.app/admin/labels`.
-4. On the phone tap **Scan with camera**, allow the camera, hold a barcode on the laptop screen inside the green box.
-5. The item details appear. Tap **Sell this item**, enter the price the customer paid, tap **Record sale**.
-6. On the phone open **Switch role → Continue as Admin** to see revenue and stock. (The phone and the laptop each keep their own demo data, so check the dashboard on the same device you sold from.)
+1. On a laptop, open `https://maa-collection-pi.vercel.app/login`, log in as **Owner** and open **Labels** (or add a product and open its page).
+2. On the phone, open the same address and log in as a salesman (tap your name, enter your PIN).
+3. On **Counter sale**, tap **Scan with camera**, allow the camera, and hold a barcode on the laptop screen inside the green box.
+4. The item details appear. Tap **Sell this item**, enter the price, choose **Credit sale to** if it is for a colleague, and tap **Record sale**.
+5. All devices share one database: the laptop's **Dashboard** shows the sale straight away, and the phone's **My sales** shows it too.
 
-## 5. Where the data lives today, and what changes with the database
+## 5. Where the data lives
 
-| Today (demo) | After the database phase (P2–P4) |
-|---|---|
-| Catalog is a fixed list in `src/features/catalog/dummy-catalog.ts` | Catalog comes from PostgreSQL through an API; admin can add items |
-| Stock and sales live in the browser's localStorage (`src/features/inventory/dummy-store.ts`) | Stock and sales live on the server; every device sees the same numbers |
-| Each device has its own stock | One shared stock; two phones selling the last piece is handled by a database transaction |
-| Salesperson is a dropdown | Salesperson comes from the logged-in account |
-
-The scanning code, the two-step screen, and the validation rules (`src/features/inventory/inventory.ts`) stay the same. Only the `recordSale()` and `useInventory()` functions change from localStorage to API calls.
+Products, stock, sales, exchanges and staff live in the shared PostgreSQL database (Neon in production; an embedded PGlite database when running locally). A scan sends the code to the server, which looks it up by barcode or SKU (`findProductByCode` in `src/server/services/products.ts`) and returns the counter view of the product, never the cost price. Sales and exchanges are recorded on the server in a database transaction, so two phones can never both sell the last piece.
 
 ## 6. Troubleshooting
 
