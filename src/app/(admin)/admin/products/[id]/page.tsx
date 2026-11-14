@@ -2,15 +2,17 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { card, link, muted, okBox, sectionTitle } from '@/components/ui/styles';
-import { requestDb } from '@/server/request-db';
 import { BarcodeLabel } from '@/features/catalog/barcode-label';
 import { PrintButton } from '@/features/catalog/print-button';
 import { ProductForm } from '@/features/catalog/product-form';
-import { StockInForm } from '@/features/catalog/small-forms';
-import { STORE_ID } from '@/lib/app-config';
-import { stockInAction, updateProductAction } from '@/server/actions/admin';
+import { DesignRatesForm, StockInForm } from '@/features/catalog/small-forms';
+import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
+import { formatPaise } from '@/lib/money';
+import { stockInAction, updateDesignRatesAction, updateProductAction } from '@/server/actions/admin';
 import { requireAdmin } from '@/server/auth';
-import { getProduct, listMovements, listProducts } from '@/server/services/products';
+import { requestDb } from '@/server/request-db';
+import { listCategories, listSuppliers } from '@/server/services/catalog';
+import { getProduct, listDesignVariants, listMovements } from '@/server/services/products';
 
 const REASONS: Record<string, string> = {
   opening: 'Opening stock',
@@ -29,11 +31,16 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const db = await requestDb();
   const product = await getProduct(db, STORE_ID, id);
   if (!product) notFound();
-  const [movements, all] = await Promise.all([listMovements(db, STORE_ID, id), listProducts(db, STORE_ID)]);
-  const categories = [...new Set(all.map((p) => p.category))].sort();
+  const [movements, variants, categoryRows, supplierRows] = await Promise.all([
+    listMovements(db, STORE_ID, id),
+    listDesignVariants(db, STORE_ID, id),
+    listCategories(db, STORE_ID),
+    listSuppliers(db, STORE_ID),
+  ]);
+  const supplier = supplierRows.find((s) => s.id === product.supplierId);
 
   return (
-    <main className="flex flex-col gap-6">
+    <main className="flex flex-col gap-5">
       <Link href="/admin/products" className={`text-sm ${link} print:hidden`}>
         ← Products
       </Link>
@@ -43,54 +50,122 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
           <span className="font-mono">{product.barcode}</span>. Print the label below and stick it on the item.
         </p>
       )}
-      <div className="flex flex-wrap items-start gap-6">
-        <div className="w-64">
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="mx-auto w-60 sm:mx-0">
           <BarcodeLabel product={product} />
         </div>
-        <div className="flex flex-col gap-2 print:hidden">
+        <div className="flex flex-col gap-1 print:hidden">
           <h1 className="text-2xl font-semibold">{product.name}</h1>
           <p className={`text-sm ${muted}`}>
-            {product.brand} · {product.category} · {product.size} · {product.color}
+            {product.color} · {product.size} · {product.category} · {product.brand}
+            {!product.active && ' · inactive'}
+          </p>
+          {supplier && (
+            <p className="text-sm">
+              From{' '}
+              <Link href={`/admin/suppliers/${supplier.id}`} className={link}>
+                {supplier.name}
+              </Link>
+            </p>
+          )}
+          <p className="text-sm">
+            {formatPaise(product.pricePaise)} <span className={muted}>· MRP {formatPaise(product.mrpPaise)}</span>
+            {product.costPaise !== null && <span className={muted}> · cost {formatPaise(product.costPaise)}</span>}
           </p>
           <p data-testid="product-stock" className="text-lg font-semibold">
             {product.stock} in stock
           </p>
-          <PrintButton label="Print label" />
+          <div className="mt-1 flex flex-wrap gap-2">
+            <PrintButton label="Print label" />
+            <Link
+              href={`/admin/stock/receive${supplier ? `?supplier=${supplier.id}` : ''}`}
+              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
+            >
+              Restock
+            </Link>
+          </div>
         </div>
       </div>
 
+      {variants.length > 1 && (
+        <section className={`${card} flex flex-col gap-2 print:hidden`}>
+          <h2 className={sectionTitle}>This design: {variants.length} sizes / colours</h2>
+          <ul data-testid="design-variants" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {variants.map((v) => (
+              <li key={v.id}>
+                <Link
+                  href={`/admin/products/${v.id}`}
+                  aria-current={v.id === product.id ? 'page' : undefined}
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                    v.id === product.id ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950' : 'border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  <span>
+                    {v.color} · {v.size}
+                  </span>
+                  <span
+                    className={`font-semibold tabular-nums ${
+                      v.stock <= 0 ? 'text-red-600 dark:text-red-400' : v.stock <= LOW_STOCK_THRESHOLD ? 'text-amber-600' : ''
+                    }`}
+                  >
+                    {v.stock}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className={`${card} flex flex-col gap-3 print:hidden`}>
-        <h2 className={sectionTitle}>Receive stock</h2>
+        <h2 className={sectionTitle}>Rates{variants.length > 1 ? ' for the whole design' : ''}</h2>
+        <DesignRatesForm
+          action={updateDesignRatesAction.bind(null, product.id)}
+          count={variants.length}
+          initial={{ mrp: rupees(product.mrpPaise), price: rupees(product.pricePaise), cost: rupees(product.costPaise) }}
+        />
+        <p className={`text-xs ${muted}`}>Past sales keep the prices they were sold at.</p>
+      </section>
+
+      <section className={`${card} flex flex-col gap-3 print:hidden`}>
+        <h2 className={sectionTitle}>Receive stock of this item</h2>
         <StockInForm action={stockInAction.bind(null, product.id)} />
       </section>
 
-      <section className={`${card} flex flex-col gap-3 print:hidden`}>
-        <h2 className={sectionTitle}>Edit details and prices</h2>
-        <ProductForm
-          mode="edit"
-          action={updateProductAction.bind(null, product.id)}
-          categories={categories}
-          initial={{
-            name: product.name,
-            brand: product.brand,
-            category: product.category,
-            size: product.size,
-            color: product.color,
-            mrp: rupees(product.mrpPaise),
-            price: rupees(product.pricePaise),
-            cost: rupees(product.costPaise),
-            active: product.active,
-          }}
-        />
-      </section>
+      <details className={`${card} print:hidden`}>
+        <summary className="cursor-pointer font-medium">Edit details (name, size, colour, category, supplier)</summary>
+        <div className="mt-3">
+          <ProductForm
+            mode="edit"
+            action={updateProductAction.bind(null, product.id)}
+            categories={categoryRows.filter((c) => c.active || c.id === product.categoryId).map(({ id, name, code }) => ({ id, name, code }))}
+            suppliers={supplierRows.filter((s) => s.active || s.id === product.supplierId).map(({ id, name }) => ({ id, name }))}
+            initial={{
+              name: product.name,
+              brand: product.brand,
+              categoryId: product.categoryId ?? '',
+              supplierId: product.supplierId ?? '',
+              size: product.size,
+              color: product.color,
+              mrp: rupees(product.mrpPaise),
+              price: rupees(product.pricePaise),
+              cost: rupees(product.costPaise),
+              active: product.active,
+            }}
+          />
+        </div>
+      </details>
 
       <section className="flex flex-col gap-2 print:hidden">
         <h2 className={sectionTitle}>Stock history</h2>
-        <ul className="flex flex-col gap-1 text-sm">
+        <ul data-testid="stock-history" className="flex flex-col gap-1 text-sm">
           {movements.map((m) => (
             <li key={m.id} className="flex justify-between gap-2 border-b border-zinc-100 py-1 dark:border-zinc-900">
               <span>
                 {REASONS[m.reason] ?? m.reason}
+                {m.supplierName && ` · ${m.supplierName}`}
+                {m.billNumber && ` · bill ${m.billNumber}`}
                 <span className={`block text-xs ${muted}`}>
                   {time.format(m.createdAt)}
                   {m.staffName && ` · ${m.staffName}`}

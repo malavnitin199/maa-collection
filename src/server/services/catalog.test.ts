@@ -2,7 +2,7 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPgliteDb, type Db } from '@/db/client';
-import { products, stockMovements } from '@/db/schema';
+import { products, sales, stockMovements } from '@/db/schema';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { STORE_ID } from '@/lib/app-config';
 import {
@@ -15,7 +15,8 @@ import {
   updateCategory,
   updateSupplier,
 } from './catalog';
-import { createDesign, findProductByCode, getReceiptForLabels, receiveStock } from './products';
+import { createDesign, findProductByCode, getReceiptForLabels, listDesignVariants, receiveStock, updateDesignRates } from './products';
+import { recordSale } from './sales';
 import { listStaff } from './staff';
 
 let db: Db;
@@ -128,5 +129,27 @@ describe('receive stock for existing items', () => {
     expect(moves).toHaveLength(2);
     await expect(receiveStock(db, STORE_ID, { ...input, operationId: 'rc-2', lines: [{ productId: tee.id, quantity: 0 }] })).rejects.toThrow(/at least one item/);
     await expect(receiveStock(db, STORE_ID, { ...input, operationId: 'rc-3', lines: [{ productId: tee.id, quantity: 1 }, { productId: tee.id, quantity: 1 }] })).rejects.toThrow(/listed twice/);
+  });
+});
+
+describe('rates for a whole design', () => {
+  it('updates every size/colour of the design, leaves other designs and past sales alone', async () => {
+    const xyz = await createSupplier(db, STORE_ID, { name: 'XYZ Textiles', ...supplierInput });
+    const kurta = (await listCategories(db, STORE_ID)).find((c) => c.code === 'KU')!;
+    const { products: created } = await createDesign(db, STORE_ID, {
+      operationId: 'rates-1', supplierId: xyz.id, categoryId: kurta.id, name: 'Cotton Kurta', brand: 'XYZ',
+      sizes: ['M', 'L'], colors: ['Blue', 'Red'], mrpPaise: 100000, pricePaise: 90000, costPaise: 50000, quantityEach: 2, staffId: owner,
+    });
+    const { sale } = await recordSale(db, STORE_ID, {
+      operationId: 'rates-sale', productId: created[0].id, quantity: 1, unitPricePaise: 85000, soldBy: owner, recordedBy: owner,
+    });
+    expect(await listDesignVariants(db, STORE_ID, created[0].id)).toHaveLength(4);
+    expect(await updateDesignRates(db, STORE_ID, created[0].id, { mrpPaise: 120000, pricePaise: 110000, costPaise: 60000 })).toBe(4);
+    const after = await listDesignVariants(db, STORE_ID, created[3].id);
+    expect(after.every((p) => p.mrpPaise === 120000 && p.pricePaise === 110000 && p.costPaise === 60000)).toBe(true);
+    expect((await findProductByCode(db, STORE_ID, 'MAA-KU-001'))?.mrpPaise).toBe(129900); // other design untouched
+    const [saved] = await db.select().from(sales).where(eq(sales.id, sale.id));
+    expect([saved.mrpPaise, saved.unitPricePaise, saved.costPaise]).toEqual([100000, 85000, 50000]); // sale snapshot unchanged
+    await expect(updateDesignRates(db, STORE_ID, created[0].id, { mrpPaise: 1000, pricePaise: 2000, costPaise: null })).rejects.toThrow(/above MRP/);
   });
 });

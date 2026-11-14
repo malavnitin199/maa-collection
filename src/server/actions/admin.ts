@@ -8,7 +8,16 @@ import { STORE_ID } from '@/lib/app-config';
 import { requireAdmin } from '@/server/auth';
 import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
-import { createDesign, createProduct, listProducts, receiveStock, stockIn, updateProduct, type ProductInput } from '@/server/services/products';
+import {
+  createDesign,
+  createProduct,
+  listProducts,
+  receiveStock,
+  stockIn,
+  updateDesignRates,
+  updateProduct,
+  type ProductInput,
+} from '@/server/services/products';
 import { createStaff, setStaffActive, setStaffPin } from '@/server/services/staff';
 
 export type FormState = { error?: string; message?: string };
@@ -23,11 +32,16 @@ function money(formData: FormData, key: string, label: string, { optional = fals
   return paise;
 }
 
-function productInput(formData: FormData): ProductInput {
+function productInput(formData: FormData): ProductInput & { categoryId: string; supplierId: string | null } {
+  const categoryId = text(formData, 'categoryId');
+  if (!categoryId) throw new DomainError('Choose a category.');
   return {
+    categoryId,
+    supplierId: text(formData, 'supplierId') || null,
     name: text(formData, 'name'),
     brand: text(formData, 'brand'),
-    category: text(formData, 'category'),
+    // Resolved from categoryId by the service.
+    category: '-',
     size: text(formData, 'size'),
     color: text(formData, 'color'),
     mrpPaise: money(formData, 'mrp', 'MRP') as number,
@@ -291,5 +305,21 @@ export async function receiveStockAction(input: {
     return { ok: true, receiptId: result.receipt.id };
   } catch (error) {
     return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
+  }
+}
+
+export async function updateDesignRatesAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  try {
+    const mrpPaise = money(formData, 'mrp', 'MRP') as number;
+    const count = await updateDesignRates(await getDb(), STORE_ID, productId, {
+      mrpPaise,
+      pricePaise: text(formData, 'price') ? (money(formData, 'price', 'selling price') as number) : mrpPaise,
+      costPaise: money(formData, 'cost', 'cost price', { optional: true }),
+    });
+    revalidatePath('/admin', 'layout');
+    return { message: `Rates updated for ${count} item${count === 1 ? '' : 's'}.` };
+  } catch (error) {
+    return failure(error);
   }
 }

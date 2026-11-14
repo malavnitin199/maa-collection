@@ -106,3 +106,37 @@ export function ToggleActiveForm({ action, active }: { action: (state: FormState
     </form>
   );
 }
+
+export function DesignRatesForm({
+  action,
+  initial,
+  count,
+}: {
+  action: Action;
+  initial: { mrp: string; price: string; cost: string };
+  count: number;
+}) {
+  const [state, formAction, pending] = useActionState(action, {});
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <div className="grid grid-cols-3 gap-2">
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          MRP (₹)
+          <input name="mrp" inputMode="decimal" required defaultValue={initial.mrp} className={input} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Price (₹)
+          <input name="price" inputMode="decimal" defaultValue={initial.price} className={input} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Cost (₹)
+          <input name="cost" inputMode="decimal" defaultValue={initial.cost} placeholder="—" className={input} />
+        </label>
+      </div>
+      <Feedback state={state} />
+      <button type="submit" disabled={pending} className={primaryButton}>
+        {pending ? 'Saving…' : `Apply to all ${count} size${count === 1 ? '' : 's'}/colour${count === 1 ? '' : 's'}`}
+      </button>
+    </form>
+  );
+}

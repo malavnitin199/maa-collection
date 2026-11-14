@@ -7,7 +7,8 @@ import type { FormState } from '@/server/actions/admin';
 export type ProductFormValues = {
   name: string;
   brand: string;
-  category: string;
+  categoryId: string;
+  supplierId: string;
   size: string;
   color: string;
   mrp: string;
@@ -20,7 +21,8 @@ type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   mode: 'new' | 'edit';
   initial?: ProductFormValues;
-  categories: string[];
+  categories: { id: string; name: string; code: string }[];
+  suppliers: { id: string; name: string }[];
 };
 
 function Field({ label, name, defaultValue, hint, inputMode, required = true }: {
@@ -40,8 +42,7 @@ function Field({ label, name, defaultValue, hint, inputMode, required = true }: 
           defaultValue={defaultValue}
           inputMode={inputMode}
           required={required}
-          list={name === 'category' ? 'category-options' : undefined}
-          className={input}
+            className={input}
         />
       </label>
       {hint && <span className={`text-xs ${muted}`}>{hint}</span>}
@@ -49,7 +50,7 @@ function Field({ label, name, defaultValue, hint, inputMode, required = true }: 
   );
 }
 
-export function ProductForm({ action, mode, initial, categories }: Props) {
+export function ProductForm({ action, mode, initial, categories, suppliers }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const [barcodeMode, setBarcodeMode] = useState<'generate' | 'manufacturer'>('generate');
 
@@ -58,12 +59,28 @@ export function ProductForm({ action, mode, initial, categories }: Props) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Product name" name="name" defaultValue={initial?.name} />
         <Field label="Brand" name="brand" defaultValue={initial?.brand} />
-        <Field label="Category" name="category" defaultValue={initial?.category} hint="e.g. Kurta, Saree, Jeans. Used in the SKU." />
-        <datalist id="category-options">
-          {categories.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Category
+          <select name="categoryId" required defaultValue={initial?.categoryId ?? ''} className={input}>
+            <option value="">Choose category…</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.code})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Supplier (optional)
+          <select name="supplierId" defaultValue={initial?.supplierId ?? ''} className={input}>
+            <option value="">No supplier</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Size" name="size" defaultValue={initial?.size} />
           <Field label="Colour" name="color" defaultValue={initial?.color} />

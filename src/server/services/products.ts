@@ -571,3 +571,42 @@ export async function listMovements(db: Db, storeId: string, productId: string) 
     .orderBy(desc(stockMovements.createdAt))
     .limit(50);
 }
+
+/** Every size/colour of the same design: same name, brand and category. */
+export async function listDesignVariants(db: Db, storeId: string, productId: string): Promise<Product[]> {
+  const product = await getProduct(db, storeId, productId);
+  if (!product) return [];
+  return db
+    .select()
+    .from(products)
+    .where(
+      and(
+        eq(products.storeId, storeId),
+        sql`lower(${products.name}) = lower(${product.name})`,
+        sql`lower(${products.brand}) = lower(${product.brand})`,
+        product.categoryId ? eq(products.categoryId, product.categoryId) : eq(products.category, product.category),
+      ),
+    )
+    .orderBy(asc(products.color), asc(products.size));
+}
+
+/**
+ * Sets MRP, selling price and cost for every size/colour of a design at once.
+ * Past sales keep their own price/MRP/cost snapshots, so history is unchanged.
+ */
+export async function updateDesignRates(
+  db: Db,
+  storeId: string,
+  productId: string,
+  rates: { mrpPaise: number; pricePaise: number; costPaise: number | null },
+): Promise<number> {
+  validatePrices(rates);
+  const ids = (await listDesignVariants(db, storeId, productId)).map((p) => p.id);
+  if (ids.length === 0) throw new DomainError('Product not found.');
+  const updated = await db
+    .update(products)
+    .set({ mrpPaise: rates.mrpPaise, pricePaise: rates.pricePaise, costPaise: rates.costPaise })
+    .where(and(eq(products.storeId, storeId), inArray(products.id, ids)))
+    .returning({ id: products.id });
+  return updated.length;
+}

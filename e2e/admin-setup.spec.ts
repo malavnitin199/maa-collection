@@ -104,6 +104,17 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   const barcode = (await labels.first().getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
   expect(barcode).toMatch(/^200\d{10}$/);
 
+  // Rates for the whole design from any one of its products.
+  await page.getByTestId('receipt-lines').getByRole('link').first().click();
+  await expect(page.getByTestId('design-variants').getByRole('link')).toHaveCount(4);
+  const rates = page.locator('section', { has: page.getByRole('heading', { name: 'Rates for the whole design' }) });
+  await rates.getByLabel('MRP (₹)').fill('1599');
+  await rates.getByLabel('Price (₹)').fill('1499');
+  await rates.getByRole('button', { name: 'Apply to all 4 sizes/colours' }).click();
+  await expect(page.getByText('Rates updated for 4 items.')).toBeVisible();
+  await page.goto(`/admin/products?q=${encodeURIComponent(`Chikan Kurta ${run}`)}`);
+  await expect(page.getByTestId('product-list').getByRole('listitem').filter({ hasText: '₹1,499.00' })).toHaveCount(4);
+
   // Same entry again is refused (sizes/colours already exist).
   await page.goto('/admin/stock/new');
   await page.getByRole('combobox', { name: /^Supplier/ }).selectOption({ label: `Design Co ${run}` });
@@ -125,7 +136,7 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('item-details')).toContainText(`Chikan Kurta ${run}`);
   await expect(page.getByTestId('details-stock')).toHaveText('2');
-  await expect(page.getByTestId('item-details')).toContainText('₹1,399.00');
+  await expect(page.getByTestId('item-details')).toContainText('₹1,499.00');
 });
 
 test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {

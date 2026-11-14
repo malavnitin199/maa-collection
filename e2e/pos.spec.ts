@@ -18,7 +18,7 @@ async function addProduct(page: Page, { name, size, mrp, price, stock }: { name:
   await page.goto('/admin/products/new');
   await page.getByLabel('Product name').fill(name);
   await page.getByLabel('Brand').fill('Test Brand');
-  await page.getByLabel('Category', { exact: true }).fill('Kurta');
+  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Size').fill(size);
   await page.getByLabel('Colour').fill('Blue');
   await page.getByLabel('MRP (₹)').fill(mrp);
