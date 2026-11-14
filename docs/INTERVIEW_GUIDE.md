@@ -70,7 +70,7 @@ docs/                    Blueprint, backlog, decisions, progress log
 ## 5. The core flow: scan to sale
 
 ```
-Salesman scans barcode / QR (or types SKU)
+Salesman scans barcode (or types SKU)
   → lookup item in catalog
   → not found?        show "No item found"
   → stock is 0?       show "Out of stock"

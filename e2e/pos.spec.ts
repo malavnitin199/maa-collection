@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const scanBox = (page: import('@playwright/test').Page) =>
-  page.getByLabel('Scan barcode / QR or enter SKU');
+  page.getByLabel('Scan barcode or enter SKU');
 
 test('role picker navigates to POS and admin dashboard', async ({ page }) => {
   await page.goto('/login');
@@ -50,13 +50,12 @@ test('scan shows item details first, then sells at a bargained price', async ({ 
   await expect(page.getByTestId('sales-by-person')).toContainText('Ravi');
 });
 
-test('labels page shows a QR code and a barcode for every demo item', async ({ page }) => {
+test('labels page shows exactly one barcode per demo item', async ({ page }) => {
   await page.goto('/admin/labels');
   await expect(page.getByRole('heading', { name: 'Test labels' })).toBeVisible();
-  const qr = page.getByRole('img', { name: 'QR code for MAA-TS-001' });
-  await expect(qr).toBeVisible();
   await expect(page.getByRole('img', { name: 'Barcode 8901111000014 for MAA-TS-001' })).toBeVisible();
-  await expect(page.getByText('MAA-DR-001')).toBeVisible();
+  await expect(page.getByRole('img', { name: /^Barcode / })).toHaveCount(8);
+  await expect(page.getByRole('img', { name: /QR code/ })).toHaveCount(0);
 });
 
 test('sale price above MRP is rejected', async ({ page }) => {

@@ -8,9 +8,8 @@ export default function LabelsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Test labels</h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Open this page on a laptop and scan a code with the phone camera on the POS screen, or
-          print it. Each item has a QR code (encodes the SKU) and an EAN-13 barcode (encodes the
-          barcode number) — either one finds the item.
+          One barcode per item. Scan it with the phone camera on the POS screen or with a
+          USB/Bluetooth scanner, or print this page.
         </p>
       </div>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -26,13 +25,6 @@ export default function LabelsPage() {
               </p>
             </div>
             <Image
-              src={`/qr/${item.sku}.png`}
-              alt={`QR code for ${item.sku}`}
-              width={150}
-              height={150}
-            />
-            <p className="font-mono text-xs text-zinc-900">{item.sku}</p>
-            <Image
               src={`/barcodes/${item.sku}.svg`}
               alt={`Barcode ${item.barcode} for ${item.sku}`}
               width={226}
@@ -40,6 +32,7 @@ export default function LabelsPage() {
               unoptimized
               className="h-auto w-full max-w-[226px]"
             />
+            <p className="font-mono text-xs text-zinc-600">{item.sku}</p>
           </li>
         ))}
       </ul>

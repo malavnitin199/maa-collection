@@ -181,7 +181,7 @@ export function PosScreen() {
         className="flex flex-col gap-2"
       >
         <label htmlFor="scan-input" className="text-sm font-medium">
-          Scan barcode / QR or enter SKU
+          Scan barcode or enter SKU
         </label>
         <div className="flex gap-2">
           <input

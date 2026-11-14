@@ -26,13 +26,13 @@ Rules enforced before a sale is saved:
 
 ## 2. Three ways to scan
 
-### A. Phone camera (QR or barcode)
+### A. Phone camera
 On the POS screen tap **Scan with camera**, allow camera access, point at the code. It reads once and closes automatically.
 
 Requirements:
 - An **https://** address or `localhost`. Browsers refuse camera access on plain `http://`. The Vercel URL (`https://maa-collection-pi.vercel.app/pos`) works; `http://192.168.x.x:3000` does not.
 - Works in Chrome (Android) and Safari (iPhone). Uses the rear camera.
-- Library: `@zxing/browser` (`src/features/scanning/camera-scanner.tsx`). It decodes QR codes and 1D barcodes (EAN-13, Code 128).
+- Reader (`src/features/scanning/camera-scanner.tsx`): the browser's built-in `BarcodeDetector` when available (Chrome on Android), otherwise `@zxing/browser`. It asks for an HD picture with autofocus and reads EAN-13, EAN-8, UPC-A and Code 128 barcodes (and QR codes, in case an item ever carries one). A green box shows where to hold the barcode.
 
 ### B. Hardware scanner (USB or Bluetooth)
 These scanners act as a keyboard: they type the code and press Enter. Just scan — the scan box is selected when the POS screen opens, and if focus has moved to a button (for example after using the camera), the app still recognises the fast scanner burst and treats it as a scan instead of pressing the button (`src/features/scanning/scanner-keystrokes.ts`). The only time a scan is ignored is while typing in the quantity or price box. No pairing with the app is needed — only with the phone or computer. This is the recommended setup at the counter because it is faster than the camera.
@@ -40,15 +40,14 @@ These scanners act as a keyboard: they type the code and press Enter. Just scan 
 ### C. Type the code
 Type a SKU (`MAA-TS-001`) or barcode (`8901111000014`) into the scan box and press Enter or **Find**. This is the fallback for a torn label.
 
-## 3. Test QR codes and barcodes
+## 3. Test barcodes
 
-Every demo item has two scannable labels; either one finds the item:
+Every demo item has **one** label, an EAN-13 barcode (the same kind printed on clothing tags). Scanning it, by camera or by a hardware scanner, finds the item (owner decision: one code per item, no separate QR code).
 
-- **QR code** encoding the SKU: `public/qr/<SKU>.png`.
 - **EAN-13 barcode** encoding the item's barcode number: `public/barcodes/<SKU>.svg`. Drawn by our own code (`ean13Svg` in `src/features/scanning/ean13.ts`); every one was checked by scanning it through the POS camera.
-- Page: **Admin → Labels** (`/admin/labels`) shows both codes for all eight items with name, size, colour and MRP. Open it on a laptop and scan it with the phone camera from the POS screen, or print it.
+- Page: **Admin → Labels** (`/admin/labels`) shows the barcode for all eight items with name, size, colour and MRP. Open it on a laptop and scan it with the phone camera from the POS screen, or print it.
 - Ready-made sheet: `Maa-Collection-test-labels.pdf` / `.png` in the starter folder (one level above the app).
-- Regenerate after changing the catalog: `pnpm labels:generate` (same as `pnpm qr:generate`; script in `scripts/generate-qr.ts`).
+- Regenerate after changing the catalog: `pnpm labels:generate` (script in `scripts/generate-labels.ts`).
 
 | SKU | Barcode | Item | Demo stock |
 |---|---|---|---|
@@ -68,7 +67,7 @@ Stock numbers are the starting values; they go down as you record sales. **Admin
 1. Open `https://maa-collection-pi.vercel.app/login` on the phone.
 2. Tap **Continue as Salesman**.
 3. On a laptop, open `https://maa-collection-pi.vercel.app/admin/labels`.
-4. On the phone tap **Scan with camera**, allow the camera, point at a QR on the laptop screen.
+4. On the phone tap **Scan with camera**, allow the camera, hold a barcode on the laptop screen inside the green box.
 5. The item details appear. Tap **Sell this item**, enter the price the customer paid, tap **Record sale**.
 6. On the phone open **Switch role → Continue as Admin** to see revenue and stock. (The phone and the laptop each keep their own demo data, so check the dashboard on the same device you sold from.)
 
@@ -89,6 +88,6 @@ The scanning code, the two-step screen, and the validation rules (`src/features/
 |---|---|
 | "Camera needs HTTPS" | You opened an `http://` address. Use the Vercel URL or `localhost`. |
 | "Camera permission was denied" | Allow the camera in the browser's site settings and reload. |
-| Camera opens but never reads | Hold the phone steady 15–25 cm away, make sure the QR fills about a third of the view and is not blurry or too small on screen. Increase laptop screen brightness. |
+| Camera opens but never reads | Hold the phone steady 15–25 cm away, keep the barcode flat and level inside the green box and wait a moment for it to come into focus; avoid glare on the screen. Increase laptop screen brightness. |
 | Hardware scanner types nothing | Check the scanner is paired as a keyboard and set to send Enter after each code. Scans are ignored while the cursor is in the quantity or price box. |
 | Page loads but buttons stay disabled | Development only: opened via an IP that isn't allowed. Use `localhost` or add the IP to `allowedDevOrigins` in `next.config.ts`. |

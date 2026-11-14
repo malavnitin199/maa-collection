@@ -1,6 +1,6 @@
 # Maa Collection
 
-Mobile-first **inventory + point-of-sale (POS)** web app for an Indian clothing shop. A salesperson scans an item's barcode or QR code, sees its details and stock, enters the price the customer agreed to pay, and the sale is recorded against their name. The owner sees stock, revenue and sales per salesperson.
+Mobile-first **inventory + point-of-sale (POS)** web app for an Indian clothing shop. A salesperson scans an item's barcode, sees its details and stock, enters the price the customer agreed to pay, and the sale is recorded against their name. The owner sees stock, revenue and sales per salesperson.
 
 It starts as a tool for one shop (Maa Collection). The plan is to grow it into a product many retailers can use, so shop settings and tax are data-driven, not hardcoded.
 
@@ -15,7 +15,7 @@ It starts as a tool for one shop (Maa Collection). The plan is to grow it into a
 2. [Tech stack](#tech-stack)
 3. [Installation and running locally](#installation-and-running-locally)
 4. [Using the app](#using-the-app)
-5. [Testing barcode and QR scanning](#testing-barcode-and-qr-scanning)
+5. [Testing barcode scanning](#testing-barcode-scanning)
 6. [Available scripts](#available-scripts)
 7. [Running the tests](#running-the-tests)
 8. [Project structure](#project-structure)
@@ -36,7 +36,7 @@ It starts as a tool for one shop (Maa Collection). The plan is to grow it into a
 | Role picker | `/login` | Everyone | Demo-only. Choose **Salesman** or **Admin** (no password yet) |
 | Counter sale | `/pos` | Salesman | Scan or type a code, see item details, enter quantity and the agreed price, record the sale |
 | Dashboard | `/admin/dashboard` | Admin | Stock per item, low-stock warnings, total revenue, units sold, sales per salesperson, **Reset demo data** |
-| Test labels | `/admin/labels` | Admin | A QR code and an EAN-13 barcode for every demo item, for scan testing or printing |
+| Test labels | `/admin/labels` | Admin | One EAN-13 barcode per demo item, for scan testing or printing |
 
 ### The sale flow
 
@@ -62,7 +62,7 @@ Rules checked before a sale is saved:
 
 ### Three ways to scan
 
-1. **Phone camera.** Tap **Scan with camera**. It reads QR codes and barcodes (EAN-13, EAN-8, UPC-A, Code 128) and closes on its own after one read. On Chrome for Android it uses the phone's built-in barcode reader; elsewhere it uses [zxing](https://github.com/zxing-js/browser).
+1. **Phone camera.** Tap **Scan with camera**. It reads barcodes (EAN-13, EAN-8, UPC-A, Code 128), and QR codes too if an item ever carries one, and closes on its own after one read. On Chrome for Android it uses the phone's built-in barcode reader; elsewhere it uses [zxing](https://github.com/zxing-js/browser).
 2. **USB or Bluetooth barcode scanner.** These act like a keyboard: they type the code and press Enter. Just scan; you don't need to tap anything first.
 3. **Typing.** Type a SKU (`MAA-TS-001`) or barcode (`8901111000014`) and press Enter. This is the fallback for a torn label.
 
@@ -76,7 +76,7 @@ Rules checked before a sale is saved:
 | Language | TypeScript (strict mode) |
 | Styling | Tailwind CSS 4 |
 | Scanning | `@zxing/browser` plus the browser's `BarcodeDetector` when available |
-| Label generation | `qrcode` (QR codes); our own EAN-13 encoder in `src/features/scanning/ean13.ts` (barcodes) |
+| Label generation | Our own EAN-13 barcode encoder in `src/features/scanning/ean13.ts` (no extra library) |
 | Unit tests | Vitest + Testing Library (jsdom) |
 | End-to-end tests | Playwright (Chromium) |
 | Package manager | **pnpm only** (one lockfile; don't use npm/yarn/bun to install) |
@@ -170,16 +170,16 @@ pnpm start      # serves the production build on http://localhost:3000
 
 ---
 
-## Testing barcode and QR scanning
+## Testing barcode scanning
 
 **The camera only works on `https://` addresses or `localhost`.** Browsers block camera access on plain `http://` addresses such as `http://192.168.x.x:3000`. To scan with a phone, use the deployed site or your own Vercel preview.
 
-1. On a laptop, open **`/admin/labels`** (for example https://maa-collection-pi.vercel.app/admin/labels). It shows a QR code and a barcode for every demo item. You can also print the page.
+1. On a laptop, open **`/admin/labels`** (for example https://maa-collection-pi.vercel.app/admin/labels). It shows one barcode for every demo item. You can also print the page.
 2. On the phone, open **`/pos`** and tap **Scan with camera**, then allow camera access.
 3. Hold the barcode flat inside the green box, about 15–20 cm away, until it is sharp. Keep the laptop screen bright and avoid glare.
 4. The item details appear automatically.
 
-The label images are in `public/qr/<SKU>.png` (the QR code encodes the SKU) and `public/barcodes/<SKU>.svg` (the barcode encodes the barcode number). After changing the catalog, regenerate them:
+Each item has **one label: an EAN-13 barcode** encoding its barcode number, the same kind of barcode printed on clothing tags. The images are in `public/barcodes/<SKU>.svg`. After changing the catalog, regenerate them:
 
 ```bash
 pnpm labels:generate
@@ -201,7 +201,7 @@ Full guide, including hardware scanners and troubleshooting: **[`docs/SCANNING.m
 | `pnpm test` | Unit tests (Vitest), run once |
 | `pnpm test:watch` | Unit tests in watch mode |
 | `pnpm test:e2e` | End-to-end tests (Playwright, Chromium). Starts the dev server automatically |
-| `pnpm labels:generate` | Regenerate QR code and barcode images for the demo catalog (same as `pnpm qr:generate`) |
+| `pnpm labels:generate` | Regenerate the barcode images for the demo catalog |
 
 ---
 
@@ -222,7 +222,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e
 | Suite | Location | Covers |
 |---|---|---|
 | Unit (Vitest) | `src/**/*.test.ts` | Money in paise, catalog lookup, sale validation rules, EAN-13 check digits and drawing, scanner keystroke detection |
-| End-to-end (Playwright) | `e2e/*.spec.ts` | Role picker, scan → details → sell → stock drops → dashboard, price above MRP rejected, unknown and out-of-stock codes, scanner works without tapping the box, labels page |
+| End-to-end (Playwright) | `e2e/*.spec.ts` | Role picker, scan → details → sell → stock drops → dashboard, price above MRP rejected, unknown and out-of-stock codes, scanner works without tapping the box, labels page shows one barcode per item |
 
 The camera itself needs a real device. The automated tests cover everything around it, and [`docs/SCANNING.md`](docs/SCANNING.md) lists the manual phone checks.
 
@@ -251,8 +251,8 @@ maa-collection/
 │   ├── offline/                  (later) offline queue and sync
 │   └── test/                     Test setup
 ├── e2e/                          Playwright end-to-end tests
-├── public/qr/, public/barcodes/  Generated test labels
-├── scripts/generate-qr.ts        Label generator (pnpm labels:generate)
+├── public/barcodes/              Generated barcode labels
+├── scripts/generate-labels.ts    Label generator (pnpm labels:generate)
 ├── docs/                         Product and engineering documentation
 └── .cursor/rules/                Rules for AI coding agents (also apply to humans)
 ```
@@ -320,7 +320,7 @@ No environment variables are needed on Vercel yet. To deploy automatically on ev
 | Port 3000 already in use | Stop the other process, or run `pnpm dev -p 3001` (Playwright expects 3000) |
 | "Camera needs HTTPS" | Use the Vercel URL or `localhost`; plain `http://` IP addresses can't use the camera |
 | "Camera permission was denied" | Allow the camera in the browser's site settings and reload |
-| Camera opens but never reads | Barcode flat inside the green box, 15–20 cm away, sharp, bright screen, no glare. Try the QR code on the same label to compare |
+| Camera opens but never reads | Barcode flat inside the green box, 15–20 cm away, sharp, bright screen, no glare. |
 | Scan says "No item found" | The code isn't in the demo catalog. Use the labels from `/admin/labels` |
 | Stock looks different on phone and laptop | Expected: demo data is stored per browser. Use **Reset demo data** to start over |
 | `pnpm test:e2e` says the browser is missing | `pnpm exec playwright install chromium` |
@@ -332,7 +332,7 @@ No environment variables are needed on Vercel yet. To deploy automatically on ev
 **Done**
 - P1-01: project setup and quality checks (lint, typecheck, unit tests, build, end-to-end tests)
 - P1-02: login, salesman and admin page outlines
-- Demo scan-to-sell flow: camera, hardware scanner and typed scanning; bargained price up to MRP; sales per salesperson; admin dashboard; QR and barcode test labels
+- Demo scan-to-sell flow: camera, hardware scanner and typed scanning; bargained price up to MRP; sales per salesperson; admin dashboard; barcode test labels
 
 **Next** (see [`docs/TASK_BACKLOG.md`](docs/TASK_BACKLOG.md))
 - P1-03: shared UI components (shadcn/ui)
