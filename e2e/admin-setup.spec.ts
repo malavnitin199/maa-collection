@@ -357,3 +357,25 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
   await expect(photo).toBeVisible();
   await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 });
+
+test('help guide is reachable and first-time tips can be dismissed', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('link', { name: 'New here?' }).click();
+  await expect(page).toHaveURL(/\/help#start$/);
+  await expect(page.getByRole('heading', { name: 'Help & guide' })).toBeVisible();
+  await expect(page.getByText('Add it to your home screen')).toBeVisible(); // "New here?" open by default
+  await page.getByText('Catalog & old stock (catalog / QC person)').click();
+  await expect(page.getByText('Tag one item (about 30 seconds)')).toBeVisible();
+
+  await page.goto('/login');
+  await page.getByText('Vishal', { exact: true }).click();
+  await page.getByLabel('PIN').fill(PIN);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  const tip = page.getByRole('note').filter({ hasText: 'First time here?' });
+  await expect(tip).toBeVisible();
+  await tip.getByRole('button', { name: 'Hide this tip' }).click();
+  await expect(tip).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeVisible();
+  await expect(page.getByRole('note').filter({ hasText: 'First time here?' })).toHaveCount(0);
+});

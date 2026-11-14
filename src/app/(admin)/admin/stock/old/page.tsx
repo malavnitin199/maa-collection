@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { muted } from '@/components/ui/styles';
 import { OldStockForm } from '@/features/catalog/old-stock-form';
+import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
 import { requirePermission } from '@/server/auth';
@@ -33,6 +34,7 @@ export default function TagOldStockPage() {
           kept for the next item.
         </p>
       </div>
+      <FirstTimeTip id="old-stock" text="See the 6 steps and tips for tagging shelf by shelf." helpHref="/help#catalog" />
       <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
         <Tagger />
       </Suspense>

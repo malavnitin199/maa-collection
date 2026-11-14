@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { rupeesToPaise, saleTotalPaise, validateSaleDraft } from '@/features/inventory/inventory';
 import { ScanInput } from '@/features/scanning/scan-input';
+import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { formatPaise } from '@/lib/money';
 import { lookupProductAction, recordSaleAction } from '@/server/actions/pos';
 import type { CounterProduct } from '@/server/services/products';
@@ -83,6 +84,8 @@ export function PosScreen({ me, staff }: { me: StaffOption; staff: StaffOption[]
           My sales today →
         </Link>
       </div>
+
+      <FirstTimeTip id="sell" text="Scan a tag (or type its code) to start a sale." helpHref="/help#sell" />
 
       <ScanInput label="Scan barcode or enter SKU" onScan={handleScan} busy={busy} captureScanner={pending?.step !== 'sell'} />
 

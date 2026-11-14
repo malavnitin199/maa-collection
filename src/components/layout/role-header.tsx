@@ -42,11 +42,22 @@ async function HeaderContent() {
             </span>
           )}
         </div>
-        <form action={logoutAction}>
-          <button type="submit" className="text-sm text-zinc-500 underline-offset-4 hover:underline dark:text-zinc-400">
-            Log out
-          </button>
-        </form>
+        <div className="flex items-center gap-4 text-sm">
+          <Link href="/help" className="text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400">
+            Help
+          </Link>
+          {me ? (
+            <form action={logoutAction}>
+              <button type="submit" className="text-zinc-500 underline-offset-4 hover:underline dark:text-zinc-400">
+                Log out
+              </button>
+            </form>
+          ) : (
+            <Link href="/login" className="text-zinc-500 underline-offset-4 hover:underline dark:text-zinc-400">
+              Log in
+            </Link>
+          )}
+        </div>
       </div>
       <nav className="hidden flex-wrap gap-x-4 gap-y-1 text-sm sm:flex">
         {links.map((item) => (
