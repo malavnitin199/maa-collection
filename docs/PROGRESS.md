@@ -27,7 +27,12 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Camera barcode reliability (2026-11-15, latest)
+## Documentation + fresh-clone fix (2026-11-15, latest)
+- README rewritten: features, install/run guide (Node 26, pnpm 12.18 via `npm i -g`, since Corepack is no longer bundled with Node), scripts, tests, structure, deployment, docs index, troubleshooting, roadmap. `PROJECT_CONTEXT.md` status and `CLAUDE.md` stack/status brought up to date.
+- Verified the guide on a fresh clone from GitHub: install, lint, unit tests, build, `pnpm start` all OK.
+- Found and fixed: `pnpm typecheck` failed on a fresh clone (`Cannot find name 'LayoutProps'`). Next's global route types live in git-ignored `.next/types` and only appear after `dev`/`build`. The script is now `next typegen && tsc --noEmit`; verified on the fresh clone with `.next` removed.
+
+## Camera barcode reliability (2026-11-15)
 - Owner report: phone camera pointed at a barcode never read it.
 - Causes found: no resolution requested (many phones default to 640×480, too coarse for EAN-13 bars on a screen); zxing ran without TRY_HARDER (few rows, no rotation); every format enabled.
 - `camera-scanner.tsx` now: requests 1920×1080 ideal + continuous focus; uses native `BarcodeDetector` when available (Chrome Android) else zxing with formats limited to EAN-13/EAN-8/UPC-A/Code 128/QR and TRY_HARDER, 100 ms between attempts; manages the stream itself; on-screen guide box; shows which reader is active.

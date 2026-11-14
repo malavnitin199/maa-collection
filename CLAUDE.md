@@ -22,7 +22,8 @@ Sales flow (owner decision 2026-11-15, ADR-004): **scan → see stock → salesp
 - **Next.js 16 App Router** (16.4.6), React 19, TypeScript strict, Tailwind CSS 4
 - Tests: **Vitest** (`pnpm test`, jsdom, `src/**/*.{test,spec}.{ts,tsx}`) + **Playwright** (`pnpm test:e2e`, `e2e/`, Chromium, auto-starts dev server)
 - Quality gate for every task: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`
-- Planned, NOT yet installed (add only in the phase that needs them): PostgreSQL + Drizzle, Better Auth, Zod + React Hook Form, shadcn/ui, TanStack Query, Zustand, Dexie, @zxing/browser
+- Scanning: `@zxing/browser` (installed) + native `BarcodeDetector` when available; QR labels via `qrcode` (dev); EAN-13 drawn by our own `src/features/scanning/ean13.ts`
+- Planned, NOT yet installed (add only in the phase that needs them): PostgreSQL + Drizzle, Better Auth, Zod + React Hook Form, shadcn/ui, TanStack Query, Zustand, Dexie
 - Next.js 16 has breaking changes vs older training data — consult `node_modules/next/dist/docs/` before writing framework code (see `AGENTS.md`)
 
 ## Project structure
@@ -72,4 +73,4 @@ Empty folders hold `.gitkeep`; they are the agreed blueprint skeleton — fill t
 
 ## Status
 
-**P1-01 (bootstrap) and P1-02 (route shells) done**, plus a dummy scan-to-sell demo: `/login` fake role picker → `/pos` (scan by camera, hardware scanner or typed code → item details → bargained price → deduct, attributed to salesperson), `/admin/dashboard` (stock, revenue, sales by salesperson) and `/admin/labels` (QR codes for demo items; regenerate with `pnpm qr:generate`). Deployed at https://maa-collection-pi.vercel.app. Scanning details: `docs/SCANNING.md`. Dummy data lives in `src/features/catalog/dummy-catalog.ts` and the localStorage `src/features/inventory/dummy-store.ts` — both throwaway until P2/P3. No real auth or DB yet. Next: **P1-03** per backlog, or pull **P2-01** (PostgreSQL) forward to replace the dummy store.
+**P1-01 (bootstrap) and P1-02 (route shells) done**, plus a dummy scan-to-sell demo: `/login` fake role picker → `/pos` (scan by camera, hardware scanner or typed code → item details → bargained price → deduct, attributed to salesperson), `/admin/dashboard` (stock, revenue, sales by salesperson) and `/admin/labels` (QR code + EAN-13 barcode per demo item; regenerate with `pnpm labels:generate`). POS screen starts with scan controls only (no inventory list, owner request). Deployed at https://maa-collection-pi.vercel.app (Vercel CLI; repo not Git-connected). Code: https://github.com/malavnitin199/maa-collection. Setup/run guide: `README.md`. Scanning details: `docs/SCANNING.md`. Dummy data lives in `src/features/catalog/dummy-catalog.ts` and the localStorage `src/features/inventory/dummy-store.ts` — both throwaway until P2/P3. No real auth or DB yet. Next: **P1-03** per backlog, or pull **P2-01** (PostgreSQL) forward to replace the dummy store.
