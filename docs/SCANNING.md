@@ -35,29 +35,31 @@ Requirements:
 - Library: `@zxing/browser` (`src/features/scanning/camera-scanner.tsx`). It decodes QR codes and 1D barcodes (EAN-13, Code 128).
 
 ### B. Hardware scanner (USB or Bluetooth)
-These scanners act as a keyboard: they type the code and press Enter. Tap the scan box once so it has focus, then scan. No pairing with the app is needed — only with the phone or computer. This is the recommended setup at the counter because it is faster than the camera.
+These scanners act as a keyboard: they type the code and press Enter. Just scan — the scan box is selected when the POS screen opens, and if focus has moved to a button (for example after using the camera), the app still recognises the fast scanner burst and treats it as a scan instead of pressing the button (`src/features/scanning/scanner-keystrokes.ts`). The only time a scan is ignored is while typing in the quantity or price box. No pairing with the app is needed — only with the phone or computer. This is the recommended setup at the counter because it is faster than the camera.
 
 ### C. Type the code
-Type a SKU (`MAA-TS-001`) or barcode (`8901111000011`) into the scan box and press Enter or **Find**. This is the fallback for a torn label.
+Type a SKU (`MAA-TS-001`) or barcode (`8901111000014`) into the scan box and press Enter or **Find**. This is the fallback for a torn label.
 
-## 3. Test QR codes
+## 3. Test QR codes and barcodes
 
-Every demo item has a QR image that encodes its SKU:
+Every demo item has two scannable labels; either one finds the item:
 
-- Files: `public/qr/<SKU>.png` (for example `public/qr/MAA-TS-001.png`). Print them, or send them to the phone.
-- Page: **Admin → Labels** (`/admin/labels`) shows all eight codes with name, size, colour and MRP. Open it on a laptop and scan it with the phone camera from the POS screen.
-- Regenerate after changing the catalog: `pnpm qr:generate` (script in `scripts/generate-qr.ts`, uses the `qrcode` package).
+- **QR code** encoding the SKU: `public/qr/<SKU>.png`.
+- **EAN-13 barcode** encoding the item's barcode number: `public/barcodes/<SKU>.svg`. Drawn by our own code (`ean13Svg` in `src/features/scanning/ean13.ts`); every one was checked by scanning it through the POS camera.
+- Page: **Admin → Labels** (`/admin/labels`) shows both codes for all eight items with name, size, colour and MRP. Open it on a laptop and scan it with the phone camera from the POS screen, or print it.
+- Ready-made sheet: `Maa-Collection-test-labels.pdf` / `.png` in the starter folder (one level above the app).
+- Regenerate after changing the catalog: `pnpm labels:generate` (same as `pnpm qr:generate`; script in `scripts/generate-qr.ts`).
 
-| SKU | Item | Demo stock |
-|---|---|---|
-| MAA-TS-001 | Classic Crew Tee, M, Black | 3 |
-| MAA-TS-002 | Classic Crew Tee, L, White | 5 |
-| MAA-KU-001 | Anarkali Kurta, M, Blue | 4 |
-| MAA-KU-002 | Anarkali Kurta, L, Red | 2 (low) |
-| MAA-JE-001 | Slim Fit Jeans, 32, Indigo | 6 |
-| MAA-SH-001 | Oxford Shirt, 40, Sky Blue | 1 (low) |
-| MAA-SA-001 | Banarasi Saree, Free, Green | 0 (out of stock) |
-| MAA-DR-001 | A-Line Dress, S, Maroon | 8 |
+| SKU | Barcode | Item | Demo stock |
+|---|---|---|---|
+| MAA-TS-001 | 8901111000014 | Classic Crew Tee, M, Black | 3 |
+| MAA-TS-002 | 8901111000021 | Classic Crew Tee, L, White | 5 |
+| MAA-KU-001 | 8902222000016 | Anarkali Kurta, M, Blue | 4 |
+| MAA-KU-002 | 8902222000023 | Anarkali Kurta, L, Red | 2 (low) |
+| MAA-JE-001 | 8903333000018 | Slim Fit Jeans, 32, Indigo | 6 |
+| MAA-SH-001 | 8905555000012 | Oxford Shirt, 40, Sky Blue | 1 (low) |
+| MAA-SA-001 | 8904444000010 | Banarasi Saree, Free, Green | 0 (out of stock) |
+| MAA-DR-001 | 8906666000014 | A-Line Dress, S, Maroon | 8 |
 
 Stock numbers are the starting values; they go down as you record sales. **Admin → Dashboard → Reset demo data** restores them.
 
@@ -88,5 +90,5 @@ The scanning code, the two-step screen, and the validation rules (`src/features/
 | "Camera needs HTTPS" | You opened an `http://` address. Use the Vercel URL or `localhost`. |
 | "Camera permission was denied" | Allow the camera in the browser's site settings and reload. |
 | Camera opens but never reads | Hold the phone steady 15–25 cm away, make sure the QR fills about a third of the view and is not blurry or too small on screen. Increase laptop screen brightness. |
-| Hardware scanner types nothing | Tap the scan box first so it has focus; check the scanner is paired as a keyboard. |
+| Hardware scanner types nothing | Check the scanner is paired as a keyboard and set to send Enter after each code. Scans are ignored while the cursor is in the quantity or price box. |
 | Page loads but buttons stay disabled | Development only: opened via an IP that isn't allowed. Use `localhost` or add the IP to `allowedDevOrigins` in `next.config.ts`. |

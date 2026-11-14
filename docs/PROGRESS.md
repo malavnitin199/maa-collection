@@ -27,6 +27,27 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
+## Camera barcode reliability (2026-11-15, latest)
+- Owner report: phone camera pointed at a barcode never read it.
+- Causes found: no resolution requested (many phones default to 640×480, too coarse for EAN-13 bars on a screen); zxing ran without TRY_HARDER (few rows, no rotation); every format enabled.
+- `camera-scanner.tsx` now: requests 1920×1080 ideal + continuous focus; uses native `BarcodeDetector` when available (Chrome Android) else zxing with formats limited to EAN-13/EAN-8/UPC-A/Code 128/QR and TRY_HARDER, 100 ms between attempts; manages the stream itself; on-screen guide box; shows which reader is active.
+- Hard-image benchmark (640×480 fake camera, zxing path): 3/6 → 5/6 (now reads tiny 1.2px/bar and sideways barcodes). All 8 label barcodes + QR still read. lint, typecheck, 28 unit, 9 e2e, build PASS. Not verified on a real phone yet; needs deploy.
+
+## Barcode test labels (2026-11-15)
+- Owner request: scannable barcode images for the dummy items to test the phone app.
+- `ean13Modules` / `ean13Svg` in `src/features/scanning/ean13.ts` draw EAN-13 barcodes (no new dependency); `pnpm labels:generate` (alias of `qr:generate`) now also writes `public/barcodes/<SKU>.svg`. `/admin/labels` (heading now "Test labels") shows QR + barcode per item.
+- Printable sheet saved outside the app: `../Maa-Collection-test-labels.pdf` and `.png`.
+- Verified: each of the 8 barcodes rasterised into a fake camera feed and scanned on `/pos` → correct item (8/8). lint, typecheck, 28 unit tests, 9 Playwright tests, build — PASS. Not yet deployed.
+
+## Scanner fixes + scan-only POS screen (2026-11-15)
+- Owner request: POS screen no longer lists inventory/demo items. It starts with only the scan box, Find, and Scan with camera; an item appears only after it is scanned. Recent sales still show once a sale is recorded.
+- Fixed: scan box was never focused on page load (focus ran while the box was still disabled pre-hydration), so the first hardware scan was lost.
+- Fixed: a hardware scan while a button had focus was lost and its Enter pressed that button (e.g. reopened the camera). New `useScannerKeystrokes` (`src/features/scanning/scanner-keystrokes.ts`) catches fast keystroke bursts outside text boxes. Deliberately no extra `focus()` calls after camera scans, to avoid popping the phone keyboard over the item card.
+- Fixed: all 8 demo EAN-13 barcodes had wrong check digits (no real label could carry them). Corrected in the catalog, tests and docs; `isValidEan13` (`src/features/scanning/ean13.ts`) + a catalog test now guard this.
+- Fixed: camera scanner could report one scan twice (first frame decodes before zxing returns its controls); now stops via the callback's controls and reports once.
+- Verified: lint, typecheck, 24 unit tests, 9 Playwright tests, build — all PASS. Also verified live camera decoding in headless Chromium with a fake camera feed (QR `MAA-KU-001` and EAN-13 `8901111000014` both decoded and opened the right item in ~0.3 s). Not yet tried on a real phone or a real USB/Bluetooth scanner.
+- Deployed to Vercel production (deployment `dpl_7H6vYpMEttL6wEe2eo1PAodKjQ16`, aliased to https://maa-collection-pi.vercel.app). Live check: no inventory list, scan box focused on load, typed scan and fake-camera EAN-13 scan both open the right item.
+
 ## Camera scanning, QR labels, two-step sale (2026-11-15, later)
 - POS flow is now two steps: scan → item details card (SKU, barcode, brand, category, size/colour, MRP, stock) → "Sell this item" → quantity + bargained price → record.
 - **Camera scanning** via `@zxing/browser` (`src/features/scanning/camera-scanner.tsx`): rear camera, QR + 1D barcodes, stops after one decode. Needs HTTPS or localhost.
