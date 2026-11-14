@@ -8,6 +8,29 @@ export function isValidEan13(code: string): boolean {
   return (10 - (sum % 10)) % 10 === digits[12];
 }
 
+/** Check digit for the first 12 digits of an EAN-13. */
+export function ean13CheckDigit(first12: string): number {
+  if (!/^\d{12}$/.test(first12)) throw new Error(`Need 12 digits, got: ${first12}`);
+  const sum = first12
+    .split('')
+    .map(Number)
+    .reduce((total, digit, index) => total + digit * (index % 2 === 0 ? 1 : 3), 0);
+  return (10 - (sum % 10)) % 10;
+}
+
+/**
+ * Shop-generated barcode number: GS1 in-store prefix "200" (20–29 is reserved
+ * for a shop's own use, so it never clashes with manufacturer barcodes),
+ * a 9-digit running number, and the check digit.
+ */
+export function inStoreEan13(sequence: number): string {
+  if (!Number.isInteger(sequence) || sequence < 1 || sequence > 999_999_999) {
+    throw new Error(`Barcode sequence out of range: ${sequence}`);
+  }
+  const first12 = `200${String(sequence).padStart(9, '0')}`;
+  return first12 + ean13CheckDigit(first12);
+}
+
 // EAN-13 digit patterns (1 = dark module). G is L inverted and reversed; R is L inverted.
 const L_CODES = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011'];
 const invert = (bits: string) => bits.replace(/[01]/g, (b) => (b === '1' ? '0' : '1'));

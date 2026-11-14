@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ean13Modules, ean13Svg, isValidEan13 } from './ean13';
+import { ean13Modules, ean13Svg, inStoreEan13, isValidEan13 } from './ean13';
 
 describe('ean13Modules', () => {
   it('builds 95 modules with start, centre and end guards', () => {
@@ -49,5 +49,19 @@ describe('isValidEan13', () => {
     expect(isValidEan13('890111100001')).toBe(false);
     expect(isValidEan13('MAA-TS-001')).toBe(false);
     expect(isValidEan13('')).toBe(false);
+  });
+});
+
+describe('inStoreEan13', () => {
+  it('builds valid in-store barcodes with the 200 prefix', () => {
+    const code = inStoreEan13(1);
+    expect(code).toBe('2000000000015');
+    expect(isValidEan13(code)).toBe(true);
+    expect(isValidEan13(inStoreEan13(123_456_789))).toBe(true);
+  });
+
+  it('rejects out-of-range sequence numbers', () => {
+    expect(() => inStoreEan13(0)).toThrow();
+    expect(() => inStoreEan13(1_000_000_000)).toThrow();
   });
 });

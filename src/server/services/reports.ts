@@ -1,0 +1,259 @@
+import { and, asc, desc, eq, gte, lte, ne, or, sql, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import type { Db } from '@/db/client';
+import { exchanges, products, sales, staff } from '@/db/schema';
+import { LOW_STOCK_THRESHOLD, STORE_TIMEZONE } from '@/lib/app-config';
+
+export type Totals = { count: number; units: number; totalPaise: number };
+export type PeriodTotals = { today: Totals; month: Totals };
+
+/** Start of today / this month in the shop's time zone, as timestamptz SQL. */
+function periodStarts(now: Date, timezone: string) {
+  const at = sql`${now.toISOString()}::timestamptz`;
+  return {
+    day: sql`(date_trunc('day', ${at} AT TIME ZONE ${timezone}) AT TIME ZONE ${timezone})`,
+    month: sql`(date_trunc('month', ${at} AT TIME ZONE ${timezone}) AT TIME ZONE ${timezone})`,
+    now: at,
+  };
+}
+
+const int = (expression: SQL) => sql<number>`${expression}`.mapWith(Number);
+
+async function saleTotals(db: Db, storeId: string, now: Date, filter?: SQL): Promise<PeriodTotals> {
+  const p = periodStarts(now, STORE_TIMEZONE);
+  const isToday = sql`${sales.createdAt} >= ${p.day}`;
+  const [row] = await db
+    .select({
+      todayCount: int(sql`count(*) filter (where ${isToday})`),
+      todayUnits: int(sql`coalesce(sum(${sales.quantity}) filter (where ${isToday}), 0)`),
+      todayTotal: int(sql`coalesce(sum(${sales.totalPaise}) filter (where ${isToday}), 0)`),
+      monthCount: int(sql`count(*)`),
+      monthUnits: int(sql`coalesce(sum(${sales.quantity}), 0)`),
+      monthTotal: int(sql`coalesce(sum(${sales.totalPaise}), 0)`),
+    })
+    .from(sales)
+    .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month), lte(sales.createdAt, p.now), filter));
+  return {
+    today: { count: row.todayCount, units: row.todayUnits, totalPaise: row.todayTotal },
+    month: { count: row.monthCount, units: row.monthUnits, totalPaise: row.monthTotal },
+  };
+}
+
+export type ExchangeTotals = { today: { count: number; differencePaise: number }; month: { count: number; differencePaise: number } };
+
+async function exchangeTotals(db: Db, storeId: string, now: Date, filter?: SQL): Promise<ExchangeTotals> {
+  const p = periodStarts(now, STORE_TIMEZONE);
+  const isToday = sql`${exchanges.createdAt} >= ${p.day}`;
+  const [row] = await db
+    .select({
+      todayCount: int(sql`count(*) filter (where ${isToday})`),
+      todayDiff: int(sql`coalesce(sum(${exchanges.differencePaise}) filter (where ${isToday}), 0)`),
+      monthCount: int(sql`count(*)`),
+      monthDiff: int(sql`coalesce(sum(${exchanges.differencePaise}), 0)`),
+    })
+    .from(exchanges)
+    .where(
+      and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, p.month), lte(exchanges.createdAt, p.now), filter),
+    );
+  return {
+    today: { count: row.todayCount, differencePaise: row.todayDiff },
+    month: { count: row.monthCount, differencePaise: row.monthDiff },
+  };
+}
+
+export type ActivityEntry = {
+  kind: 'sale' | 'exchange';
+  id: string;
+  at: Date;
+  description: string;
+  amountPaise: number;
+  creditedTo: string;
+  recordedBy: string;
+};
+
+async function recentActivity(
+  db: Db,
+  storeId: string,
+  { staffId, limit = 30 }: { staffId?: string; limit?: number } = {},
+): Promise<ActivityEntry[]> {
+  const credited = alias(staff, 'credited');
+  const recorder = alias(staff, 'recorder');
+  const saleRows = await db
+    .select({
+      id: sales.id,
+      at: sales.createdAt,
+      quantity: sales.quantity,
+      name: sales.productName,
+      size: sales.size,
+      color: sales.color,
+      unitPricePaise: sales.unitPricePaise,
+      totalPaise: sales.totalPaise,
+      creditedTo: credited.name,
+      recordedBy: recorder.name,
+    })
+    .from(sales)
+    .innerJoin(credited, eq(credited.id, sales.soldBy))
+    .innerJoin(recorder, eq(recorder.id, sales.recordedBy))
+    .where(
+      and(eq(sales.storeId, storeId), staffId ? or(eq(sales.soldBy, staffId), eq(sales.recordedBy, staffId)) : undefined),
+    )
+    .orderBy(desc(sales.createdAt))
+    .limit(limit);
+  const returned = alias(products, 'returned');
+  const exchangeRows = await db
+    .select({
+      id: exchanges.id,
+      at: exchanges.createdAt,
+      returnedQuantity: exchanges.returnedQuantity,
+      returnedName: returned.name,
+      returnedSize: returned.size,
+      issuedQuantity: exchanges.issuedQuantity,
+      issuedName: exchanges.issuedProductName,
+      issuedSize: exchanges.issuedSize,
+      differencePaise: exchanges.differencePaise,
+      creditedTo: credited.name,
+      recordedBy: recorder.name,
+    })
+    .from(exchanges)
+    .innerJoin(returned, eq(returned.id, exchanges.returnedProductId))
+    .innerJoin(credited, eq(credited.id, exchanges.creditedTo))
+    .innerJoin(recorder, eq(recorder.id, exchanges.recordedBy))
+    .where(
+      and(
+        eq(exchanges.storeId, storeId),
+        staffId ? or(eq(exchanges.creditedTo, staffId), eq(exchanges.recordedBy, staffId)) : undefined,
+      ),
+    )
+    .orderBy(desc(exchanges.createdAt))
+    .limit(limit);
+
+  const entries: ActivityEntry[] = [
+    ...saleRows.map((r) => ({
+      kind: 'sale' as const,
+      id: r.id,
+      at: r.at,
+      description: `${r.quantity} × ${r.name} (${r.size}, ${r.color})`,
+      amountPaise: r.totalPaise,
+      creditedTo: r.creditedTo,
+      recordedBy: r.recordedBy,
+    })),
+    ...exchangeRows.map((r) => ({
+      kind: 'exchange' as const,
+      id: r.id,
+      at: r.at,
+      description: `Returned ${r.returnedQuantity} × ${r.returnedName} (${r.returnedSize}) → ${r.issuedQuantity} × ${r.issuedName} (${r.issuedSize})`,
+      amountPaise: r.differencePaise,
+      creditedTo: r.creditedTo,
+      recordedBy: r.recordedBy,
+    })),
+  ];
+  return entries.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, limit);
+}
+
+/** Salesman's own dashboard: what is credited to them, and what they entered for others. */
+export async function staffDashboard(db: Db, storeId: string, staffId: string, now = new Date()) {
+  const [mine, forOthers, myExchanges, activity] = await Promise.all([
+    saleTotals(db, storeId, now, eq(sales.soldBy, staffId)),
+    saleTotals(db, storeId, now, and(eq(sales.recordedBy, staffId), ne(sales.soldBy, staffId))),
+    exchangeTotals(db, storeId, now, eq(exchanges.creditedTo, staffId)),
+    recentActivity(db, storeId, { staffId, limit: 25 }),
+  ]);
+  return { mine, forOthers, exchanges: myExchanges, activity };
+}
+
+export type SalespersonRow = {
+  id: string;
+  name: string;
+  active: boolean;
+  today: { units: number; netPaise: number };
+  month: { units: number; netPaise: number };
+};
+
+/** Admin dashboard: whole shop, today and this month. Includes profit (admin only). */
+export async function shopDashboard(db: Db, storeId: string, now = new Date()) {
+  const p = periodStarts(now, STORE_TIMEZONE);
+  const [totals, exchangeSums, profitRow, people, salesByPerson, exchangesByPerson, lowStock, stockRow, activity] =
+    await Promise.all([
+      saleTotals(db, storeId, now),
+      exchangeTotals(db, storeId, now),
+      db
+        .select({
+          today: int(
+            sql`coalesce(sum(${sales.quantity} * (${sales.unitPricePaise} - ${sales.costPaise})) filter (where ${sales.createdAt} >= ${p.day}), 0)`,
+          ),
+          month: int(sql`coalesce(sum(${sales.quantity} * (${sales.unitPricePaise} - ${sales.costPaise})), 0)`),
+        })
+        .from(sales)
+        .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month), sql`${sales.costPaise} is not null`)),
+      db.select({ id: staff.id, name: staff.name, active: staff.active, role: staff.role }).from(staff).where(eq(staff.storeId, storeId)).orderBy(asc(staff.name)),
+      db
+        .select({
+          staffId: sales.soldBy,
+          todayUnits: int(sql`coalesce(sum(${sales.quantity}) filter (where ${sales.createdAt} >= ${p.day}), 0)`),
+          todayTotal: int(sql`coalesce(sum(${sales.totalPaise}) filter (where ${sales.createdAt} >= ${p.day}), 0)`),
+          monthUnits: int(sql`coalesce(sum(${sales.quantity}), 0)`),
+          monthTotal: int(sql`coalesce(sum(${sales.totalPaise}), 0)`),
+        })
+        .from(sales)
+        .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month)))
+        .groupBy(sales.soldBy),
+      db
+        .select({
+          staffId: exchanges.creditedTo,
+          todayDiff: int(sql`coalesce(sum(${exchanges.differencePaise}) filter (where ${exchanges.createdAt} >= ${p.day}), 0)`),
+          monthDiff: int(sql`coalesce(sum(${exchanges.differencePaise}), 0)`),
+        })
+        .from(exchanges)
+        .where(and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, p.month)))
+        .groupBy(exchanges.creditedTo),
+      db
+        .select({ id: products.id, sku: products.sku, name: products.name, size: products.size, color: products.color, stock: products.stock })
+        .from(products)
+        .where(and(eq(products.storeId, storeId), eq(products.active, true), lte(products.stock, LOW_STOCK_THRESHOLD)))
+        .orderBy(asc(products.stock), asc(products.sku)),
+      db
+        .select({
+          units: int(sql`coalesce(sum(${products.stock}), 0)`),
+          mrpValue: int(sql`coalesce(sum(${products.stock} * ${products.mrpPaise}), 0)`),
+          costValue: int(sql`coalesce(sum(${products.stock} * ${products.costPaise}), 0)`),
+          productCount: int(sql`count(*)`),
+        })
+        .from(products)
+        .where(and(eq(products.storeId, storeId), eq(products.active, true))),
+      recentActivity(db, storeId, { limit: 15 }),
+    ]);
+
+  const salespeople: SalespersonRow[] = people
+    .filter((person) => person.role === 'salesman' || salesByPerson.some((s) => s.staffId === person.id))
+    .map((person) => {
+      const s = salesByPerson.find((row) => row.staffId === person.id);
+      const e = exchangesByPerson.find((row) => row.staffId === person.id);
+      return {
+        id: person.id,
+        name: person.name,
+        active: person.active,
+        today: { units: s?.todayUnits ?? 0, netPaise: (s?.todayTotal ?? 0) + (e?.todayDiff ?? 0) },
+        month: { units: s?.monthUnits ?? 0, netPaise: (s?.monthTotal ?? 0) + (e?.monthDiff ?? 0) },
+      };
+    })
+    .sort((a, b) => b.month.netPaise - a.month.netPaise);
+
+  return {
+    sales: totals,
+    exchanges: exchangeSums,
+    netRevenue: {
+      today: totals.today.totalPaise + exchangeSums.today.differencePaise,
+      month: totals.month.totalPaise + exchangeSums.month.differencePaise,
+    },
+    estimatedProfit: profitRow[0],
+    salespeople,
+    lowStock,
+    stock: stockRow[0],
+    activity,
+  };
+}
+
+/** Full activity log for the admin. */
+export async function shopActivity(db: Db, storeId: string, limit = 100) {
+  return recentActivity(db, storeId, { limit });
+}
