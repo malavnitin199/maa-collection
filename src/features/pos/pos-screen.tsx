@@ -1,19 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import {
-  DUMMY_CATALOG,
-  findByBarcodeOrSku,
-  type CatalogItem,
-} from '@/features/catalog/dummy-catalog';
+import { findByBarcodeOrSku, type CatalogItem } from '@/features/catalog/dummy-catalog';
 import { recordSale, useInventory } from '@/features/inventory/dummy-store';
-import {
-  LOW_STOCK_THRESHOLD,
-  rupeesToPaise,
-  saleTotalPaise,
-  validateSaleDraft,
-} from '@/features/inventory/inventory';
+import { rupeesToPaise, saleTotalPaise, validateSaleDraft } from '@/features/inventory/inventory';
 import { CameraScanner } from '@/features/scanning/camera-scanner';
+import { useScannerKeystrokes } from '@/features/scanning/scanner-keystrokes';
 import { formatPaise } from '@/lib/money';
 
 const SALESPEOPLE = ['Ravi', 'Priya'];
@@ -80,9 +72,14 @@ export function PosScreen() {
   const scanRef = useRef<HTMLInputElement>(null);
   const hydrated = useHydrated();
 
+  // The box is disabled until hydration, so focus it once it becomes enabled;
+  // a hardware scanner can then scan straight away.
   useEffect(() => {
-    scanRef.current?.focus();
-  }, []);
+    if (hydrated) scanRef.current?.focus();
+  }, [hydrated]);
+
+  // Catch hardware scans when focus is on a button instead of the scan box.
+  useScannerKeystrokes(handleScan, hydrated);
 
   function handleScan(raw: string) {
     const code = raw.trim();
@@ -335,55 +332,6 @@ export function PosScreen() {
           </div>
         </section>
       )}
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Try these items (demo data)
-        </h2>
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {DUMMY_CATALOG.map((item) => {
-            const available = stock[item.sku] ?? 0;
-            return (
-              <li
-                key={item.sku}
-                className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
-              >
-                <div>
-                  <p className="font-medium">
-                    {item.design}{' '}
-                    <span className="font-normal text-zinc-500 dark:text-zinc-400">
-                      {item.size} · {item.color}
-                    </span>
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {item.sku} · MRP {formatPaise(item.mrpPaise)} ·{' '}
-                    <span
-                      data-testid={`stock-${item.sku}`}
-                      className={
-                        available <= 0
-                          ? 'font-medium text-red-600 dark:text-red-400'
-                          : available <= LOW_STOCK_THRESHOLD
-                            ? 'font-medium text-amber-600 dark:text-amber-400'
-                            : ''
-                      }
-                    >
-                      {available <= 0 ? 'Out of stock' : `${available} in stock`}
-                    </span>
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={!hydrated}
-                  onClick={() => handleScan(item.sku)}
-                  className="shrink-0 rounded-lg border border-emerald-600 px-3 py-1.5 font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
-                >
-                  Scan
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
 
       {sales.length > 0 && (
         <section className="flex flex-col gap-2">
