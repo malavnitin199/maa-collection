@@ -13,11 +13,19 @@ async function Dashboard() {
   const d = await shopDashboard(await requestDb(), STORE_ID);
   return (
     <main className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-2">
+      <div className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <Link href="/admin/products/new" className={`text-sm ${link}`}>
-          + Add product
-        </Link>
+        <div data-testid="quick-actions" className="grid grid-cols-3 gap-2 text-center text-sm font-medium">
+          <Link href="/admin/stock/new" className="rounded-xl bg-emerald-600 px-2 py-3 text-white active:bg-emerald-700">
+            + New stock
+          </Link>
+          <Link href="/admin/suppliers" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
+            Suppliers
+          </Link>
+          <Link href="/admin/labels" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
+            Labels
+          </Link>
+        </div>
       </div>
 
       <section className="flex flex-col gap-2">

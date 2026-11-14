@@ -5,7 +5,8 @@ const GROUPS = [
   {
     title: 'Stock',
     links: [
-      { href: '/admin/products/new', label: 'Add a single product', hint: 'One size/colour, generated barcode' },
+      { href: '/admin/stock/new', label: 'New items from a supplier', hint: 'A design in sizes × colours, barcodes + labels' },
+      { href: '/admin/products/new', label: 'Add a single product', hint: 'One size/colour, or a manufacturer barcode' },
       { href: '/admin/categories', label: 'Categories', hint: 'Kurta, Saree… and their SKU codes' },
       { href: '/admin/suppliers', label: 'Suppliers', hint: 'Companies you buy from' },
       { href: '/admin/labels', label: 'Print labels', hint: 'Barcode labels for all products' },

@@ -8,7 +8,7 @@ import { STORE_ID } from '@/lib/app-config';
 import { requireAdmin } from '@/server/auth';
 import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
-import { createProduct, stockIn, updateProduct, type ProductInput } from '@/server/services/products';
+import { createDesign, createProduct, stockIn, updateProduct, type ProductInput } from '@/server/services/products';
 import { createStaff, setStaffActive, setStaffPin } from '@/server/services/staff';
 
 export type FormState = { error?: string; message?: string };
@@ -189,5 +189,59 @@ export async function updateCategoryAction(categoryId: string, _prev: FormState,
     return { message: 'Saved.' };
   } catch (error) {
     return failure(error);
+  }
+}
+
+// ------------------------------------------------- new design (sizes × colours)
+
+export type DesignActionInput = {
+  operationId: string;
+  supplierId: string;
+  categoryId: string;
+  name: string;
+  brand: string;
+  sizes: string[];
+  colors: string[];
+  mrp: string;
+  price: string;
+  cost: string;
+  quantityEach: string;
+  billNumber: string;
+};
+
+export type DesignActionResult = { ok: true; receiptId: string; created: number } | { ok: false; error: string };
+
+export async function createDesignAction(input: DesignActionInput): Promise<DesignActionResult> {
+  const admin = await requireAdmin();
+  try {
+    const toPaise = (raw: string, label: string, optional = false) => {
+      if (!raw.trim() && optional) return null;
+      const paise = rupeesToPaise(raw);
+      if (paise === null) throw new DomainError(`Enter a valid ${label} in rupees.`);
+      return paise;
+    };
+    const qty = input.quantityEach.trim() || '0';
+    if (!/^\d+$/.test(qty)) throw new DomainError('Pieces must be a whole number.');
+    const mrpPaise = toPaise(input.mrp, 'MRP') as number;
+    const result = await createDesign(await getDb(), STORE_ID, {
+      operationId: String(input.operationId).slice(0, 100),
+      supplierId: String(input.supplierId),
+      categoryId: String(input.categoryId),
+      name: String(input.name),
+      brand: String(input.brand),
+      sizes: Array.isArray(input.sizes) ? input.sizes.map(String) : [],
+      colors: Array.isArray(input.colors) ? input.colors.map(String) : [],
+      mrpPaise,
+      pricePaise: input.price.trim() ? (toPaise(input.price, 'selling price') as number) : mrpPaise,
+      costPaise: toPaise(input.cost, 'cost price', true),
+      quantityEach: Number(qty),
+      billNumber: input.billNumber,
+      staffId: admin.id,
+    });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, receiptId: result.receipt.id, created: result.products.length };
+  } catch (error) {
+    const state = failure(error);
+    return { ok: false, error: state.error ?? 'Something went wrong.' };
   }
 }

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { card, link, muted, sectionTitle } from '@/components/ui/styles';
+import { card, link, muted, primaryButton, sectionTitle } from '@/components/ui/styles';
 import { SupplierForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
@@ -45,7 +45,9 @@ async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
           )}
         </p>
       </div>
-      {/* STOCK_ACTIONS */}
+      <Link href={`/admin/stock/new?supplier=${supplier.id}`} className={`${primaryButton} py-3 text-center`}>
+        + New items from {supplier.name}
+      </Link>
       <section className="flex flex-col gap-2">
         <h2 className={sectionTitle}>Deliveries</h2>
         {receipts.length === 0 ? (
@@ -61,6 +63,9 @@ async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
                     {r.lines} items · {r.units} pcs · cost {formatPaise(r.costValuePaise)} · by {r.staffName}
                   </span>
                 </span>
+                <Link href={`/admin/labels/print?receipt=${r.id}`} className={`shrink-0 ${link}`}>
+                  Labels
+                </Link>
               </li>
             ))}
           </ul>
