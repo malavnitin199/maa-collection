@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  customType,
   index,
   integer,
   pgTable,
@@ -219,6 +220,34 @@ export const exchanges = pgTable(
       sql`${t.issuedUnitPricePaise} > 0 AND ${t.issuedUnitPricePaise} <= ${t.issuedMrpPaise}`,
     ),
   ],
+);
+
+/** Raw image bytes (Postgres bytea). PGlite returns Uint8Array, postgres.js returns Buffer. */
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+  dataType: () => 'bytea',
+});
+
+/**
+ * Product photos. Bytes live in `data` (works everywhere); `url` is for an
+ * external store (e.g. Vercel Blob) when configured. Lowest sort = main photo.
+ */
+export const productImages = pgTable(
+  'product_images',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    productId: uuid('product_id').notNull().references(() => products.id),
+    contentType: text('content_type').notNull(),
+    data: bytea('data'),
+    url: text('url'),
+    byteSize: integer('byte_size').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdBy: uuid('created_by').references(() => staff.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('product_images_product_idx').on(t.productId, t.sortOrder)],
 );
 
 export type Staff = typeof staff.$inferSelect;

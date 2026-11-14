@@ -8,6 +8,7 @@ import { DomainError } from '@/server/services/errors';
 import { findReturnableSales, recordExchange, type ReturnableSale } from '@/server/services/exchanges';
 import { findProductByCode, toCounterProduct, type CounterProduct } from '@/server/services/products';
 import { recordSale } from '@/server/services/sales';
+import { imageSrc, mainImages } from '@/server/services/images';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -26,8 +27,11 @@ async function run<T>(work: () => Promise<T>): Promise<ActionResult<T>> {
 export async function lookupProductAction(code: string): Promise<ActionResult<CounterProduct | null>> {
   await requireStaff();
   return run(async () => {
-    const product = await findProductByCode(await getDb(), STORE_ID, z.string().max(64).parse(code));
-    return product ? toCounterProduct(product) : null;
+    const db = await getDb();
+    const product = await findProductByCode(db, STORE_ID, z.string().max(64).parse(code));
+    if (!product) return null;
+    const photo = (await mainImages(db, STORE_ID, [product.id])).get(product.id);
+    return { ...toCounterProduct(product), imageSrc: photo ? imageSrc(photo) : null };
   });
 }
 

@@ -21,6 +21,7 @@ import {
   updateProduct,
   type ProductInput,
 } from '@/server/services/products';
+import { addProductImage, deleteImage, makeMainImage } from '@/server/services/images';
 import { updatePriceCode } from '@/server/services/settings';
 import { createStaff, setStaffActive, setStaffPermissions, setStaffPin } from '@/server/services/staff';
 
@@ -412,5 +413,101 @@ export async function setStaffPermissionsAction(staffId: string, _prev: FormStat
     return { message: granted.length ? `Saved: ${granted.join(', ')}.` : 'Saved: counter only.' };
   } catch (error) {
     return failure(error);
+  }
+}
+
+// -------------------------------------------------------------------- photos
+
+async function readPhoto(file: FormDataEntryValue | null): Promise<Uint8Array | null> {
+  if (!file || typeof file === 'string' || file.size === 0) return null;
+  return new Uint8Array(await file.arrayBuffer());
+}
+
+export async function uploadProductImageAction(productId: string, formData: FormData): Promise<FormState> {
+  const me = await requirePermission('catalog');
+  try {
+    const bytes = await readPhoto(formData.get('photo'));
+    if (!bytes) throw new DomainError('Choose a photo first.');
+    const size = (key: string) => (/^\d+$/.test(text(formData, key)) ? Number(text(formData, key)) : null);
+    await addProductImage(await getDb(), STORE_ID, { productId, bytes, width: size('width'), height: size('height'), staffId: me.id });
+    revalidatePath('/admin', 'layout');
+    return { message: 'Photo added.' };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function makeMainImageAction(imageId: string): Promise<FormState> {
+  await requirePermission('catalog');
+  try {
+    await makeMainImage(await getDb(), STORE_ID, imageId);
+    revalidatePath('/admin', 'layout');
+    return { message: 'Main photo changed.' };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function deleteImageAction(imageId: string): Promise<FormState> {
+  await requirePermission('catalog');
+  try {
+    await deleteImage(await getDb(), STORE_ID, imageId);
+    revalidatePath('/admin', 'layout');
+    return { message: 'Photo deleted.' };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// ------------------------------------------------------------- tag old stock
+
+export type OldStockResult =
+  | { ok: true; product: { id: string; sku: string; barcode: string; name: string; size: string; color: string; mrpPaise: number }; photoError?: string }
+  | { ok: false; error: string };
+
+/** One old-stock item: details + counted pieces + photos → product with barcode. */
+export async function tagOldStockAction(formData: FormData): Promise<OldStockResult> {
+  const me = await requirePermission('catalog');
+  try {
+    const name = text(formData, 'name');
+    if (!name) throw new DomainError('Enter the product name.');
+    const categoryId = text(formData, 'categoryId');
+    if (!categoryId) throw new DomainError('Choose a category.');
+    const mrpPaise = money(formData, 'mrp', 'MRP') as number;
+    const pricePaise = text(formData, 'price') ? (money(formData, 'price', 'selling price') as number) : mrpPaise;
+    const costPaise = can(me, 'costs') ? money(formData, 'cost', 'purchase price', { optional: true }) : null;
+    const qty = text(formData, 'quantity') || '1';
+    if (!/^\d+$/.test(qty)) throw new DomainError('Pieces must be a whole number.');
+    const db = await getDb();
+    const result = await createProductsBatch(db, STORE_ID, {
+      operationId: text(formData, 'operationId').slice(0, 100),
+      supplierId: text(formData, 'supplierId') || null,
+      categoryId,
+      brand: text(formData, 'brand'),
+      note: 'Old stock tagged',
+      rows: [{ name, size: text(formData, 'size'), color: text(formData, 'color'), mrpPaise, pricePaise, costPaise, quantity: Number(qty) }],
+      staffId: me.id,
+    });
+    const product = result.products[0];
+    let photoError: string | undefined;
+    if (!result.duplicate) {
+      for (const entry of formData.getAll('photos')) {
+        const bytes = await readPhoto(entry);
+        if (!bytes) continue;
+        try {
+          await addProductImage(db, STORE_ID, { productId: product.id, bytes, staffId: me.id });
+        } catch (error) {
+          photoError = error instanceof DomainError ? error.message : 'A photo could not be saved.';
+        }
+      }
+    }
+    revalidatePath('/admin', 'layout');
+    return {
+      ok: true,
+      product: { id: product.id, sku: product.sku, barcode: product.barcode, name: product.name, size: product.size, color: product.color, mrpPaise: product.mrpPaise },
+      photoError,
+    };
+  } catch (error) {
+    return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
   }
 }

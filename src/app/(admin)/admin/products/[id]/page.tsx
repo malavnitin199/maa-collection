@@ -15,6 +15,8 @@ import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 import { getProduct, listDesignVariants, listMovements } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
+import { imageSrc, listProductImages } from '@/server/services/images';
+import { PhotoManager } from '@/features/catalog/photo-manager';
 
 const REASONS: Record<string, string> = {
   opening: 'Opening stock',
@@ -33,12 +35,13 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const db = await requestDb();
   const product = await getProduct(db, STORE_ID, id);
   if (!product) notFound();
-  const [movements, variants, categoryRows, supplierRows, settings] = await Promise.all([
+  const [movements, variants, categoryRows, supplierRows, settings, photos] = await Promise.all([
     listMovements(db, STORE_ID, id),
     listDesignVariants(db, STORE_ID, id),
     listCategories(db, STORE_ID),
     listSuppliers(db, STORE_ID),
     getStoreSettings(db, STORE_ID),
+    listProductImages(db, STORE_ID, id),
   ]);
   const supplier = supplierRows.find((s) => s.id === product.supplierId);
 
@@ -94,6 +97,11 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
           </div>
         </div>
       </div>
+
+      <section className={`${card} flex flex-col gap-3 print:hidden`}>
+        <h2 className={sectionTitle}>Photos</h2>
+        <PhotoManager productId={product.id} photos={photos.map((p) => ({ id: p.id, src: imageSrc(p) }))} canEdit={can(me, 'catalog')} />
+      </section>
 
       {variants.length > 1 && (
         <section className={`${card} flex flex-col gap-2 print:hidden`}>

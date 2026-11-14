@@ -17,6 +17,8 @@ export type CounterProduct = {
   mrpPaise: number;
   pricePaise: number;
   stock: number;
+  /** Main photo, if any (set by the counter lookup). */
+  imageSrc?: string | null;
 };
 
 export function toCounterProduct(p: Product): CounterProduct {
@@ -362,7 +364,7 @@ async function insertNewProducts(
   storeId: string,
   input: {
     operationId: string;
-    supplierId: string;
+    supplierId: string | null;
     category: { id: string; name: string; code: string };
     billNumber?: string | null;
     note: string;
@@ -453,10 +455,12 @@ export async function createProductsBatch(
   storeId: string,
   input: {
     operationId: string;
-    supplierId: string;
+    /** Optional: old stock often has no known company. */
+    supplierId?: string | null;
     categoryId: string;
     brand?: string | null;
     billNumber?: string | null;
+    note?: string;
     rows: QuickRowInput[];
     staffId: string;
   },
@@ -466,8 +470,8 @@ export async function createProductsBatch(
   if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
 
   const category = await resolveCategory(db, storeId, input.categoryId);
-  const supplier = await resolveSupplier(db, storeId, input.supplierId);
-  const brand = input.brand?.trim() || supplier.name;
+  const supplier = input.supplierId ? await resolveSupplier(db, storeId, input.supplierId) : null;
+  const brand = input.brand?.trim() || supplier?.name || 'Unbranded';
   const rows = input.rows.filter((r) => r.name.trim());
   if (rows.length === 0) throw new DomainError('Add at least one product with a name.');
   if (rows.length > 50) throw new DomainError('Up to 50 products at once. Split the entry.');
@@ -515,10 +519,10 @@ export async function createProductsBatch(
 
   return insertNewProducts(db, storeId, {
     operationId: input.operationId,
-    supplierId: supplier.id,
+    supplierId: supplier?.id ?? null,
     category,
     billNumber: input.billNumber,
-    note: `Quick add: ${cleaned.length} products`,
+    note: input.note ?? `Quick add: ${cleaned.length} products`,
     staffId: input.staffId,
     rows: cleaned,
   });
@@ -754,4 +758,23 @@ export async function updateDesignRates(
     .where(and(eq(products.storeId, storeId), inArray(products.id, ids)))
     .returning({ id: products.id });
   return updated.length;
+}
+
+/** Every label line from receipts this person entered today (shop time zone) — "print today's labels". */
+export async function getMyLabelsToday(db: Db, storeId: string, staffId: string, timezone: string, now = new Date()) {
+  const at = sql`${now.toISOString()}::timestamptz`;
+  const rows = await db
+    .select({ product: products, quantity: stockMovements.quantityChange, receiptAt: stockReceipts.createdAt })
+    .from(stockReceipts)
+    .innerJoin(stockMovements, eq(stockMovements.refId, stockReceipts.id))
+    .innerJoin(products, eq(products.id, stockMovements.productId))
+    .where(
+      and(
+        eq(stockReceipts.storeId, storeId),
+        eq(stockReceipts.staffId, staffId),
+        sql`${stockReceipts.createdAt} >= (date_trunc('day', ${at} AT TIME ZONE ${timezone}) AT TIME ZONE ${timezone})`,
+      ),
+    )
+    .orderBy(asc(stockReceipts.createdAt), asc(products.name));
+  return rows.map((r) => ({ ...r.product, quantity: r.quantity }));
 }

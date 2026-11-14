@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   // PGlite (local/test database) ships WASM files; load it from node_modules at runtime.
   serverExternalPackages: ["@electric-sql/pglite"],
+  experimental: {
+    // Product photos are resized on the phone (~100–250 KB each); an old-stock save
+    // sends a few at once. Vercel's own request limit is 4.5 MB.
+    serverActions: { bodySizeLimit: "4mb" },
+  },
   partialPrefetching: true,
   turbopack: {
     rules: {

@@ -8,6 +8,7 @@ import { requireAnyPermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 import { listProducts } from '@/server/services/products';
+import { imageSrc, mainImages } from '@/server/services/images';
 
 type Search = { q?: string; supplier?: string; category?: string };
 const uuid = (v?: string) => (v && /^[0-9a-f-]{36}$/i.test(v) ? v : undefined);
@@ -24,6 +25,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
     listSuppliers(db, STORE_ID),
     listCategories(db, STORE_ID),
   ]);
+  const photos = await mainImages(db, STORE_ID, items.map((p) => p.id));
   return (
     <>
       <form className="flex flex-col gap-2" role="search">
@@ -59,7 +61,15 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
         {items.map((p) => (
           <li key={p.id}>
             <Link href={`/admin/products/${p.id}`} className={`${card} flex items-center justify-between gap-3 py-3 active:bg-zinc-50 dark:active:bg-zinc-900`}>
-              <span className="min-w-0">
+              {photos.get(p.id) ? (
+                // eslint-disable-next-line @next/next/no-img-element -- our own resized photos
+                <img src={imageSrc(photos.get(p.id)!)} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-cover" />
+              ) : (
+                <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xs text-zinc-400 dark:bg-zinc-800">
+                  no photo
+                </span>
+              )}
+              <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">
                   {p.name} <span className={`font-normal ${muted}`}>· {p.color} · {p.size}</span>
                 </span>

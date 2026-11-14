@@ -31,7 +31,13 @@ export function ProductDetails({ product }: { product: CounterProduct }) {
 export function ProductCard({ product, children }: { product: CounterProduct; children?: React.ReactNode }) {
   return (
     <section data-testid="item-details" className={card}>
-      <h2 className="text-lg font-semibold">{product.name}</h2>
+      <div className="flex items-start gap-3">
+        {product.imageSrc && (
+          // eslint-disable-next-line @next/next/no-img-element -- our own resized photos
+          <img src={product.imageSrc} alt={`Photo of ${product.name}`} className="h-24 w-24 shrink-0 rounded-lg object-cover" />
+        )}
+        <h2 className="text-lg font-semibold">{product.name}</h2>
+      </div>
       <ProductDetails product={product} />
       {children}
     </section>

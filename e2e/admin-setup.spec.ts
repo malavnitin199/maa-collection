@@ -291,3 +291,69 @@ test('owner makes a salesman a catalog person; they get catalog screens but not 
     await expect(page, `${path} is owner-only`).toHaveURL(/\/pos$/);
   }
 });
+
+test('catalog person tags old stock with a photo; label, today\'s labels, photo at the counter', async ({ page }) => {
+  // Owner makes Nitin a catalog person (no purchase price).
+  await loginOwner(page);
+  await page.goto('/admin/staff');
+  await page.getByTestId('staff-list').getByRole('listitem').filter({ hasText: /^Nitin/ }).getByText(/^Permissions:/).click();
+  const perms = page.getByRole('form', { name: 'Permissions for Nitin' });
+  for (const p of ['Catalog', 'Prices', 'Stock']) await perms.getByLabel(`${p} for Nitin`).check();
+  await perms.getByLabel('Purchase price for Nitin').uncheck();
+  await perms.getByRole('button', { name: 'Save permissions' }).click();
+  await expect(perms.getByRole('status')).toContainText('Saved');
+
+  // A real JPEG made in the browser, as a phone camera would give.
+  const jpegBase64 = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 640;
+    c.height = 480;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#c2410c';
+    g.fillRect(0, 0, 640, 480);
+    g.fillStyle = '#fde68a';
+    g.fillRect(100, 100, 300, 200);
+    return c.toDataURL('image/jpeg', 0.9).split(',')[1];
+  });
+
+  await page.goto('/login');
+  await page.getByText('Nitin', { exact: true }).click();
+  await page.getByLabel('PIN').fill(PIN);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  await page.goto('/admin/stock');
+  await page.getByRole('link', { name: /Tag old stock/ }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/old$/);
+
+  await page.getByLabel('Choose photos').setInputFiles({ name: 'shelf.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(jpegBase64, 'base64') });
+  await expect(page.getByTestId('new-photos').getByRole('img')).toHaveCount(1);
+  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
+  await page.getByLabel('Product name').fill(`Phulkari Dupatta ${run}`);
+  await page.getByRole('button', { name: 'M', exact: true }).click();
+  await page.getByLabel('Colour').fill('Orange');
+  await page.getByLabel('MRP (₹)').fill('899');
+  await expect(page.getByLabel('Purchase price (₹)')).toHaveCount(0);
+  await page.getByLabel('Pieces counted').fill('3');
+  await page.getByRole('button', { name: 'Save and get barcode' }).click();
+
+  const saved = page.getByRole('status');
+  await expect(saved).toContainText(`Saved Phulkari Dupatta ${run}`);
+  const barcode = (await saved.innerText()).match(/barcode (\d{13})/)?.[1];
+  expect(barcode).toMatch(/^200/);
+  await page.getByRole('button', { name: 'Next item →' }).click();
+  await expect(page.getByRole('combobox', { name: /^Category/ })).toHaveValue(/.+/); // category kept
+  await expect(page.getByLabel('Product name')).toHaveValue('');
+
+  await page.getByRole('link', { name: "print today's labels" }).click();
+  await expect(page.getByRole('heading', { name: 'My labels today' })).toBeVisible();
+  await expect(page.getByTestId('label-sheet').getByRole('img', { name: `Barcode ${barcode} for MAA-SA-`, exact: false })).toHaveCount(3);
+
+  // Seller scans it and sees the photo.
+  await page.goto('/pos');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await page.keyboard.type(barcode!, { delay: 5 });
+  await page.keyboard.press('Enter');
+  const photo = page.getByRole('img', { name: `Photo of Phulkari Dupatta ${run}` });
+  await expect(photo).toBeVisible();
+  await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+});

@@ -194,3 +194,50 @@ describe('quick add many products', () => {
     ).rejects.toThrow(/entered twice/);
   });
 });
+
+describe('product photos', () => {
+  const jpeg = (size = 100) => {
+    const bytes = new Uint8Array(size);
+    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+    return bytes;
+  };
+
+  it('stores photos in order, picks a main photo, deletes, and checks type/size/limit', async () => {
+    const images = await import('./images');
+    const tee = (await findProductByCode(db, STORE_ID, 'MAA-TS-001'))!;
+    const first = await images.addProductImage(db, STORE_ID, { productId: tee.id, bytes: jpeg(), width: 800, height: 600, staffId: owner });
+    const second = await images.addProductImage(db, STORE_ID, { productId: tee.id, bytes: jpeg(200), staffId: owner });
+    expect((await images.listProductImages(db, STORE_ID, tee.id)).map((i) => i.id)).toEqual([first.id, second.id]);
+    expect((await images.mainImages(db, STORE_ID, [tee.id])).get(tee.id)?.id).toBe(first.id);
+
+    await images.makeMainImage(db, STORE_ID, second.id);
+    expect((await images.mainImages(db, STORE_ID, [tee.id])).get(tee.id)?.id).toBe(second.id);
+    const stored = await images.getImageData(db, STORE_ID, second.id);
+    expect(stored?.contentType).toBe('image/jpeg');
+    expect(stored?.data?.length).toBe(200);
+
+    await images.deleteImage(db, STORE_ID, second.id);
+    expect((await images.listProductImages(db, STORE_ID, tee.id)).map((i) => i.id)).toEqual([first.id]);
+
+    await expect(images.addProductImage(db, STORE_ID, { productId: tee.id, bytes: new TextEncoder().encode('<script>'), staffId: owner })).rejects.toThrow(/Only JPEG/);
+    await expect(images.addProductImage(db, STORE_ID, { productId: tee.id, bytes: jpeg(images.MAX_IMAGE_BYTES + 1), staffId: owner })).rejects.toThrow(/too large/);
+    for (let i = 0; i < images.MAX_IMAGES_PER_PRODUCT - 1; i++) await images.addProductImage(db, STORE_ID, { productId: tee.id, bytes: jpeg(), staffId: owner });
+    await expect(images.addProductImage(db, STORE_ID, { productId: tee.id, bytes: jpeg(), staffId: owner })).rejects.toThrow(/Up to 8 photos/);
+  });
+});
+
+describe('tag old stock', () => {
+  it('creates an item without a company, and lists my labels from today', async () => {
+    const { createProductsBatch, getMyLabelsToday } = await import('./products');
+    const dupatta = await createCategory(db, STORE_ID, { name: 'Dupatta' });
+    const result = await createProductsBatch(db, STORE_ID, {
+      operationId: 'old-1', categoryId: dupatta.id, staffId: owner, note: 'Old stock',
+      rows: [{ name: 'Phulkari Dupatta', color: 'Orange', mrpPaise: 89900, pricePaise: 79900, costPaise: null, quantity: 4 }],
+    });
+    expect(result.products[0]).toMatchObject({ supplierId: null, brand: 'Unbranded', sku: 'MAA-DU-001', stock: 4 });
+    const mine = await getMyLabelsToday(db, STORE_ID, owner, 'Asia/Kolkata');
+    expect(mine.map((l) => [l.name, l.quantity])).toEqual([['Phulkari Dupatta', 4]]);
+    const someoneElse = (await listStaff(db, STORE_ID)).find((p) => p.name === 'Vishal')!.id;
+    expect(await getMyLabelsToday(db, STORE_ID, someoneElse, 'Asia/Kolkata')).toEqual([]);
+  });
+});
