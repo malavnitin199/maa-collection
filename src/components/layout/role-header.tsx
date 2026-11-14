@@ -12,7 +12,7 @@ const SALES_LINKS = [
 const ADMIN_LINKS = [
   { href: '/admin/dashboard', label: 'Dashboard' },
   { href: '/admin/products', label: 'Products' },
-  { href: '/admin/stock/new', label: '+ New stock' },
+  { href: '/admin/stock', label: '+ Add stock' },
   { href: '/admin/suppliers', label: 'Suppliers' },
   { href: '/admin/categories', label: 'Categories' },
   { href: '/admin/staff', label: 'Staff' },

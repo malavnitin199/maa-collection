@@ -52,7 +52,8 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
   const tabs = page.getByRole('navigation', { name: 'Main' });
   await expect(tabs).toBeVisible();
   await tabs.getByRole('link', { name: '+ Stock' }).click();
-  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
+  await expect(page).toHaveURL(/\/admin\/stock$/);
+  await expect(page.getByRole('link', { name: /Many different products/ })).toBeVisible();
   await tabs.getByRole('link', { name: 'More' }).click();
   await page.getByRole('link', { name: /^Suppliers/ }).click();
   await expect(page).toHaveURL(/\/admin\/suppliers$/);
@@ -73,7 +74,7 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await page.getByRole('button', { name: 'Add supplier' }).click();
   await expect(page.getByRole('status')).toContainText('added');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(`Design Co ${run}`) }).click();
-  await page.getByRole('link', { name: `+ New items from Design Co ${run}` }).click();
+  await page.getByRole('link', { name: '+ New design in sizes × colours' }).click();
   await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=/);
 
   // Supplier preselected, brand defaults to the supplier name.
@@ -205,4 +206,55 @@ test('owner sets a code word; labels print the purchase price in code and the de
   await page.goto('/admin/products?q=MAA-TS-001');
   await page.getByTestId('product-list').getByRole('link').first().click();
   await expect(page.getByTestId('price-code')).toHaveText('LSS');
+});
+
+test('quick add: one company + category, several products with their own prices → labels → seller scans', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/stock');
+  await page.getByRole('link', { name: /Many different products/ }).click();
+  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
+  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
+
+  await page.getByLabel('Product 1 name').fill(`Georgette Saree ${run}`);
+  await page.getByLabel('Product 1 MRP').fill('2500');
+  await page.getByLabel('Product 1 selling price').fill('2200');
+  await page.getByLabel('Product 1 purchase price').fill('1400');
+  await page.getByLabel('Product 1 pieces').fill('3');
+
+  await page.getByRole('button', { name: '+ Add product' }).click();
+  await page.getByLabel('Product 2 name').fill(`Cotton Saree ${run}`);
+  await page.getByLabel('Product 2 MRP').fill('1200');
+  await page.getByLabel('Product 2 purchase price').fill('600');
+  await page.getByLabel('Product 2 pieces').fill('2');
+
+  // Copy keeps the prices; just give it a new name.
+  await page.getByTestId('quick-rows').getByRole('listitem').nth(1).getByRole('button', { name: 'Copy' }).click();
+  await page.getByLabel('Product 3 name').fill(`Linen Saree ${run}`);
+  await expect(page.getByLabel('Product 3 MRP')).toHaveValue('1200');
+
+  await expect(page.getByTestId('quick-summary')).toHaveText('3 products · 7 pieces · purchase value ₹6,600.00');
+  await page.getByRole('button', { name: 'Save 3 products and print labels' }).click();
+
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+  await expect(page.getByText('Saved 3 new items with barcodes.')).toBeVisible();
+  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(7);
+  await expect(page.getByTestId('receipt-lines')).toContainText(`Georgette Saree ${run} · Assorted · Free`);
+  const georgette = page.getByTestId('label-sheet').getByRole('listitem').filter({ hasText: `Georgette Saree ${run}` }).first();
+  const barcode = (await georgette.getByRole('img').getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
+
+  // The seller scans it: selling price ₹2,200 (MRP ₹2,500), no purchase price shown.
+  await page.goto('/login');
+  await page.getByText('Balram', { exact: true }).click();
+  await page.getByLabel('PIN').fill(PIN);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await page.keyboard.type(barcode!, { delay: 5 });
+  await page.keyboard.press('Enter');
+  const details = page.getByTestId('item-details');
+  await expect(details).toContainText(`Georgette Saree ${run}`);
+  await expect(details).toContainText('₹2,200.00');
+  await expect(details).toContainText('₹2,500.00');
+  await expect(details).not.toContainText('₹1,400.00');
+  await page.getByRole('button', { name: 'Sell this item' }).click();
+  await expect(page.getByLabel(/Sale price/)).toHaveValue('2200');
 });

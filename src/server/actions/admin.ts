@@ -10,6 +10,7 @@ import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   createDesign,
+  createProductsBatch,
   createProduct,
   listProducts,
   receiveStock,
@@ -338,5 +339,50 @@ export async function updatePriceCodeAction(_prev: FormState, formData: FormData
     return { message: 'Saved.' };
   } catch (error) {
     return failure(error);
+  }
+}
+
+// ------------------------------------------------- quick add many products
+
+export type QuickActionInput = {
+  operationId: string;
+  supplierId: string;
+  categoryId: string;
+  brand: string;
+  billNumber: string;
+  rows: { name: string; size: string; color: string; mrp: string; price: string; cost: string; quantity: string }[];
+};
+
+export async function createQuickAction(input: QuickActionInput): Promise<DesignActionResult> {
+  const admin = await requireAdmin();
+  try {
+    const rows = (Array.isArray(input.rows) ? input.rows : [])
+      .filter((row) => String(row.name ?? '').trim())
+      .map((row, i) => {
+        const label = `Row ${i + 1} (${String(row.name).trim()})`;
+        const mrpPaise = rupeesToPaise(String(row.mrp ?? ''));
+        if (mrpPaise === null) throw new DomainError(`${label}: enter a valid MRP.`);
+        const pricePaise = String(row.price ?? '').trim() ? rupeesToPaise(String(row.price)) : mrpPaise;
+        if (pricePaise === null) throw new DomainError(`${label}: enter a valid selling price.`);
+        const costRaw = String(row.cost ?? '').trim();
+        const costPaise = costRaw ? rupeesToPaise(costRaw) : null;
+        if (costRaw && costPaise === null) throw new DomainError(`${label}: enter a valid purchase price.`);
+        const qty = String(row.quantity ?? '').trim() || '0';
+        if (!/^\d+$/.test(qty)) throw new DomainError(`${label}: pieces must be a whole number.`);
+        return { name: String(row.name), size: String(row.size ?? ''), color: String(row.color ?? ''), mrpPaise, pricePaise, costPaise, quantity: Number(qty) };
+      });
+    const result = await createProductsBatch(await getDb(), STORE_ID, {
+      operationId: String(input.operationId).slice(0, 100),
+      supplierId: String(input.supplierId),
+      categoryId: String(input.categoryId),
+      brand: String(input.brand ?? ''),
+      billNumber: String(input.billNumber ?? ''),
+      rows,
+      staffId: admin.id,
+    });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, receiptId: result.receipt.id, created: result.products.length };
+  } catch (error) {
+    return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
   }
 }

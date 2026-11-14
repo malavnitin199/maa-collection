@@ -318,7 +318,59 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
     throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`);
   }
 
-  const prefix = skuPrefix(category.code);
+  return insertNewProducts(db, storeId, {
+    operationId: input.operationId,
+    supplierId: input.supplierId,
+    category,
+    billNumber: input.billNumber,
+    note: `New design: ${name}`,
+    staffId: input.staffId,
+    rows: colors.flatMap((color) =>
+      sizes.map((size) => ({
+        name,
+        brand,
+        size,
+        color,
+        mrpPaise: input.mrpPaise,
+        pricePaise: input.pricePaise,
+        costPaise: input.costPaise,
+        quantity: input.quantityEach,
+      })),
+    ),
+  });
+}
+
+type NewProductRow = {
+  name: string;
+  brand: string;
+  size: string;
+  color: string;
+  mrpPaise: number;
+  pricePaise: number;
+  costPaise: number | null;
+  quantity: number;
+};
+
+/**
+ * Shared by "new design" and "quick add": inserts one stock receipt and one
+ * product per row (next SKUs for the category, next in-store barcodes) with
+ * their opening movements, in a single transaction. Retrying the same
+ * operationId returns the first result; a SKU/barcode race retries.
+ */
+async function insertNewProducts(
+  db: Db,
+  storeId: string,
+  input: {
+    operationId: string;
+    supplierId: string;
+    category: { id: string; name: string; code: string };
+    billNumber?: string | null;
+    note: string;
+    staffId: string;
+    rows: NewProductRow[];
+  },
+): Promise<DesignResult> {
+  const prefix = skuPrefix(input.category.code);
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await db.transaction(async (tx) => {
@@ -332,40 +384,38 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
             operationId: input.operationId,
             supplierId: input.supplierId,
             billNumber: input.billNumber?.trim() || null,
-            note: `New design: ${name}`,
+            note: input.note,
             staffId: input.staffId,
           })
           .returning();
         const created = await tx
           .insert(products)
           .values(
-            colors.flatMap((color) =>
-              sizes.map((size) => ({
-                storeId,
-                sku: `${prefix}${String(++skuNumber).padStart(3, '0')}`,
-                barcode: inStoreEan13(++barcodeNumber),
-                name,
-                brand,
-                category: category.name,
-                categoryId: category.id,
-                supplierId: input.supplierId,
-                size,
-                color,
-                mrpPaise: input.mrpPaise,
-                pricePaise: input.pricePaise,
-                costPaise: input.costPaise,
-                stock: input.quantityEach,
-                createdBy: input.staffId,
-              })),
-            ),
+            input.rows.map((row) => ({
+              storeId,
+              sku: `${prefix}${String(++skuNumber).padStart(3, '0')}`,
+              barcode: inStoreEan13(++barcodeNumber),
+              name: row.name,
+              brand: row.brand,
+              category: input.category.name,
+              categoryId: input.category.id,
+              supplierId: input.supplierId,
+              size: row.size,
+              color: row.color,
+              mrpPaise: row.mrpPaise,
+              pricePaise: row.pricePaise,
+              costPaise: row.costPaise,
+              stock: row.quantity,
+              createdBy: input.staffId,
+            })),
           )
           .returning();
         // One movement per product (0 when only cataloguing) links each product to this receipt.
         await tx.insert(stockMovements).values(
-          created.map((p) => ({
+          created.map((p, i) => ({
             storeId,
             productId: p.id,
-            quantityChange: input.quantityEach,
+            quantityChange: input.rows[i].quantity,
             reason: 'opening' as const,
             refId: receipt.id,
             staffId: input.staffId,
@@ -381,6 +431,97 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
     }
   }
   throw new DomainError('Could not generate unique SKUs/barcodes. Try again.');
+}
+
+export type QuickRowInput = {
+  name: string;
+  size?: string;
+  color?: string;
+  mrpPaise: number;
+  pricePaise: number;
+  costPaise: number | null;
+  quantity: number;
+};
+
+/**
+ * Quick add: many different products from one supplier in one category, each
+ * row with its own name, MRP, selling and purchase price, and pieces. Size and
+ * colour are optional (default "Free" / "Assorted"). One receipt, one save.
+ */
+export async function createProductsBatch(
+  db: Db,
+  storeId: string,
+  input: {
+    operationId: string;
+    supplierId: string;
+    categoryId: string;
+    brand?: string | null;
+    billNumber?: string | null;
+    rows: QuickRowInput[];
+    staffId: string;
+  },
+): Promise<DesignResult> {
+  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
+  const existing = await findReceiptByOperation(db, storeId, input.operationId);
+  if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
+
+  const category = await resolveCategory(db, storeId, input.categoryId);
+  const supplier = await resolveSupplier(db, storeId, input.supplierId);
+  const brand = input.brand?.trim() || supplier.name;
+  const rows = input.rows.filter((r) => r.name.trim());
+  if (rows.length === 0) throw new DomainError('Add at least one product with a name.');
+  if (rows.length > 50) throw new DomainError('Up to 50 products at once. Split the entry.');
+
+  const cleaned = rows.map((row, i) => {
+    const label = `Row ${i + 1} (${row.name.trim()})`;
+    try {
+      validatePrices(row);
+    } catch (error) {
+      throw new DomainError(`${label}: ${(error as Error).message}`);
+    }
+    if (!Number.isInteger(row.quantity) || row.quantity < 0 || row.quantity > 10_000) {
+      throw new DomainError(`${label}: pieces must be 0 or more.`);
+    }
+    return {
+      name: row.name.trim(),
+      brand,
+      size: row.size?.trim() || 'Free',
+      color: row.color?.trim() || 'Assorted',
+      mrpPaise: row.mrpPaise,
+      pricePaise: row.pricePaise,
+      costPaise: row.costPaise,
+      quantity: row.quantity,
+    };
+  });
+  const keys = cleaned.map((r) => `${r.name}|${r.size}|${r.color}`.toLowerCase());
+  const repeated = keys.find((k, i) => keys.indexOf(k) !== i);
+  if (repeated) throw new DomainError(`The same product is entered twice: ${repeated.split('|').join(' · ')}.`);
+
+  const clash = await db
+    .select({ name: products.name, size: products.size, color: products.color, sku: products.sku })
+    .from(products)
+    .where(
+      and(
+        eq(products.storeId, storeId),
+        eq(products.categoryId, category.id),
+        sql`lower(${products.brand}) = lower(${brand})`,
+        inArray(sql`lower(${products.name}) || '|' || lower(${products.size}) || '|' || lower(${products.color})`, keys),
+      ),
+    );
+  if (clash.length > 0) {
+    const list = clash.map((c) => `${c.name} ${c.color} ${c.size} (${c.sku})`).join(', ');
+    throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`);
+  }
+
+  return insertNewProducts(db, storeId, {
+    operationId: input.operationId,
+    supplierId: supplier.id,
+    category,
+    billNumber: input.billNumber,
+    note: `Quick add: ${cleaned.length} products`,
+    staffId: input.staffId,
+    rows: cleaned,
+  });
 }
 
 export async function updateProduct(

@@ -8,7 +8,7 @@ type Tab = { href: string; label: string; icon: string };
 const ADMIN_TABS: Tab[] = [
   { href: '/admin/dashboard', label: 'Home', icon: '⌂' },
   { href: '/admin/products', label: 'Products', icon: '▦' },
-  { href: '/admin/stock/new', label: '+ Stock', icon: '⊕' },
+  { href: '/admin/stock', label: '+ Stock', icon: '⊕' },
   { href: '/pos', label: 'Sell', icon: '⎙' },
   { href: '/admin/more', label: 'More', icon: '☰' },
 ];

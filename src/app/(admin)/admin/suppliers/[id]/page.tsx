@@ -45,8 +45,14 @@ async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
           )}
         </p>
       </div>
-      <Link href={`/admin/stock/new?supplier=${supplier.id}`} className={`${primaryButton} py-3 text-center`}>
-        + New items from {supplier.name}
+      <Link href={`/admin/stock/quick?supplier=${supplier.id}`} className={`${primaryButton} py-3 text-center`}>
+        + Quick add products from {supplier.name}
+      </Link>
+      <Link
+        href={`/admin/stock/new?supplier=${supplier.id}`}
+        className="rounded-lg border border-emerald-600 px-5 py-3 text-center font-medium text-emerald-700 dark:text-emerald-400"
+      >
+        + New design in sizes × colours
       </Link>
       <Link
         href={`/admin/stock/receive?supplier=${supplier.id}`}

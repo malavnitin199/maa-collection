@@ -164,3 +164,33 @@ describe('code price setting', () => {
     expect(saved).toMatchObject({ priceCodeWord: 'BLACKHORSE', printPriceCode: true });
   });
 });
+
+describe('quick add many products', () => {
+  it('creates different products with their own prices in one receipt; defaults size/colour and brand', async () => {
+    const { createProductsBatch } = await import('./products');
+    const ganesh = await createSupplier(db, STORE_ID, { name: 'Shree Ganesh', ...supplierInput });
+    const saree = (await listCategories(db, STORE_ID)).find((c) => c.code === 'SA')!;
+    const input = {
+      operationId: 'quick-1', supplierId: ganesh.id, categoryId: saree.id, billNumber: 'SG-1', staffId: owner,
+      rows: [
+        { name: 'Georgette Saree', mrpPaise: 250000, pricePaise: 220000, costPaise: 140000, quantity: 3 },
+        { name: 'Cotton Saree', color: 'Yellow', mrpPaise: 120000, pricePaise: 110000, costPaise: 60000, quantity: 5 },
+        { name: '  ', mrpPaise: 1, pricePaise: 1, costPaise: null, quantity: 1 }, // blank row ignored
+      ],
+    };
+    const result = await createProductsBatch(db, STORE_ID, input);
+    expect(result.products.map((p) => [p.sku, p.name, p.size, p.color, p.brand, p.pricePaise, p.stock])).toEqual([
+      ['MAA-SA-002', 'Georgette Saree', 'Free', 'Assorted', 'Shree Ganesh', 220000, 3],
+      ['MAA-SA-003', 'Cotton Saree', 'Free', 'Yellow', 'Shree Ganesh', 110000, 5],
+    ]);
+    expect((await getReceiptForLabels(db, STORE_ID, result.receipt.id))?.lines.reduce((n, l) => n + l.quantity, 0)).toBe(8);
+    expect((await createProductsBatch(db, STORE_ID, input)).duplicate).toBe(true);
+    await expect(createProductsBatch(db, STORE_ID, { ...input, operationId: 'quick-2' })).rejects.toThrow(/Already in the catalogue: Georgette Saree/);
+    await expect(
+      createProductsBatch(db, STORE_ID, { ...input, operationId: 'quick-3', rows: [{ name: 'X', mrpPaise: 100, pricePaise: 200, costPaise: null, quantity: 1 }] }),
+    ).rejects.toThrow(/Row 1 \(X\): Selling price cannot be above MRP/);
+    await expect(
+      createProductsBatch(db, STORE_ID, { ...input, operationId: 'quick-4', rows: [input.rows[0], { ...input.rows[0], name: 'georgette saree' }].map((r) => ({ ...r, name: r.name + ' New' })) }),
+    ).rejects.toThrow(/entered twice/);
+  });
+});

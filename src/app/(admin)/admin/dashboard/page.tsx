@@ -16,7 +16,7 @@ async function Dashboard() {
       <div className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <div data-testid="quick-actions" className="grid grid-cols-2 gap-2 text-center text-sm font-medium sm:grid-cols-4">
-          <Link href="/admin/stock/new" className="rounded-xl bg-emerald-600 px-2 py-3 text-white active:bg-emerald-700">
+          <Link href="/admin/stock" className="rounded-xl bg-emerald-600 px-2 py-3 text-white active:bg-emerald-700">
             + New stock
           </Link>
           <Link href="/admin/stock/receive" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
