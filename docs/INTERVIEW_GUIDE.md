@@ -187,7 +187,7 @@ Add the database earlier — the demo store was useful to validate the flow with
 ## 12. Quick demo script (2 minutes)
 
 1. Open `/login` → "Continue as Salesman".
-2. Scan `8901111000011` (Classic Crew Tee, 3 in stock). Set quantity 2, price ₹450. Record sale → "Stock left: 1".
+2. Scan `8901111000014` (Classic Crew Tee, 3 in stock). Set quantity 2, price ₹450. Record sale → "Stock left: 1".
 3. Scan the Banarasi Saree → "out of stock" error. Type `0000` → "No item found".
 4. Try price ₹600 on any item → "cannot be above MRP".
 5. Switch role → Admin. Show revenue ₹900, units 2, Ravi in "Sales by salesperson", tee at 1 in the inventory table.
