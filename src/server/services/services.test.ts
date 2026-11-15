@@ -262,3 +262,19 @@ describe('sales team dashboard', () => {
     expect(today.sellers[0]).toMatchObject({ name: 'Vishal', sharePct: 100, daily: [240000] });
   });
 });
+
+describe('sale errors carry a message key (shown in the person’s language)', () => {
+  it('out of stock / only N left / above MRP', async () => {
+    const { DomainError } = await import('./errors');
+    const { errorText } = await import('@/server/i18n');
+    const { makeT, MESSAGES } = await import('@/lib/i18n');
+    const tee = await product('MAA-TS-001'); // 3 in stock
+    const attempt = (quantity: number, price: number) =>
+      recordSale(db, STORE_ID, { operationId: nextOp(), productId: tee.id, quantity, unitPricePaise: price, soldBy: people.Vishal, recordedBy: people.Vishal }).catch((e: unknown) => e);
+    const tooMany = await attempt(4, 100);
+    expect(tooMany).toBeInstanceOf(DomainError);
+    expect(tooMany).toMatchObject({ message: 'Only 3 left in stock.', key: 'error.onlyLeft', vars: { n: 3 } });
+    expect(errorText(tooMany as InstanceType<typeof DomainError>, makeT(MESSAGES.hi))).toBe('स्टॉक में सिर्फ़ 3 बचे हैं।');
+    expect(await attempt(1, 999999)).toMatchObject({ key: 'error.aboveMrp' });
+  });
+});

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useT } from '@/features/i18n/i18n-provider';
 import { useSyncExternalStore } from 'react';
 
 const listeners = new Set<() => void>();
@@ -19,6 +20,7 @@ function isDismissed(id: string): boolean {
  * Hidden once dismissed (remembered on this phone; never shown before hydration).
  */
 export function FirstTimeTip({ id, text, helpHref }: { id: string; text: string; helpHref: string }) {
+  const t = useT();
   const dismissed = useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
@@ -31,14 +33,14 @@ export function FirstTimeTip({ id, text, helpHref }: { id: string; text: string;
   return (
     <div role="note" className="flex items-start justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
       <span>
-        <strong>First time here?</strong> {text}{' '}
+        <strong>{t('tip.firstTime')}</strong> {text}{' '}
         <Link href={helpHref} className="font-medium underline underline-offset-2">
-          Show me how
+          {t('tip.showMe')}
         </Link>
       </span>
       <button
         type="button"
-        aria-label="Hide this tip"
+        aria-label={t('tip.hide')}
         onClick={() => {
           try {
             localStorage.setItem(keyFor(id), '1');

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { ScanInput } from '@/features/scanning/scan-input';
+import { feedback } from '@/features/feedback/sounds';
 import { findRestockItemsAction, receiveStockAction, type RestockItem } from '@/server/actions/admin';
 
 type Line = RestockItem & { quantity: number };
@@ -14,6 +15,12 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
   const [billNumber, setBillNumber] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [choices, setChoices] = useState<RestockItem[] | null>(null);
+  // Every piece scanned: tick + "ting"; nothing found: shake + buzz.
+  const [scanResult, setScanResult] = useState<{ kind: 'ok' | 'error'; id: number } | null>(null);
+  const signal = (kind: 'ok' | 'error') => {
+    feedback(kind === 'ok' ? 'scan' : 'error');
+    setScanResult((last) => ({ kind, id: (last?.id ?? 0) + 1 }));
+  };
   const [message, setMessage] = useState<string | null>(null);
   const [busy, startTransition] = useTransition();
   // Same id while the entry is unchanged: a double tap or retry adds stock once.
@@ -36,9 +43,13 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
   function find(code: string) {
     startTransition(async () => {
       const found = await findRestockItemsAction(code);
-      if (found.length === 0) setMessage(`Nothing found for "${code}". New item? Use "+ Stock" to create it.`);
-      else if (found.length === 1) addItem(found[0]);
-      else setChoices(found);
+      if (found.length === 0) {
+        signal('error');
+        setMessage(`Nothing found for "${code}". New item? Use "+ Stock" to create it.`);
+      } else if (found.length === 1) {
+        signal('ok');
+        addItem(found[0]);
+      } else setChoices(found);
     });
   }
 
@@ -99,7 +110,7 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
         </label>
       </section>
 
-      <ScanInput label="Scan a tag, or type SKU / name" onScan={find} busy={busy} />
+      <ScanInput label="Scan a tag, or type SKU / name" onScan={find} busy={busy} result={scanResult} />
       <p className={`-mt-2 text-xs ${muted}`}>Scanning the same tag again adds one more piece.</p>
 
       {message && (

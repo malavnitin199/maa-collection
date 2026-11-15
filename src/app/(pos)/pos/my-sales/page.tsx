@@ -5,40 +5,46 @@ import { ActivityList, StatTile } from '@/features/reports/widgets';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { requireStaff } from '@/server/auth';
+import { plural } from '@/lib/i18n';
+import { getT } from '@/server/i18n';
 import { staffDashboard } from '@/server/services/reports';
 
-const pcs = (n: number) => `${n} pc${n === 1 ? '' : 's'}`;
-
 async function MySales() {
-  const me = await requireStaff();
+  const [me, t] = await Promise.all([requireStaff(), getT()]);
+  const pcs = (n: number) => plural(t, 'my.pcs', n);
+  const count = (n: number) => plural(t, 'my.sales', n);
   const data = await staffDashboard(await requestDb(), STORE_ID, me.id);
   const todayNet = data.mine.today.totalPaise + data.exchanges.today.differencePaise;
   const monthNet = data.mine.month.totalPaise + data.exchanges.month.differencePaise;
   return (
     <main className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">My sales</h1>
-        <p className={`text-sm ${muted}`}>{me.name} · sales credited to you, including exchanges</p>
+        <h1 className="text-2xl font-semibold">{t('my.title')}</h1>
+        <p className={`text-sm ${muted}`}>{t('my.subtitle', { name: me.name })}</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <StatTile label="Today" value={formatPaise(todayNet)} sub={`${pcs(data.mine.today.units)} · ${data.mine.today.count} sales`} testId="my-today" />
-        <StatTile label="This month" value={formatPaise(monthNet)} sub={`${pcs(data.mine.month.units)} · ${data.mine.month.count} sales`} testId="my-month" />
+        <StatTile label={t('my.today')} value={formatPaise(todayNet)} sub={`${pcs(data.mine.today.units)} · ${count(data.mine.today.count)}`} testId="my-today" />
+        <StatTile label={t('my.month')} value={formatPaise(monthNet)} sub={`${pcs(data.mine.month.units)} · ${count(data.mine.month.count)}`} testId="my-month" />
       </div>
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>Recorded by me for others</h2>
+        <h2 className={sectionTitle}>{t('my.forOthers')}</h2>
         <p data-testid="for-others" className="text-sm">
-          Today {formatPaise(data.forOthers.today.totalPaise)} ({data.forOthers.today.count}) · This month{' '}
-          {formatPaise(data.forOthers.month.totalPaise)} ({data.forOthers.month.count})
+          {t('my.forOthersLine', {
+            today: formatPaise(data.forOthers.today.totalPaise),
+            todayCount: data.forOthers.today.count,
+            month: formatPaise(data.forOthers.month.totalPaise),
+            monthCount: data.forOthers.month.count,
+          })}
         </p>
       </section>
-      <ActivityList entries={data.activity} title="My recent activity" testId="my-activity" />
+      <ActivityList entries={data.activity} title={t('my.activity')} testId="my-activity" t={t} />
     </main>
   );
 }
 
 export default function MySalesPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+    <Suspense fallback={<p className="text-sm text-zinc-500">…</p>}>
       <MySales />
     </Suspense>
   );

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getDb } from '@/db/client';
 import { STORE_ID } from '@/lib/app-config';
 import { requireStaff } from '@/server/auth';
+import { errorText, getT } from '@/server/i18n';
 import { DomainError } from '@/server/services/errors';
 import { findReturnableSales, recordExchange, type ReturnableSale } from '@/server/services/exchanges';
 import { findProductByCode, toCounterProduct, type CounterProduct } from '@/server/services/products';
@@ -12,14 +13,16 @@ import { imageSrc, mainImages } from '@/server/services/images';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
+/** Runs a counter action; errors come back in the person's language. */
 async function run<T>(work: () => Promise<T>): Promise<ActionResult<T>> {
   try {
     return { ok: true, data: await work() };
   } catch (error) {
-    if (error instanceof DomainError) return { ok: false, error: error.message };
-    if (error instanceof z.ZodError) return { ok: false, error: 'Some details are missing or invalid.' };
+    const t = await getT();
+    if (error instanceof DomainError) return { ok: false, error: errorText(error, t) };
+    if (error instanceof z.ZodError) return { ok: false, error: t('error.invalid') };
     console.error(error);
-    return { ok: false, error: 'Something went wrong. Please try again.' };
+    return { ok: false, error: t('error.generic') };
   }
 }
 

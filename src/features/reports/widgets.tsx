@@ -1,5 +1,6 @@
 import { card, muted, sectionTitle } from '@/components/ui/styles';
 import { formatPaise } from '@/lib/money';
+import { tEnglish, type T } from '@/lib/i18n';
 import type { ActivityEntry } from '@/server/services/reports';
 
 export function StatTile({ label, value, sub, testId }: { label: string; value: string; sub?: string; testId?: string }) {
@@ -16,12 +17,13 @@ export function StatTile({ label, value, sub, testId }: { label: string; value: 
 
 const time = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
-export function ActivityList({ entries, title, testId }: { entries: ActivityEntry[]; title: string; testId?: string }) {
+/** Sales and exchanges, newest first. `t` words it in the reader's language (English by default). */
+export function ActivityList({ entries, title, testId, t = tEnglish }: { entries: ActivityEntry[]; title: string; testId?: string; t?: T }) {
   return (
     <section className="flex flex-col gap-2">
       <h2 className={sectionTitle}>{title}</h2>
       {entries.length === 0 ? (
-        <p className={`text-sm ${muted}`}>Nothing yet.</p>
+        <p className={`text-sm ${muted}`}>{t('activity.none')}</p>
       ) : (
         <ul data-testid={testId} className="flex flex-col gap-1 text-sm">
           {entries.map((entry) => (
@@ -32,13 +34,13 @@ export function ActivityList({ entries, title, testId }: { entries: ActivityEntr
               <span className="min-w-0">
                 {entry.kind === 'exchange' && (
                   <span className="mr-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                    Exchange
+                    {t('activity.exchange')}
                   </span>
                 )}
-                {entry.description}
+                {entry.swap ? `${t('activity.returned')} ${entry.swap.returned} → ${entry.swap.issued}` : entry.description}
                 <span className={`block text-xs ${muted}`}>
-                  {time.format(new Date(entry.at))} · credited to {entry.creditedTo}
-                  {entry.recordedBy !== entry.creditedTo && ` · recorded by ${entry.recordedBy}`}
+                  {time.format(new Date(entry.at))} · {t('activity.creditedTo', { name: entry.creditedTo })}
+                  {entry.recordedBy !== entry.creditedTo && ` · ${t('activity.recordedBy', { name: entry.recordedBy })}`}
                 </span>
               </span>
               <span className="font-medium tabular-nums">{formatPaise(entry.amountPaise)}</span>

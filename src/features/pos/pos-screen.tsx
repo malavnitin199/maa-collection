@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { rupeesToPaise, saleTotalPaise, validateSaleDraft } from '@/features/inventory/inventory';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { FirstTimeTip } from '@/components/layout/first-time-tip';
+import { DoneOverlay } from '@/features/feedback/effects';
+import { feedback } from '@/features/feedback/sounds';
+import { useT } from '@/features/i18n/i18n-provider';
 import { formatPaise } from '@/lib/money';
 import { lookupProductAction, recordSaleAction } from '@/server/actions/pos';
 import type { CounterProduct } from '@/server/services/products';
@@ -25,6 +28,7 @@ export function PosScreen({
   /** Item opened from a tag's QR code (looked up on the server). */
   initial?: { code: string; product: CounterProduct | null };
 }) {
+  const t = useT();
   const [pending, setPending] = useState<Pending | null>(() =>
     initial?.product ? { product: initial.product, step: 'details', operationId: crypto.randomUUID() } : null,
   );
@@ -32,18 +36,32 @@ export function PosScreen({
   const [priceText, setPriceText] = useState('');
   const [creditTo, setCreditTo] = useState(me.id);
   const [message, setMessage] = useState<Message | null>(() =>
-    initial && !initial.product ? { kind: 'error', text: `No item found for "${initial.code}".` } : null,
+    initial && !initial.product ? { kind: 'error', text: t('scan.notFound', { code: initial.code }) } : null,
   );
+  // Last scan result for the tick / shake, and the "Sale done" card.
+  const [scanResult, setScanResult] = useState<{ kind: 'ok' | 'error'; id: number } | null>(null);
+  const [done, setDone] = useState<{ amount: string; detail: string } | null>(null);
+  const closeDone = useCallback(() => setDone(null), []);
+  const signal = (kind: 'ok' | 'error') => {
+    feedback(kind === 'ok' ? 'scan' : 'error');
+    setScanResult((last) => ({ kind, id: (last?.id ?? 0) + 1 }));
+  };
   const [busy, startTransition] = useTransition();
 
   function handleScan(code: string) {
+    setDone(null);
     startTransition(async () => {
       const result = await lookupProductAction(code);
-      if (!result.ok) return setMessage({ kind: 'error', text: result.error });
-      if (!result.data) {
-        setPending(null);
-        return setMessage({ kind: 'error', text: `No item found for "${code}".` });
+      if (!result.ok) {
+        signal('error');
+        return setMessage({ kind: 'error', text: result.error });
       }
+      if (!result.data) {
+        signal('error');
+        setPending(null);
+        return setMessage({ kind: 'error', text: t('scan.notFound', { code }) });
+      }
+      signal('ok');
       setPending({ product: result.data, step: 'details', operationId: crypto.randomUUID() });
       setMessage(null);
     });
@@ -53,7 +71,7 @@ export function PosScreen({
     if (!pending) return;
     const { product } = pending;
     if (product.stock <= 0) {
-      return setMessage({ kind: 'error', text: `${product.name} (${product.size}, ${product.color}) is out of stock.` });
+      return setMessage({ kind: 'error', text: t('sell.outOfStock', { name: product.name, size: product.size, color: product.color }) });
     }
     setQtyText('1');
     setPriceText((product.pricePaise / 100).toString());
@@ -67,19 +85,22 @@ export function PosScreen({
     const { product, operationId } = pending;
     const quantity = /^\d+$/.test(qtyText.trim()) ? Number(qtyText.trim()) : NaN;
     const unitPricePaise = rupeesToPaise(priceText);
-    if (unitPricePaise === null) return setMessage({ kind: 'error', text: 'Enter a valid sale price.' });
-    const problem = validateSaleDraft({ quantity, unitPricePaise }, { stock: product.stock, mrpPaise: product.mrpPaise });
+    if (unitPricePaise === null) return setMessage({ kind: 'error', text: t('error.salePrice') });
+    const problem = validateSaleDraft({ quantity, unitPricePaise }, { stock: product.stock, mrpPaise: product.mrpPaise }, t);
     if (problem) return setMessage({ kind: 'error', text: problem });
 
     startTransition(async () => {
       const result = await recordSaleAction({ operationId, productId: product.id, quantity, unitPricePaise, soldBy: creditTo });
-      if (!result.ok) return setMessage({ kind: 'error', text: result.error });
+      if (!result.ok) {
+        feedback('error');
+        return setMessage({ kind: 'error', text: result.error });
+      }
       const creditedName = staff.find((s) => s.id === creditTo)?.name ?? me.name;
-      const onBehalf = creditTo === me.id ? `by ${me.name}` : `credited to ${creditedName} (recorded by ${me.name})`;
-      setMessage({
-        kind: 'ok',
-        text: `Sold ${quantity} × ${product.name} (${product.size}, ${product.color}) @ ${formatPaise(unitPricePaise)} each — ${onBehalf}. Stock left: ${result.data.stockLeft}.`,
-      });
+      const values = { qty: quantity, name: product.name, size: product.size, color: product.color, price: formatPaise(unitPricePaise), me: me.name, other: creditedName, left: result.data.stockLeft };
+      setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'sell.doneMine' : 'sell.doneOther', values) });
+      // Payment-app style: chime + "Sale done" card with the amount.
+      feedback('done');
+      setDone({ amount: formatPaise(saleTotalPaise(quantity, unitPricePaise)), detail: `${quantity} × ${product.name} (${product.size}, ${product.color})` });
       setPending(null);
     });
   }
@@ -92,15 +113,16 @@ export function PosScreen({
   return (
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Counter sale</h1>
+        <h1 className="text-2xl font-semibold">{t('sell.title')}</h1>
         <Link href="/pos/my-sales" className={`text-sm ${link}`}>
-          My sales today →
+          {t('sell.myToday')}
         </Link>
       </div>
 
-      <FirstTimeTip id="sell" text="Scan a tag (or type its code) to start a sale." helpHref="/guide#sell" />
+      <FirstTimeTip id="sell" text={t('sell.tip')} helpHref="/guide#sell" />
 
-      <ScanInput label="Scan barcode or enter SKU" onScan={handleScan} busy={busy} captureScanner={pending?.step !== 'sell'} />
+      <ScanInput label={t('sell.scanLabel')} onScan={handleScan} busy={busy} captureScanner={pending?.step !== 'sell'} result={scanResult} />
+      {done && <DoneOverlay title={t('done.sale')} amount={done.amount} detail={done.detail} onClose={closeDone} />}
 
       {message && (
         <p role="status" className={message.kind === 'ok' ? okBox : errorBox}>
@@ -112,10 +134,10 @@ export function PosScreen({
         <ProductCard product={pending.product}>
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" onClick={() => setPending(null)} className={secondaryButton}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="button" onClick={startSell} className={primaryButton}>
-              Sell this item
+              {t('sell.sellThis')}
             </button>
           </div>
         </ProductCard>
@@ -124,17 +146,17 @@ export function PosScreen({
       {pending?.step === 'sell' && (
         <section className={card}>
           <h2 className="text-lg font-semibold">
-            Sell {pending.product.name}{' '}
+            {t('sell.heading', { name: pending.product.name })}{' '}
             <span className={`text-sm font-normal ${muted}`}>
               {pending.product.sku} · {pending.product.size} · {pending.product.color}
             </span>
           </h2>
           <p className={`mt-1 text-sm ${muted}`}>
-            {pending.product.stock} in stock · MRP {formatPaise(pending.product.mrpPaise)}
+            {t('sell.stockLine', { stock: pending.product.stock, mrp: formatPaise(pending.product.mrpPaise) })}
           </p>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Quantity
+              {t('sell.quantity')}
               <input
                 type="number"
                 min={1}
@@ -145,20 +167,20 @@ export function PosScreen({
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Sale price (₹)
+              {t('sell.price')}
               <input inputMode="decimal" value={priceText} onChange={(e) => setPriceText(e.target.value)} className={input} />
-              <span className={`text-xs font-normal ${muted}`}>Bargained price allowed, up to MRP.</span>
+              <span className={`text-xs font-normal ${muted}`}>{t('sell.priceHint')}</span>
             </label>
-            <StaffSelect label="Credit sale to" staff={staff} meId={me.id} value={creditTo} onChange={setCreditTo} />
+            <StaffSelect label={t('sell.creditTo')} staff={staff} meId={me.id} value={creditTo} onChange={setCreditTo} />
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-lg font-semibold">Total: {pendingTotal !== null ? formatPaise(pendingTotal) : '—'}</p>
+            <p className="text-lg font-semibold">{t('sell.total', { total: pendingTotal !== null ? formatPaise(pendingTotal) : '—' })}</p>
             <div className="flex gap-2">
               <button type="button" onClick={() => setPending(null)} className={secondaryButton}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="button" disabled={busy} onClick={handleRecordSale} className={primaryButton}>
-                {busy ? 'Saving…' : 'Record sale'}
+                {busy ? t('common.saving') : t('sell.record')}
               </button>
             </div>
           </div>

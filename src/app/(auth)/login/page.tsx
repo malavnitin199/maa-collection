@@ -3,6 +3,8 @@ import { Suspense } from 'react';
 import { getCurrentStaff } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { LoginForm } from '@/features/auth/login-form';
+import { LanguageSwitch } from '@/features/i18n/language-switch';
+import { getT } from '@/server/i18n';
 import { STORE_ID } from '@/lib/app-config';
 import { listStaff } from '@/server/services/staff';
 
@@ -14,19 +16,23 @@ async function StaffLogin() {
   return <LoginForm people={people.map(({ id, name, role }) => ({ id, name, role }))} />;
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const t = await getT(); // this phone's language
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 p-6">
       <div>
-        <h1 className="text-3xl font-semibold">Maa Collection</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-3xl font-semibold">Maa Collection</h1>
+          <LanguageSwitch />
+        </div>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Tap your name and enter your PIN.{' '}
+          {t('login.subtitle')}{' '}
           <a href="/guide#start" className="text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400">
-            New here?
+            {t('login.newHere')}
           </a>
         </p>
       </div>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading staff…</p>}>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('login.loading')}</p>}>
         <StaffLogin />
       </Suspense>
     </main>

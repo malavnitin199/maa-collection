@@ -2,6 +2,9 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { ScanTick } from '@/features/feedback/effects';
+import { unlockAudio } from '@/features/feedback/sounds';
+import { useT } from '@/features/i18n/i18n-provider';
 import { CameraScanner } from './camera-scanner';
 import { useScannerKeystrokes } from './scanner-keystrokes';
 
@@ -21,14 +24,18 @@ type Props = {
   busy?: boolean;
   /** Catch hardware-scanner bursts anywhere on the page (only one ScanInput should enable this). */
   captureScanner?: boolean;
+  /** Result of the last scan: a green tick (ok) or a shake (error). A new `id` plays it again. */
+  result?: { kind: 'ok' | 'error'; id: number } | null;
 };
 
 /** Scan box + Find + camera; also accepts USB/Bluetooth scanners typing into the page. */
-export function ScanInput({ label, onScan, busy = false, captureScanner = true }: Props) {
+export function ScanInput({ label, onScan, busy = false, captureScanner = true, result = null }: Props) {
+  const t = useT();
   const id = useId();
   const [value, setValue] = useState('');
   const [cameraOpen, setCameraOpen] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const hydrated = useHydrated();
 
   useEffect(() => {
@@ -44,6 +51,21 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true }
 
   useScannerKeystrokes(submit, hydrated && captureScanner);
 
+  // A failed scan: the box shakes and flashes red (only a flash with reduced motion). Played on the
+  // element itself so the text box keeps its focus.
+  const errorId = result?.kind === 'error' ? result.id : null;
+  useEffect(() => {
+    const box = boxRef.current;
+    if (errorId === null || !box?.animate) return;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const off = '0 0 0 0 rgb(220 38 38 / 0)';
+    const red = '0 0 0 4px rgb(220 38 38 / 0.45)';
+    const frames = still
+      ? [off, red, off].map((boxShadow) => ({ boxShadow }))
+      : [0, -7, 7, -4, 4, 0].map((x, i, all) => ({ transform: `translateX(${x}px)`, boxShadow: i === 0 || i === all.length - 1 ? off : red }));
+    box.animate(frames, { duration: still ? 700 : 420, easing: 'ease-in-out' });
+  }, [errorId]);
+
   return (
     <div className="flex flex-col gap-2">
       <form
@@ -56,31 +78,38 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true }
         <label htmlFor={id} className="text-sm font-medium">
           {label}
         </label>
-        <div className="flex gap-2">
-          <input
-            id={id}
-            ref={ref}
-            disabled={!hydrated}
-            autoComplete="off"
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder="Scanner types here, or enter a code"
-            className={`w-full ${input}`}
-          />
+        <div ref={boxRef} data-last-scan={result?.kind} className="flex gap-2 rounded-xl">
+          {/* The tick sits at the end of the text box, clear of the Find button. */}
+          <div className="relative w-full">
+            <input
+              id={id}
+              ref={ref}
+              disabled={!hydrated}
+              autoComplete="off"
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              placeholder={t('scan.placeholder')}
+              className={`w-full ${input} pr-12`}
+            />
+            {result?.kind === 'ok' && <ScanTick key={result.id} />}
+          </div>
           <button type="submit" disabled={!hydrated || busy} className={primaryButton}>
-            Find
+            {t('scan.find')}
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             disabled={!hydrated}
-            onClick={() => setCameraOpen((open) => !open)}
+            onClick={() => {
+              unlockAudio(); // camera scans aren't a tap: allow the sound now
+              setCameraOpen((open) => !open);
+            }}
             className={secondaryButton}
           >
-            {cameraOpen ? 'Stop camera' : 'Scan with camera'}
+            {cameraOpen ? t('scan.stopCamera') : t('scan.camera')}
           </button>
-          <p className={`text-xs ${muted}`}>A USB/Bluetooth scanner types the code and presses Enter by itself.</p>
+          <p className={`text-xs ${muted}`}>{t('scan.hardwareHint')}</p>
         </div>
       </form>
       {cameraOpen && <CameraScanner onDecode={submit} onClose={() => setCameraOpen(false)} />}

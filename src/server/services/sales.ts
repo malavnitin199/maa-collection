@@ -22,7 +22,7 @@ export async function assertActiveStaff(db: Db, storeId: string, staffId: string
     .from(staff)
     .where(and(eq(staff.storeId, storeId), eq(staff.id, staffId), eq(staff.active, true)))
     .limit(1);
-  if (!person) throw new DomainError('That salesperson is not active.');
+  if (!person) throw new DomainError('That salesperson is not active.', { key: 'error.sellerInactive' });
 }
 
 /**
@@ -33,10 +33,10 @@ export async function assertActiveStaff(db: Db, storeId: string, staffId: string
 export async function recordSale(db: Db, storeId: string, input: RecordSaleInput): Promise<RecordSaleResult> {
   if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
   if (!Number.isInteger(input.quantity) || input.quantity < 1) {
-    throw new DomainError('Quantity must be a whole number, minimum 1.');
+    throw new DomainError('Quantity must be a whole number, minimum 1.', { key: 'error.quantity' });
   }
   if (!Number.isSafeInteger(input.unitPricePaise) || input.unitPricePaise <= 0) {
-    throw new DomainError('Enter a valid sale price.');
+    throw new DomainError('Enter a valid sale price.', { key: 'error.salePrice' });
   }
 
   const existing = await findSaleByOperation(db, storeId, input.operationId);
@@ -50,8 +50,8 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
         .from(products)
         .where(and(eq(products.storeId, storeId), eq(products.id, input.productId), eq(products.active, true)))
         .limit(1);
-      if (!product) throw new DomainError('Product not found.');
-      if (input.unitPricePaise > product.mrpPaise) throw new DomainError('Sale price cannot be above MRP.');
+      if (!product) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+      if (input.unitPricePaise > product.mrpPaise) throw new DomainError('Sale price cannot be above MRP.', { key: 'error.aboveMrp' });
 
       const [updated] = await tx
         .update(products)
@@ -59,7 +59,9 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
         .where(and(eq(products.id, product.id), gte(products.stock, input.quantity)))
         .returning({ stock: products.stock });
       if (!updated) {
-        throw new DomainError(product.stock <= 0 ? 'Out of stock.' : `Only ${product.stock} left in stock.`);
+        throw product.stock <= 0
+          ? new DomainError('Out of stock.', { key: 'error.outOfStock' })
+          : new DomainError(`Only ${product.stock} left in stock.`, { key: 'error.onlyLeft', vars: { n: product.stock } });
       }
 
       const [sale] = await tx

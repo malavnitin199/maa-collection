@@ -50,6 +50,7 @@ export const LESSONS: Lesson[] = [
       <>Open the app and tap <strong>your name</strong>, then type your <strong>PIN</strong> (the owner gives it to you).</>,
       <>Put it on your home screen: Chrome ⋮ → <em>Add to Home screen</em>; iPhone Share → <em>Add to Home Screen</em>. It then opens like an app.</>,
       <>Use the tabs at the bottom: <strong>Sell</strong>, <strong>Exchange</strong>, <strong>My sales</strong> — plus <strong>Catalog</strong> or <strong>+ Stock</strong> if the owner gave you those rights.</>,
+      <>Switch language with the <strong>हिन्दी / English</strong> button at the top (your choice is remembered), and turn scan sounds on or off with 🔊.</>,
       <>Finished on a shared phone? Tap <strong>Log out</strong> at the top.</>,
     ],
     open: [{ href: '/pos', label: 'Open Sell' }],
@@ -73,11 +74,11 @@ export const LESSONS: Lesson[] = [
     intro: 'Scan, check, agree the price, record. Stock goes down on every phone at once.',
     art: <ScanArt />,
     steps: [
-      <>Tab <strong>Sell</strong> → tap <strong>Scan with camera</strong> (or use the USB/Bluetooth scanner, or type the number under the barcode).</>,
+      <>Tab <strong>Sell</strong> → tap <strong>Scan with camera</strong> (or use the USB/Bluetooth scanner, or type the number under the barcode). A good scan shows a green ✓ with a &ldquo;ting&rdquo;.</>,
       <>Check the <strong>photo, size and colour</strong> match the piece in your hand.</>,
       <>Tap <strong>Sell this item</strong> → quantity → the <strong>price you agreed</strong> with the customer (never above MRP).</>,
       <>Selling for a colleague? Pick them in <strong>Credit sale to</strong>.</>,
-      <>Tap <strong>Record sale</strong>. Done — see it in <strong>My sales</strong>.</>,
+      <>Tap <strong>Record sale</strong> — &ldquo;Sale done ✓&rdquo; appears with a chime. See it in <strong>My sales</strong>.</>,
     ],
     open: [
       { href: '/pos', label: 'Open Sell' },

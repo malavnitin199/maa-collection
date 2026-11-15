@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { errorBox, input, primaryButton } from '@/components/ui/styles';
+import { useT } from '@/features/i18n/i18n-provider';
 import { loginAction, type LoginState } from '@/server/actions/auth';
 
 type Person = { id: string; name: string; role: 'admin' | 'salesman' };
@@ -9,11 +10,12 @@ type Person = { id: string; name: string; role: 'admin' | 'salesman' };
 export function LoginForm({ people }: { people: Person[] }) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(loginAction, {});
   const [staffId, setStaffId] = useState('');
+  const t = useT();
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">Who are you?</legend>
+        <legend className="mb-2 text-sm font-medium">{t('login.who')}</legend>
         <div className="grid grid-cols-2 gap-2">
           {people.map((person) => (
             <label
@@ -34,14 +36,14 @@ export function LoginForm({ people }: { people: Person[] }) {
               />
               <span className="block">{person.name}</span>
               <span className="block text-xs font-normal text-zinc-500">
-                {person.role === 'admin' ? 'Admin' : 'Salesman'}
+                {t(person.role === 'admin' ? 'role.admin' : 'role.salesman')}
               </span>
             </label>
           ))}
         </div>
       </fieldset>
       <label className="flex flex-col gap-1 text-sm font-medium">
-        PIN
+        {t('login.pin')}
         <input
           name="pin"
           type="password"
@@ -57,7 +59,7 @@ export function LoginForm({ people }: { people: Person[] }) {
         </p>
       )}
       <button type="submit" disabled={pending} className={`${primaryButton} py-3 text-lg`}>
-        {pending ? 'Logging in…' : 'Log in'}
+        {pending ? t('login.submitting') : t('login.submit')}
       </button>
     </form>
   );

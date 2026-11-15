@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '@/features/i18n/i18n-provider';
+import type { MessageKey } from '@/lib/i18n';
 
 type Props = {
   onDecode: (text: string) => void;
@@ -30,14 +32,12 @@ const NATIVE_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_cod
 const HINT_POSSIBLE_FORMATS = 2;
 const HINT_TRY_HARDER = 3;
 
-function describeCameraError(error: unknown): string {
+function describeCameraError(error: unknown): MessageKey {
   const name = error instanceof Error ? error.name : '';
-  if (name === 'NotAllowedError') return 'Camera permission was denied. Allow camera access and try again.';
-  if (name === 'NotFoundError') return 'No camera found on this device.';
-  if (typeof window !== 'undefined' && !window.isSecureContext) {
-    return 'Camera needs HTTPS (or localhost). Open the https:// address.';
-  }
-  return 'Could not start the camera.';
+  if (name === 'NotAllowedError') return 'scan.errDenied';
+  if (name === 'NotFoundError') return 'scan.errNoCamera';
+  if (typeof window !== 'undefined' && !window.isSecureContext) return 'scan.errHttps';
+  return 'scan.errStart';
 }
 
 async function createNativeDetector(): Promise<NativeDetector | null> {
@@ -192,7 +192,8 @@ function drawView(
 export function CameraScanner({ onDecode, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const onDecodeRef = useRef(onDecode);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<MessageKey | null>(null);
+  const t = useT();
   const [engine, setEngine] = useState<Engine | null>(null);
 
   useEffect(() => {
@@ -249,18 +250,18 @@ export function CameraScanner({ onDecode, onClose }: Props) {
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold">Camera scan</h2>
+        <h2 className="font-semibold">{t('scan.cameraTitle')}</h2>
         <button
           type="button"
           onClick={onClose}
           className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
         >
-          Close
+          {t('scan.close')}
         </button>
       </div>
       {error ? (
         <p role="alert" className="text-sm text-red-700 dark:text-red-300">
-          {error}
+          {t(error)}
         </p>
       ) : (
         <>
@@ -272,11 +273,10 @@ export function CameraScanner({ onDecode, onClose }: Props) {
             />
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Hold the barcode flat inside the box, about 15–20 cm away, until it is sharp. It reads
-            automatically.{' '}
+            {t('scan.cameraHint')}{' '}
             {engine && (
               <span data-testid="scan-engine">
-                ({engine === 'native' ? "phone's built-in scanner" : 'web scanner'})
+                ({t(engine === 'native' ? 'scan.engineNative' : 'scan.engineWeb')})
               </span>
             )}
           </p>

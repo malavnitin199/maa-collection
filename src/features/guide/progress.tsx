@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { useT } from '@/features/i18n/i18n-provider';
 
 // Which lessons this person has ticked, kept on this phone only (a convenience; nothing breaks without it).
 const KEY = 'maa-guide-done';
@@ -50,6 +51,7 @@ const noop = () => () => {};
 
 export function LessonDone({ id, title }: { id: string; title: string }) {
   const { done, toggle } = useDone();
+  const t = useT();
   // Disabled until the page is interactive, so an early tap is never lost.
   const ready = useSyncExternalStore(noop, () => true, () => false);
   const checked = done.includes(id);
@@ -57,20 +59,21 @@ export function LessonDone({ id, title }: { id: string; title: string }) {
     <button
       type="button"
       aria-pressed={checked}
-      aria-label={`${checked ? 'Learned' : 'Mark as learned'}: ${title}`}
+      aria-label={t(checked ? 'guide.learnedFor' : 'guide.markLearnedFor', { title })}
       disabled={!ready}
       onClick={() => toggle(id)}
       className={`self-start rounded-full border px-4 py-2 text-sm font-medium ${
         checked ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
       }`}
     >
-      {checked ? '✓ Learned' : 'Mark as learned'}
+      {checked ? t('guide.learned') : t('guide.markLearned')}
     </button>
   );
 }
 
 export function GuideProgress({ ids }: { ids: string[] }) {
   const { done } = useDone();
+  const t = useT();
   const count = ids.filter((id) => done.includes(id)).length;
   return (
     <div className="flex items-center gap-3 text-sm" data-testid="guide-progress">
@@ -78,7 +81,7 @@ export function GuideProgress({ ids }: { ids: string[] }) {
         <div className="h-full rounded-full bg-emerald-600 transition-[width]" style={{ width: `${(count / ids.length) * 100}%` }} />
       </div>
       <span className="tabular-nums">
-        {count} of {ids.length} learned
+        {t('guide.progress', { done: count, total: ids.length })}
       </span>
     </div>
   );

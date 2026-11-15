@@ -66,6 +66,8 @@ export type ActivityEntry = {
   id: string;
   at: Date;
   description: string;
+  /** Exchange only: what came back and what went out, for wording in another language. */
+  swap?: { returned: string; issued: string };
   amountPaise: number;
   creditedTo: string;
   recordedBy: string;
@@ -142,6 +144,7 @@ async function recentActivity(
       id: r.id,
       at: r.at,
       description: `Returned ${r.returnedQuantity} × ${r.returnedName} (${r.returnedSize}) → ${r.issuedQuantity} × ${r.issuedName} (${r.issuedSize})`,
+      swap: { returned: `${r.returnedQuantity} × ${r.returnedName} (${r.returnedSize})`, issued: `${r.issuedQuantity} × ${r.issuedName} (${r.issuedSize})` },
       amountPaise: r.differencePaise,
       creditedTo: r.creditedTo,
       recordedBy: r.recordedBy,

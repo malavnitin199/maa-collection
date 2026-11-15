@@ -88,13 +88,13 @@ export async function recordExchange(
 ): Promise<RecordExchangeResult> {
   if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
   if (!Number.isInteger(input.returnedQuantity) || input.returnedQuantity < 1) {
-    throw new DomainError('Returned quantity must be at least 1.');
+    throw new DomainError('Returned quantity must be at least 1.', { key: 'error.returnQty' });
   }
   if (!Number.isInteger(input.issuedQuantity) || input.issuedQuantity < 1) {
-    throw new DomainError('New item quantity must be at least 1.');
+    throw new DomainError('New item quantity must be at least 1.', { key: 'error.newQty' });
   }
   if (!Number.isSafeInteger(input.issuedUnitPricePaise) || input.issuedUnitPricePaise <= 0) {
-    throw new DomainError('Enter a valid price for the new item.');
+    throw new DomainError('Enter a valid price for the new item.', { key: 'error.newPrice' });
   }
 
   const existing = await findExchangeByOperation(db, storeId, input.operationId);
@@ -110,18 +110,16 @@ export async function recordExchange(
         .where(and(eq(sales.storeId, storeId), eq(sales.id, input.originalSaleId)))
         .for('update')
         .limit(1);
-      if (!original) throw new DomainError('Original sale not found.');
+      if (!original) throw new DomainError('Original sale not found.', { key: 'error.saleNotFound' });
       const [{ returned }] = await tx
         .select({ returned: sql<number>`coalesce(sum(${exchanges.returnedQuantity}), 0)::int` })
         .from(exchanges)
         .where(eq(exchanges.originalSaleId, original.id));
       const returnable = original.quantity - Number(returned);
       if (input.returnedQuantity > returnable) {
-        throw new DomainError(
-          returnable <= 0
-            ? 'Everything from this sale has already been exchanged.'
-            : `Only ${returnable} unit(s) from this sale can be returned.`,
-        );
+        throw returnable <= 0
+          ? new DomainError('Everything from this sale has already been exchanged.', { key: 'error.allExchanged' })
+          : new DomainError(`Only ${returnable} unit(s) from this sale can be returned.`, { key: 'error.onlyReturnable', vars: { n: returnable } });
       }
 
       const [issued] = await tx
@@ -129,8 +127,8 @@ export async function recordExchange(
         .from(products)
         .where(and(eq(products.storeId, storeId), eq(products.id, input.issuedProductId), eq(products.active, true)))
         .limit(1);
-      if (!issued) throw new DomainError('New item not found.');
-      if (input.issuedUnitPricePaise > issued.mrpPaise) throw new DomainError('New item price cannot be above MRP.');
+      if (!issued) throw new DomainError('New item not found.', { key: 'error.newNotFound' });
+      if (input.issuedUnitPricePaise > issued.mrpPaise) throw new DomainError('New item price cannot be above MRP.', { key: 'error.newAboveMrp' });
 
       // Returned units back on the shelf first, so swapping for the same item works.
       await tx
@@ -144,9 +142,9 @@ export async function recordExchange(
         .returning({ stock: products.stock });
       if (!afterIssue) {
         const [current] = await tx.select({ stock: products.stock }).from(products).where(eq(products.id, issued.id));
-        throw new DomainError(
-          (current?.stock ?? 0) <= 0 ? 'The new item is out of stock.' : `Only ${current.stock} of the new item left.`,
-        );
+        throw (current?.stock ?? 0) <= 0
+          ? new DomainError('The new item is out of stock.', { key: 'error.newOutOfStock' })
+          : new DomainError(`Only ${current.stock} of the new item left.`, { key: 'error.newOnlyLeft', vars: { n: current.stock } });
       }
 
       const returnedValue = input.returnedQuantity * original.unitPricePaise;

@@ -193,3 +193,80 @@ test('sales team dashboard: number of sellers, each one’s share and daily sale
   await expect(page).toHaveURL(/period=30d/);
   await expect(page.getByTestId('seller-cards').getByRole('listitem')).not.toHaveCount(0);
 });
+
+test('Hindi or English: switch on the login page or in the header; each person keeps their choice', async ({ page }) => {
+  // Own salesman for this test, so the seeded staff stay in English for the other tests.
+  await login(page, 'Owner');
+  await page.goto('/admin/staff');
+  const name = `Ravi ${run}`;
+  await page.getByLabel('Name', { exact: true }).fill(name);
+  await page.getByLabel('PIN (4–6 digits)').fill('4321');
+  await page.getByRole('button', { name: 'Add staff' }).click();
+  await expect(page.getByRole('status')).toContainText(`${name} added`);
+
+  // Logged out: this phone switches to Hindi on the login page.
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Language: English. Switch to Hindi' }).click();
+  await expect(page.getByText('अपने नाम पर टैप करें और PIN डालें।')).toBeVisible();
+  await page.getByText(name, { exact: true }).click();
+  await page.getByLabel('PIN').fill('4321');
+  await page.getByRole('button', { name: 'लॉग इन करें' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  // Ravi hasn't chosen yet → the phone's Hindi. Screens, labels and server messages are in Hindi.
+  await expect(page.getByRole('heading', { name: 'काउंटर बिक्री' })).toBeVisible();
+  await expect(page.getByLabel('बारकोड स्कैन करें या SKU डालें')).toBeVisible();
+  await scan(page, 'NOPE-404');
+  await expect(page.getByText('"NOPE-404" का कोई आइटम नहीं मिला।')).toBeVisible();
+
+  // Header switch: English and back, in place (no login again); saved on Ravi.
+  await page.getByRole('button', { name: 'भाषा: हिन्दी। अंग्रेज़ी में बदलें' }).click();
+  await expect(page.getByRole('heading', { name: 'Counter sale' })).toBeVisible();
+  await page.getByRole('button', { name: 'Language: English. Switch to Hindi' }).click();
+  await expect(page.getByRole('heading', { name: 'काउंटर बिक्री' })).toBeVisible();
+
+  // Another phone (no cookie): English login page, but Ravi gets his Hindi back after logging in.
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await expect(page.getByText('Tap your name and enter your PIN.')).toBeVisible();
+  await page.getByText(name, { exact: true }).click();
+  await page.getByLabel('PIN').fill('4321');
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page.getByRole('heading', { name: 'काउंटर बिक्री' })).toBeVisible();
+  await page.goto('/pos/my-sales');
+  await expect(page.getByRole('heading', { name: 'मेरी बिक्री' })).toBeVisible();
+  await page.goto('/guide');
+  await expect(page.getByRole('heading', { name: 'आइटम बेचें', level: 3 })).toBeVisible();
+  await expect(page.getByText('यह पाठ अभी अंग्रेज़ी में है।').first()).toBeVisible(); // owner lessons: English for now
+});
+
+test('scan feedback: green tick, buzz and shake on a failed scan, "Sale done" card; sound can be muted', async ({ page }) => {
+  await login(page, 'Owner');
+  const barcode = await addProduct(page, { name: `Ting Kurta ${run}`, size: 'L', mrp: '800', price: '750', stock: '3' });
+
+  await login(page, 'Balram');
+  const sound = () => page.getByRole('button', { name: 'Sound and vibration for scans' });
+  await expect(sound()).toHaveAttribute('aria-pressed', 'true'); // on by default
+  await sound().click();
+  await expect(sound()).toHaveAttribute('aria-pressed', 'false');
+  await page.reload();
+  await expect(sound()).toHaveAttribute('aria-pressed', 'false'); // remembered on this phone
+  await sound().click();
+  await expect(sound()).toHaveAttribute('aria-pressed', 'true');
+
+  await scan(page, 'NOPE-999');
+  await expect(page.locator('[data-last-scan="error"]')).toBeVisible();
+  await scan(page, barcode);
+  await expect(page.locator('[data-last-scan="ok"]')).toBeVisible();
+  await expect(page.getByTestId('scan-ok')).toBeAttached();
+  await expect(page.getByTestId('item-details')).toContainText(`Ting Kurta ${run}`);
+
+  await page.getByRole('button', { name: 'Sell this item' }).click();
+  await page.getByLabel(/Sale price/).fill('700');
+  await page.getByRole('button', { name: 'Record sale' }).click();
+  const done = page.getByTestId('done-overlay');
+  await expect(done).toContainText('Sale done');
+  await expect(done).toContainText('₹700.00');
+  await expect(done).toBeHidden({ timeout: 5000 }); // closes by itself
+  await expect(page.getByRole('status')).toContainText('by Balram');
+});

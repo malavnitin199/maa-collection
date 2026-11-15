@@ -1,3 +1,4 @@
+import { tEnglish, type T } from '@/lib/i18n';
 export const LOW_STOCK_THRESHOLD = 2;
 
 export type StockMap = Record<string, number>;
@@ -26,23 +27,25 @@ export function rupeesToPaise(input: string): number | null {
   return Math.round(Number(cleaned) * 100);
 }
 
+/** The problem with a sale before it is sent, in the person's language (`t`; English by default), or null. */
 export function validateSaleDraft(
   draft: { quantity: number; unitPricePaise: number },
   limits: { stock: number; mrpPaise: number },
+  t: T = tEnglish,
 ): string | null {
   if (!Number.isInteger(draft.quantity) || draft.quantity < 1) {
-    return 'Quantity must be a whole number, minimum 1.';
+    return t('error.quantity');
   }
-  if (limits.stock <= 0) return 'Out of stock.';
+  if (limits.stock <= 0) return t('error.outOfStock');
   if (draft.quantity > limits.stock) {
-    return `Only ${limits.stock} left in stock.`;
+    return t('error.onlyLeft', { n: limits.stock });
   }
   if (!Number.isSafeInteger(draft.unitPricePaise) || draft.unitPricePaise <= 0) {
-    return 'Enter a valid sale price.';
+    return t('error.salePrice');
   }
   // Selling above MRP is not permitted in India. Below MRP is fine (bargaining).
   if (draft.unitPricePaise > limits.mrpPaise) {
-    return 'Sale price cannot be above MRP.';
+    return t('error.aboveMrp');
   }
   return null;
 }
