@@ -1,20 +1,23 @@
-import Link from 'next/link';
 import { Suspense } from 'react';
 import { muted } from '@/components/ui/styles';
 import type { MessageKey } from '@/lib/i18n';
 import { can, type Permission } from '@/lib/permissions';
 import { requireAnyPermission } from '@/server/auth';
 import { getT } from '@/server/i18n';
+import { TagTile } from '@/components/ui/tag-tile';
+import { IconGrid, IconScan, IconStockAdd, IconTag } from '@/components/ui/icons';
 
-const OPTIONS: { href: string; title: MessageKey; hint: MessageKey; primary?: boolean; needs: Permission }[] = [
+const OPTIONS: { href: string; Icon: (p: { className?: string }) => React.ReactNode; title: MessageKey; hint: MessageKey; primary?: boolean; needs: Permission }[] = [
   {
     href: '/admin/stock/old',
+    Icon: IconTag,
     title: 'stk.hub.old.title',
     hint: 'stk.hub.old.hint',
     needs: 'catalog',
   },
   {
     href: '/admin/stock/quick',
+    Icon: IconStockAdd,
     title: 'stk.hub.quick.title',
     hint: 'stk.hub.quick.hint',
     primary: true,
@@ -22,12 +25,14 @@ const OPTIONS: { href: string; title: MessageKey; hint: MessageKey; primary?: bo
   },
   {
     href: '/admin/stock/new',
+    Icon: IconGrid,
     title: 'stk.hub.design.title',
     hint: 'stk.hub.design.hint',
     needs: 'catalog',
   },
   {
     href: '/admin/stock/receive',
+    Icon: IconScan,
     title: 'stk.hub.receive.title',
     hint: 'stk.hub.receive.hint',
     needs: 'stock',
@@ -37,18 +42,10 @@ const OPTIONS: { href: string; title: MessageKey; hint: MessageKey; primary?: bo
 async function Options() {
   const [me, t] = await Promise.all([requireAnyPermission(['catalog', 'stock']), getT()]);
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {OPTIONS.filter((option) => can(me, option.needs)).map((option) => (
         <li key={option.href}>
-          <Link
-            href={option.href}
-            className={`flex flex-col gap-1 rounded-xl border p-4 ${
-              option.primary ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950' : 'border-zinc-200 dark:border-zinc-800'
-            }`}
-          >
-            <span className="text-lg font-semibold">{t(option.title)}</span>
-            <span className={`text-sm ${muted}`}>{t(option.hint)}</span>
-          </Link>
+          <TagTile href={option.href} primary={option.primary} icon={<option.Icon />} title={t(option.title)} hint={t(option.hint)} />
         </li>
       ))}
     </ul>

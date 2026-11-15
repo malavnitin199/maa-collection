@@ -6,7 +6,8 @@ import { setLanguageAction } from '@/server/actions/i18n';
 import { useLocale, useT } from './i18n-provider';
 
 /** One tap switches English ⇄ हिन्दी; the page re-renders in place (no reload). */
-export function LanguageSwitch({ className = '' }: { className?: string }) {
+/** `onBand`: white style for the coloured header band. */
+export function LanguageSwitch({ onBand = false }: { onBand?: boolean }) {
   const t = useT();
   const locale = useLocale();
   const router = useRouter();
@@ -22,7 +23,9 @@ export function LanguageSwitch({ className = '' }: { className?: string }) {
           router.refresh();
         })
       }
-      className={`rounded-full border border-zinc-300 px-2.5 py-0.5 text-sm font-medium transition-opacity disabled:opacity-50 dark:border-zinc-700 ${className}`}
+      className={`rounded-full border px-3 py-1 text-sm font-semibold transition active:scale-95 disabled:opacity-50 ${
+        onBand ? 'border-white/25 bg-white/10 text-white hover:bg-white/20' : 'border-zinc-300 bg-white/70 hover:border-brand-400 dark:border-zinc-700 dark:bg-zinc-900/60'
+      }`}
     >
       {t('lang.switchTo')}
     </button>

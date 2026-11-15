@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { card, link, muted, sectionTitle } from '@/components/ui/styles';
 import { requestDb } from '@/server/request-db';
-import { ActivityList, StatTile } from '@/features/reports/widgets';
+import { ActivityList, HeroStat, StatTile } from '@/features/reports/widgets';
+import { TagTile } from '@/components/ui/tag-tile';
+import { IconRupee, IconScan, IconStockAdd, IconTag } from '@/components/ui/icons';
 import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
@@ -20,31 +22,23 @@ async function Dashboard() {
       <div className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold">{t('nav.dashboard')}</h1>
         <FirstTimeTip id="owner" text={t('own.dash.tip')} helpHref="/guide#for-owner" />
-        <div data-testid="quick-actions" className="grid grid-cols-2 gap-2 text-center text-sm font-medium sm:grid-cols-4">
-          <Link href="/admin/stock" className="rounded-xl bg-emerald-600 px-2 py-3 text-white active:bg-emerald-700">
-            {t('own.dash.newStock')}
-          </Link>
-          <Link href="/admin/stock/receive" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
-            {t('own.dash.restock')}
-          </Link>
-          <Link href="/admin/suppliers" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
-            {t('nav.suppliers')}
-          </Link>
-          <Link href="/admin/reports" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
-            {t('nav.reports')}
-          </Link>
+        <div data-testid="quick-actions" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <TagTile href="/admin/stock" primary icon={<IconStockAdd />} title={t('own.dash.newStock')} />
+          <TagTile href="/admin/stock/receive" icon={<IconScan />} title={t('own.dash.restock')} />
+          <TagTile href="/admin/suppliers" icon={<IconTag />} title={t('nav.suppliers')} />
+          <TagTile href="/admin/reports" icon={<IconRupee />} title={t('nav.reports')} />
         </div>
       </div>
 
       <section className="flex flex-col gap-2">
         <h2 className={sectionTitle}>{t('my.today')}</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label={t('own.dash.netRevenue')} value={formatPaise(d.netRevenue.today)} testId="today-revenue" />
-          <StatTile
-            label={t('own.dash.unitsSold')}
-            value={String(d.sales.today.units)}
-            sub={t('own.salesCount', { n: d.sales.today.count })}
-            testId="today-units"
+          <HeroStat
+            label={t('own.dash.netRevenue')}
+            value={formatPaise(d.netRevenue.today)}
+            testId="today-revenue"
+            sub={`${t('own.dash.unitsSold')}: ${d.sales.today.units} · ${t('own.salesCount', { n: d.sales.today.count })}`}
+            subTestId="today-units"
           />
           <StatTile label={t('own.estProfit')} value={formatPaise(d.estimatedProfit.today)} sub={t('own.dash.withCost')} />
           <StatTile

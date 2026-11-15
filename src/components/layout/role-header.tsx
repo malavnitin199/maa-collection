@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { LanguageSwitch } from '@/features/i18n/language-switch';
 import { SoundToggle } from '@/features/feedback/sound-toggle';
+import { AppearanceMenu } from '@/features/appearance/appearance-menu';
+import { headerIconButton } from '@/components/ui/styles';
+import { IconBook, IconLogout } from '@/components/ui/icons';
 import type { MessageKey } from '@/lib/i18n';
 import { logoutAction } from '@/server/actions/auth';
 import { canAny } from '@/lib/permissions';
@@ -37,45 +40,48 @@ async function HeaderContent() {
   return (
     <>
       {/* On a narrow phone the buttons move to a second row instead of squeezing the shop name. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        <div className="flex items-baseline gap-2 whitespace-nowrap">
-          <Link href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'} className="text-lg font-semibold">
+      {/* On a narrow phone the buttons move to a second row instead of squeezing the shop name. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Link href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'} className="font-display text-[1.45rem] leading-none whitespace-nowrap text-white">
             Maa Collection
           </Link>
           {me && (
             <span
               data-testid="current-user"
-              className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+              className="truncate rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90 ring-1 ring-white/15"
             >
               {me.name} · {t(me.role === 'admin' ? 'role.admin' : 'role.salesman')}
             </span>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-3 text-sm whitespace-nowrap">
+        <div className="ml-auto flex items-center gap-1.5 text-sm whitespace-nowrap">
+          <AppearanceMenu />
           <SoundToggle />
-          <LanguageSwitch />
-          <Link href="/guide" className="text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400">
+          <LanguageSwitch onBand />
+          <Link href="/guide" className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-white/90 transition hover:bg-white/10 hover:text-white">
+            <IconBook className="h-4 w-4" />
             {t('nav.guide')}
           </Link>
           {me ? (
             <form action={logoutAction}>
-              <button type="submit" className="text-zinc-500 underline-offset-4 hover:underline dark:text-zinc-400">
-                {t('nav.logout')}
+              <button type="submit" aria-label={t('nav.logout')} title={t('nav.logout')} className={headerIconButton}>
+                <IconLogout className="h-5 w-5" />
               </button>
             </form>
           ) : (
-            <Link href="/login" className="text-zinc-500 underline-offset-4 hover:underline dark:text-zinc-400">
+            <Link href="/login" className="rounded-full px-2.5 py-1 font-semibold text-white/90 hover:bg-white/10">
               {t('nav.login')}
             </Link>
           )}
         </div>
       </div>
-      <nav className="hidden flex-wrap gap-x-4 gap-y-1 text-sm sm:flex">
+      <nav className="hidden flex-wrap gap-x-1 gap-y-1 text-sm sm:flex">
         {links.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-300"
+            className="rounded-full px-2.5 py-1 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
           >
             {t(item.label)}
           </Link>
@@ -93,12 +99,14 @@ async function BottomNavForUser() {
 export function RoleHeader() {
   return (
     <>
-    <header className="sticky top-0 z-10 print:hidden border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
-      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-3">
-        <Suspense fallback={<span className="text-lg font-semibold">Maa Collection</span>}>
+    {/* A band in the theme's dye, finished with the zari border (the app's signature). */}
+    <header className="sticky top-0 z-10 bg-brand-800 text-white shadow-lg shadow-brand-950/20 print:hidden dark:bg-brand-950">
+      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 pt-3 pb-2.5">
+        <Suspense fallback={<span className="font-display text-[1.45rem] leading-none text-white">Maa Collection</span>}>
           <HeaderContent />
         </Suspense>
       </div>
+      <div aria-hidden className="zari opacity-90" />
     </header>
     {/* Outside <header>: its backdrop blur would make a fixed child stick to the header. */}
     <Suspense fallback={null}>

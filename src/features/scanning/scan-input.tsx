@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
-import { input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { input } from '@/components/ui/styles';
+import { IconCamera } from '@/components/ui/icons';
 import { ScanTick } from '@/features/feedback/effects';
 import { unlockAudio } from '@/features/feedback/sounds';
 import { useT } from '@/features/i18n/i18n-provider';
@@ -17,6 +18,17 @@ export function useHydrated(): boolean {
     () => false,
   );
 }
+
+const CORNERS = [
+  'top-2 left-2 rounded-tl-md border-t-2 border-l-2',
+  'top-2 right-2 rounded-tr-md border-t-2 border-r-2',
+  'bottom-2 left-2 rounded-bl-md border-b-2 border-l-2',
+  'bottom-2 right-2 rounded-br-md border-b-2 border-r-2',
+];
+const findButton =
+  'inline-flex shrink-0 items-center justify-center rounded-full bg-white px-5 py-2 font-bold text-brand-800 shadow-md transition hover:bg-brand-50 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100';
+const cameraButton =
+  'inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/25 active:scale-[0.97] disabled:opacity-60';
 
 type Props = {
   label: string;
@@ -68,14 +80,19 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
 
   return (
     <div className="flex flex-col gap-2">
+      {/* The scan zone (plan v8): the theme's dye with viewfinder corners in zari, so
+          every screen that scans shows the same "scan here" place. */}
       <form
         onSubmit={(event) => {
           event.preventDefault();
           submit(value);
         }}
-        className="flex flex-col gap-2"
+        className="relative flex flex-col gap-2.5 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 to-brand-900 px-6 py-5 text-white shadow-lg shadow-brand-900/20 dark:from-brand-900 dark:to-brand-950"
       >
-        <label htmlFor={id} className="text-sm font-medium">
+        {CORNERS.map((c) => (
+          <span key={c} aria-hidden className={`pointer-events-none absolute h-3.5 w-3.5 border-zari ${c}`} />
+        ))}
+        <label htmlFor={id} className="text-sm font-semibold text-white/95">
           {label}
         </label>
         <div ref={boxRef} data-last-scan={result?.kind} className="flex gap-2 rounded-xl">
@@ -89,11 +106,11 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
               value={value}
               onChange={(event) => setValue(event.target.value)}
               placeholder={t('scan.placeholder')}
-              className={`w-full ${input} pr-12`}
+              className={`w-full ${input} pr-12 text-zinc-900 dark:text-zinc-100`}
             />
             {result?.kind === 'ok' && <ScanTick key={result.id} />}
           </div>
-          <button type="submit" disabled={!hydrated || busy} className={primaryButton}>
+          <button type="submit" disabled={!hydrated || busy} className={findButton}>
             {t('scan.find')}
           </button>
         </div>
@@ -105,11 +122,12 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
               unlockAudio(); // camera scans aren't a tap: allow the sound now
               setCameraOpen((open) => !open);
             }}
-            className={secondaryButton}
+            className={cameraButton}
           >
+            <IconCamera className="h-5 w-5" />
             {cameraOpen ? t('scan.stopCamera') : t('scan.camera')}
           </button>
-          <p className={`text-xs ${muted}`}>{t('scan.hardwareHint')}</p>
+          <p className="text-xs text-white/75">{t('scan.hardwareHint')}</p>
         </div>
       </form>
       {cameraOpen && <CameraScanner onDecode={submit} onClose={() => setCameraOpen(false)} />}
