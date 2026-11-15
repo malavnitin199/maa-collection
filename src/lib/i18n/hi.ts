@@ -225,6 +225,10 @@ const base = {
   'aud.owner': 'मालिक',
   'aud.owner.who': 'मालिक और भरोसेमंद स्टाफ़',
 
+  'look.short': 'थीम',
+  'sound.short': 'आवाज़',
+  'sound.shortOff': 'बंद',
+  'nav.logoutShort': 'लॉग आउट',
   'look.open': 'थीम और दिन/रात',
   'look.title': 'रंग-रूप',
   'look.theme': 'रंग की थीम',

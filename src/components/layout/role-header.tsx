@@ -3,8 +3,8 @@ import { Suspense } from 'react';
 import { LanguageSwitch } from '@/features/i18n/language-switch';
 import { SoundToggle } from '@/features/feedback/sound-toggle';
 import { AppearanceMenu } from '@/features/appearance/appearance-menu';
-import { headerIconButton } from '@/components/ui/styles';
-import { IconBook, IconLogout } from '@/components/ui/icons';
+import { headerChip } from '@/components/ui/styles';
+import { IconBook, IconChevron, IconLogout } from '@/components/ui/icons';
 import type { MessageKey } from '@/lib/i18n';
 import { logoutAction } from '@/server/actions/auth';
 import { canAny } from '@/lib/permissions';
@@ -39,9 +39,8 @@ async function HeaderContent() {
     me?.role === 'admin' ? [...ADMIN_LINKS, ...SALES_LINKS] : catalogAccess ? [...SALES_LINKS, { href: '/admin/more', label: 'nav.catalog' }] : SALES_LINKS;
   return (
     <>
-      {/* On a narrow phone the buttons move to a second row instead of squeezing the shop name. */}
-      {/* On a narrow phone the buttons move to a second row instead of squeezing the shop name. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      {/* On a phone the buttons sit in their own row under the shop name: five equal, labelled buttons. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <Link href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'} className="font-display text-[1.45rem] leading-none whitespace-nowrap text-white">
             Maa Collection
@@ -55,22 +54,24 @@ async function HeaderContent() {
             </span>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-1.5 text-sm whitespace-nowrap">
+        <div data-testid="header-buttons" className="grid w-full grid-cols-5 gap-2 whitespace-nowrap sm:ml-auto sm:flex sm:w-auto sm:gap-2.5 [&>*]:w-full [&_button]:w-full sm:[&>*]:w-auto sm:[&_button]:w-auto">
           <AppearanceMenu />
           <SoundToggle />
           <LanguageSwitch onBand />
-          <Link href="/guide" className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-white/90 transition hover:bg-white/10 hover:text-white">
-            <IconBook className="h-4 w-4" />
+          <Link href="/guide" className={headerChip}>
+            <IconBook className="h-5 w-5" />
             {t('nav.guide')}
           </Link>
           {me ? (
             <form action={logoutAction}>
-              <button type="submit" aria-label={t('nav.logout')} title={t('nav.logout')} className={headerIconButton}>
+              <button type="submit" aria-label={t('nav.logout')} title={t('nav.logout')} className={headerChip}>
                 <IconLogout className="h-5 w-5" />
+                <span aria-hidden>{t('nav.logoutShort')}</span>
               </button>
             </form>
           ) : (
-            <Link href="/login" className="rounded-full px-2.5 py-1 font-semibold text-white/90 hover:bg-white/10">
+            <Link href="/login" className={headerChip}>
+              <IconChevron className="h-5 w-5" />
               {t('nav.login')}
             </Link>
           )}
@@ -101,7 +102,7 @@ export function RoleHeader() {
     <>
     {/* A band in the theme's dye, finished with the zari border (the app's signature). */}
     <header className="sticky top-0 z-10 bg-brand-800 text-white shadow-lg shadow-brand-950/20 print:hidden dark:bg-brand-950">
-      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 pt-3 pb-2.5">
+      <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 pt-3.5 pb-3">
         <Suspense fallback={<span className="font-display text-[1.45rem] leading-none text-white">Maa Collection</span>}>
           <HeaderContent />
         </Suspense>

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { headerIconButton } from '@/components/ui/styles';
+import { headerChip } from '@/components/ui/styles';
 import { IconMoon, IconPalette, IconPhone, IconSun } from '@/components/ui/icons';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
@@ -78,9 +78,10 @@ export function AppearanceMenu() {
           if (r) setAnchor({ top: r.bottom + 8, right: window.innerWidth - r.right });
           setOpen((o) => !o);
         }}
-        className={headerIconButton}
+        className={headerChip}
       >
         <IconPalette className="h-5 w-5" />
+        <span aria-hidden>{t('look.short')}</span>
       </button>
       {/* Rendered on <body>: the header is its own layer under the bottom dock, and the
           sheet must cover the dock on phones. */}

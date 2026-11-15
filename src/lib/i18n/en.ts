@@ -237,6 +237,10 @@ const base = {
   'aud.owner.who': 'Owner and trusted staff',
 
   // Look: theme and day/night (plan v8)
+  'look.short': 'Theme',
+  'sound.short': 'Sound',
+  'sound.shortOff': 'Muted',
+  'nav.logoutShort': 'Log out',
   'look.open': 'Theme and day/night',
   'look.title': 'Look',
   'look.theme': 'Colour theme',

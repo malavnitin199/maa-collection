@@ -21,6 +21,16 @@ export const okBox =
 export const errorBox =
   'rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200';
 export const link = 'text-brand-700 underline-offset-4 hover:underline dark:text-brand-300';
+/**
+ * A labelled button on the coloured header band: icon above a one-word caption,
+ * at least 44 px tall, with a clear edge and a press effect — so it reads as a
+ * button and says what it does.
+ */
+const headerChipShape =
+  'inline-flex min-h-11 min-w-[3.4rem] flex-col items-center justify-center gap-1 rounded-2xl px-2.5 py-1.5 text-[11px] leading-none font-semibold shadow-sm ring-1 shadow-black/10 transition hover:-translate-y-0.5 active:translate-y-0 active:scale-90 disabled:opacity-60';
+export const headerChip = `${headerChipShape} bg-white/15 text-white ring-white/35 hover:bg-white/25 active:bg-white/40`;
+/** The same chip switched on (sound on): filled, so the state is obvious. Use instead of `headerChip`, not with it. */
+export const headerChipOn = `${headerChipShape} bg-white text-brand-800 ring-white hover:bg-white/90 dark:text-brand-900`;
 /** Round icon button on the coloured header band. */
 export const headerIconButton =
   'inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 active:scale-95';
