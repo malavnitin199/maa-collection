@@ -20,6 +20,7 @@ const SALES_LINKS: NavLink[] = [
 ];
 const ADMIN_LINKS: NavLink[] = [
   { href: '/admin/dashboard', label: 'nav.dashboard' },
+  { href: '/admin/approvals', label: 'nav.approvals' },
   { href: '/admin/products', label: 'nav.products' },
   { href: '/admin/stock', label: 'nav.addStock' },
   { href: '/admin/suppliers', label: 'nav.suppliers' },

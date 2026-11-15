@@ -4,19 +4,21 @@ import { card, link, muted, sectionTitle } from '@/components/ui/styles';
 import { requestDb } from '@/server/request-db';
 import { ActivityList, HeroStat, StatTile } from '@/features/reports/widgets';
 import { TagTile } from '@/components/ui/tag-tile';
-import { IconRupee, IconScan, IconStockAdd, IconTag } from '@/components/ui/icons';
+import { IconCheckList, IconRupee, IconScan, IconStockAdd, IconTag } from '@/components/ui/icons';
 import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { requireAdmin } from '@/server/auth';
 import { getT, getLocale } from '@/server/i18n';
+import { pendingCount } from '@/server/services/approvals';
 import { shopDashboard } from '@/server/services/reports';
 
 async function Dashboard() {
   await requireAdmin();
   const t = await getT();
   const locale = await getLocale();
-  const d = await shopDashboard(await requestDb(), STORE_ID);
+  const db = await requestDb();
+  const [d, pending] = await Promise.all([shopDashboard(db, STORE_ID), pendingCount(db, STORE_ID)]);
   return (
     <main className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
@@ -27,6 +29,16 @@ async function Dashboard() {
           <TagTile href="/admin/stock/receive" icon={<IconScan />} title={t('own.dash.restock')} />
           <TagTile href="/admin/suppliers" icon={<IconTag />} title={t('nav.suppliers')} />
           <TagTile href="/admin/reports" icon={<IconRupee />} title={t('nav.reports')} />
+          <TagTile
+            href="/admin/approvals"
+            icon={<IconCheckList />}
+            title={t('nav.approvals')}
+            hint={
+              <span data-testid="approvals-waiting" className={pending.total > 0 ? 'font-semibold text-red-700 dark:text-red-300' : undefined}>
+                {pending.total > 0 ? t('appr.home.tile', { n: pending.total }) : t('appr.home.tileNone')}
+              </span>
+            }
+          />
         </div>
       </div>
 

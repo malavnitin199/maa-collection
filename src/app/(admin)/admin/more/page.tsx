@@ -28,6 +28,7 @@ const GROUPS: { title: MessageKey; links: Item[] }[] = [
   {
     title: 'cat.menu.shop',
     links: [
+      { href: '/admin/approvals', Icon: IconCheckList, label: 'nav.approvals', hint: 'appr.menu.hint', needs: 'admin' },
       { href: '/admin/staff', Icon: IconUsers, label: 'cat.menu.staff', hint: 'cat.menu.staffHint', needs: 'admin' },
       { href: '/admin/team', Icon: IconChart, label: 'cat.menu.team', hint: 'cat.menu.teamHint', needs: 'admin' },
       { href: '/admin/reports', Icon: IconRupee, label: 'nav.reports', hint: 'cat.menu.reportsHint', needs: 'admin' },

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPgliteDb, type Db } from '@/db/client';
 import { approvalDecisions, sales, stockMovements } from '@/db/schema';

@@ -70,13 +70,28 @@ export function ActivityList({
                     {t('activity.exchange')}
                   </span>
                 )}
+                {entry.manual && (
+                  <span className="mr-1 rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    {t('my.byHand')}
+                  </span>
+                )}
+                {entry.status === 'waiting' && (
+                  <span data-testid="status-waiting" className="mr-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                    {t('my.status.waiting')}
+                  </span>
+                )}
+                {entry.status === 'rejected' && (
+                  <span data-testid="status-rejected" className="mr-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200">
+                    {t('my.status.rejected')}
+                  </span>
+                )}
                 {entry.swap ? `${t('activity.returned')} ${entry.swap.returned} → ${entry.swap.issued}` : entry.description}
                 <span className={`block text-xs ${muted}`}>
                   {formatDate(locale, entry.at, 'dateTime')} · {t('activity.creditedTo', { name: entry.creditedTo })}
                   {entry.recordedBy !== entry.creditedTo && ` · ${t('activity.recordedBy', { name: entry.recordedBy })}`}
                 </span>
               </span>
-              <span className="font-medium tabular-nums">{formatPaise(entry.amountPaise)}</span>
+              <span className={`font-medium tabular-nums ${entry.status === 'rejected' ? `line-through ${muted}` : ''}`}>{formatPaise(entry.amountPaise)}</span>
             </li>
           ))}
         </ul>
