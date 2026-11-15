@@ -70,6 +70,8 @@ Every piece gets a **hang tag, 50 × 80 mm**: shop name, **QR code**, the **size
 - Print: after saving, or **Labels → print today's labels**. Choose **Tags on A4** (9 per page: cut, punch the circle, thread), **Tag printer 50×80 mm**, or **Sticker printer 50×25 mm** (small barcode sticker, no QR).
 - **QR code:** staff point the normal phone camera at it → the item opens (sellers: Sell screen with the item ready; catalog/stock/owner: the product page). You must be logged in on that phone; customers only see the login page. In-app and USB scanners read the QR too.
 
+**Sample tags to practise scanning:** 8 demo tags in `public/sample-scanner-images/` (in the code), also online at https://maa-collection-pi.vercel.app/sample-scanner-images/all-tags.png, …/all-tags-print-a4.pdf, and one per tag (e.g. …/02-anarkali-kurta-M-MAA-KU-001.png). Open one on a computer screen and scan it with **Sell → Scan with camera**.
+
 ### Photos of an existing product
 
 **Products** → tap the item → **Photos** → *Take photo* / *From gallery*. The first photo is the **main** one, shown at the counter. Use *Make main* to change it, or *Delete*. Up to 8 photos per product; they're made smaller automatically before uploading.

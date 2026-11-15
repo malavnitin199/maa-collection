@@ -36,7 +36,7 @@ Owner request (chat, while away; photo of a fashion-store hang tag): tags with a
 | 1 | Hang tag 50 × 80 mm (`HangTag`, `QrCode`): shop, QR, size box + colour, design's sizes with this one highlighted, name, ART. (SKU) + code price, EAN-13, MRP box | Done — product page, all print sheets, test labels, tag old stock |
 | 2 | QR item link `/i/<barcode>` (`src/app/i/[code]/route.ts`): owner/catalog → product page, seller → `/pos?code=` (item preloaded), logged out → login; `codeFromScan` so in-app/USB scanners accept the link | Done |
 | 3 | Label formats: Tags on A4 (9/page, default) · Tag printer 50×80 mm · Sticker 50×25 mm (barcode only, unchanged) | Done |
-| 4 | Regenerated `../Maa-Collection-test-labels.png` and `.pdf` (8 demo items, from a fresh in-memory DB, QR → live app). Old versions kept outside the repo in the session scratchpad | Done |
+| 4 | Regenerated the sample tags (8 demo items, from a fresh in-memory DB, QR → live app): `public/sample-scanner-images/` — `all-tags.png`, `all-tags-print-a4.pdf` and one PNG per tag (owner asked to keep them in the app's public folder; served at `/sample-scanner-images/<file>`) | Done |
 | 5 | `/guide`: 13 lessons in 4 groups (everyone, selling, stock & tags, owner), animated SVG/CSS illustrations (static for reduced motion), steps, "Open" buttons, tips, real tag anatomy, inventory routine, "Mark as learned" progress (localStorage). Linked from header, menu, login, first-time tips; `/help` kept as quick reference & fixes | Done |
 | 6 | Tests, docs, commits, push, deploy, live check | See verification below |
 
