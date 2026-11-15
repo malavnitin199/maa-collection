@@ -10,6 +10,7 @@ import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { stockInAction, updateDesignRatesAction, updateProductAction } from '@/server/actions/admin';
 import { can } from '@/lib/permissions';
+import { splitDesignRates } from '@/lib/size-prices';
 import { requireAnyPermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
@@ -44,6 +45,11 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
     listProductImages(db, STORE_ID, id),
   ]);
   const supplier = supplierRows.find((s) => s.id === product.supplierId);
+  // Today's rates as a default + each size's own; purchase prices only with the "costs" right.
+  const showCost = can(me, 'costs');
+  const rates = splitDesignRates(
+    variants.map((v) => ({ size: v.size, mrpPaise: v.mrpPaise, pricePaise: v.pricePaise, costPaise: showCost ? v.costPaise : null })),
+  );
 
   return (
     <main className="flex flex-col gap-5">
@@ -139,10 +145,17 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
         <DesignRatesForm
           action={updateDesignRatesAction.bind(null, product.id)}
           count={variants.length}
-          showCost={can(me, 'costs')}
-          initial={{ mrp: rupees(product.mrpPaise), price: rupees(product.pricePaise), cost: can(me, 'costs') ? rupees(product.costPaise) : '' }}
+          showCost={showCost}
+          initial={{ mrp: rupees(rates.defaults.mrpPaise), price: rupees(rates.defaults.pricePaise), cost: rupees(rates.defaults.costPaise) }}
+          sizes={rates.sizes}
+          initialOwn={Object.fromEntries(
+            rates.own.map((o) => [o.size, { mrp: rupees(o.mrpPaise ?? null), price: rupees(o.pricePaise ?? null), cost: rupees(o.costPaise ?? null) }]),
+          )}
+          mixedSizes={rates.mixedSizes}
         />
-        <p className={`text-xs ${muted}`}>Past sales keep the prices they were sold at.</p>
+        <p className={`text-xs ${muted}`}>
+          {rates.sizes.length > 1 ? 'Every colour of a size gets the same price. ' : ''}Past sales keep the prices they were sold at.
+        </p>
       </section>
       )}
 

@@ -1,7 +1,8 @@
 'use client';
 
-import { useActionState, useRef } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { errorBox, input, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { SizeRatesEditor, type OwnRatesText, type RatesText } from '@/features/catalog/size-rates-editor';
 import type { FormState } from '@/server/actions/admin';
 
 type Action = (state: FormState, formData: FormData) => Promise<FormState>;
@@ -112,31 +113,54 @@ export function DesignRatesForm({
   initial,
   count,
   showCost = true,
+  sizes = [],
+  initialOwn = {},
+  mixedSizes = [],
 }: {
   action: Action;
-  initial: { mrp: string; price: string; cost: string };
+  /** The design's defaults (rupees). */
+  initial: RatesText;
   count: number;
   showCost?: boolean;
+  /** The design's sizes in shop order; 2+ shows "Price by size". */
+  sizes?: string[];
+  /** Sizes' own rates today (rupees). */
+  initialOwn?: OwnRatesText;
+  /** Sizes whose colours have different prices today. */
+  mixedSizes?: string[];
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+  const [rates, setRates] = useState(initial);
+  const [own, setOwn] = useState(initialOwn);
+  const field = (key: keyof RatesText) => ({
+    name: key,
+    value: rates[key],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setRates({ ...rates, [key]: e.target.value }),
+  });
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <div className={`grid gap-2 ${showCost ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <label className="flex flex-col gap-1 text-sm font-medium">
           MRP (₹)
-          <input name="mrp" inputMode="decimal" required defaultValue={initial.mrp} className={input} />
+          <input {...field('mrp')} inputMode="decimal" required className={input} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Price (₹)
-          <input name="price" inputMode="decimal" defaultValue={initial.price} className={input} />
+          <input {...field('price')} inputMode="decimal" placeholder={rates.mrp || '= MRP'} className={input} />
         </label>
         {showCost && (
           <label className="flex flex-col gap-1 text-sm font-medium">
             Purchase (₹)
-            <input name="cost" inputMode="decimal" defaultValue={initial.cost} placeholder="—" className={input} />
+            <input {...field('cost')} inputMode="decimal" placeholder="—" className={input} />
           </label>
         )}
       </div>
+      {sizes.length >= 2 && <SizeRatesEditor sizes={sizes} defaults={rates} own={own} onChange={setOwn} showCost={showCost} named />}
+      {mixedSizes.length > 0 && (
+        <p className="text-xs text-amber-700 dark:text-amber-400">
+          Colours of size {mixedSizes.join(', ')} have different prices now. Saving gives every colour of a size the same price.
+        </p>
+      )}
       <Feedback state={state} />
       <button type="submit" disabled={pending} className={primaryButton}>
         {pending ? 'Saving…' : `Apply to all ${count} size${count === 1 ? '' : 's'}/colour${count === 1 ? '' : 's'}`}

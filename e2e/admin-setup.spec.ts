@@ -142,6 +142,77 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await expect(page.getByTestId('item-details')).toContainText('₹1,499.00');
 });
 
+test('owner gives sizes their own MRP, selling and purchase price; every colour of a size gets them', async ({ page }) => {
+  await loginOwner(page);
+  const name = `Linen Shirt ${run}`;
+  await page.goto('/admin/stock/new');
+  await page.getByRole('combobox', { name: /^Supplier/ }).selectOption({ label: 'Royal Garments' });
+  await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
+  await page.getByLabel('Design / product name').fill(name);
+  for (const size of ['XL', 'M', 'L']) await page.getByRole('button', { name: `Size ${size}`, exact: true }).click();
+  await page.getByLabel('Colour').fill('Black, White');
+  await page.getByRole('button', { name: 'Add colour' }).click();
+  await page.getByLabel('MRP (₹)').fill('700');
+  await page.getByLabel('Selling price (₹)').fill('500');
+  await page.getByLabel('Purchase price (₹)').fill('300');
+
+  // Sizes listed in shop order; empty boxes show the default.
+  await page.getByText('Price by size (optional)').click();
+  const editor = page.getByTestId('size-rates');
+  await expect(editor.getByLabel(/^Size \S+ MRP$/)).toHaveCount(3);
+  await expect(editor.getByLabel('Size M selling price')).toHaveAttribute('placeholder', '500');
+  await editor.getByLabel('Size L selling price').fill('550');
+  await editor.getByLabel('Size L purchase price').fill('330');
+  await editor.getByLabel('Size XL MRP').fill('750');
+  await editor.getByLabel('Size XL selling price').fill('600');
+  await editor.getByLabel('Size XL purchase price').fill('360');
+  await expect(editor).toContainText('2 sizes with own price');
+
+  const preview = page.getByTestId('size-rates-preview');
+  await expect(preview).toContainText('M: ₹500.00 · MRP ₹700.00 · purchase ₹300.00 (default)');
+  await expect(preview).toContainText('L: ₹550.00 · MRP ₹700.00 · purchase ₹330.00 (own price)');
+  await expect(preview).toContainText('XL: ₹600.00 · MRP ₹750.00 · purchase ₹360.00 (own price)');
+  // (300 + 330 + 360) × 2 colours × 1 piece
+  await expect(page.getByTestId('design-preview')).toContainText('purchase value ₹1,980.00');
+
+  // Above MRP for one size is flagged in the preview and refused by the server.
+  await editor.getByLabel('Size XL selling price').fill('800');
+  await expect(page.getByTestId('design-preview')).toContainText('Selling price is above MRP for size XL.');
+  await page.getByRole('button', { name: 'Save 6 items and print labels' }).click();
+  await expect(page.getByText('Size XL: Selling price cannot be above MRP.')).toBeVisible();
+  await editor.getByLabel('Size XL selling price').fill('600');
+  await page.getByRole('button', { name: 'Save 6 items and print labels' }).click();
+
+  // Labels print each size's own MRP, on both colours.
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+  await expect(page.getByText('Saved 6 new items with barcodes.')).toBeVisible();
+  const labels = page.getByTestId('label-sheet').getByRole('listitem');
+  await expect(labels.filter({ hasText: 'MRP ₹750.00' })).toHaveCount(2);
+  await expect(labels.filter({ hasText: 'MRP ₹700.00' })).toHaveCount(4);
+
+  const list = page.getByTestId('product-list').getByRole('listitem');
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}`);
+  await expect(list).toHaveCount(6);
+  await expect(list.filter({ hasText: '₹500.00 · MRP ₹700.00 · purchase ₹300.00' })).toHaveCount(2);
+  await expect(list.filter({ hasText: '₹550.00 · MRP ₹700.00 · purchase ₹330.00' })).toHaveCount(2);
+  await expect(list.filter({ hasText: '₹600.00 · MRP ₹750.00 · purchase ₹360.00' })).toHaveCount(2);
+
+  // Product page: rates by size, filled with today's prices; change only L.
+  await page.getByTestId('product-list').getByRole('link').first().click();
+  const rates = page.locator('section', { has: page.getByRole('heading', { name: 'Rates for the whole design' }) });
+  await expect(rates.getByLabel('MRP (₹)')).toHaveValue('700');
+  await expect(rates.getByTestId('size-rates')).toHaveAttribute('open', '');
+  await expect(rates.getByLabel('Size XL MRP')).toHaveValue('750');
+  await expect(rates.getByLabel('Size M selling price')).toHaveValue('');
+  await rates.getByLabel('Size L selling price').fill('520');
+  await rates.getByRole('button', { name: 'Apply to all 6 sizes/colours' }).click();
+  await expect(page.getByText('Rates updated for 6 items.')).toBeVisible();
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}`);
+  await expect(list.filter({ hasText: '₹520.00 · MRP ₹700.00 · purchase ₹330.00' })).toHaveCount(2);
+  await expect(list.filter({ hasText: '₹500.00 · MRP ₹700.00' })).toHaveCount(2);
+  await expect(list.filter({ hasText: '₹600.00 · MRP ₹750.00' })).toHaveCount(2);
+});
+
 test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock/receive');
@@ -292,6 +363,14 @@ test('owner makes a salesman a catalog person; they get catalog screens but not 
   await page.goto('/admin/stock/quick');
   await expect(page.getByLabel('Product 1 MRP')).toBeVisible();
   await expect(page.getByLabel('Product 1 purchase price')).toHaveCount(0);
+  // Price by size: MRP and selling price per size, but no purchase price boxes.
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: 'Size M', exact: true }).click();
+  await page.getByRole('button', { name: 'Size L', exact: true }).click();
+  await page.getByText('Price by size (optional)').click();
+  await expect(page.getByLabel('Size M selling price')).toBeVisible();
+  await expect(page.getByLabel('Size L MRP')).toBeVisible();
+  await expect(page.getByLabel(/purchase price/i)).toHaveCount(0);
   for (const path of ['/admin/dashboard', '/admin/staff', '/admin/settings', '/admin/activity']) {
     await page.goto(path);
     await expect(page, `${path} is owner-only`).toHaveURL(/\/pos$/);

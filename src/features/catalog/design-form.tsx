@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { hasOwnText, SizeRatesEditor, type OwnRatesText } from '@/features/catalog/size-rates-editor';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { formatPaise } from '@/lib/money';
+import { ratesForSize, sortSizes } from '@/lib/size-prices';
 import { createDesignAction } from '@/server/actions/admin';
 
 type Option = { id: string; name: string };
@@ -59,6 +61,8 @@ export function DesignForm({
   const [mrp, setMrp] = useState('');
   const [price, setPrice] = useState('');
   const [cost, setCost] = useState('');
+  // Sizes' own rates (kept while a size is unticked; only ticked sizes are saved).
+  const [sizeOwn, setSizeOwn] = useState<OwnRatesText>({});
   const [quantityEach, setQuantityEach] = useState('1');
   const [billNumber, setBillNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -91,10 +95,29 @@ export function DesignForm({
   const allColors = colorText.trim() ? [...colors, ...colorText.split(',').map((c) => c.trim()).filter(Boolean)] : colors;
   const combos = sizes.length * allColors.length;
   const qty = /^\d+$/.test(quantityEach) ? Number(quantityEach) : 0;
-  const mrpPaise = rupeesToPaise(mrp);
-  const pricePaise = price.trim() ? rupeesToPaise(price) : mrpPaise;
-  const costPaise = rupeesToPaise(cost);
   const category = categories.find((c) => c.id === categoryId);
+
+  // Price by size needs 2+ sizes; what the preview shows is exactly what is sent.
+  const orderedSizes = sortSizes(sizes);
+  const bySize = sizes.length >= 2;
+  const ownRows = bySize
+    ? orderedSizes
+        .filter((size) => hasOwnText(sizeOwn[size]))
+        .map((size) => ({ size, mrp: sizeOwn[size].mrp ?? '', price: sizeOwn[size].price ?? '', cost: showCost ? (sizeOwn[size].cost ?? '') : '' }))
+    : [];
+  const paise = (text: string) => (text.trim() ? rupeesToPaise(text) : null);
+  const defaults = { mrpPaise: paise(mrp), pricePaise: paise(price), costPaise: paise(cost) };
+  const sizeRows = orderedSizes.map((size) => {
+    const own = ownRows.find((r) => r.size === size);
+    return {
+      size,
+      own: Boolean(own),
+      ...ratesForSize(defaults, own && { mrpPaise: paise(own.mrp), pricePaise: paise(own.price), costPaise: paise(own.cost) }),
+    };
+  });
+  const purchaseValue = sizeRows.reduce((sum, r) => sum + (r.costPaise ?? 0), 0) * allColors.length * qty;
+  const aboveMrp = sizeRows.filter((r) => r.mrpPaise !== null && r.pricePaise !== null && r.pricePaise > r.mrpPaise).map((r) => r.size);
+  const money = (value: number | null) => (value === null ? '—' : formatPaise(value));
 
   function save() {
     setError(null);
@@ -112,6 +135,7 @@ export function DesignForm({
         mrp,
         price,
         cost,
+        sizeRates: ownRows,
         quantityEach,
         billNumber,
       });
@@ -301,8 +325,21 @@ export function DesignForm({
             <input inputMode="numeric" value={quantityEach} onChange={(e) => setQuantityEach(e.target.value)} className={input} />
           </label>
         </div>
+        {bySize && (
+          <SizeRatesEditor
+            sizes={orderedSizes}
+            defaults={{ mrp, price, cost }}
+            own={sizeOwn}
+            onChange={(next) => {
+              setSizeOwn(next);
+              touched();
+            }}
+            showCost={showCost}
+          />
+        )}
         <p className={`text-xs ${muted}`}>
-          &ldquo;Pieces each&rdquo; = pieces of every size in every colour. Purchase (code) price is admin-only; salesmen never see it.
+          These rates are for every size and colour{bySize ? ', unless a size has its own price' : ''}. &ldquo;Pieces each&rdquo; = pieces of every
+          size in every colour. Purchase (code) price is admin-only; salesmen never see it.
         </p>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Supplier bill no. (optional)
@@ -320,10 +357,21 @@ export function DesignForm({
               <strong>{combos}</strong> new item{combos === 1 ? '' : 's'} ({allColors.length} colour{allColors.length === 1 ? '' : 's'} ×{' '}
               {sizes.length} size{sizes.length === 1 ? '' : 's'}), each with its own barcode
               {category && ` and SKU MAA-${category.code}-…`}. <strong>{combos * qty}</strong> pieces in total
-              {costPaise !== null && costPaise > 0 && <> · purchase value {formatPaise(combos * qty * costPaise)}</>}.
+              {purchaseValue > 0 && <> · purchase value {formatPaise(purchaseValue)}</>}.
             </p>
-            {mrpPaise !== null && pricePaise !== null && pricePaise > mrpPaise && (
-              <p className="text-sm text-red-600">Selling price is above MRP.</p>
+            {ownRows.length > 0 && (
+              <ul data-testid="size-rates-preview" className="flex flex-col gap-0.5 text-sm">
+                {sizeRows.map((r) => (
+                  <li key={r.size}>
+                    <strong>{r.size}</strong>: {money(r.pricePaise)} <span className={muted}>· MRP {money(r.mrpPaise)}</span>
+                    {showCost && r.costPaise !== null && <span className={muted}> · purchase {money(r.costPaise)}</span>}
+                    <span className={`text-xs ${muted}`}> {r.own ? '(own price)' : '(default)'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {aboveMrp.length > 0 && (
+              <p className="text-sm text-red-600">Selling price is above MRP{bySize ? ` for size ${aboveMrp.join(', ')}` : ''}.</p>
             )}
             <ul className={`flex flex-wrap gap-1 text-xs ${muted}`}>
               {allColors.flatMap((c) =>
