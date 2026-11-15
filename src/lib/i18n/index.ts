@@ -32,3 +32,16 @@ export function plural(t: T, base: 'my.pcs' | 'my.sales', n: number, vars: Vars 
 
 /** English translate function — the default for code that runs before a person's language is known. */
 export const tEnglish: T = makeT(en);
+
+type DateStyle = 'date' | 'dateTime' | 'dayMonth';
+const DATE_OPTIONS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
+  date: { dateStyle: 'medium', timeZone: 'Asia/Kolkata' },
+  dateTime: { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' },
+  // A plain calendar day (YYYY-MM-DD from the shop's day list): no time zone shift.
+  dayMonth: { day: 'numeric', month: 'short', timeZone: 'UTC' },
+};
+
+/** Dates in the person's language — Hindi month names ("15 नव॰ 2026"), English otherwise; normal digits in both. Shop time zone. */
+export function formatDate(locale: Locale, value: Date | string | number, style: DateStyle = 'date'): string {
+  return new Intl.DateTimeFormat(locale === 'hi' ? 'hi-IN' : 'en-IN', DATE_OPTIONS[style]).format(new Date(value));
+}

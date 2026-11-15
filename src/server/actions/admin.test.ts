@@ -14,6 +14,11 @@ import { createDesignAction, updateDesignRatesAction } from './admin';
 vi.mock('@/server/auth', () => ({ requirePermission: vi.fn(), requireAdmin: vi.fn() }));
 vi.mock('@/db/client', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/db/client')>()), getDb: vi.fn() }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+// Messages in English (the person's language comes from the request in the app).
+vi.mock('@/server/i18n', async (importOriginal) => {
+  const { tEnglish } = await import('@/lib/i18n');
+  return { ...(await importOriginal<typeof import('@/server/i18n')>()), getT: async () => tEnglish };
+});
 
 let db: Db;
 let owner: CurrentStaff;

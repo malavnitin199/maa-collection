@@ -10,6 +10,8 @@ import { codeFromScan } from '@/lib/item-link';
 import { sizeFieldName, type SizeRates } from '@/lib/size-prices';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
+import type { MessageKey } from '@/lib/i18n';
+import { errorText, getT } from '@/server/i18n';
 import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
@@ -33,17 +35,30 @@ export type FormState = { error?: string; message?: string };
 
 const text = (formData: FormData, key: string) => String(formData.get(key) ?? '').trim();
 
-function money(formData: FormData, key: string, label: string, { optional = false } = {}): number | null {
+type MoneyLabel = 'MRP' | 'selling price' | 'cost price' | 'purchase price';
+const RUPEES_KEY: Record<MoneyLabel, MessageKey> = {
+  MRP: 'act.err.rupees.mrp',
+  'selling price': 'act.err.rupees.price',
+  'cost price': 'act.err.rupees.cost',
+  'purchase price': 'act.err.rupees.purchase',
+};
+const SIZE_KEY: Record<'MRP' | 'selling price' | 'purchase price', MessageKey> = {
+  MRP: 'act.err.size.mrp',
+  'selling price': 'act.err.size.price',
+  'purchase price': 'act.err.size.purchase',
+};
+
+function money(formData: FormData, key: string, label: MoneyLabel, { optional = false } = {}): number | null {
   const raw = text(formData, key);
   if (!raw && optional) return null;
   const paise = rupeesToPaise(raw);
-  if (paise === null) throw new DomainError(`Enter a valid ${label} in rupees.`);
+  if (paise === null) throw new DomainError(`Enter a valid ${label} in rupees.`, { key: RUPEES_KEY[label] });
   return paise;
 }
 
 function productInput(formData: FormData): ProductInput & { categoryId: string; supplierId: string | null } {
   const categoryId = text(formData, 'categoryId');
-  if (!categoryId) throw new DomainError('Choose a category.');
+  if (!categoryId) throw new DomainError('Choose a category.', { key: 'act.err.chooseCategory' });
   return {
     categoryId,
     supplierId: text(formData, 'supplierId') || null,
@@ -70,15 +85,15 @@ export type SizeRatesText = { size: string; mrp: string; price: string; cost: st
 /** Rupee text per size → paise. Purchase prices are dropped without the "costs" right; sizes with nothing of their own are left out. */
 function sizeRatesInput(rows: unknown, me: CurrentStaff): SizeRates[] {
   if (!Array.isArray(rows)) return [];
-  if (rows.length > 60) throw new DomainError('Too many sizes at once.');
+  if (rows.length > 60) throw new DomainError('Too many sizes at once.', { key: 'act.err.tooManySizes' });
   return rows
     .map((row: Partial<Record<keyof SizeRatesText, unknown>>) => {
       const size = String(row?.size ?? '').trim();
-      const paise = (raw: unknown, label: string) => {
+      const paise = (raw: unknown, label: keyof typeof SIZE_KEY) => {
         const value = String(raw ?? '').trim();
         if (!value) return null;
         const result = rupeesToPaise(value);
-        if (result === null) throw new DomainError(`Size ${size}: enter a valid ${label} in rupees.`);
+        if (result === null) throw new DomainError(`Size ${size}: enter a valid ${label} in rupees.`, { key: SIZE_KEY[label], vars: { size } });
         return result;
       };
       return {
@@ -91,10 +106,12 @@ function sizeRatesInput(rows: unknown, me: CurrentStaff): SizeRates[] {
     .filter((r) => r.mrpPaise !== null || r.pricePaise !== null || r.costPaise !== null);
 }
 
-function failure(error: unknown): FormState {
-  if (error instanceof DomainError) return { error: error.message };
+/** A failed action as a message in the person's language (rule errors with a key are translated). */
+async function failure(error: unknown): Promise<FormState> {
+  const t = await getT();
+  if (error instanceof DomainError) return { error: errorText(error, t) };
   console.error(error);
-  return { error: 'Something went wrong. Please try again.' };
+  return { error: t('error.generic') };
 }
 
 export async function createProductAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -102,7 +119,7 @@ export async function createProductAction(_prev: FormState, formData: FormData):
   let createdId: string;
   try {
     const openingRaw = text(formData, 'openingStock') || '0';
-    if (!/^\d+$/.test(openingRaw)) throw new DomainError('Opening stock must be a whole number.');
+    if (!/^\d+$/.test(openingRaw)) throw new DomainError('Opening stock must be a whole number.', { key: 'act.err.openingStock' });
     const created = await createProduct(await getDb(), STORE_ID, {
       ...withoutCost(productInput(formData), admin),
       manufacturerBarcode: formData.get('barcodeMode') === 'manufacturer' ? text(formData, 'barcode') : null,
@@ -122,7 +139,7 @@ export async function updateProductAction(productId: string, _prev: FormState, f
   try {
     const db = await getDb();
     const current = await getProduct(db, STORE_ID, productId);
-    if (!current) throw new DomainError('Product not found.');
+    if (!current) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
     const input = productInput(formData);
     await updateProduct(db, STORE_ID, productId, {
       ...input,
@@ -136,14 +153,14 @@ export async function updateProductAction(productId: string, _prev: FormState, f
     return failure(error);
   }
   revalidatePath('/admin', 'layout');
-  return { message: 'Saved.' };
+  return { message: (await getT())('act.saved') };
 }
 
 export async function stockInAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const admin = await requirePermission('stock');
   try {
     const raw = text(formData, 'quantity');
-    if (!/^\d+$/.test(raw)) throw new DomainError('Quantity must be a whole number.');
+    if (!/^\d+$/.test(raw)) throw new DomainError('Quantity must be a whole number.', { key: 'act.err.quantityWhole' });
     const updated = await stockIn(await getDb(), STORE_ID, {
       operationId: text(formData, 'operationId'),
       productId,
@@ -152,8 +169,9 @@ export async function stockInAction(productId: string, _prev: FormState, formDat
       note: text(formData, 'note'),
     });
     revalidatePath('/admin', 'layout');
-    if (updated.duplicate) return { message: `Already saved. Stock is ${updated.stock}.` };
-    return { message: `Added ${raw}. Stock is now ${updated.stock}.` };
+    const t = await getT();
+    if (updated.duplicate) return { message: t('act.stockAlready', { stock: updated.stock }) };
+    return { message: t('act.stockAdded', { qty: raw, stock: updated.stock }) };
   } catch (error) {
     return failure(error);
   }
@@ -165,7 +183,7 @@ export async function createStaffAction(_prev: FormState, formData: FormData): P
     const role = formData.get('role') === 'admin' ? 'admin' : 'salesman';
     const created = await createStaff(await getDb(), STORE_ID, { name: text(formData, 'name'), role, pin: text(formData, 'pin') });
     revalidatePath('/admin/staff');
-    return { message: `${created.name} added. They can log in with the PIN you set.` };
+    return { message: (await getT())('act.staffAdded', { name: created.name }) };
   } catch (error) {
     return failure(error);
   }
@@ -175,7 +193,7 @@ export async function resetPinAction(staffId: string, _prev: FormState, formData
   await requireAdmin();
   try {
     await setStaffPin(await getDb(), STORE_ID, staffId, text(formData, 'pin'));
-    return { message: 'PIN changed.' };
+    return { message: (await getT())('act.pinChanged') };
   } catch (error) {
     return failure(error);
   }
@@ -187,7 +205,7 @@ export async function setStaffActiveAction(staffId: string, active: boolean): Pr
   try {
     await setStaffActive(await getDb(), STORE_ID, staffId, active, admin.id);
     revalidatePath('/admin/staff');
-    return { message: active ? 'Activated.' : 'Deactivated.' };
+    return { message: (await getT())(active ? 'act.activated' : 'act.deactivated') };
   } catch (error) {
     return failure(error);
   }
@@ -210,7 +228,7 @@ export async function createSupplierAction(_prev: FormState, formData: FormData)
   try {
     const created = await createSupplier(await getDb(), STORE_ID, supplierInput(formData));
     revalidatePath('/admin', 'layout');
-    return { message: `${created.name} added.` };
+    return { message: (await getT())('act.added', { name: created.name }) };
   } catch (error) {
     return failure(error);
   }
@@ -221,7 +239,7 @@ export async function updateSupplierAction(supplierId: string, _prev: FormState,
   try {
     await updateSupplier(await getDb(), STORE_ID, supplierId, { ...supplierInput(formData), active: formData.get('active') === 'on' });
     revalidatePath('/admin', 'layout');
-    return { message: 'Saved.' };
+    return { message: (await getT())('act.saved') };
   } catch (error) {
     return failure(error);
   }
@@ -234,7 +252,7 @@ export async function createCategoryAction(_prev: FormState, formData: FormData)
   try {
     const created = await createCategory(await getDb(), STORE_ID, { name: text(formData, 'name'), code: text(formData, 'code'), sizes: text(formData, 'sizes') });
     revalidatePath('/admin', 'layout');
-    return { message: `${created.name} added with code ${created.code}.` };
+    return { message: (await getT())('act.categoryAdded', { name: created.name, code: created.code }) };
   } catch (error) {
     return failure(error);
   }
@@ -250,7 +268,7 @@ export async function updateCategoryAction(categoryId: string, _prev: FormState,
       sizes: text(formData, 'sizes'),
     });
     revalidatePath('/admin', 'layout');
-    return { message: 'Saved.' };
+    return { message: (await getT())('act.saved') };
   } catch (error) {
     return failure(error);
   }
@@ -283,14 +301,14 @@ export type DesignActionResult =
 export async function createDesignAction(input: DesignActionInput): Promise<DesignActionResult> {
   const admin = await requirePermission('catalog');
   try {
-    const toPaise = (raw: string, label: string, optional = false) => {
+    const toPaise = (raw: string, label: MoneyLabel, optional = false) => {
       if (!raw.trim() && optional) return null;
       const paise = rupeesToPaise(raw);
-      if (paise === null) throw new DomainError(`Enter a valid ${label} in rupees.`);
+      if (paise === null) throw new DomainError(`Enter a valid ${label} in rupees.`, { key: RUPEES_KEY[label] });
       return paise;
     };
     const qty = input.quantityEach.trim() || '0';
-    if (!/^\d+$/.test(qty)) throw new DomainError('Pieces must be a whole number.');
+    if (!/^\d+$/.test(qty)) throw new DomainError('Pieces must be a whole number.', { key: 'act.err.piecesWhole' });
     const mrpPaise = toPaise(input.mrp, 'MRP') as number;
     const result = await createDesign(await getDb(), STORE_ID, {
       operationId: String(input.operationId).slice(0, 100),
@@ -312,7 +330,7 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
     revalidatePath('/admin', 'layout');
     return { ok: true, receiptId: result.receipt.id, created: result.products.length, items: result.products.map((p) => ({ id: p.id, color: p.color })) };
   } catch (error) {
-    const state = failure(error);
+    const state = await failure(error);
     return { ok: false, error: state.error ?? 'Something went wrong.' };
   }
 }
@@ -361,7 +379,7 @@ export async function receiveStockAction(input: {
     revalidatePath('/admin', 'layout');
     return { ok: true, receiptId: result.receipt.id };
   } catch (error) {
-    return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
 }
 
@@ -386,7 +404,7 @@ export async function updateDesignRatesAction(productId: string, _prev: FormStat
       ),
     });
     revalidatePath('/admin', 'layout');
-    return { message: `Rates updated for ${count} item${count === 1 ? '' : 's'}.` };
+    return { message: (await getT())(count === 1 ? 'act.ratesUpdated.one' : 'act.ratesUpdated.other', { n: count }) };
   } catch (error) {
     return failure(error);
   }
@@ -402,7 +420,7 @@ export async function updatePriceCodeAction(_prev: FormState, formData: FormData
       printPriceCode: formData.get('printPriceCode') === 'on',
     });
     revalidatePath('/admin', 'layout');
-    return { message: 'Saved.' };
+    return { message: (await getT())('act.saved') };
   } catch (error) {
     return failure(error);
   }
@@ -426,15 +444,16 @@ export async function createQuickAction(input: QuickActionInput): Promise<Design
       .filter((row) => String(row.name ?? '').trim())
       .map((row, i) => {
         const label = `Row ${i + 1} (${String(row.name).trim()})`;
+        const vars = { row: i + 1, name: String(row.name).trim() };
         const mrpPaise = rupeesToPaise(String(row.mrp ?? ''));
-        if (mrpPaise === null) throw new DomainError(`${label}: enter a valid MRP.`);
+        if (mrpPaise === null) throw new DomainError(`${label}: enter a valid MRP.`, { key: 'act.err.row.mrp', vars });
         const pricePaise = String(row.price ?? '').trim() ? rupeesToPaise(String(row.price)) : mrpPaise;
-        if (pricePaise === null) throw new DomainError(`${label}: enter a valid selling price.`);
+        if (pricePaise === null) throw new DomainError(`${label}: enter a valid selling price.`, { key: 'act.err.row.price', vars });
         const costRaw = String(row.cost ?? '').trim();
         const costPaise = costRaw && can(admin, 'costs') ? rupeesToPaise(costRaw) : null;
-        if (costRaw && costPaise === null) throw new DomainError(`${label}: enter a valid purchase price.`);
+        if (costRaw && costPaise === null) throw new DomainError(`${label}: enter a valid purchase price.`, { key: 'act.err.row.purchase', vars });
         const qty = String(row.quantity ?? '').trim() || '0';
-        if (!/^\d+$/.test(qty)) throw new DomainError(`${label}: pieces must be a whole number.`);
+        if (!/^\d+$/.test(qty)) throw new DomainError(`${label}: pieces must be a whole number.`, { key: 'act.err.row.pieces', vars });
         return { name: String(row.name), size: String(row.size ?? ''), color: String(row.color ?? ''), mrpPaise, pricePaise, costPaise, quantity: Number(qty) };
       });
     const result = await createProductsBatch(await getDb(), STORE_ID, {
@@ -449,7 +468,7 @@ export async function createQuickAction(input: QuickActionInput): Promise<Design
     revalidatePath('/admin', 'layout');
     return { ok: true, receiptId: result.receipt.id, created: result.products.length, items: result.products.map((p) => ({ id: p.id, color: p.color })) };
   } catch (error) {
-    return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
 }
 
@@ -459,7 +478,8 @@ export async function setStaffPermissionsAction(staffId: string, _prev: FormStat
   try {
     const granted = await setStaffPermissions(await getDb(), STORE_ID, staffId, formData.getAll('permissions').map(String));
     revalidatePath('/admin', 'layout');
-    return { message: granted.length ? `Saved: ${granted.join(', ')}.` : 'Saved: counter only.' };
+    const t = await getT();
+    return { message: granted.length ? t('act.permsSaved', { list: granted.map((p) => t(`act.perm.${p}` as MessageKey)).join(', ') }) : t('act.permsNone') };
   } catch (error) {
     return failure(error);
   }
@@ -476,11 +496,11 @@ export async function uploadProductImageAction(productId: string, formData: Form
   const me = await requirePermission('catalog');
   try {
     const bytes = await readPhoto(formData.get('photo'));
-    if (!bytes) throw new DomainError('Choose a photo first.');
+    if (!bytes) throw new DomainError('Choose a photo first.', { key: 'act.err.choosePhoto' });
     const size = (key: string) => (/^\d+$/.test(text(formData, key)) ? Number(text(formData, key)) : null);
     await addProductImage(await getDb(), STORE_ID, { productId, bytes, width: size('width'), height: size('height'), staffId: me.id });
     revalidatePath('/admin', 'layout');
-    return { message: 'Photo added.' };
+    return { message: (await getT())('act.photoAdded') };
   } catch (error) {
     return failure(error);
   }
@@ -491,12 +511,12 @@ export async function addPhotoToItemsAction(productIds: string[], formData: Form
   const me = await requirePermission('catalog');
   try {
     const bytes = await readPhoto(formData.get('photo'));
-    if (!bytes) throw new DomainError('Choose a photo first.');
+    if (!bytes) throw new DomainError('Choose a photo first.', { key: 'act.err.choosePhoto' });
     const ids = (Array.isArray(productIds) ? productIds : []).map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 60);
     const size = (key: string) => (/^\d+$/.test(text(formData, key)) ? Number(text(formData, key)) : null);
     await addPhotoToProducts(await getDb(), STORE_ID, { productIds: ids, bytes, width: size('width'), height: size('height'), staffId: me.id });
     revalidatePath('/admin', 'layout');
-    return { message: 'Photo added.' };
+    return { message: (await getT())('act.photoAdded') };
   } catch (error) {
     return failure(error);
   }
@@ -507,7 +527,7 @@ export async function makeMainImageAction(imageId: string): Promise<FormState> {
   try {
     await makeMainImage(await getDb(), STORE_ID, imageId);
     revalidatePath('/admin', 'layout');
-    return { message: 'Main photo changed.' };
+    return { message: (await getT())('act.mainPhoto') };
   } catch (error) {
     return failure(error);
   }
@@ -518,7 +538,7 @@ export async function deleteImageAction(imageId: string): Promise<FormState> {
   try {
     await deleteImage(await getDb(), STORE_ID, imageId);
     revalidatePath('/admin', 'layout');
-    return { message: 'Photo deleted.' };
+    return { message: (await getT())('act.photoDeleted') };
   } catch (error) {
     return failure(error);
   }
@@ -535,14 +555,14 @@ export async function tagOldStockAction(formData: FormData): Promise<OldStockRes
   const me = await requirePermission('catalog');
   try {
     const name = text(formData, 'name');
-    if (!name) throw new DomainError('Enter the product name.');
+    if (!name) throw new DomainError('Enter the product name.', { key: 'act.err.productName' });
     const categoryId = text(formData, 'categoryId');
-    if (!categoryId) throw new DomainError('Choose a category.');
+    if (!categoryId) throw new DomainError('Choose a category.', { key: 'act.err.chooseCategory' });
     const mrpPaise = money(formData, 'mrp', 'MRP') as number;
     const pricePaise = text(formData, 'price') ? (money(formData, 'price', 'selling price') as number) : mrpPaise;
     const costPaise = can(me, 'costs') ? money(formData, 'cost', 'purchase price', { optional: true }) : null;
     const qty = text(formData, 'quantity') || '1';
-    if (!/^\d+$/.test(qty)) throw new DomainError('Pieces must be a whole number.');
+    if (!/^\d+$/.test(qty)) throw new DomainError('Pieces must be a whole number.', { key: 'act.err.piecesWhole' });
     const db = await getDb();
     const result = await createProductsBatch(db, STORE_ID, {
       operationId: text(formData, 'operationId').slice(0, 100),
@@ -573,7 +593,7 @@ export async function tagOldStockAction(formData: FormData): Promise<OldStockRes
       photoError,
     };
   } catch (error) {
-    return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
 }
 

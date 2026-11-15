@@ -1,11 +1,16 @@
 import type { Messages } from './en';
+import { actionsHi } from './modules/actions.ts';
+import { catalogHi } from './modules/catalog.ts';
+import { helpHi } from './modules/help.ts';
+import { ownerHi } from './modules/owner.ts';
+import { stockHi } from './modules/stock.ts';
 
 /**
  * हिन्दी — every key of `en.ts`, in simple shop Hindi (common English shop words
  * like MRP, SKU, स्टॉक, स्कैन are kept as staff say them). Please have a
  * native speaker in the shop review new lines.
  */
-export const hi: Messages = {
+const base = {
   'lang.switchTo': 'English',
   'lang.switchLabel': 'भाषा: हिन्दी। अंग्रेज़ी में बदलें',
   'sound.on': 'आवाज़ चालू',
@@ -212,3 +217,5 @@ export const hi: Messages = {
   'tag.part6': 'MRP',
   'tag.part6.text': 'सबसे ज़्यादा दाम। मोलभाव वाला दाम बेचते समय डाला जाता है।',
 };
+
+export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi };

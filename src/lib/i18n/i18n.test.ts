@@ -15,9 +15,9 @@ describe('dictionaries', () => {
   });
 
   it('Hindi lines are really in Devanagari (not English copied over), except shop words', () => {
-    const allowedLatin = new Set(['login.pin', 'item.sku', 'item.mrp', 'tag.part6', 'lang.switchTo']);
-    for (const [key, text] of Object.entries(MESSAGES.hi)) {
-      if (allowedLatin.has(key)) continue;
+    for (const [key, text] of Object.entries(MESSAGES.hi) as [MessageKey, string][]) {
+      // Same as English on purpose (MRP, SKU, PIN, CSV…), or the switch button's "English".
+      if (text === MESSAGES.en[key] || key === 'lang.switchTo') continue;
       expect(/[ऀ-ॿ]/.test(text), key).toBe(true);
     }
   });

@@ -3,7 +3,13 @@
  * (the type there enforces it). `{name}` = a value filled in; `.one` / `.other`
  * = singular / plural. Shop data (product names, sizes, prices) is never here.
  */
-export const en = {
+import { actionsEn } from './modules/actions.ts';
+import { catalogEn } from './modules/catalog.ts';
+import { helpEn } from './modules/help.ts';
+import { ownerEn } from './modules/owner.ts';
+import { stockEn } from './modules/stock.ts';
+
+const base = {
   // Language and sound
   'lang.switchTo': 'हिन्दी',
   'lang.switchLabel': 'Language: English. Switch to Hindi',
@@ -222,6 +228,9 @@ export const en = {
   'tag.part6': 'MRP',
   'tag.part6.text': 'The highest price. The agreed (bargained) price is entered when selling.',
 } as const;
+
+/** All English text: the salesman screens above, plus the owner/catalog areas (one module each). */
+export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn } as const;
 
 export type MessageKey = keyof typeof en;
 export type Messages = Record<MessageKey, string>;
