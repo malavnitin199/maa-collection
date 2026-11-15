@@ -123,6 +123,7 @@ export default function HelpPage() {
             <><strong>Code price</strong>: Settings → choose a 10-letter word; labels then show the purchase price in letters only your staff can read.</>,
             <><strong>Rates</strong>: open any product → Rates for the whole design. Past sales keep their prices.</>,
             <><strong>Track</strong>: Home shows today and this month, sales per salesperson, low stock; Activity lists every sale and exchange.</>,
+            <><strong>Reports</strong>: best sellers, what is not selling, sales by category / company / salesperson for any period, and <strong>CSV downloads</strong> (sales, stock) for your accountant.</>,
           ]}
         />
       </Section>

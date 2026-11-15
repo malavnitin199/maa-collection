@@ -9,7 +9,7 @@ Live app: https://maa-collection-pi.vercel.app
 ## 1. New here? (2 minutes)
 
 1. Open the app on your phone, tap **your name**, type your **PIN** (the owner gives it to you).
-2. Put it on your home screen: Chrome → ⋮ → *Add to Home screen*; iPhone → Share → *Add to Home Screen*.
+2. Put it on your home screen: Chrome → ⋮ → *Add to Home screen* (or *Install app*); iPhone → Share → *Add to Home Screen*. It gets the green **MC** icon and opens full-screen, straight to your screen while you're logged in.
 3. The tabs at the bottom:
    - **Sell**: scan and sell
    - **Exchange**: swap an item from an earlier sale
@@ -72,6 +72,7 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 3. **Settings → Code price** (optional): a 10-letter word with no repeated letters. Labels then show the purchase price in letters, e.g. BLACKHORSE: ₹450 = **CKE**.
 4. Add stock (or let the catalog person tag old stock).
 5. Daily: **Home** for today/month, sales per person, low stock; **Activity** for every sale and exchange.
+6. **Reports** (Menu → Reports): best sellers, items not selling for 30 days, sales by category / company / salesperson for Today, 7 days, 30 days or this month; **download sales and stock as CSV** for your accountant (opens in Excel / Google Sheets).
 
 ## 6. Required vs optional
 

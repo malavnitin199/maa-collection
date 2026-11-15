@@ -27,7 +27,13 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Catalog person extras: sticker labels, tag barcodes, Needs attention (2026-11-15, latest)
+## Installable app, owner reports, CSV export (2026-11-15, latest)
+- **Installable phone app**: `app/manifest.ts` (standalone, portrait, brand green, start /login), generated icons `/app-icon/192|512` + apple-icon (next/og), theme colour; `/login` redirects someone already logged in to their screen. Tests switching user now log out first.
+- **Reports** (`/admin/reports`, owner): periods Today / 7d / 30d / month in IST; totals, best sellers, by category / company / salesperson, "not selling" (in stock, no sale in 30 days).
+- **CSV export** (owner, 403 for others): `/admin/export/sales?period=` (sales + exchanges, purchase, profit, credited/recorded) and `/admin/export/stock`. `src/lib/csv.ts` quotes, neutralises formula injection, adds BOM.
+- Verified: lint, typecheck, **72 unit tests**, build, **37 Playwright tests (desktop + phone)**.
+
+## Catalog person extras: sticker labels, tag barcodes, Needs attention (2026-11-15)
 - **Sticker printer 50×25 mm** label format (one per page via `@page`), with short bars so the barcode spans ~47 mm. Rendered at 203 dpi it decodes with the browser BarcodeDetector; E2E checks the 50×25 mm size.
 - **Tag old stock with the barcode already on the item**: scan the manufacturer EAN-13 first. Unused + valid → item uses it (no sticker). Already known → shows the item, save blocked. Invalid → explained. The E2E test caught a nested-form bug (Enter submitted the page) — scanner moved above the form. It also showed the duplicate-barcode guard working (desktop and phone runs picked the same random code; the second was refused).
 - **Needs attention** (`/admin/catalog/check`): items without photo / company / stock / purchase price (last only with the costs right).

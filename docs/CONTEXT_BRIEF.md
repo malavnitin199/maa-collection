@@ -12,7 +12,7 @@
 - **Code**: https://github.com/malavnitin199/maa-collection (Next.js 16, TypeScript, PostgreSQL on Neon, hosted on Vercel, Singapore region)
 - **People set up**: Owner (admin) and salesmen Vishal, Nitin, Pradeep, Balram. The owner mentioned 6 staff; only these names were given.
 - **Sample data**: 8 demo products, 11 categories, and 5 sample supplier companies (Shree Ganesh Textiles, Laxmi Fashion House, Royal Garments, Kalyan Silk Mills, Jaipur Prints Co.).
-- **Quality**: 69 automated unit tests and 33 end-to-end browser tests, run at desktop and phone size; deployed after every step.
+- **Quality**: 72 automated unit tests and 37 end-to-end browser tests, run at desktop and phone size; deployed after every step.
 
 ## 3. What the app does today
 
@@ -25,6 +25,7 @@
 
 **Owner (admin)**
 - Dashboard: today / month revenue, units, estimated profit, exchanges, sales per salesperson, stock value, low stock, activity log.
+- **Reports**: best sellers, items not selling for 30 days, sales by category / company / salesperson for a chosen period; **CSV export** of sales and stock for the accountant.
 - **Companies (suppliers)** and **categories** (each with a 2–3 letter SKU code).
 - **Add stock**, three ways:
   1. **Quick add**: one company + category, many products, each with its own MRP / selling / purchase price.
@@ -50,7 +51,7 @@
 - **Product photos** (camera or gallery, resized on the phone); the main photo shows at the counter.
 - **Needs attention** list: items without a photo, company, stock or purchase price.
 
-**For everyone**: in-app **Help** (`/help`) with a new-user guide, role guides, required vs optional fields, tips and fixes. First-time tip cards on the main screens.
+**For everyone**: installable on the phone home screen (app icon, full screen); in-app **Help** (`/help`) with a new-user guide, role guides, required vs optional fields, tips and fixes. First-time tip cards on the main screens.
 
 ## 4. Key decisions taken (and why)
 
@@ -77,6 +78,7 @@
 6. Quick add, code price setting, sample companies/categories, salesman permission audit.
 7. **Plan v3**: owner-granted permissions, product photos, Tag old stock, in-app Help, user guide.
 8. Sticker-printer labels (verified scannable at 203 dpi), tag-barcode reuse, Needs attention list.
+9. Installable phone app (icon, opens to your screen), owner Reports, CSV export for the accountant.
 
 ## 6. Open questions for the owner
 
@@ -93,7 +95,7 @@
 - **Payments**: payment method per sale (cash / UPI / card), day-close cash count.
 - **Returns**: refund-only returns, damaged stock handling.
 - **Offline**: billing when the internet drops (queued sales).
-- **Reports**: brand/category/product reports, reorder suggestions, accountant export (Tally / Excel).
+- **Reports**: reorder suggestions, Tally-format export (basic reports and CSV export exist).
 - **Multi-shop**: real multi-shop / multi-retailer accounts. Every record already carries a `store_id` to make this cheaper.
 
 ## 8. Ideas worth brainstorming (starting points)
