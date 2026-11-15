@@ -495,7 +495,7 @@ Migrations so far were backward-compatible (added tables or nullable/defaulted c
 
 ## 15. Languages (Hindi / English)
 
-Plan v7, ADR-017. Round 1 covers the salesman screens (login, header/menus/tabs, Sell, Exchange, My sales, scanning, sale/exchange errors, tips, Guide page + everyone/selling lessons); owner/catalog screens and Help are still English.
+Plan v7, ADR-017. Round 1 (salesman screens: login, header/menus/tabs, Sell, Exchange, My sales, scanning, sale/exchange errors, tips) and round 2 (owner and catalog screens, server-action and service messages, Help page, all Guide lessons) — the whole app follows the person's language. Stays English on purpose: printed tags, CSV exports, page titles in the browser tab, and shop data.
 
 | Piece | Where | What it does |
 |---|---|---|
@@ -507,6 +507,26 @@ Plan v7, ADR-017. Round 1 covers the salesman screens (login, header/menus/tabs,
 | Switching | `LanguageSwitch` (header + login page) → `setLanguageAction` (`src/server/actions/i18n.ts`) | Saves `staff.language` when logged in and always the cookie; then `router.refresh()` re-renders in place |
 | Server errors | `DomainError(message, { key, vars })` (`services/errors.ts`) | Sale/exchange errors carry keys; `pos.ts` `run()` and `loginAction` translate. The English message remains for logs and untranslated screens. |
 | Guide lessons | `src/features/guide/lessons.hi.tsx` | Hindi versions by lesson id; lessons without one show in English with a note |
+
+**Modules (round 2):** owner/catalog text lives in `src/lib/i18n/modules/` — `stock.ts` (`stk.*`: stock entry, labels), `catalog.ts` (`cat.*`: products, suppliers, categories, small forms, menu), `owner.ts` (`own.*`: dashboard, reports, team, staff, settings, activity), `help.ts` (`help.*`: Help page, Guide routine), `actions.ts` (`act.*`: owner/catalog server-action messages). Each exports `<area>En` (English, exactly as on screen) and `<area>Hi` (typed to the same keys); `en.ts` / `hi.ts` merge them.
+
+**Shared Hindi word list** (use these everywhere so the same thing always has the same name):
+
+| English | Hindi | English | Hindi |
+|---|---|---|---|
+| Product / Item / Piece(s) | प्रोडक्ट / आइटम / पीस | Stock / Add stock | स्टॉक / स्टॉक जोड़ें |
+| Supplier / Company | सप्लायर / कंपनी | Category / Brand | कैटेगरी / ब्रांड |
+| Design / Size / Colour | डिज़ाइन / साइज़ / रंग | Price / Rates | दाम / रेट |
+| MRP | MRP | Selling price | बिक्री दाम |
+| Purchase price / Code price | खरीद दाम / कोड दाम | Barcode / QR code | बारकोड / QR कोड |
+| Label / Tag / Sticker | लेबल / टैग / स्टिकर | Print | प्रिंट करें |
+| Photo / Camera / Gallery | फ़ोटो / कैमरा / गैलरी | Save / Saving… / Saved. | सेव करें / सेव हो रहा है… / सेव हो गया। |
+| Cancel / Delete / Edit / Add | रद्द करें / हटाएँ / बदलें / जोड़ें | Staff / Owner / Salesman | स्टाफ़ / मालिक / सेल्समैन |
+| Permissions / Rights | अधिकार | Active / Inactive | चालू / बंद |
+| Sales / Exchange | बिक्री / एक्सचेंज | Report / Dashboard / Activity / Settings | रिपोर्ट / डैशबोर्ड / गतिविधि / सेटिंग |
+| Today / This month | आज / इस महीने | Last 7 days / Last 30 days | पिछले 7 दिन / पिछले 30 दिन |
+| Bill no. / Total / Profit / Share | बिल नंबर / कुल / मुनाफ़ा / हिस्सा | Needs attention | ध्यान दें |
+| Receive (stock) | प्राप्त करें | Quantity | मात्रा |
 
 **Add a sentence:** add the key + English to `en.ts`, the Hindi to `hi.ts`, use `t('key')`. The unit test `src/lib/i18n/i18n.test.ts` checks every key, that placeholders match, and that Hindi lines are in Devanagari.
 **Add a language:** add its code to `LOCALES`, a dictionary file typed `Messages`, and its entry in `MESSAGES`; give `LanguageSwitch` a picker instead of a toggle.

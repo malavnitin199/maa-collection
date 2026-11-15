@@ -27,7 +27,20 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Hindi + English, and payment-app style scan feedback (2026-11-15, latest)
+## Hindi round 2: owner and catalog screens (2026-11-16, latest)
+Owner request: translate the owner and catalog screens too; the live Home dashboard still showed "Net revenue", "Net profit", "Sold", "Exchange", "This month" in English. Approach: `docs/PLAN_V7_HINDI_AND_SCAN_FEEDBACK.md` § Round 2; developer notes + word list: `docs/TECHNICAL_REFERENCE.md` §15.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | Area dictionaries (`src/lib/i18n/modules/*`: stock, catalog, owner, help, actions) merged into en/hi; Hindi type-checked complete | Done (~710 keys) |
+| 2 | Owner screens: Home dashboard (every tile, sub-line, heading, button, table, low stock, activity), reports, sales team (incl. chart labels), activity, staff (permission names/descriptions), settings (code price) | Done |
+| 3 | Catalog screens: products list/page/new, product form, rates, stock-in, photos, suppliers, categories (size presets), needs attention, More menu | Done |
+| 4 | Stock entry + labels: new design (size chips, price by size, colour photos, preview), quick add, tag old stock, restock, stock hub, label pages | Done (printed tags stay English) |
+| 5 | Server messages: all rule errors (products, images, catalog, staff, settings) and owner/catalog action messages carry keys | Done |
+| 6 | Help page and all 14 Guide lessons (and drawing labels) in Hindi; dates follow the language | Done |
+- Verified: lint, typecheck, **114 unit tests** (dictionary completeness/placeholders/Devanagari incl. all modules), build, **53 Playwright tests at desktop + phone size** (+1 phone-only skip) incl. a new test "owner and catalog screens in Hindi" (a new owner-level person in Hindi: Home has no English labels; products, stock entry, reports, categories open in Hindi); English unchanged everywhere. Hindi crawler over 26 screens: only shop data, the "English" button and "Bluetooth" remain. Phone screenshots: Hindi dashboard and new-design form.
+
+## Hindi + English, and payment-app style scan feedback (2026-11-15)
 Owner request (chat): multi-language (Hindi + English for now) with a smooth switch; after a successful scan, a completion effect with a sound like payment apps; write every approach into `docs/`. Owner decisions (ADR-017): salesman screens first, choice saved per person, sound on by default with mute. Plan + approach: `docs/PLAN_V7_HINDI_AND_SCAN_FEEDBACK.md`; developer notes: `docs/TECHNICAL_REFERENCE.md` §15–16.
 
 | # | Task | Result |

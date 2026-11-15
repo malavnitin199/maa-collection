@@ -17,8 +17,20 @@ Owner request (chat): (1) **multi-language support, Hindi and English for now** 
 - **Server components** call `await getT()`. **Client components** use `useT()` from `I18nProvider`, which the root layout fills inside one `<Suspense>` (`LocaleRoot`), wrapping the page in `<div lang="hi|en" class="contents">` so screen readers and fonts know the language.
 - **Switching** (`LanguageSwitch`, in the header and on the login page): `setLanguageAction` saves `staff.language` (when logged in) and the cookie, then `router.refresh()` re-renders in place — no reload, scroll and form state of client components stay.
 - **Server messages**: `DomainError` can carry a message key + values; the counter actions translate it for the person (`translateError`). The English text stays as the fallback, so untranslated owner screens are unaffected.
-- **What is not translated**: product names, sizes, colours, brands, staff names, SKUs, barcodes, money (₹1,299.00, Indian digits) and dates in English month names (Indian format) — the shop's own data stays as typed.
+- **What is not translated**: product names, sizes, colours, brands, staff names, SKUs, barcodes, and money (₹1,299.00, Indian digits) — the shop's own data stays as typed. (Dates follow the language since round 2.)
 - Devanagari uses the phone's system font (Geist has no Devanagari).
+
+## Round 2 (2026-11-16): owner and catalog screens
+
+Owner asked to translate the owner and catalog screens too (and, seeing the live Home dashboard, named "Net revenue", "Net profit", "Sold", "Exchange", "This month"). Done in one pass:
+
+- **Dictionaries per area** in `src/lib/i18n/modules/`: `stock.ts` (`stk.*`, stock entry + labels), `catalog.ts` (`cat.*`, products, suppliers, categories, catalog forms, menu), `owner.ts` (`own.*`, dashboard, reports, team, staff, settings, activity), `help.ts` (`help.*`, Help page, Guide routine), `actions.ts` (`act.*`, owner/catalog server-action messages). `en.ts` / `hi.ts` merge them; Hindi is type-checked to have every key.
+- **Server messages**: every rule error in `products.ts`, `images.ts`, `catalog.ts`, `staff.ts`, `settings.ts` and the owner/catalog actions carries a key; `failure()` in `admin.ts` translates for the person. English messages unchanged.
+- **Help page and all 14 Guide lessons** in Hindi (words inside the Guide drawings too).
+- **Dates follow the language** (`formatDate`): "15 नव॰ 2026, 4:00 pm" in Hindi, "15 Nov 2026, 4:00 pm" in English; digits stay normal.
+- **Work split**: four helpers translated disjoint file sets in parallel with one shared word list (docs/TECHNICAL_REFERENCE.md §15); then one integration pass. English text is byte-identical (all e2e assert English).
+- **Checked by machine**: a crawler logs in as the owner in Hindi, opens all 26 screens (folded sections opened) and lists English left in visible text, placeholders, aria-labels and titles. Final result: only shop data (names, sizes, colours, SKU codes), the "English" switch button and "Bluetooth".
+- **Stays English on purpose**: printed tags and stickers (customers read them), CSV exports (accountant), browser-tab page titles, shop data, and the rare photo-resize error from the phone ("This phone cannot process photos.").
 
 ## Approach — scan feedback
 
