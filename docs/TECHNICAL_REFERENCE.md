@@ -148,7 +148,8 @@ Route handlers: see [§10](#10-route-handlers-http-endpoints). Layouts `(pos)/la
 | `scanning/scanner-keystrokes.ts` | `createScanBuffer`, `useScannerKeystrokes` | Detects fast HID bursts outside text fields |
 | `scanning/ean13.ts` | `isValidEan13`, `ean13CheckDigit`, `inStoreEan13`, `ean13Modules`, `ean13Svg` | Pure; SVG with configurable bar height |
 | `catalog/barcode-label.tsx` | `BarcodeLabel`, `StickerLabel` | A4 label (normal/compact) and exact 50×25 mm sticker |
-| `catalog/design-form.tsx` | `DesignForm` | Size chips, colour chips, preview, retry-safe save |
+| `catalog/design-form.tsx` | `DesignForm` | Size chips, colour chips, price by size, preview, retry-safe save |
+| `catalog/size-rates-editor.tsx` | `SizeRatesEditor` | "Price by size" fold-out (default in grey, size's own in green); used by `DesignForm` and `DesignRatesForm` |
 | `catalog/quick-add-form.tsx` | `QuickAddForm` | Product cards with Copy/Remove, labelled price fields, totals |
 | `catalog/old-stock-form.tsx` | `OldStockForm` | Tag-barcode check (outside the form), photos, details, save → label → Next item |
 | `catalog/restock-form.tsx` | `RestockForm` | Scan each piece = +1, name search picker, ± per line |
@@ -276,7 +277,7 @@ All tables carry `store_id` (FK `stores.id`, currently the single store `maa-col
    4. Insert two movements.
 
 ### 6.3 Creating products (all share `insertNewProducts`)
-- **Design in sizes × colours:** `createDesignAction` → `createDesign`. Validates the size/colour lists (≤60 combinations) and refuses combinations that already exist.
+- **Design in sizes × colours:** `createDesignAction` → `createDesign`. Validates the size/colour lists (≤60 combinations) and refuses combinations that already exist. Prices: defaults + optional `sizeRates` (a size's own MRP / selling / purchase), resolved by `src/lib/size-prices.ts` and checked per size on the server; every colour of a size gets the same rates (ADR-013). `updateDesignRates` does the same for an existing design.
 - **Quick add:** `createQuickAction` → `createProductsBatch` (≤50 rows; size defaults to `Free`, colour to `Assorted`, brand to the supplier name or `Unbranded`).
 - **Tag old stock:** `tagOldStockAction` → `createProductsBatch` (one row; optional manufacturer barcode; supplier optional), then the photos.
 - **Single product:** `createProductAction` → `createProduct` (own path; generated or manufacturer barcode).

@@ -27,7 +27,14 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Installable app, owner reports, CSV export (2026-11-15, latest)
+## Prices by size (2026-11-15, latest)
+- Owner request: one default MRP / selling / purchase price for a design, and any **size** can have its own (all its colours share it). Owner decisions (ADR-013): MRP by size too; product-page rates by size too. Plan: `docs/PLAN_SIZE_PRICES.md`.
+- **No migration**: each size × colour was already its own product with its own prices. Shared rule `src/lib/size-prices.ts` (`ratesForSize`, `splitDesignRates`, `sortSizes`); `createDesign` / `updateDesignRates` check every size on the server (errors name the size; a price for a size not in the design is refused). Empty selling price = each size's own MRP.
+- Screens: **Price by size (optional)** fold-out on `/admin/stock/new` (2+ sizes) and in *Rates for the whole design* on the product page (`SizeRatesEditor`): grey = default, green = the size's own price; preview lists the price per size and the purchase value; sizes whose colours differ today are named and made equal on save.
+- Purchase prices (default and per size) are only shown, accepted and saved with `costs` (server drops them otherwise; unit-tested on the actions).
+- Verified: lint, typecheck, **91 unit tests** (shared rule, services on PGlite, server actions with/without `costs`), build, **39 Playwright tests at desktop + phone size** (+1 phone-only skip): owner sets size prices → preview → per-size above-MRP refused → labels print each size's MRP → product list per size → rates by size on the product page; catalog person without `costs` sees no purchase boxes. Phone screenshots checked (light + dark).
+
+## Installable app, owner reports, CSV export (2026-11-15)
 - **Installable phone app**: `app/manifest.ts` (standalone, portrait, brand green, start /login), generated icons `/app-icon/192|512` + apple-icon (next/og), theme colour; `/login` redirects someone already logged in to their screen. Tests switching user now log out first.
 - **Reports** (`/admin/reports`, owner): periods Today / 7d / 30d / month in IST; totals, best sellers, by category / company / salesperson, "not selling" (in stock, no sale in 30 days).
 - **CSV export** (owner, 403 for others): `/admin/export/sales?period=` (sales + exchanges, purchase, profit, credited/recorded) and `/admin/export/stock`. `src/lib/csv.ts` quotes, neutralises formula injection, adds BOM.

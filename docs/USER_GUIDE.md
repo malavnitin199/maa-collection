@@ -25,7 +25,7 @@ Live app: https://maa-collection-pi.vercel.app
 | **Owner (admin)** | Everything: dashboard, staff & permissions, settings, reports, all catalog and stock work |
 | **Salesman** | Sell (also on behalf of a colleague), exchanges, own sales |
 | **Salesman + Catalog** (catalog / QC person) | Add and edit products, photos, names, sizes, colours, categories, companies; tag old stock; generate barcodes; print labels |
-| **+ Prices** | Change MRP and selling prices (also "rates for the whole design") |
+| **+ Prices** | Change MRP and selling prices (also "rates for the whole design", by size) |
 | **+ Stock** | Receive stock: deliveries, restocks, counts |
 | **+ Purchase price** | See and enter the purchase (code) price. Trusted staff only |
 
@@ -59,6 +59,8 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 
 - **Many different products** from one company: one card per product with its own prices.
 - **One design in sizes × colours**: e.g. a kurta in M/L/XL × 3 colours. Every combination gets a barcode.
+  - Enter one MRP, selling and purchase price for all sizes. If a size costs more (e.g. XL), open **Price by size**, and type that size's own MRP / selling / purchase price. Grey numbers are the default; green ones are the size's own. Every colour of that size gets the same price; colour never changes the price.
+  - Later: open any of its products → **Rates for the whole design** → change the default or one size → **Apply**. Past sales keep their prices.
 - **More of existing items** (needs *Stock*): scan each piece. Scanning the same tag again adds one more.
 
 ### Photos of an existing product
