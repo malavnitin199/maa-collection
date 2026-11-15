@@ -18,14 +18,9 @@ const SAMPLE_TAG = {
 
 const TAG_PARTS = [1, 2, 3, 4, 5, 6].map((n) => [`tag.part${n}`, `tag.part${n}.text`] as [MessageKey, MessageKey]);
 
-const ROUTINE = [
-  ['Every morning · 5 min', 'Home: low stock. Catalog → Needs attention: items without photo, company or stock.'],
-  ['When goods arrive', 'Enter them the same day (new design / many products / more of existing) → print tags → attach → shelf.'],
-  ['Every sale or exchange', 'Always scan. Stock updates by itself on every phone.'],
-  ['Every evening', 'Print today’s labels; tag any piece still without a tag.'],
-  ['Every week', 'Reports → Not selling (move or discount) and Best sellers (reorder). Count one shelf against the stock on Products.'],
-  ['Every month', 'Download the sales and stock CSV for the accountant.'],
-];
+const ROUTINE = (['morning', 'arrive', 'sale', 'evening', 'week', 'month'] as const).map(
+  (when) => [`help.routine.${when}`, `help.routine.${when}.text`] as const,
+);
 
 function Steps({ items }: { items: React.ReactNode[] }) {
   return (
@@ -61,26 +56,23 @@ function TagAnatomy({ t }: { t: T }) {
   );
 }
 
-function Routine() {
+function Routine({ t }: { t: T }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
-        <caption className="sr-only">Inventory routine</caption>
+        <caption className="sr-only">{t('help.routine.caption')}</caption>
         <tbody className="align-top">
           {ROUTINE.map(([when, what]) => (
             <tr key={when} className="border-t border-zinc-200 dark:border-zinc-800">
               <th scope="row" className="w-[38%] py-2 pr-3 font-semibold">
-                {when}
+                {t(when)}
               </th>
-              <td className="py-2">{what}</td>
+              <td className="py-2">{t(what)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <p className={`mt-2 text-xs ${muted}`}>
-        Shelf has fewer pieces than the app (lost or damaged)? Tell the owner — reducing stock by hand isn&apos;t in the app yet, so
-        the history stays honest.
-      </p>
+      <p className={`mt-2 text-xs ${muted}`}>{t('help.routine.note')}</p>
     </div>
   );
 }
@@ -105,7 +97,7 @@ function LessonCard({ lesson, number, t, englishOnly }: { lesson: Lesson; number
           {lesson.art && <div className="flex justify-center rounded-lg bg-zinc-50 p-3 sm:w-72 sm:shrink-0 dark:bg-zinc-900">{lesson.art}</div>}
           <div className="flex flex-1 flex-col gap-3 text-sm leading-relaxed">
             <Steps items={lesson.steps} />
-            {lesson.extra === 'routine' && <Routine />}
+            {lesson.extra === 'routine' && <Routine t={t} />}
           </div>
         </div>
       )}
@@ -124,7 +116,7 @@ function LessonCard({ lesson, number, t, englishOnly }: { lesson: Lesson; number
 
 export default async function GuidePage() {
   const [t, locale] = await Promise.all([getT(), getLocale()]);
-  // Lessons in the reader's language where a translation exists (Hindi: the everyone + selling lessons so far).
+  // Lessons in the reader's language where a translation exists (Hindi: all lessons, lessons.hi.tsx).
   const lessons = LESSONS.map((l) => ({ ...l, ...(locale === 'hi' ? HI_LESSONS[l.id] : undefined) }));
   const englishOnly = (id: string) => locale === 'hi' && !HI_LESSONS[id];
   const audience = (id: string) => t(`aud.${id}` as MessageKey);

@@ -2,6 +2,7 @@ import { and, asc, desc, eq, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, products, staff, stockMovements, stockReceipts, suppliers, type Product, type StockReceipt } from '@/db/schema';
 import { inStoreEan13, isValidEan13 } from '@/features/scanning/ean13';
+import type { MessageKey } from '@/lib/i18n';
 import { codeFromScan } from '@/lib/item-link';
 import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById, findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
@@ -111,14 +112,21 @@ export type ProductInput = {
 };
 
 function validatePrices(input: { mrpPaise: number; pricePaise: number; costPaise: number | null }) {
-  if (!Number.isSafeInteger(input.mrpPaise) || input.mrpPaise <= 0) throw new DomainError('Enter a valid MRP.');
+  if (!Number.isSafeInteger(input.mrpPaise) || input.mrpPaise <= 0) throw new DomainError('Enter a valid MRP.', { key: 'stk.err.price.mrp' });
   if (!Number.isSafeInteger(input.pricePaise) || input.pricePaise <= 0) {
-    throw new DomainError('Enter a valid selling price.');
+    throw new DomainError('Enter a valid selling price.', { key: 'stk.err.price.price' });
   }
-  if (input.pricePaise > input.mrpPaise) throw new DomainError('Selling price cannot be above MRP.');
+  if (input.pricePaise > input.mrpPaise) throw new DomainError('Selling price cannot be above MRP.', { key: 'stk.err.price.aboveMrp' });
   if (input.costPaise !== null && (!Number.isSafeInteger(input.costPaise) || input.costPaise < 0)) {
-    throw new DomainError('Enter a valid cost price.');
+    throw new DomainError('Enter a valid cost price.', { key: 'stk.err.price.cost' });
   }
+}
+
+/** Which validatePrices rule failed — the same rule said for one size or one row ("Size M: …") has its own key. */
+type PriceProblem = 'mrp' | 'price' | 'aboveMrp' | 'cost';
+function priceProblem(error: unknown): PriceProblem | null {
+  const match = error instanceof DomainError ? error.key?.match(/^stk\.err\.price\.(mrp|price|aboveMrp|cost)$/) : null;
+  return match ? (match[1] as PriceProblem) : null;
 }
 
 type CheckedRates = { mrpPaise: number; pricePaise: number; costPaise: number | null };
@@ -132,9 +140,14 @@ function resolveSizeRates(sizes: readonly string[], defaults: { mrpPaise: number
   validatePrices({ ...defaults, pricePaise: defaults.pricePaise ?? defaults.mrpPaise });
   own.forEach((row, i) => {
     if (!sizes.some((s) => sameSize(s, row.size))) {
-      throw new DomainError(`Size ${row.size.trim() || '(blank)'} has its own price but is not one of the sizes.`);
+      throw new DomainError(
+        `Size ${row.size.trim() || '(blank)'} has its own price but is not one of the sizes.`,
+        row.size.trim() ? { key: 'stk.err.sizeNotListed', vars: { size: row.size.trim() } } : { key: 'stk.err.blankSizeNotListed' },
+      );
     }
-    if (own.findIndex((other) => sameSize(other.size, row.size)) !== i) throw new DomainError(`Size ${row.size.trim()} is priced twice.`);
+    if (own.findIndex((other) => sameSize(other.size, row.size)) !== i) {
+      throw new DomainError(`Size ${row.size.trim()} is priced twice.`, { key: 'stk.err.sizeTwice', vars: { size: row.size.trim() } });
+    }
   });
   return new Map(
     sizes.map((size) => {
@@ -143,16 +156,27 @@ function resolveSizeRates(sizes: readonly string[], defaults: { mrpPaise: number
       try {
         validatePrices(checked);
       } catch (error) {
-        throw error instanceof DomainError ? new DomainError(`Size ${size}: ${error.message}`) : error;
+        const problem = priceProblem(error);
+        throw error instanceof DomainError
+          ? new DomainError(`Size ${size}: ${error.message}`, problem ? { key: `stk.err.size.${problem}`, vars: { size } } : undefined)
+          : error;
       }
       return [size.trim().toLowerCase(), checked];
     }),
   );
 }
 
+const ENTER_KEY: Record<'name' | 'brand' | 'category' | 'size' | 'color', MessageKey> = {
+  name: 'stk.err.enter.name',
+  brand: 'stk.err.enter.brand',
+  category: 'stk.err.enter.category',
+  size: 'stk.err.enter.size',
+  color: 'stk.err.enter.color',
+};
+
 function validateProductInput(input: ProductInput) {
   for (const field of ['name', 'brand', 'category', 'size', 'color'] as const) {
-    if (!input[field].trim()) throw new DomainError(`Enter the ${field === 'name' ? 'product name' : field}.`);
+    if (!input[field].trim()) throw new DomainError(`Enter the ${field === 'name' ? 'product name' : field}.`, { key: ENTER_KEY[field] });
   }
   validatePrices(input);
 }
@@ -189,7 +213,7 @@ async function resolveCategory(db: Db, storeId: string, categoryId: string) {
     .from(categories)
     .where(and(eq(categories.storeId, storeId), eq(categories.id, categoryId), eq(categories.active, true)))
     .limit(1);
-  if (!category) throw new DomainError('Choose an active category.');
+  if (!category) throw new DomainError('Choose an active category.', { key: 'stk.err.activeCategory' });
   return category;
 }
 
@@ -199,7 +223,7 @@ async function resolveSupplier(db: Db, storeId: string, supplierId: string) {
     .from(suppliers)
     .where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, supplierId), eq(suppliers.active, true)))
     .limit(1);
-  if (!supplier) throw new DomainError('Choose an active supplier.');
+  if (!supplier) throw new DomainError('Choose an active supplier.', { key: 'stk.err.activeSupplier' });
   return supplier;
 }
 
@@ -228,11 +252,11 @@ export async function createProduct(
   if (input.supplierId) await resolveSupplier(db, storeId, input.supplierId);
   validateProductInput({ ...input, category });
   if (!Number.isInteger(input.openingStock) || input.openingStock < 0) {
-    throw new DomainError('Opening stock must be 0 or more.');
+    throw new DomainError('Opening stock must be 0 or more.', { key: 'stk.err.openingStock' });
   }
   const manual = input.manufacturerBarcode?.trim() || null;
   if (manual && !isValidEan13(manual)) {
-    throw new DomainError('That barcode is not a valid 13-digit EAN-13 (check the last digit).');
+    throw new DomainError('That barcode is not a valid 13-digit EAN-13 (check the last digit).', { key: 'stk.err.ean13' });
   }
 
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -274,11 +298,11 @@ export async function createProduct(
       });
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
-      if (manual) throw new DomainError('Another product already uses that barcode.');
+      if (manual) throw new DomainError('Another product already uses that barcode.', { key: 'stk.err.barcodeTaken' });
       // Two admins generated the same SKU/barcode at once: try the next number.
     }
   }
-  throw new DomainError('Could not generate a unique SKU/barcode. Try again.');
+  throw new DomainError('Could not generate a unique SKU/barcode. Try again.', { key: 'stk.err.uniqueCode' });
 }
 
 /** Trims, drops blanks and case-insensitive duplicates, keeping the first spelling. */
@@ -318,22 +342,22 @@ export type DesignResult = { receipt: StockReceipt; products: Product[]; duplica
  * single transaction. Retrying the same operationId returns the first result.
  */
 export async function createDesign(db: Db, storeId: string, input: DesignInput): Promise<DesignResult> {
-  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
+  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
   const existing = await findReceiptByOperation(db, storeId, input.operationId);
   if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
 
   const name = input.name.trim();
   const brand = input.brand.trim();
-  if (!name) throw new DomainError('Enter the design / product name.');
-  if (!brand) throw new DomainError('Enter the brand.');
+  if (!name) throw new DomainError('Enter the design / product name.', { key: 'stk.err.designName' });
+  if (!brand) throw new DomainError('Enter the brand.', { key: 'stk.err.enter.brand' });
   const sizes = cleanList(input.sizes);
   const colors = cleanList(input.colors);
-  if (sizes.length === 0) throw new DomainError('Pick at least one size.');
-  if (colors.length === 0) throw new DomainError('Add at least one colour.');
-  if (sizes.length * colors.length > 60) throw new DomainError('Too many combinations at once (max 60). Split the entry.');
+  if (sizes.length === 0) throw new DomainError('Pick at least one size.', { key: 'stk.err.pickSize' });
+  if (colors.length === 0) throw new DomainError('Add at least one colour.', { key: 'stk.err.addColour' });
+  if (sizes.length * colors.length > 60) throw new DomainError('Too many combinations at once (max 60). Split the entry.', { key: 'stk.err.tooManyCombos' });
   const rates = resolveSizeRates(sizes, input, input.sizeRates);
   if (!Number.isInteger(input.quantityEach) || input.quantityEach < 0 || input.quantityEach > 10_000) {
-    throw new DomainError('Pieces per size/colour must be 0 or more.');
+    throw new DomainError('Pieces per size/colour must be 0 or more.', { key: 'stk.err.piecesEach' });
   }
   const category = await resolveCategory(db, storeId, input.categoryId);
   await resolveSupplier(db, storeId, input.supplierId);
@@ -353,7 +377,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
     );
   if (clash.length > 0) {
     const list = clash.map((c) => `${c.color} ${c.size} (${c.sku})`).join(', ');
-    throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`);
+    throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`, { key: 'stk.err.alreadyInCatalogue', vars: { list } });
   }
 
   return insertNewProducts(db, storeId, {
@@ -468,7 +492,7 @@ async function insertNewProducts(
       // SKU/barcode taken by a concurrent save: retry with fresh numbers.
     }
   }
-  throw new DomainError('Could not generate unique SKUs/barcodes. Try again.');
+  throw new DomainError('Could not generate unique SKUs/barcodes. Try again.', { key: 'stk.err.uniqueCodes' });
 }
 
 export type QuickRowInput = {
@@ -503,7 +527,7 @@ export async function createProductsBatch(
     staffId: string;
   },
 ): Promise<DesignResult> {
-  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
+  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
   const existing = await findReceiptByOperation(db, storeId, input.operationId);
   if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
 
@@ -511,21 +535,25 @@ export async function createProductsBatch(
   const supplier = input.supplierId ? await resolveSupplier(db, storeId, input.supplierId) : null;
   const brand = input.brand?.trim() || supplier?.name || 'Unbranded';
   const rows = input.rows.filter((r) => r.name.trim());
-  if (rows.length === 0) throw new DomainError('Add at least one product with a name.');
-  if (rows.length > 50) throw new DomainError('Up to 50 products at once. Split the entry.');
+  if (rows.length === 0) throw new DomainError('Add at least one product with a name.', { key: 'stk.err.addNamedProduct' });
+  if (rows.length > 50) throw new DomainError('Up to 50 products at once. Split the entry.', { key: 'stk.err.tooManyProducts' });
 
   const cleaned = rows.map((row, i) => {
     const label = `Row ${i + 1} (${row.name.trim()})`;
+    const vars = { row: i + 1, name: row.name.trim() };
     try {
       validatePrices(row);
     } catch (error) {
-      throw new DomainError(`${label}: ${(error as Error).message}`);
+      const problem = priceProblem(error);
+      throw new DomainError(`${label}: ${(error as Error).message}`, problem ? { key: `stk.err.row.${problem}`, vars } : undefined);
     }
     if (!Number.isInteger(row.quantity) || row.quantity < 0 || row.quantity > 10_000) {
-      throw new DomainError(`${label}: pieces must be 0 or more.`);
+      throw new DomainError(`${label}: pieces must be 0 or more.`, { key: 'stk.err.row.pieces', vars });
     }
     const barcode = row.barcode?.trim() || null;
-    if (barcode && !isValidEan13(barcode)) throw new DomainError(`${label}: ${barcode} is not a valid 13-digit barcode.`);
+    if (barcode && !isValidEan13(barcode)) {
+      throw new DomainError(`${label}: ${barcode} is not a valid 13-digit barcode.`, { key: 'stk.err.row.barcode', vars: { ...vars, barcode } });
+    }
     return {
       barcode,
       name: row.name.trim(),
@@ -539,19 +567,23 @@ export async function createProductsBatch(
     };
   });
   const ownBarcodes = cleaned.flatMap((r) => (r.barcode ? [r.barcode] : []));
-  if (new Set(ownBarcodes).size !== ownBarcodes.length) throw new DomainError('The same barcode is entered twice.');
+  if (new Set(ownBarcodes).size !== ownBarcodes.length) throw new DomainError('The same barcode is entered twice.', { key: 'stk.err.sameBarcodeTwice' });
   if (ownBarcodes.length > 0) {
     const taken = await db
       .select({ barcode: products.barcode, name: products.name, sku: products.sku })
       .from(products)
       .where(and(eq(products.storeId, storeId), inArray(products.barcode, ownBarcodes)));
     if (taken.length > 0) {
-      throw new DomainError(`Barcode already in the app: ${taken.map((t) => `${t.barcode} = ${t.name} (${t.sku})`).join(', ')}. Add pieces to it instead.`);
+      const list = taken.map((t) => `${t.barcode} = ${t.name} (${t.sku})`).join(', ');
+      throw new DomainError(`Barcode already in the app: ${list}. Add pieces to it instead.`, { key: 'stk.err.barcodeInApp', vars: { list } });
     }
   }
   const keys = cleaned.map((r) => `${r.name}|${r.size}|${r.color}`.toLowerCase());
   const repeated = keys.find((k, i) => keys.indexOf(k) !== i);
-  if (repeated) throw new DomainError(`The same product is entered twice: ${repeated.split('|').join(' · ')}.`);
+  if (repeated) {
+    const item = repeated.split('|').join(' · ');
+    throw new DomainError(`The same product is entered twice: ${item}.`, { key: 'stk.err.sameProductTwice', vars: { item } });
+  }
 
   const clash = await db
     .select({ name: products.name, size: products.size, color: products.color, sku: products.sku })
@@ -566,7 +598,7 @@ export async function createProductsBatch(
     );
   if (clash.length > 0) {
     const list = clash.map((c) => `${c.name} ${c.color} ${c.size} (${c.sku})`).join(', ');
-    throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`);
+    throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`, { key: 'stk.err.alreadyInCatalogue', vars: { list } });
   }
 
   return insertNewProducts(db, storeId, {
@@ -607,7 +639,7 @@ export async function updateProduct(
     })
     .where(and(eq(products.storeId, storeId), eq(products.id, id)))
     .returning();
-  if (!updated) throw new DomainError('Product not found.');
+  if (!updated) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
   return updated;
 }
 
@@ -629,17 +661,17 @@ export async function receiveStock(
   storeId: string,
   input: ReceiveStockInput,
 ): Promise<{ receipt: StockReceipt; products: Product[]; duplicate: boolean }> {
-  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
+  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
   const existing = await findReceiptByOperation(db, storeId, input.operationId);
   if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
   const lines = input.lines.filter((l) => l.quantity !== 0);
-  if (lines.length === 0) throw new DomainError('Add at least one item with a quantity.');
+  if (lines.length === 0) throw new DomainError('Add at least one item with a quantity.', { key: 'stk.err.addLine' });
   for (const line of lines) {
     if (!Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 100_000) {
-      throw new DomainError('Quantity must be a whole number, at least 1.');
+      throw new DomainError('Quantity must be a whole number, at least 1.', { key: 'stk.err.quantity' });
     }
   }
-  if (new Set(lines.map((l) => l.productId)).size !== lines.length) throw new DomainError('An item is listed twice.');
+  if (new Set(lines.map((l) => l.productId)).size !== lines.length) throw new DomainError('An item is listed twice.', { key: 'stk.err.listedTwice' });
   if (input.supplierId) await resolveSupplier(db, storeId, input.supplierId);
 
   try {
@@ -662,7 +694,7 @@ export async function receiveStock(
           .set({ stock: sql`${products.stock} + ${line.quantity}` })
           .where(and(eq(products.storeId, storeId), eq(products.id, line.productId)))
           .returning();
-        if (!row) throw new DomainError('Product not found.');
+        if (!row) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
         updated.push(row);
       }
       await tx.insert(stockMovements).values(
@@ -694,7 +726,7 @@ export async function stockIn(
   input: { operationId: string; productId: string; quantity: number; staffId: string; note?: string; supplierId?: string | null },
 ): Promise<Product & { duplicate: boolean }> {
   if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 100_000) {
-    throw new DomainError('Quantity must be a whole number, at least 1.');
+    throw new DomainError('Quantity must be a whole number, at least 1.', { key: 'stk.err.quantity' });
   }
   const result = await receiveStock(db, storeId, {
     operationId: input.operationId,
@@ -704,7 +736,7 @@ export async function stockIn(
     staffId: input.staffId,
   });
   const product = result.products.find((p) => p.id === input.productId) ?? (await getProduct(db, storeId, input.productId));
-  if (!product) throw new DomainError('Product not found.');
+  if (!product) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
   return { ...product, duplicate: result.duplicate };
 }
 
@@ -833,7 +865,7 @@ export async function updateDesignRates(
   const keepCost = rates.costPaise === undefined;
   const own = (rates.sizeRates ?? []).map((row) => (keepCost ? { ...row, costPaise: null } : row));
   const variants = await listDesignVariants(db, storeId, productId);
-  if (variants.length === 0) throw new DomainError('Product not found.');
+  if (variants.length === 0) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
   const groups: { size: string; ids: string[] }[] = [];
   for (const v of variants) {
     const group = groups.find((g) => sameSize(g.size, v.size));

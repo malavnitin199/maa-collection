@@ -7,6 +7,7 @@ import { STORE_ID } from '@/lib/app-config';
 import { createProductAction } from '@/server/actions/admin';
 import { can } from '@/lib/permissions';
 import { requirePermission } from '@/server/auth';
+import { getT } from '@/server/i18n';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 
 async function NewProduct() {
@@ -27,17 +28,18 @@ async function NewProduct() {
   );
 }
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-4">
       <Link href="/admin/products" className={`text-sm ${link}`}>
-        ← Products
+        {t('cat.backProducts')}
       </Link>
       <div>
-        <h1 className="text-2xl font-semibold">Add product</h1>
-        <p className={`text-sm ${muted}`}>One size and colour, e.g. an item with the manufacturer&rsquo;s barcode already on its tag. For a design in several sizes/colours use “+ Stock”.</p>
+        <h1 className="text-2xl font-semibold">{t('cat.new.title')}</h1>
+        <p className={`text-sm ${muted}`}>{t('cat.new.intro')}</p>
       </div>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <NewProduct />
       </Suspense>
     </main>

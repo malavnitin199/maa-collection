@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { checkTagBarcodeAction, tagOldStockAction, type OldStockResult, type TagLookup } from '@/server/actions/admin';
+import { useT } from '@/features/i18n/i18n-provider';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { itemLink } from '@/lib/item-link';
 import { tagSizeRange } from '@/lib/size-lists';
@@ -19,6 +20,7 @@ const QUICK_SIZES = ['Free', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34',
 let photoKey = 1;
 
 export function OldStockForm({ categories, suppliers, showCost }: { categories: (Option & { code: string; sizes?: string[] })[]; suppliers: Option[]; showCost: boolean }) {
+  const t = useT();
   const [categoryId, setCategoryId] = useState('');
   // The category's own sizes first (shop order), then the usual ones.
   const categorySizes = categories.find((c) => c.id === categoryId)?.sizes ?? [];
@@ -64,7 +66,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
       }
       setPhotos((current) => [...current, ...resized].slice(0, 4));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not use that photo.');
+      setError(e instanceof Error ? e.message : t('stk.photo.cantUse'));
     } finally {
       setPreparing(false);
     }
@@ -124,27 +126,25 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
     return (
       <div className="flex flex-col gap-4">
         <p role="status" className={okBox}>
-          Saved {saved.product.name} · barcode {saved.product.barcode}.{' '}
-          {saved.product.barcode.startsWith('200')
-            ? 'Stick this label on each piece.'
-            : 'It uses the barcode already on the tag, so no new sticker is needed.'}
-          {saved.photoError && <span className="block text-red-700">Photo problem: {saved.photoError}</span>}
+          {t('stk.old.saved', { name: saved.product.name, barcode: saved.product.barcode })}{' '}
+          {saved.product.barcode.startsWith('200') ? t('stk.old.stickLabel') : t('stk.old.usesTagBarcode')}
+          {saved.photoError && <span className="block text-red-700">{t('stk.old.photoProblem', { error: saved.photoError })}</span>}
         </p>
         <div className="mx-auto">
           <HangTag product={saved.product} sizes={tagSizeRange(categorySizes, [], saved.product.size)} qrValue={itemLink(window.location.origin, saved.product.barcode)} />
         </div>
         <button type="button" onClick={nextItem} className={`${primaryButton} py-3 text-lg`} autoFocus>
-          Next item →
+          {t('stk.old.nextItem')}
         </button>
         <div className="grid grid-cols-2 gap-2">
           <Link href="/admin/labels/print?mine=today" className={`${secondaryButton} py-3 text-center`}>
-            Print today&apos;s labels
+            {t('stk.printTodaysLabels')}
           </Link>
           <Link href={`/admin/products/${saved.product.id}`} className={`${secondaryButton} py-3 text-center`}>
-            Open item
+            {t('stk.old.openItem')}
           </Link>
         </div>
-        <p className={`text-center text-sm ${muted}`}>{count} item{count === 1 ? '' : 's'} tagged in this session</p>
+        <p className={`text-center text-sm ${muted}`}>{t(count === 1 ? 'stk.old.session.one' : 'stk.old.session.other', { n: count })}</p>
       </div>
     );
   }
@@ -154,18 +154,18 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
       {/* Outside the main <form>: the scanner has its own form, and forms can't be nested. */}
       <section className={`${card} flex flex-col gap-3`}>
         <h2 className="font-semibold">
-          0. Barcode already on the tag? <span className={`text-sm font-normal ${muted}`}>(optional)</span>
+          {t('stk.old.step0')} <span className={`text-sm font-normal ${muted}`}>{t('stk.optional')}</span>
         </h2>
         {tag?.status === 'new' ? (
           <p data-testid="tag-barcode" className={okBox}>
-            Will use barcode <span className="font-mono">{tag.barcode}</span> from the tag — no new sticker needed.{' '}
+            {t('stk.old.willUse')} <span className="font-mono">{tag.barcode}</span> {t('stk.old.willUseRest')}{' '}
             <button type="button" onClick={() => { setTag(null); touched(); }} className="underline">
-              Remove
+              {t('stk.remove')}
             </button>
           </p>
         ) : scanning ? (
           <ScanInput
-            label="Scan the barcode on the item's tag"
+            label={t('stk.old.scanLabel')}
             onScan={(code) =>
               startTransition(async () => {
                 const result = await checkTagBarcodeAction(code);
@@ -178,24 +178,30 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
           />
         ) : (
           <button type="button" onClick={() => setScanning(true)} className={`${secondaryButton} py-3`}>
-            Scan the tag&apos;s barcode
+            {t('stk.old.scanButton')}
           </button>
         )}
         {tag?.status === 'exists' && (
           <p role="alert" className={errorBox}>
-            Already in the app: {tag.product.name} · {tag.product.color} · {tag.product.size} ({tag.product.sku}, {tag.product.stock} in stock).{' '}
+            {t('stk.old.exists', {
+              name: tag.product.name,
+              color: tag.product.color,
+              size: tag.product.size,
+              sku: tag.product.sku,
+              stock: tag.product.stock,
+            })}{' '}
             <Link href={`/admin/products/${tag.product.id}`} className="underline">
-              Open it
+              {t('stk.old.openIt')}
             </Link>{' '}
-            to add pieces or photos instead.
+            {t('stk.old.existsRest')}
           </p>
         )}
         {tag?.status === 'invalid' && (
           <p role="alert" className={errorBox}>
-            &ldquo;{tag.code}&rdquo; is not a 13-digit product barcode. Leave it, and the app will make a new barcode.
+            {t('stk.old.invalid', { code: tag.code })}
           </p>
         )}
-        {!tag && !scanning && <p className={`text-xs ${muted}`}>Skip this if the item has no barcode: a new one is made for you.</p>}
+        {!tag && !scanning && <p className={`text-xs ${muted}`}>{t('stk.old.skip')}</p>}
       </section>
 
     <form
@@ -208,25 +214,25 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
     >
       {count > 0 && (
         <p className={`text-sm ${muted}`}>
-          {count} tagged so far ·{' '}
+          {t('stk.old.soFar', { n: count })}{' '}
           <Link href="/admin/labels/print?mine=today" className={link}>
-            print today&apos;s labels
+            {t('stk.old.printTodaysLower')}
           </Link>
         </p>
       )}
 
       <section className={`${card} flex flex-col gap-3`}>
-        <h2 className="font-semibold">1. Photos <span className={`text-sm font-normal ${muted}`}>(recommended, up to 4)</span></h2>
+        <h2 className="font-semibold">{t('stk.old.step1')} <span className={`text-sm font-normal ${muted}`}>{t('stk.old.photosHint')}</span></h2>
         {photos.length > 0 && (
           <ul data-testid="new-photos" className="grid grid-cols-4 gap-2">
             {photos.map((photo, i) => (
               <li key={photo.key} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element -- local preview of a resized photo */}
-                <img src={photo.url} alt={`New photo ${i + 1}`} className="aspect-square w-full rounded-lg object-cover" />
+                <img src={photo.url} alt={t('stk.old.newPhoto', { n: i + 1 })} className="aspect-square w-full rounded-lg object-cover" />
                 <button
                   type="button"
                   onClick={() => removePhoto(photo.key)}
-                  aria-label={`Remove photo ${i + 1}`}
+                  aria-label={t('stk.old.removePhoto', { n: i + 1 })}
                   className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 text-xs text-white"
                 >
                   ✕
@@ -236,15 +242,15 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
           </ul>
         )}
         <PhotoPickers onFiles={addPhotos} disabled={preparing || photos.length >= 4} />
-        {preparing && <p className={`text-sm ${muted}`}>Preparing photo…</p>}
+        {preparing && <p className={`text-sm ${muted}`}>{t('stk.old.preparingPhoto')}</p>}
       </section>
 
       <section className={`${card} flex flex-col gap-3`}>
-        <h2 className="font-semibold">2. What is it?</h2>
+        <h2 className="font-semibold">{t('stk.old.step2')}</h2>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Category <span className="sr-only">(required)</span>
+          {t('stk.category')} <span className="sr-only">{t('stk.old.required')}</span>
           <select required value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={input}>
-            <option value="">Choose category…</option>
+            <option value="">{t('stk.chooseCategory')}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} ({c.code})
@@ -253,11 +259,11 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Product name
-          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Phulkari Dupatta" className={input} />
+          {t('stk.old.productName')}
+          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('stk.old.namePlaceholder')} className={input} />
         </label>
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">Size</span>
+          <span className="text-sm font-medium">{t('stk.size')}</span>
           <div className="flex flex-wrap gap-1.5">
             {sizeChoices.map((s, i) => (
               <button
@@ -280,16 +286,16 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
               </button>
             ))}
           </div>
-          <input aria-label="Size" value={size} onChange={(e) => setSize(e.target.value)} placeholder="or type a size (empty = Free)" className={input} />
+          <input aria-label={t('stk.size')} value={size} onChange={(e) => setSize(e.target.value)} placeholder={t('stk.old.sizePlaceholder')} className={input} />
         </div>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Colour
-          <input value={color} onChange={(e) => setColor(e.target.value)} placeholder="optional, e.g. Maroon" className={input} />
+          {t('stk.colour')}
+          <input value={color} onChange={(e) => setColor(e.target.value)} placeholder={t('stk.old.colourPlaceholder')} className={input} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Company (optional)
+          {t('stk.old.companyOptional')}
           <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={input}>
-            <option value="">Not known</option>
+            <option value="">{t('stk.old.notKnown')}</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -300,24 +306,24 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
       </section>
 
       <section className={`${card} flex flex-col gap-3`}>
-        <h2 className="font-semibold">3. Price and count</h2>
+        <h2 className="font-semibold">{t('stk.old.step3')}</h2>
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm font-medium">
             MRP (₹)
             <input required inputMode="decimal" value={mrp} onChange={(e) => setMrp(e.target.value)} className={input} />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Selling price (₹)
-            <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={mrp || 'same as MRP'} className={input} />
+            {t('stk.sellingPrice')}
+            <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={mrp || t('stk.sameAsMrp')} className={input} />
           </label>
           {showCost && (
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Purchase price (₹)
-              <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="code price, optional" className={input} />
+              {t('stk.purchasePrice')}
+              <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder={t('stk.codePriceOptional')} className={input} />
             </label>
           )}
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Pieces counted
+            {t('stk.old.piecesCounted')}
             <input required inputMode="numeric" value={quantity} onChange={(e) => setQuantity(e.target.value)} className={input} />
           </label>
         </div>
@@ -329,7 +335,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
         </p>
       )}
       <button type="submit" disabled={busy || preparing || tag?.status === 'exists'} className={`${primaryButton} py-3 text-lg`}>
-        {busy ? 'Saving…' : 'Save and get barcode'}
+        {busy ? t('common.saving') : t('stk.old.save')}
       </button>
     </form>
     </div>

@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { stores } from '@/db/schema';
+import { codeWordProblemKey } from '@/lib/i18n/modules/owner';
 import { codeWordProblem, encodePriceCode, normalizeCodeWord } from '@/lib/price-code';
 import { DomainError } from './errors';
 
@@ -12,7 +13,7 @@ export async function getStoreSettings(db: Db, storeId: string): Promise<StoreSe
     .from(stores)
     .where(eq(stores.id, storeId))
     .limit(1);
-  if (!row) throw new DomainError('Shop not found.');
+  if (!row) throw new DomainError('Shop not found.', { key: 'own.err.shopNotFound' });
   return row;
 }
 
@@ -25,9 +26,12 @@ export async function updatePriceCode(
   const word = normalizeCodeWord(input.priceCodeWord);
   if (word) {
     const problem = codeWordProblem(word);
-    if (problem) throw new DomainError(problem);
+    if (problem) {
+      const key = codeWordProblemKey(problem);
+      throw new DomainError(problem, key ? { key } : undefined);
+    }
   }
-  if (input.printPriceCode && !word) throw new DomainError('Set a code word before printing code prices on labels.');
+  if (input.printPriceCode && !word) throw new DomainError('Set a code word before printing code prices on labels.', { key: 'own.err.codeWordFirst' });
   await db
     .update(stores)
     .set({ priceCodeWord: word || null, printPriceCode: input.printPriceCode })

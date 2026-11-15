@@ -7,74 +7,82 @@ import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { requireAdmin } from '@/server/auth';
+import { getT, getLocale } from '@/server/i18n';
 import { shopDashboard } from '@/server/services/reports';
 
 async function Dashboard() {
   await requireAdmin();
+  const t = await getT();
+  const locale = await getLocale();
   const d = await shopDashboard(await requestDb(), STORE_ID);
   return (
     <main className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <FirstTimeTip id="owner" text="Set up companies, staff rights and your first stock in a few steps." helpHref="/guide#for-owner" />
+        <h1 className="text-2xl font-semibold">{t('nav.dashboard')}</h1>
+        <FirstTimeTip id="owner" text={t('own.dash.tip')} helpHref="/guide#for-owner" />
         <div data-testid="quick-actions" className="grid grid-cols-2 gap-2 text-center text-sm font-medium sm:grid-cols-4">
           <Link href="/admin/stock" className="rounded-xl bg-emerald-600 px-2 py-3 text-white active:bg-emerald-700">
-            + New stock
+            {t('own.dash.newStock')}
           </Link>
           <Link href="/admin/stock/receive" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
-            Restock
+            {t('own.dash.restock')}
           </Link>
           <Link href="/admin/suppliers" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
-            Suppliers
+            {t('nav.suppliers')}
           </Link>
           <Link href="/admin/reports" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
-            Reports
+            {t('nav.reports')}
           </Link>
         </div>
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>Today</h2>
+        <h2 className={sectionTitle}>{t('my.today')}</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Net revenue" value={formatPaise(d.netRevenue.today)} testId="today-revenue" />
-          <StatTile label="Units sold" value={String(d.sales.today.units)} sub={`${d.sales.today.count} sales`} testId="today-units" />
-          <StatTile label="Est. profit" value={formatPaise(d.estimatedProfit.today)} sub="items with a cost price" />
+          <StatTile label={t('own.dash.netRevenue')} value={formatPaise(d.netRevenue.today)} testId="today-revenue" />
           <StatTile
-            label="Exchanges"
+            label={t('own.dash.unitsSold')}
+            value={String(d.sales.today.units)}
+            sub={t('own.salesCount', { n: d.sales.today.count })}
+            testId="today-units"
+          />
+          <StatTile label={t('own.estProfit')} value={formatPaise(d.estimatedProfit.today)} sub={t('own.dash.withCost')} />
+          <StatTile
+            label={t('own.exchanges')}
             value={String(d.exchanges.today.count)}
-            sub={`net ${formatPaise(d.exchanges.today.differencePaise)}`}
+            sub={t('own.net', { amount: formatPaise(d.exchanges.today.differencePaise) })}
           />
         </div>
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>This month</h2>
+        <h2 className={sectionTitle}>{t('my.month')}</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Net revenue" value={formatPaise(d.netRevenue.month)} testId="month-revenue" />
-          <StatTile label="Units sold" value={String(d.sales.month.units)} sub={`${d.sales.month.count} sales`} />
-          <StatTile label="Est. profit" value={formatPaise(d.estimatedProfit.month)} />
+          <StatTile label={t('own.dash.netRevenue')} value={formatPaise(d.netRevenue.month)} testId="month-revenue" />
+          <StatTile label={t('own.dash.unitsSold')} value={String(d.sales.month.units)} sub={t('own.salesCount', { n: d.sales.month.count })} />
+          <StatTile label={t('own.estProfit')} value={formatPaise(d.estimatedProfit.month)} />
           <StatTile
-            label="Exchanges"
+            label={t('own.exchanges')}
             value={String(d.exchanges.month.count)}
-            sub={`net ${formatPaise(d.exchanges.month.differencePaise)}`}
+            sub={t('own.net', { amount: formatPaise(d.exchanges.month.differencePaise) })}
           />
         </div>
       </section>
 
       <section className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className={sectionTitle}>Sales by salesperson</h2>
+          <h2 className={sectionTitle}>{t('own.dash.bySalesperson')}</h2>
           <Link href="/admin/team" className={`text-sm ${link}`}>
-            Sales team graphs →
+            {t('own.dash.teamGraphs')}
           </Link>
         </div>
         <div className={`${card} overflow-x-auto p-0`}>
           <table data-testid="sales-by-person" className="w-full min-w-[420px] text-left text-sm">
             <thead className={muted}>
               <tr>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 text-right font-medium">Today</th>
-                <th className="px-4 py-2 text-right font-medium">This month</th>
+                <th className="px-4 py-2 font-medium">{t('own.dash.name')}</th>
+                <th className="px-4 py-2 text-right font-medium">{t('my.today')}</th>
+                <th className="px-4 py-2 text-right font-medium">{t('my.month')}</th>
               </tr>
             </thead>
             <tbody>
@@ -82,13 +90,13 @@ async function Dashboard() {
                 <tr key={person.id} className="border-t border-zinc-200 dark:border-zinc-800">
                   <td className="px-4 py-2">
                     {person.name}
-                    {!person.active && <span className={`ml-1 text-xs ${muted}`}>(inactive)</span>}
+                    {!person.active && <span className={`ml-1 text-xs ${muted}`}>{t('own.dash.inactive')}</span>}
                   </td>
                   <td className="px-4 py-2 text-right tabular-nums">
-                    {formatPaise(person.today.netPaise)} <span className={muted}>· {person.today.units} pcs</span>
+                    {formatPaise(person.today.netPaise)} <span className={muted}>· {t('own.pcs', { n: person.today.units })}</span>
                   </td>
                   <td className="px-4 py-2 text-right tabular-nums">
-                    {formatPaise(person.month.netPaise)} <span className={muted}>· {person.month.units} pcs</span>
+                    {formatPaise(person.month.netPaise)} <span className={muted}>· {t('own.pcs', { n: person.month.units })}</span>
                   </td>
                 </tr>
               ))}
@@ -99,14 +107,18 @@ async function Dashboard() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <section className="flex flex-col gap-2">
-          <h2 className={sectionTitle}>Stock</h2>
+          <h2 className={sectionTitle}>{t('own.dash.stock')}</h2>
           <div className="grid grid-cols-2 gap-3">
-            <StatTile label="Pieces in stock" value={String(d.stock.units)} sub={`${d.stock.productCount} products`} />
-            <StatTile label="Stock value at MRP" value={formatPaise(d.stock.mrpValue)} sub={`at cost ${formatPaise(d.stock.costValue)}`} />
+            <StatTile label={t('own.dash.piecesInStock')} value={String(d.stock.units)} sub={t('own.dash.products', { n: d.stock.productCount })} />
+            <StatTile
+              label={t('own.dash.stockValue')}
+              value={formatPaise(d.stock.mrpValue)}
+              sub={t('own.dash.atCost', { amount: formatPaise(d.stock.costValue) })}
+            />
           </div>
-          <h3 className="mt-2 text-sm font-medium">Low stock</h3>
+          <h3 className="mt-2 text-sm font-medium">{t('own.dash.lowStock')}</h3>
           {d.lowStock.length === 0 ? (
-            <p className={`text-sm ${muted}`}>All good.</p>
+            <p className={`text-sm ${muted}`}>{t('own.dash.allGood')}</p>
           ) : (
             <ul data-testid="low-stock" className="flex flex-col gap-1 text-sm">
               {d.lowStock.map((p) => (
@@ -115,22 +127,23 @@ async function Dashboard() {
                     {p.name} ({p.size}, {p.color})
                   </Link>
                   <span className={p.stock <= 0 ? 'font-medium text-red-600 dark:text-red-400' : 'font-medium text-amber-600'}>
-                    {p.stock <= 0 ? 'Out of stock' : `${p.stock} left`}
+                    {p.stock <= 0 ? t('own.dash.outOfStock') : t('own.dash.left', { n: p.stock })}
                   </span>
                 </li>
               ))}
             </ul>
           )}
         </section>
-        <ActivityList entries={d.activity} title="Latest activity" testId="latest-activity" />
+        <ActivityList entries={d.activity} title={t('own.dash.latest')} testId="latest-activity" t={t} locale={locale} />
       </div>
     </main>
   );
 }
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const t = await getT();
   return (
-    <Suspense fallback={<p className="text-sm text-zinc-500">Loading dashboard…</p>}>
+    <Suspense fallback={<p className="text-sm text-zinc-500">{t('own.dash.loading')}</p>}>
       <Dashboard />
     </Suspense>
   );

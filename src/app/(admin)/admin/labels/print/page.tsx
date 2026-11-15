@@ -6,15 +6,17 @@ import { StickerLabel } from '@/features/catalog/barcode-label';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { PrintButton } from '@/features/catalog/print-button';
 import { STORE_ID, STORE_TIMEZONE } from '@/lib/app-config';
+import type { MessageKey, T } from '@/lib/i18n';
 import { itemLink } from '@/lib/item-link';
 import { appOrigin } from '@/server/app-origin';
 import { requireAnyPermission } from '@/server/auth';
+import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { getMyLabelsToday, getReceiptForLabels, tagSizesFor, type ReceiptLabelLine } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode, type StoreSettings } from '@/server/services/settings';
+import { formatDate } from '@/lib/i18n';
 
 type Search = { receipt?: string; each?: string; created?: string; mine?: string; format?: string; photos?: string };
-const time = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
 /** Builds a link to this page with some query values changed. */
 function hrefWith(params: Search, change: Partial<Search>) {
@@ -33,14 +35,14 @@ async function sheetData(lines: ReceiptLabelLine[], settings: StoreSettings): Pr
   return { settings, origin, sizes };
 }
 
-const FORMATS = [
-  [undefined, 'Tags on A4'],
-  ['tag', 'Tag printer 40×60 mm'],
-  ['sticker', 'Sticker printer 50×25 mm'],
-] as const;
+const FORMATS: readonly (readonly [string | undefined, MessageKey])[] = [
+  [undefined, 'stk.labels.format.a4'],
+  ['tag', 'stk.labels.format.tag'],
+  ['sticker', 'stk.labels.format.sticker'],
+];
 
 /** Shared controls + sheet: one label per piece (or per item); hang tags on A4 or a tag printer, or small stickers. */
-function LabelSheet({ lines, params, data }: { lines: ReceiptLabelLine[]; params: Search; data: SheetData }) {
+function LabelSheet({ lines, params, data, t }: { lines: ReceiptLabelLine[]; params: Search; data: SheetData; t: T }) {
   const { settings, origin, sizes } = data;
   const onePerItem = params.each === 'item';
   const sticker = params.format === 'sticker';
@@ -53,12 +55,12 @@ function LabelSheet({ lines, params, data }: { lines: ReceiptLabelLine[]; params
     <>
       <div className="flex flex-col gap-2 print:hidden">
         <div className="flex flex-wrap items-center gap-3">
-          <PrintButton label={`Print ${labels.length} label${labels.length === 1 ? '' : 's'}`} />
+          <PrintButton label={t(labels.length === 1 ? 'stk.labels.printN.one' : 'stk.labels.printN.other', { n: labels.length })} />
           <Link href={hrefWith(params, { each: onePerItem ? undefined : 'item' })} className={`text-sm ${link}`}>
-            {onePerItem ? `One per piece (${pieces})` : `One per item instead (${lines.length})`}
+            {onePerItem ? t('stk.labels.perPiece', { n: pieces }) : t('stk.labels.perItem', { n: lines.length })}
           </Link>
         </div>
-        <div role="group" aria-label="Label format" className="flex gap-2 text-sm">
+        <div role="group" aria-label={t('stk.labels.formatAria')} className="flex gap-2 text-sm">
           {FORMATS.map(([value, label]) => {
             const active = (params.format ?? undefined) === value;
             return (
@@ -68,17 +70,13 @@ function LabelSheet({ lines, params, data }: { lines: ReceiptLabelLine[]; params
                 aria-current={active ? 'true' : undefined}
                 className={`rounded-full border px-3 py-1 ${active ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
               >
-                {label}
+                {t(label)}
               </Link>
             );
           })}
         </div>
         <p className={`text-xs ${muted}`}>
-          {sticker
-            ? 'Choose your label printer and set the paper to 50 × 25 mm (no margins). Each sticker prints on its own label (barcode only).'
-            : tagPrinter
-              ? 'Choose your tag printer and set the paper to 40 × 60 mm (no margins). Each tag prints on its own label.'
-              : 'Hang tags, 40 × 60 mm, 16 per A4 page: cut along the border and punch the circle for the thread. Tick a size box with a pen if needed.'}
+          {t(sticker ? 'stk.labels.hint.sticker' : tagPrinter ? 'stk.labels.hint.tag' : 'stk.labels.hint.a4')}
         </p>
       </div>
       {sticker ? (
@@ -110,30 +108,29 @@ function LabelSheet({ lines, params, data }: { lines: ReceiptLabelLine[]; params
           </ul>
         </>
       )}
-      {labels.length === 0 && <p className={`mt-4 text-sm ${muted}`}>No pieces here. Switch to one label per item.</p>}
+      {labels.length === 0 && <p className={`mt-4 text-sm ${muted}`}>{t('stk.labels.noPieces')}</p>}
     </>
   );
 }
 
 async function MyLabelsToday({ params }: { params: Search }) {
-  const me = await requireAnyPermission(['catalog', 'stock']);
+  const [me, t] = await Promise.all([requireAnyPermission(['catalog', 'stock']), getT()]);
   const db = await requestDb();
   const [lines, settings] = await Promise.all([getMyLabelsToday(db, STORE_ID, me.id, STORE_TIMEZONE), getStoreSettings(db, STORE_ID)]);
   return (
     <>
       <div className="mb-3 print:hidden">
-        <h1 className="text-2xl font-semibold">My labels today</h1>
-        <p className={`text-sm ${muted}`}>
-          {lines.length} item{lines.length === 1 ? '' : 's'} you entered today
-        </p>
+        <h1 className="text-2xl font-semibold">{t('stk.labels.mineTitle')}</h1>
+        <p className={`text-sm ${muted}`}>{t(lines.length === 1 ? 'stk.labels.mine.one' : 'stk.labels.mine.other', { n: lines.length })}</p>
       </div>
-      <LabelSheet lines={lines} params={params} data={await sheetData(lines, settings)} />
+      <LabelSheet lines={lines} params={params} data={await sheetData(lines, settings)} t={t} />
     </>
   );
 }
 
 async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireAnyPermission(['catalog', 'stock']);
+  const [, t] = await Promise.all([requireAnyPermission(['catalog', 'stock']), getT()]);
+  const locale = await getLocale();
   const params = await searchParams;
   if (params.mine === 'today') return <MyLabelsToday params={params} />;
   if (!params.receipt || !/^[0-9a-f-]{36}$/i.test(params.receipt)) notFound();
@@ -146,19 +143,20 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
       <div className="mb-3 flex flex-col gap-3 print:hidden">
         {params.photos === 'failed' && (
           <p role="alert" className={errorBox}>
-            The items are saved, but a photo could not be saved. Add it on the item&apos;s page: tap the item below → Photos.
+            {t('stk.labels.photoFailed')}
           </p>
         )}
         {params.created && (
           <p role="status" className={okBox}>
-            Saved {params.created} new item{params.created === '1' ? '' : 's'} with barcodes. Print the labels and stick one on each piece.
+            {t(params.created === '1' ? 'stk.labels.created.one' : 'stk.labels.created.other', { n: params.created })}
           </p>
         )}
         <div>
-          <h1 className="text-2xl font-semibold">Labels</h1>
+          <h1 className="text-2xl font-semibold">{t('stk.labels.heading')}</h1>
           <p className={`text-sm ${muted}`}>
-            {receipt.supplierName ?? 'No supplier'}
-            {receipt.billNumber && ` · bill ${receipt.billNumber}`} · {time.format(receipt.createdAt)} · by {receipt.staffName}
+            {receipt.supplierName ?? t('stk.noSupplier')}
+            {receipt.billNumber && ` · ${t('stk.labels.bill', { bill: receipt.billNumber })}`} · {formatDate(locale, receipt.createdAt, 'dateTime')} ·{' '}
+            {t('stk.labels.by', { name: receipt.staffName })}
           </p>
         </div>
         <ul data-testid="receipt-lines" className="flex flex-col gap-1 text-sm">
@@ -167,20 +165,21 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
               <Link href={`/admin/products/${line.id}`} className={link}>
                 {line.name} · {line.color} · {line.size}
               </Link>
-              <span className="tabular-nums">{line.quantity} pcs</span>
+              <span className="tabular-nums">{t('stk.labels.pcs', { n: line.quantity })}</span>
             </li>
           ))}
         </ul>
       </div>
-      <LabelSheet lines={receipt.lines} params={params} data={await sheetData(receipt.lines, settings)} />
+      <LabelSheet lines={receipt.lines} params={params} data={await sheetData(receipt.lines, settings)} t={t} />
     </>
   );
 }
 
-export default function PrintLabelsPage(props: PageProps<'/admin/labels/print'>) {
+export default async function PrintLabelsPage(props: PageProps<'/admin/labels/print'>) {
+  const t = await getT();
   return (
     <main>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading labels…</p>}>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('stk.labels.loading')}</p>}>
         <ReceiptLabels searchParams={props.searchParams as Promise<Search>} />
       </Suspense>
     </main>

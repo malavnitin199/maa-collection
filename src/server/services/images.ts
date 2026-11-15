@@ -31,17 +31,17 @@ export async function addProductImage(
   storeId: string,
   input: { productId: string; bytes: Uint8Array; width?: number | null; height?: number | null; staffId: string },
 ): Promise<ImageMeta> {
-  if (input.bytes.length === 0) throw new DomainError('The photo is empty.');
-  if (input.bytes.length > MAX_IMAGE_BYTES) throw new DomainError('That photo is too large. Try again (it is resized automatically).');
+  if (input.bytes.length === 0) throw new DomainError('The photo is empty.', { key: 'stk.err.photoEmpty' });
+  if (input.bytes.length > MAX_IMAGE_BYTES) throw new DomainError('That photo is too large. Try again (it is resized automatically).', { key: 'stk.err.photoTooLarge' });
   const contentType = sniffImageType(input.bytes);
-  if (!contentType || !ALLOWED_TYPES.includes(contentType)) throw new DomainError('Only JPEG, PNG or WebP photos can be added.');
+  if (!contentType || !ALLOWED_TYPES.includes(contentType)) throw new DomainError('Only JPEG, PNG or WebP photos can be added.', { key: 'stk.err.photoType' });
 
   const [product] = await db
     .select({ id: products.id })
     .from(products)
     .where(and(eq(products.storeId, storeId), eq(products.id, input.productId)))
     .limit(1);
-  if (!product) throw new DomainError('Product not found.');
+  if (!product) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
 
   const [{ count, maxSort }] = await db
     .select({
@@ -50,7 +50,9 @@ export async function addProductImage(
     })
     .from(productImages)
     .where(eq(productImages.productId, input.productId));
-  if (count >= MAX_IMAGES_PER_PRODUCT) throw new DomainError(`Up to ${MAX_IMAGES_PER_PRODUCT} photos per product. Delete one first.`);
+  if (count >= MAX_IMAGES_PER_PRODUCT) {
+    throw new DomainError(`Up to ${MAX_IMAGES_PER_PRODUCT} photos per product. Delete one first.`, { key: 'stk.err.photoLimit', vars: { n: MAX_IMAGES_PER_PRODUCT } });
+  }
 
   const [row] = await db
     .insert(productImages)
@@ -115,7 +117,7 @@ export async function makeMainImage(db: Db, storeId: string, imageId: string) {
     .from(productImages)
     .where(and(eq(productImages.storeId, storeId), eq(productImages.id, imageId)))
     .limit(1);
-  if (!image) throw new DomainError('Photo not found.');
+  if (!image) throw new DomainError('Photo not found.', { key: 'stk.err.photoNotFound' });
   const [{ minSort }] = await db
     .select({ minSort: sql<number>`coalesce(min(${productImages.sortOrder}), 0)`.mapWith(Number) })
     .from(productImages)
@@ -137,10 +139,10 @@ export async function addPhotoToProducts(
   input: { productIds: string[]; bytes: Uint8Array; width?: number | null; height?: number | null; staffId: string },
 ): Promise<ImageMeta[]> {
   const ids = [...new Set(input.productIds)];
-  if (ids.length === 0) throw new DomainError('Choose the items for this photo.');
-  if (ids.length > 60) throw new DomainError('Too many items for one photo.');
+  if (ids.length === 0) throw new DomainError('Choose the items for this photo.', { key: 'stk.err.photoChooseItems' });
+  if (ids.length > 60) throw new DomainError('Too many items for one photo.', { key: 'stk.err.photoTooManyItems' });
   const owned = await db.select({ id: products.id }).from(products).where(and(eq(products.storeId, storeId), inArray(products.id, ids)));
-  if (owned.length !== ids.length) throw new DomainError('Product not found.');
+  if (owned.length !== ids.length) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
   const first = await addProductImage(db, storeId, { ...input, productId: ids[0] });
   const contentType = sniffImageType(input.bytes)!;
   const shared: ImageMeta[] = [];
@@ -185,7 +187,7 @@ export async function deleteImage(db: Db, storeId: string, imageId: string) {
       .from(productImages)
       .where(and(eq(productImages.storeId, storeId), eq(productImages.id, imageId)))
       .limit(1);
-    if (!image) throw new DomainError('Photo not found.');
+    if (!image) throw new DomainError('Photo not found.', { key: 'stk.err.photoNotFound' });
     if (image.data) {
       const sharers = await tx
         .select({ id: productImages.id })

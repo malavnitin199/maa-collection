@@ -5,28 +5,30 @@ import { SupplierForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import { createSupplierAction } from '@/server/actions/admin';
 import { requirePermission } from '@/server/auth';
+import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listSuppliers } from '@/server/services/catalog';
+import { formatDate } from '@/lib/i18n';
 
-const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' });
 
 async function AddSupplier() {
-  await requirePermission('catalog');
+  const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
   return (
     <details className={card}>
-        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">+ Add supplier</summary>
+        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">{t('cat.sup.addOpen')}</summary>
         <div className="mt-3">
-          <SupplierForm action={createSupplierAction} submitLabel="Add supplier" />
+          <SupplierForm action={createSupplierAction} submitLabel={t('cat.sup.add')} />
         </div>
       </details>
   );
 }
 
 async function SupplierList() {
-  await requirePermission('catalog');
+  const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
+  const locale = await getLocale();
   const rows = await listSuppliers(await requestDb(), STORE_ID);
   if (rows.length === 0) {
-    return <p className={`text-sm ${muted}`}>No suppliers yet. Add the first company you buy from above.</p>;
+    return <p className={`text-sm ${muted}`}>{t('cat.sup.none')}</p>;
   }
   return (
     <ul data-testid="supplier-list" className="flex flex-col gap-2">
@@ -36,14 +38,14 @@ async function SupplierList() {
             <span className="min-w-0">
               <span className="block truncate font-medium">
                 {s.name}
-                {!s.active && <span className={`ml-1 text-xs font-normal ${muted}`}>(inactive)</span>}
+                {!s.active && <span className={`ml-1 text-xs font-normal ${muted}`}>{t('cat.inactiveParen')}</span>}
               </span>
               <span className={`block text-xs ${muted}`}>
-                {[s.contactName, s.phone].filter(Boolean).join(' · ') || 'No contact saved'}
+                {[s.contactName, s.phone].filter(Boolean).join(' · ') || t('cat.sup.noContact')}
               </span>
               <span className={`block text-xs ${muted}`}>
-                {s.productCount} products · {s.stockUnits} pcs in stock
-                {s.lastReceiptAt && ` · last delivery ${date.format(s.lastReceiptAt)}`}
+                {t('cat.productsInStock', { products: s.productCount, pcs: s.stockUnits })}
+                {s.lastReceiptAt && ` · ${t('cat.sup.lastDelivery', { date: formatDate(locale, s.lastReceiptAt, 'date') })}`}
               </span>
             </span>
             <span aria-hidden className={muted}>
@@ -56,19 +58,20 @@ async function SupplierList() {
   );
 }
 
-export default function SuppliersPage() {
+export default async function SuppliersPage() {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold">Suppliers</h1>
-        <p className={`text-sm ${muted}`}>Companies you buy stock from.</p>
+        <h1 className="text-2xl font-semibold">{t('nav.suppliers')}</h1>
+        <p className={`text-sm ${muted}`}>{t('cat.sup.subtitle')}</p>
       </div>
       <Suspense fallback={null}>
         <AddSupplier />
       </Suspense>
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>All suppliers</h2>
-        <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+        <h2 className={sectionTitle}>{t('cat.allSuppliers')}</h2>
+        <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
           <SupplierList />
         </Suspense>
       </section>

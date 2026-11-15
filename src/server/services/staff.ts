@@ -33,8 +33,8 @@ export async function createStaff(
   input: { name: string; role: 'admin' | 'salesman'; pin: string },
 ): Promise<StaffSummary> {
   const name = input.name.trim();
-  if (!name || name.length > 40) throw new DomainError('Enter a name (up to 40 characters).');
-  if (!isValidPin(input.pin)) throw new DomainError('PIN must be 4 to 6 digits.');
+  if (!name || name.length > 40) throw new DomainError('Enter a name (up to 40 characters).', { key: 'own.err.name' });
+  if (!isValidPin(input.pin)) throw new DomainError('PIN must be 4 to 6 digits.', { key: 'own.err.pin' });
   try {
     const [created] = await db
       .insert(staff)
@@ -42,19 +42,19 @@ export async function createStaff(
       .returning(summaryColumns);
     return created;
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError('Someone with that name already exists.');
+    if (isUniqueViolation(error)) throw new DomainError('Someone with that name already exists.', { key: 'own.err.nameTaken' });
     throw error;
   }
 }
 
 export async function setStaffPin(db: Db, storeId: string, staffId: string, pin: string) {
-  if (!isValidPin(pin)) throw new DomainError('PIN must be 4 to 6 digits.');
+  if (!isValidPin(pin)) throw new DomainError('PIN must be 4 to 6 digits.', { key: 'own.err.pin' });
   const updated = await db
     .update(staff)
     .set({ pinHash: hashPin(pin) })
     .where(and(eq(staff.storeId, storeId), eq(staff.id, staffId)))
     .returning({ id: staff.id });
-  if (updated.length === 0) throw new DomainError('Staff member not found.');
+  if (updated.length === 0) throw new DomainError('Staff member not found.', { key: 'own.err.staffNotFound' });
 }
 
 export async function setStaffActive(
@@ -64,14 +64,14 @@ export async function setStaffActive(
   active: boolean,
   actingStaffId: string,
 ) {
-  if (!active && staffId === actingStaffId) throw new DomainError("You can't deactivate your own account.");
+  if (!active && staffId === actingStaffId) throw new DomainError("You can't deactivate your own account.", { key: 'own.err.selfDeactivate' });
   if (!active) {
     const admins = await db
       .select({ id: staff.id })
       .from(staff)
       .where(and(eq(staff.storeId, storeId), eq(staff.role, 'admin'), eq(staff.active, true)));
     if (admins.length === 1 && admins[0].id === staffId) {
-      throw new DomainError('Keep at least one active admin.');
+      throw new DomainError('Keep at least one active admin.', { key: 'own.err.lastAdmin' });
     }
   }
   await db
@@ -88,6 +88,6 @@ export async function setStaffPermissions(db: Db, storeId: string, staffId: stri
     .set({ permissions: cleaned })
     .where(and(eq(staff.storeId, storeId), eq(staff.id, staffId)))
     .returning({ permissions: staff.permissions, role: staff.role });
-  if (!updated) throw new DomainError('Staff member not found.');
+  if (!updated) throw new DomainError('Staff member not found.', { key: 'own.err.staffNotFound' });
   return updated.permissions;
 }

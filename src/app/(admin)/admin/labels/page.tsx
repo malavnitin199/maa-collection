@@ -9,6 +9,7 @@ import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById } from '@/lib/size-prices';
 import { appOrigin } from '@/server/app-origin';
 import { requireAnyPermission } from '@/server/auth';
+import { getT } from '@/server/i18n';
 import { listCategories } from '@/server/services/catalog';
 import { listProducts } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
@@ -40,20 +41,18 @@ async function Labels() {
   );
 }
 
-export default function LabelsPage() {
+export default async function LabelsPage() {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-2 print:hidden">
         <div>
-          <h1 className="text-2xl font-semibold">Test labels</h1>
-          <p className={`mt-1 text-sm ${muted}`}>
-            One tag per item (40 × 60 mm). Scan the barcode or the QR code with the phone camera on the Sell screen or
-            with a USB/Bluetooth scanner, or print this page (16 tags per A4 sheet).
-          </p>
+          <h1 className="text-2xl font-semibold">{t('stk.labels.title')}</h1>
+          <p className={`mt-1 text-sm ${muted}`}>{t('stk.labels.subtitle')}</p>
         </div>
-        <PrintButton label="Print all labels" />
+        <PrintButton label={t('stk.labels.printAll')} />
       </div>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading labels…</p>}>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('stk.labels.loading')}</p>}>
         <Labels />
       </Suspense>
     </main>

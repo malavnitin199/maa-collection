@@ -4,6 +4,7 @@ import { DesignForm } from '@/features/catalog/design-form';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
 import { requirePermission } from '@/server/auth';
+import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 
@@ -24,16 +25,15 @@ async function NewStock({ searchParams }: { searchParams: Promise<{ supplier?: s
   );
 }
 
-export default function NewStockPage(props: PageProps<'/admin/stock/new'>) {
+export default async function NewStockPage(props: PageProps<'/admin/stock/new'>) {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold">New items from a supplier</h1>
-        <p className={`text-sm ${muted}`}>
-          One design in all its sizes and colours. Each combination gets its own SKU and barcode, ready to print.
-        </p>
+        <h1 className="text-2xl font-semibold">{t('stk.new.title')}</h1>
+        <p className={`text-sm ${muted}`}>{t('stk.new.subtitle')}</p>
       </div>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <NewStock searchParams={props.searchParams as Promise<{ supplier?: string }>} />
       </Suspense>
     </main>

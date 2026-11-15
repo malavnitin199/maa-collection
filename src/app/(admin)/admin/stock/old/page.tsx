@@ -5,6 +5,7 @@ import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
 import { requirePermission } from '@/server/auth';
+import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 
@@ -24,18 +25,16 @@ async function Tagger() {
   );
 }
 
-export default function TagOldStockPage() {
+export default async function TagOldStockPage() {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold">Tag old stock</h1>
-        <p className={`text-sm ${muted}`}>
-          For items already in the shop: photo → what it is → price and count → barcode. Category, company and size are
-          kept for the next item.
-        </p>
+        <h1 className="text-2xl font-semibold">{t('stk.hub.old.title')}</h1>
+        <p className={`text-sm ${muted}`}>{t('stk.oldPage.subtitle')}</p>
       </div>
-      <FirstTimeTip id="old-stock" text="See the 6 steps and tips for tagging shelf by shelf." helpHref="/guide#old-stock" />
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+      <FirstTimeTip id="old-stock" text={t('stk.oldPage.tip')} helpHref="/guide#old-stock" />
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <Tagger />
       </Suspense>
     </main>

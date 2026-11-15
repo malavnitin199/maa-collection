@@ -3,6 +3,7 @@ import { muted } from '@/components/ui/styles';
 import { RestockForm } from '@/features/catalog/restock-form';
 import { STORE_ID } from '@/lib/app-config';
 import { requirePermission } from '@/server/auth';
+import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listSuppliers } from '@/server/services/catalog';
 
@@ -18,14 +19,15 @@ async function Receive({ searchParams }: { searchParams: Promise<{ supplier?: st
   );
 }
 
-export default function ReceiveStockPage(props: PageProps<'/admin/stock/receive'>) {
+export default async function ReceiveStockPage(props: PageProps<'/admin/stock/receive'>) {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold">Receive stock</h1>
-        <p className={`text-sm ${muted}`}>More pieces of items already in the catalogue. Saved once, then print their labels.</p>
+        <h1 className="text-2xl font-semibold">{t('stk.receivePage.title')}</h1>
+        <p className={`text-sm ${muted}`}>{t('stk.receivePage.subtitle')}</p>
       </div>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <Receive searchParams={props.searchParams as Promise<{ supplier?: string }>} />
       </Suspense>
     </main>

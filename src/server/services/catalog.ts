@@ -16,7 +16,7 @@ export function suggestCategoryCode(name: string, taken: Set<string>): string {
   for (const code of candidates) if (code.length === 2 && !taken.has(code)) return code;
   for (const a of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') if (!taken.has(first + a)) return first + a;
   for (const a of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') for (const b of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') if (!taken.has(a + b)) return a + b;
-  throw new DomainError('No free category code left.');
+  throw new DomainError('No free category code left.', { key: 'cat.err.noFreeCode' });
 }
 
 export type CategoryRow = Category & { productCount: number; stockUnits: number };
@@ -44,16 +44,16 @@ export async function listCategories(db: Db, storeId: string, { activeOnly = fal
 function cleanCode(code: string | undefined | null): string | null {
   const value = (code ?? '').trim().toUpperCase();
   if (!value) return null;
-  if (!/^[A-Z]{2,3}$/.test(value)) throw new DomainError('Code must be 2 or 3 letters, e.g. KU.');
+  if (!/^[A-Z]{2,3}$/.test(value)) throw new DomainError('Code must be 2 or 3 letters, e.g. KU.', { key: 'cat.err.codeLetters' });
   return value;
 }
 
 /** A category's size list: cleaned, in the given order, short sizes, at most MAX_SIZES. */
 function checkedSizes(input: string | readonly string[] | undefined): string[] {
   const sizes = cleanSizeList(input ?? []);
-  if (sizes.length > MAX_SIZES) throw new DomainError(`Up to ${MAX_SIZES} sizes per category.`);
+  if (sizes.length > MAX_SIZES) throw new DomainError(`Up to ${MAX_SIZES} sizes per category.`, { key: 'cat.err.tooManySizes', vars: { n: MAX_SIZES } });
   const long = sizes.find((s) => s.length > 12);
-  if (long) throw new DomainError(`Size "${long}" is too long (up to 12 characters).`);
+  if (long) throw new DomainError(`Size "${long}" is too long (up to 12 characters).`, { key: 'cat.err.sizeTooLong', vars: { size: long } });
   return sizes;
 }
 
@@ -63,7 +63,7 @@ export async function createCategory(
   input: { name: string; code?: string | null; sizes?: string | readonly string[] },
 ): Promise<Category> {
   const name = input.name.trim();
-  if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).');
+  if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).', { key: 'cat.err.categoryName' });
   const sizes = checkedSizes(input.sizes);
   let code = cleanCode(input.code);
   if (!code) {
@@ -74,7 +74,7 @@ export async function createCategory(
     const [created] = await db.insert(categories).values({ storeId, name, code, sizes }).returning();
     return created;
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError('A category with that name or code already exists.');
+    if (isUniqueViolation(error)) throw new DomainError('A category with that name or code already exists.', { key: 'cat.err.categoryExists' });
     throw error;
   }
 }
@@ -87,11 +87,11 @@ export async function updateCategory(
   input: { name: string; code: string; active: boolean; sizes?: string | readonly string[] },
 ): Promise<Category> {
   const name = input.name.trim();
-  if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).');
+  if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).', { key: 'cat.err.categoryName' });
   const code = cleanCode(input.code);
   // Leaving sizes out keeps the current list.
   const sizes = input.sizes === undefined ? undefined : checkedSizes(input.sizes);
-  if (!code) throw new DomainError('Enter a 2–3 letter code.');
+  if (!code) throw new DomainError('Enter a 2–3 letter code.', { key: 'cat.err.codeRequired' });
   try {
     return await db.transaction(async (tx) => {
       const [updated] = await tx
@@ -99,12 +99,12 @@ export async function updateCategory(
         .set({ name, code, active: input.active, ...(sizes ? { sizes } : {}) })
         .where(and(eq(categories.storeId, storeId), eq(categories.id, id)))
         .returning();
-      if (!updated) throw new DomainError('Category not found.');
+      if (!updated) throw new DomainError('Category not found.', { key: 'cat.err.categoryNotFound' });
       await tx.update(products).set({ category: name }).where(eq(products.categoryId, id));
       return updated;
     });
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError('A category with that name or code already exists.');
+    if (isUniqueViolation(error)) throw new DomainError('A category with that name or code already exists.', { key: 'cat.err.categoryExists' });
     throw error;
   }
 }
@@ -115,11 +115,11 @@ export type SupplierInput = { name: string; contactName: string; phone: string; 
 
 function cleanSupplier(input: SupplierInput) {
   const name = input.name.trim();
-  if (!name || name.length > 80) throw new DomainError('Enter the company name (up to 80 characters).');
+  if (!name || name.length > 80) throw new DomainError('Enter the company name (up to 80 characters).', { key: 'cat.err.supplierName' });
   const phone = input.phone.trim();
-  if (phone && !/^[+\d][\d\s-]{6,17}$/.test(phone)) throw new DomainError('Enter a valid phone number.');
+  if (phone && !/^[+\d][\d\s-]{6,17}$/.test(phone)) throw new DomainError('Enter a valid phone number.', { key: 'cat.err.phone' });
   const gstin = input.gstin.trim().toUpperCase();
-  if (gstin && !/^[0-9A-Z]{15}$/.test(gstin)) throw new DomainError('GSTIN must be 15 letters/digits.');
+  if (gstin && !/^[0-9A-Z]{15}$/.test(gstin)) throw new DomainError('GSTIN must be 15 letters/digits.', { key: 'cat.err.gstin' });
   return {
     name,
     contactName: input.contactName.trim() || null,
@@ -160,7 +160,7 @@ export async function createSupplier(db: Db, storeId: string, input: SupplierInp
     const [created] = await db.insert(suppliers).values({ storeId, ...cleanSupplier(input) }).returning();
     return created;
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError('A supplier with that name already exists.');
+    if (isUniqueViolation(error)) throw new DomainError('A supplier with that name already exists.', { key: 'cat.err.supplierExists' });
     throw error;
   }
 }
@@ -177,10 +177,10 @@ export async function updateSupplier(
       .set({ ...cleanSupplier(input), active: input.active })
       .where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, id)))
       .returning();
-    if (!updated) throw new DomainError('Supplier not found.');
+    if (!updated) throw new DomainError('Supplier not found.', { key: 'cat.err.supplierNotFound' });
     return updated;
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError('A supplier with that name already exists.');
+    if (isUniqueViolation(error)) throw new DomainError('A supplier with that name already exists.', { key: 'cat.err.supplierExists' });
     throw error;
   }
 }

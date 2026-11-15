@@ -4,6 +4,7 @@ import { QuickAddForm } from '@/features/catalog/quick-add-form';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
 import { requirePermission } from '@/server/auth';
+import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 
@@ -24,17 +25,15 @@ async function Quick({ searchParams }: { searchParams: Promise<{ supplier?: stri
   );
 }
 
-export default function QuickAddPage(props: PageProps<'/admin/stock/quick'>) {
+export default async function QuickAddPage(props: PageProps<'/admin/stock/quick'>) {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold">Quick add products</h1>
-        <p className={`text-sm ${muted}`}>
-          Same company and category, different products: give each a name and its prices. Every product gets its own
-          barcode and labels.
-        </p>
+        <h1 className="text-2xl font-semibold">{t('stk.quickPage.title')}</h1>
+        <p className={`text-sm ${muted}`}>{t('stk.quickPage.subtitle')}</p>
       </div>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <Quick searchParams={props.searchParams as Promise<{ supplier?: string }>} />
       </Suspense>
     </main>

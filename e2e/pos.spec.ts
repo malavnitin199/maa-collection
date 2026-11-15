@@ -237,7 +237,40 @@ test('Hindi or English: switch on the login page or in the header; each person k
   await expect(page.getByRole('heading', { name: 'मेरी बिक्री' })).toBeVisible();
   await page.goto('/guide');
   await expect(page.getByRole('heading', { name: 'आइटम बेचें', level: 3 })).toBeVisible();
-  await expect(page.getByText('यह पाठ अभी अंग्रेज़ी में है।').first()).toBeVisible(); // owner lessons: English for now
+  await expect(page.getByRole('heading', { name: 'अपना स्टॉक संभालें', level: 3 })).toBeVisible(); // owner lessons in Hindi too
+});
+
+test('owner and catalog screens in Hindi: Home dashboard, products, stock entry, reports', async ({ page }) => {
+  // Own owner-level person for this test, so the seeded Owner stays in English for the other tests.
+  await login(page, 'Owner');
+  await page.goto('/admin/staff');
+  const name = `Malik ${run}`;
+  await page.getByLabel('Name', { exact: true }).fill(name);
+  await page.getByLabel('Role').selectOption('admin');
+  await page.getByLabel('PIN (4–6 digits)').fill('5678');
+  await page.getByRole('button', { name: 'Add staff' }).click();
+  await expect(page.getByRole('status')).toContainText(`${name} added`);
+
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Language: English. Switch to Hindi' }).click();
+  await expect(page.getByText('अपने नाम पर टैप करें और PIN डालें।')).toBeVisible();
+  await page.getByText(name, { exact: true }).click();
+  await page.getByLabel('PIN').fill('5678');
+  await page.getByRole('button', { name: 'लॉग इन करें' }).click();
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
+  // Home: the owner's own words (Today / This month / net sales / exchanges) are Hindi; no English labels left.
+  const main = page.locator('main');
+  await expect(main.getByRole('heading', { name: 'आज', exact: true })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'इस महीने', exact: true })).toBeVisible();
+  for (const english of ['Net revenue', 'Net sales', 'This month', 'Exchanges', 'Sales by salesperson', 'Low stock', 'Est. profit']) {
+    await expect(main.getByText(english, { exact: false })).toHaveCount(0);
+  }
+  // Products, stock entry and reports pages open in Hindi.
+  for (const path of ['/admin/products', '/admin/stock/new', '/admin/reports', '/admin/categories']) {
+    await page.goto(path);
+    await expect(page.locator('h1')).toHaveText(/[\u0900-\u097F]/);
+  }
 });
 
 test('scan feedback: green tick, buzz and shake on a failed scan, "Sale done" card; sound can be muted', async ({ page }) => {

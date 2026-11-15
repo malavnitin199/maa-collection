@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { formatPaise } from '@/lib/money';
 import { addPhotoToItemsAction, createQuickAction } from '@/server/actions/admin';
@@ -27,6 +28,7 @@ export function QuickAddForm({
   /** Purchase (code) price field — only with the "costs" right. */
   showCost?: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [supplierId, setSupplierId] = useState(initialSupplierId ?? '');
   const [categoryId, setCategoryId] = useState('');
@@ -84,7 +86,7 @@ export function QuickAddForm({
       for (const [i, row] of saved.entries()) {
         const item = result.items[i];
         if (!row.photo || !item) continue;
-        setProgress(`Saving photo ${i + 1}…`);
+        setProgress(t('stk.quick.savingPhoto', { n: i + 1 }));
         const added = await addPhotoToItemsAction([item.id], photoForm(row.photo));
         if (added.error) photoFailed = true;
       }
@@ -102,9 +104,9 @@ export function QuickAddForm({
     >
       <section className={`${card} flex flex-col gap-3`}>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Company (supplier)
+          {t('stk.quick.company')}
           <select required value={supplierId} onChange={(e) => { setSupplierId(e.target.value); touched(); }} className={input}>
-            <option value="">Choose company…</option>
+            <option value="">{t('stk.quick.chooseCompany')}</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -113,9 +115,9 @@ export function QuickAddForm({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Category
+          {t('stk.category')}
           <select required value={categoryId} onChange={(e) => { setCategoryId(e.target.value); touched(); }} className={input}>
-            <option value="">Choose category…</option>
+            <option value="">{t('stk.chooseCategory')}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} ({c.code})
@@ -125,12 +127,12 @@ export function QuickAddForm({
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Brand
-            <input value={brand} onChange={(e) => { setBrand(e.target.value); touched(); }} placeholder={supplierName ?? 'company name'} className={input} />
+            {t('stk.brand')}
+            <input value={brand} onChange={(e) => { setBrand(e.target.value); touched(); }} placeholder={supplierName ?? t('stk.quick.companyName')} className={input} />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Bill no.
-            <input value={billNumber} onChange={(e) => { setBillNumber(e.target.value); touched(); }} placeholder="optional" className={input} />
+            {t('stk.quick.billNo')}
+            <input value={billNumber} onChange={(e) => { setBillNumber(e.target.value); touched(); }} placeholder={t('stk.optionalWord')} className={input} />
           </label>
         </div>
         {/* Size suggestions from the chosen category. */}
@@ -140,13 +142,13 @@ export function QuickAddForm({
           ))}
         </datalist>
         <p className={`text-xs ${muted}`}>
-          Missing something?{' '}
+          {t('stk.quick.missing')}{' '}
           <Link href="/admin/suppliers" className={link}>
-            Add a company
+            {t('stk.quick.addCompany')}
           </Link>{' '}
           ·{' '}
           <Link href="/admin/categories" className={link}>
-            Add a category
+            {t('stk.quick.addCategory')}
           </Link>
         </p>
       </section>
@@ -155,37 +157,37 @@ export function QuickAddForm({
         {rows.map((row, index) => (
           <li key={row.key} className={`${card} flex flex-col gap-2`}>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">Product {index + 1}</span>
+              <span className="text-sm font-semibold">{t('stk.quick.product', { n: index + 1 })}</span>
               <span className="flex gap-3 text-sm">
                 <button type="button" onClick={() => addRow(row)} className={link}>
-                  Copy
+                  {t('stk.quick.copy')}
                 </button>
-                <button type="button" onClick={() => removeRow(row.key)} className="text-red-600" aria-label={`Remove product ${index + 1}`}>
-                  Remove
+                <button type="button" onClick={() => removeRow(row.key)} className="text-red-600" aria-label={t('stk.quick.removeAria', { n: index + 1 })}>
+                  {t('stk.remove')}
                 </button>
               </span>
             </div>
             <input
-              aria-label={`Product ${index + 1} name`}
+              aria-label={t('stk.quick.nameAria', { n: index + 1 })}
               value={row.name}
               onChange={(e) => update(row.key, { name: e.target.value })}
-              placeholder="Product name, e.g. Georgette Saree"
+              placeholder={t('stk.quick.namePlaceholder')}
               className={input}
             />
-            <PhotoSlot label={`product ${index + 1}`} photo={row.photo} disabled={saving} onChange={(photo) => update(row.key, { photo })} />
+            <PhotoSlot label={t('stk.quick.productLower', { n: index + 1 })} photo={row.photo} disabled={saving} onChange={(photo) => update(row.key, { photo })} />
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {(
                 [
-                  ['mrp', 'MRP ₹', 'MRP', 'decimal', '0'],
-                  ['price', 'Selling ₹ (shown)', 'selling price', 'decimal', row.mrp || 'same as MRP'],
-                  ...(showCost ? ([['cost', 'Purchase ₹ (code)', 'purchase price', 'decimal', 'optional']] as const) : []),
-                  ['quantity', 'Pieces', 'pieces', 'numeric', '0'],
+                  ['mrp', 'MRP ₹', 'stk.quick.aria.mrp', 'decimal', '0'],
+                  ['price', t('stk.quick.selling'), 'stk.quick.aria.price', 'decimal', row.mrp || t('stk.sameAsMrp')],
+                  ...(showCost ? ([['cost', t('stk.quick.purchase'), 'stk.quick.aria.cost', 'decimal', t('stk.optionalWord')]] as const) : []),
+                  ['quantity', t('stk.quick.pieces'), 'stk.quick.aria.quantity', 'numeric', '0'],
                 ] as const
               ).map(([field, title, aria, mode, placeholder]) => (
                 <label key={field} className={`flex flex-col gap-0.5 text-xs font-medium ${muted}`}>
                   {title}
                   <input
-                    aria-label={`Product ${index + 1} ${aria}`}
+                    aria-label={t(aria, { n: index + 1 })}
                     inputMode={mode}
                     value={row[field]}
                     onChange={(e) => update(row.key, { [field]: e.target.value })}
@@ -197,12 +199,12 @@ export function QuickAddForm({
             </div>
             {row.more ? (
               <div className="grid grid-cols-2 gap-2">
-                <input aria-label={`Product ${index + 1} size`} list="category-sizes" value={row.size} onChange={(e) => update(row.key, { size: e.target.value })} placeholder="Size (Free)" className={input} />
-                <input aria-label={`Product ${index + 1} colour`} value={row.color} onChange={(e) => update(row.key, { color: e.target.value })} placeholder="Colour (Assorted)" className={input} />
+                <input aria-label={t('stk.quick.aria.size', { n: index + 1 })} list="category-sizes" value={row.size} onChange={(e) => update(row.key, { size: e.target.value })} placeholder={t('stk.quick.sizePlaceholder')} className={input} />
+                <input aria-label={t('stk.quick.aria.colour', { n: index + 1 })} value={row.color} onChange={(e) => update(row.key, { color: e.target.value })} placeholder={t('stk.quick.colourPlaceholder')} className={input} />
               </div>
             ) : (
               <button type="button" onClick={() => update(row.key, { more: true })} className={`w-fit text-xs ${link}`}>
-                + size / colour
+                {t('stk.quick.sizeColour')}
               </button>
             )}
           </li>
@@ -210,12 +212,13 @@ export function QuickAddForm({
       </ol>
 
       <button type="button" onClick={() => addRow()} className={`${secondaryButton} py-3`}>
-        + Add product
+        {t('stk.quick.addProduct')}
       </button>
 
       <p data-testid="quick-summary" className={`text-sm ${muted}`}>
-        {filled.length} product{filled.length === 1 ? '' : 's'} · {pieces} piece{pieces === 1 ? '' : 's'}
-        {purchaseValue > 0 && ` · purchase value ${formatPaise(purchaseValue)}`}
+        {t(filled.length === 1 ? 'stk.quick.products.one' : 'stk.quick.products.other', { n: filled.length })} ·{' '}
+        {t(pieces === 1 ? 'stk.quick.pieceCount.one' : 'stk.quick.pieceCount.other', { n: pieces })}
+        {purchaseValue > 0 && ` · ${t('stk.quick.purchaseValue', { value: formatPaise(purchaseValue) })}`}
       </p>
       {error && (
         <p role="alert" className={errorBox}>
@@ -223,7 +226,7 @@ export function QuickAddForm({
         </p>
       )}
       <button type="submit" disabled={saving || filled.length === 0} className={`${primaryButton} py-3 text-lg`}>
-        {saving ? (progress ?? 'Saving…') : `Save ${filled.length || ''} product${filled.length === 1 ? '' : 's'} and print labels`}
+        {saving ? (progress ?? t('common.saving')) : t(filled.length === 1 ? 'stk.quick.save.one' : 'stk.quick.save.other', { n: filled.length || '' })}
       </button>
     </form>
   );

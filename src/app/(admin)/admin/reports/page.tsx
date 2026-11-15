@@ -3,30 +3,40 @@ import { Suspense } from 'react';
 import { card, link, muted, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { StatTile } from '@/features/reports/widgets';
 import { STORE_ID } from '@/lib/app-config';
+import type { MessageKey, T } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
 import { requireAdmin } from '@/server/auth';
+import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { REPORT_PERIODS, salesReport, type GroupRow, type ReportPeriod } from '@/server/services/reports';
+import { formatDate } from '@/lib/i18n';
 
-const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' });
 
-function GroupTable({ title, rows, testId, firstColumn }: { title: string; rows: GroupRow[]; testId: string; firstColumn: string }) {
+/** Period buttons in the reader's language (the English labels are REPORT_PERIODS'). */
+const PERIOD_KEYS: Record<ReportPeriod, MessageKey> = {
+  today: 'own.period.today',
+  '7d': 'own.period.7d',
+  '30d': 'own.period.30d',
+  month: 'own.period.month',
+};
+
+function GroupTable({ title, rows, testId, firstColumn, t }: { title: string; rows: GroupRow[]; testId: string; firstColumn: string; t: T }) {
   const total = rows.reduce((sum, r) => sum + r.revenuePaise, 0);
   return (
     <section className="flex flex-col gap-2">
       <h2 className={sectionTitle}>{title}</h2>
       {rows.length === 0 ? (
-        <p className={`text-sm ${muted}`}>No sales in this period.</p>
+        <p className={`text-sm ${muted}`}>{t('own.noSalesPeriod')}</p>
       ) : (
         <div className={`${card} overflow-x-auto p-0`}>
           <table data-testid={testId} className="w-full min-w-[420px] text-left text-sm">
             <thead className={muted}>
               <tr>
                 <th className="px-3 py-2 font-medium">{firstColumn}</th>
-                <th className="px-3 py-2 text-right font-medium">Pcs</th>
-                <th className="px-3 py-2 text-right font-medium">Sales</th>
-                <th className="px-3 py-2 text-right font-medium">Share</th>
-                <th className="px-3 py-2 text-right font-medium">Est. profit</th>
+                <th className="px-3 py-2 text-right font-medium">{t('own.col.pcs')}</th>
+                <th className="px-3 py-2 text-right font-medium">{t('own.col.sales')}</th>
+                <th className="px-3 py-2 text-right font-medium">{t('own.col.share')}</th>
+                <th className="px-3 py-2 text-right font-medium">{t('own.estProfit')}</th>
               </tr>
             </thead>
             <tbody className="tabular-nums">
@@ -49,13 +59,15 @@ function GroupTable({ title, rows, testId, firstColumn }: { title: string; rows:
 
 async function Report({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   await requireAdmin();
+  const t = await getT();
+  const locale = await getLocale();
   const { period: param } = await searchParams;
   const period: ReportPeriod = REPORT_PERIODS.some((p) => p.value === param) ? (param as ReportPeriod) : '7d';
   const r = await salesReport(await requestDb(), STORE_ID, period);
 
   return (
     <>
-      <nav aria-label="Period" className="flex flex-wrap gap-2 text-sm">
+      <nav aria-label={t('own.period')} className="flex flex-wrap gap-2 text-sm">
         {REPORT_PERIODS.map((p) => (
           <Link
             key={p.value}
@@ -63,22 +75,26 @@ async function Report({ searchParams }: { searchParams: Promise<{ period?: strin
             aria-current={p.value === period ? 'page' : undefined}
             className={`rounded-full border px-3 py-1 ${p.value === period ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
           >
-            {p.label}
+            {t(PERIOD_KEYS[p.value])}
           </Link>
         ))}
       </nav>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Net sales" value={formatPaise(r.totals.netRevenuePaise)} sub="after exchanges" testId="report-net" />
-        <StatTile label="Pieces sold" value={String(r.totals.units)} sub={`${r.totals.count} sales`} />
-        <StatTile label="Est. profit" value={formatPaise(r.totals.profitPaise)} sub="items with a purchase price" />
-        <StatTile label="Exchanges" value={String(r.totals.exchanges.count)} sub={`net ${formatPaise(r.totals.exchanges.differencePaise)}`} />
+        <StatTile label={t('own.rep.netSales')} value={formatPaise(r.totals.netRevenuePaise)} sub={t('own.afterExchanges')} testId="report-net" />
+        <StatTile label={t('own.rep.piecesSold')} value={String(r.totals.units)} sub={t('own.salesCount', { n: r.totals.count })} />
+        <StatTile label={t('own.estProfit')} value={formatPaise(r.totals.profitPaise)} sub={t('own.rep.withPurchase')} />
+        <StatTile
+          label={t('own.exchanges')}
+          value={String(r.totals.exchanges.count)}
+          sub={t('own.net', { amount: formatPaise(r.totals.exchanges.differencePaise) })}
+        />
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>Best sellers</h2>
+        <h2 className={sectionTitle}>{t('own.rep.bestSellers')}</h2>
         {r.topProducts.length === 0 ? (
-          <p className={`text-sm ${muted}`}>No sales in this period.</p>
+          <p className={`text-sm ${muted}`}>{t('own.noSalesPeriod')}</p>
         ) : (
           <ol data-testid="top-products" className="flex flex-col gap-1 text-sm">
             {r.topProducts.map((p, i) => (
@@ -90,7 +106,7 @@ async function Report({ searchParams }: { searchParams: Promise<{ period?: strin
                   </Link>
                 </span>
                 <span className="shrink-0 tabular-nums">
-                  {p.units} pcs · {formatPaise(p.revenuePaise)}
+                  {t('own.pcs', { n: p.units })} · {formatPaise(p.revenuePaise)}
                 </span>
               </li>
             ))}
@@ -98,15 +114,15 @@ async function Report({ searchParams }: { searchParams: Promise<{ period?: strin
         )}
       </section>
 
-      <GroupTable title="By category" rows={r.byCategory} testId="by-category" firstColumn="Category" />
-      <GroupTable title="By company" rows={r.bySupplier} testId="by-company" firstColumn="Company" />
-      <GroupTable title="By salesperson" rows={r.bySalesperson} testId="by-person" firstColumn="Salesperson" />
+      <GroupTable title={t('own.rep.byCategory')} rows={r.byCategory} testId="by-category" firstColumn={t('own.rep.category')} t={t} />
+      <GroupTable title={t('own.rep.byCompany')} rows={r.bySupplier} testId="by-company" firstColumn={t('own.rep.company')} t={t} />
+      <GroupTable title={t('own.rep.bySalesperson')} rows={r.bySalesperson} testId="by-person" firstColumn={t('own.rep.salesperson')} t={t} />
 
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>Not selling (no sale in 30 days)</h2>
-        <p className={`text-xs ${muted}`}>In stock, biggest stock value first. Ideas: move to the front, bundle, or offer a discount.</p>
+        <h2 className={sectionTitle}>{t('own.rep.notSelling')}</h2>
+        <p className={`text-xs ${muted}`}>{t('own.rep.notSellingHint')}</p>
         {r.slowMovers.length === 0 ? (
-          <p className={`text-sm ${muted}`}>Everything in stock sold at least once in the last 30 days.</p>
+          <p className={`text-sm ${muted}`}>{t('own.rep.allSold')}</p>
         ) : (
           <ul data-testid="slow-movers" className="flex flex-col gap-1 text-sm">
             {r.slowMovers.map((s) => (
@@ -115,8 +131,10 @@ async function Report({ searchParams }: { searchParams: Promise<{ period?: strin
                   {s.label}
                 </Link>
                 <span className="shrink-0 text-right tabular-nums">
-                  {s.stock} pcs · {formatPaise(s.mrpValuePaise)}
-                  <span className={`block text-xs ${muted}`}>{s.lastSoldAt ? `last sold ${date.format(s.lastSoldAt)}` : 'never sold'}</span>
+                  {t('own.pcs', { n: s.stock })} · {formatPaise(s.mrpValuePaise)}
+                  <span className={`block text-xs ${muted}`}>
+                    {s.lastSoldAt ? t('own.rep.lastSold', { date: formatDate(locale, s.lastSoldAt) }) : t('own.rep.neverSold')}
+                  </span>
                 </span>
               </li>
             ))}
@@ -125,29 +143,30 @@ async function Report({ searchParams }: { searchParams: Promise<{ period?: strin
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>Download for your accountant</h2>
+        <h2 className={sectionTitle}>{t('own.rep.download')}</h2>
         <div className="flex flex-wrap gap-2">
           <a href={`/admin/export/sales?period=${period}`} className={secondaryButton} download>
-            Sales &amp; exchanges (CSV)
+            {t('own.rep.salesCsv')}
           </a>
           <a href="/admin/export/stock" className={secondaryButton} download>
-            Stock list (CSV)
+            {t('own.rep.stockCsv')}
           </a>
         </div>
-        <p className={`text-xs ${muted}`}>Opens in Excel or Google Sheets. Includes purchase prices and profit — owner only.</p>
+        <p className={`text-xs ${muted}`}>{t('own.rep.csvHint')}</p>
       </section>
     </>
   );
 }
 
-export default function ReportsPage(props: PageProps<'/admin/reports'>) {
+export default async function ReportsPage(props: PageProps<'/admin/reports'>) {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold">Reports</h1>
-        <p className={`text-sm ${muted}`}>What sells, what doesn&apos;t, and who sells it. Times are Indian time.</p>
+        <h1 className="text-2xl font-semibold">{t('nav.reports')}</h1>
+        <p className={`text-sm ${muted}`}>{t('own.rep.subtitle')}</p>
       </div>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Working out the numbers…</p>}>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('own.rep.loading')}</p>}>
         <Report searchParams={props.searchParams as Promise<{ period?: string }>} />
       </Suspense>
     </main>

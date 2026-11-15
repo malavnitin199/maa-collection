@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { secondaryButton } from '@/components/ui/styles';
+import { useT } from '@/features/i18n/i18n-provider';
 import { resizePhoto } from './resize-photo';
 
 /** A photo picked on the phone, already made small (~100–250 KB JPEG). */
@@ -32,6 +33,7 @@ export function PhotoSlot({
   onChange: (photo: PickedPhoto | null) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const camera = useRef<HTMLInputElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +50,7 @@ export function PhotoSlot({
       if (photo) URL.revokeObjectURL(photo.url);
       onChange({ blob, width, height, url: URL.createObjectURL(blob) });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not use that photo.');
+      setError(e instanceof Error ? e.message : t('stk.photo.cantUse'));
     } finally {
       setBusy(false);
     }
@@ -59,7 +61,7 @@ export function PhotoSlot({
       {photo ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- local preview of a resized photo */}
-          <img src={photo.url} alt={`Photo for ${label}`} className="h-12 w-12 rounded-lg border border-zinc-200 object-cover dark:border-zinc-800" />
+          <img src={photo.url} alt={t('stk.photo.alt', { label })} className="h-12 w-12 rounded-lg border border-zinc-200 object-cover dark:border-zinc-800" />
           <button
             type="button"
             disabled={disabled}
@@ -68,24 +70,24 @@ export function PhotoSlot({
               onChange(null);
             }}
             className={`${secondaryButton} py-1.5`}
-            aria-label={`Remove photo for ${label}`}
+            aria-label={t('stk.photo.removeAria', { label })}
           >
-            ✕ Remove
+            {t('stk.photo.remove')}
           </button>
         </>
       ) : (
         <>
-          <button type="button" disabled={disabled || busy} onClick={() => camera.current?.click()} className={`${secondaryButton} py-1.5`} aria-label={`Take photo for ${label}`}>
-            📷 Photo
+          <button type="button" disabled={disabled || busy} onClick={() => camera.current?.click()} className={`${secondaryButton} py-1.5`} aria-label={t('stk.photo.takeAria', { label })}>
+            {t('stk.photo.take')}
           </button>
-          <button type="button" disabled={disabled || busy} onClick={() => gallery.current?.click()} className={`${secondaryButton} py-1.5`} aria-label={`Choose photo for ${label} from gallery`}>
-            🖼 Gallery
+          <button type="button" disabled={disabled || busy} onClick={() => gallery.current?.click()} className={`${secondaryButton} py-1.5`} aria-label={t('stk.photo.galleryAria', { label })}>
+            {t('stk.photo.gallery')}
           </button>
-          {busy && <span className="text-xs text-zinc-500">Preparing…</span>}
+          {busy && <span className="text-xs text-zinc-500">{t('stk.photo.preparing')}</span>}
         </>
       )}
-      <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label={`Camera for ${label}`} onChange={(e) => pick(e.currentTarget)} />
-      <input ref={gallery} type="file" accept="image/*" hidden aria-label={`Gallery for ${label}`} onChange={(e) => pick(e.currentTarget)} />
+      <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label={t('stk.photo.cameraInput', { label })} onChange={(e) => pick(e.currentTarget)} />
+      <input ref={gallery} type="file" accept="image/*" hidden aria-label={t('stk.photo.galleryInput', { label })} onChange={(e) => pick(e.currentTarget)} />
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
   );

@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from 'react';
 import { errorBox, input, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { SizeRatesEditor, type OwnRatesText, type RatesText } from '@/features/catalog/size-rates-editor';
+import { useT } from '@/features/i18n/i18n-provider';
 import type { FormState } from '@/server/actions/admin';
 
 type Action = (state: FormState, formData: FormData) => Promise<FormState>;
@@ -28,6 +29,7 @@ export function useOperationId() {
 }
 
 export function StockInForm({ action }: { action: Action }) {
+  const t = useT();
   const op = useOperationId();
   const [state, formAction, pending] = useActionState((prev: FormState, formData: FormData) => {
     op.stamp(formData);
@@ -37,15 +39,15 @@ export function StockInForm({ action }: { action: Action }) {
     <form action={formAction} onChange={op.reset} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Pieces received
+          {t('cat.stockIn.pieces')}
           <input name="quantity" inputMode="numeric" required className={`${input} w-32`} />
         </label>
         <label className="flex flex-1 flex-col gap-1 text-sm font-medium">
-          Note (optional)
-          <input name="note" placeholder="e.g. supplier bill no." className={input} />
+          {t('cat.stockIn.note')}
+          <input name="note" placeholder={t('cat.stockIn.notePlaceholder')} className={input} />
         </label>
         <button type="submit" disabled={pending} className={primaryButton}>
-          {pending ? 'Adding…' : 'Add stock'}
+          {pending ? t('cat.adding') : t('cat.stockIn.submit')}
         </button>
       </div>
       <Feedback state={state} />
@@ -54,27 +56,28 @@ export function StockInForm({ action }: { action: Action }) {
 }
 
 export function AddStaffForm({ action }: { action: Action }) {
+  const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Name
+          {t('cat.staff.name')}
           <input name="name" required maxLength={40} className={input} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Role
+          {t('cat.staff.role')}
           <select name="role" defaultValue="salesman" className={input}>
-            <option value="salesman">Salesman</option>
-            <option value="admin">Admin</option>
+            <option value="salesman">{t('role.salesman')}</option>
+            <option value="admin">{t('role.admin')}</option>
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          PIN (4–6 digits)
+          {t('cat.staff.pin')}
           <input name="pin" inputMode="numeric" required maxLength={6} className={`${input} w-32`} />
         </label>
         <button type="submit" disabled={pending} className={primaryButton}>
-          {pending ? 'Adding…' : 'Add staff'}
+          {pending ? t('cat.adding') : t('cat.staff.add')}
         </button>
       </div>
       <Feedback state={state} />
@@ -83,12 +86,13 @@ export function AddStaffForm({ action }: { action: Action }) {
 }
 
 export function ResetPinForm({ action, name }: { action: Action; name: string }) {
+  const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2">
-      <input name="pin" inputMode="numeric" maxLength={6} placeholder="New PIN" aria-label={`New PIN for ${name}`} className={`${input} w-28 py-1`} />
+      <input name="pin" inputMode="numeric" maxLength={6} placeholder={t('cat.staff.newPin')} aria-label={t('cat.staff.newPinFor', { name })} className={`${input} w-28 py-1`} />
       <button type="submit" disabled={pending} className={`${secondaryButton} py-1`}>
-        Set PIN
+        {t('cat.staff.setPin')}
       </button>
       {state.error && <span className="text-xs text-red-600">{state.error}</span>}
       {state.message && <span className="text-xs text-emerald-700">{state.message}</span>}
@@ -97,11 +101,12 @@ export function ResetPinForm({ action, name }: { action: Action; name: string })
 }
 
 export function ToggleActiveForm({ action, active }: { action: (state: FormState) => Promise<FormState>; active: boolean }) {
+  const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
   return (
     <form action={formAction} className="flex items-center gap-2">
       <button type="submit" disabled={pending} className={`${secondaryButton} py-1`}>
-        {active ? 'Deactivate' : 'Activate'}
+        {active ? t('cat.staff.deactivate') : t('cat.staff.activate')}
       </button>
       {state.error && <span className="text-xs text-red-600">{state.error}</span>}
     </form>
@@ -129,6 +134,7 @@ export function DesignRatesForm({
   /** Sizes whose colours have different prices today. */
   mixedSizes?: string[];
 }) {
+  const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
   const [rates, setRates] = useState(initial);
   const [own, setOwn] = useState(initialOwn);
@@ -141,16 +147,16 @@ export function DesignRatesForm({
     <form action={formAction} className="flex flex-col gap-3">
       <div className={`grid gap-2 ${showCost ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          MRP (₹)
+          {t('cat.mrpRupees')}
           <input {...field('mrp')} inputMode="decimal" required className={input} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Price (₹)
+          {t('cat.rates.price')}
           <input {...field('price')} inputMode="decimal" placeholder={rates.mrp || '= MRP'} className={input} />
         </label>
         {showCost && (
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Purchase (₹)
+            {t('cat.rates.purchase')}
             <input {...field('cost')} inputMode="decimal" placeholder="—" className={input} />
           </label>
         )}
@@ -158,12 +164,12 @@ export function DesignRatesForm({
       {sizes.length >= 2 && <SizeRatesEditor sizes={sizes} defaults={rates} own={own} onChange={setOwn} showCost={showCost} named />}
       {mixedSizes.length > 0 && (
         <p className="text-xs text-amber-700 dark:text-amber-400">
-          Colours of size {mixedSizes.join(', ')} have different prices now. Saving gives every colour of a size the same price.
+          {t('cat.rates.mixed', { sizes: mixedSizes.join(', ') })}
         </p>
       )}
       <Feedback state={state} />
       <button type="submit" disabled={pending} className={primaryButton}>
-        {pending ? 'Saving…' : `Apply to all ${count} size${count === 1 ? '' : 's'}/colour${count === 1 ? '' : 's'}`}
+        {pending ? t('common.saving') : t(count === 1 ? 'cat.rates.applyOne' : 'cat.rates.applyMany', { n: count })}
       </button>
     </form>
   );
@@ -180,11 +186,12 @@ export function PermissionsForm({
   name: string;
   options: { value: string; label: string; description: string }[];
 }) {
+  const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
   return (
-    <form action={formAction} className="flex flex-col gap-2" aria-label={`Permissions for ${name}`}>
+    <form action={formAction} className="flex flex-col gap-2" aria-label={t('cat.perm.formLabel', { name })}>
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-medium">What may {name} do besides selling?</legend>
+        <legend className="mb-1 text-sm font-medium">{t('cat.perm.legend', { name })}</legend>
         {options.map((option) => (
           <label key={option.value} className="flex items-start gap-3 rounded-lg border border-zinc-200 p-2 text-sm dark:border-zinc-800">
             <input
@@ -192,7 +199,7 @@ export function PermissionsForm({
               name="permissions"
               value={option.value}
               defaultChecked={granted.includes(option.value)}
-              aria-label={`${option.label} for ${name}`}
+              aria-label={t('cat.perm.optionFor', { label: option.label, name })}
               className="mt-0.5 h-5 w-5 shrink-0"
             />
             <span>
@@ -204,7 +211,7 @@ export function PermissionsForm({
       </fieldset>
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending} className={`${primaryButton} py-1.5`}>
-          {pending ? 'Saving…' : 'Save permissions'}
+          {pending ? t('common.saving') : t('cat.perm.save')}
         </button>
         {state.error && <span className="text-xs text-red-600">{state.error}</span>}
         {state.message && <span role="status" className="text-xs text-emerald-700">{state.message}</span>}

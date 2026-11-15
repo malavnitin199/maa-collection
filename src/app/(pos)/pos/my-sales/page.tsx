@@ -6,11 +6,12 @@ import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { requireStaff } from '@/server/auth';
 import { plural } from '@/lib/i18n';
-import { getT } from '@/server/i18n';
+import { getT, getLocale } from '@/server/i18n';
 import { staffDashboard } from '@/server/services/reports';
 
 async function MySales() {
   const [me, t] = await Promise.all([requireStaff(), getT()]);
+  const locale = await getLocale();
   const pcs = (n: number) => plural(t, 'my.pcs', n);
   const count = (n: number) => plural(t, 'my.sales', n);
   const data = await staffDashboard(await requestDb(), STORE_ID, me.id);
@@ -37,7 +38,7 @@ async function MySales() {
           })}
         </p>
       </section>
-      <ActivityList entries={data.activity} title={t('my.activity')} testId="my-activity" t={t} />
+      <ActivityList entries={data.activity} title={t('my.activity')} testId="my-activity" t={t} locale={locale} />
     </main>
   );
 }

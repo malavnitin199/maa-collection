@@ -6,7 +6,8 @@ import { rupeesToPaise } from '@/features/inventory/inventory';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { DoneOverlay } from '@/features/feedback/effects';
 import { feedback } from '@/features/feedback/sounds';
-import { useT } from '@/features/i18n/i18n-provider';
+import { useLocale, useT } from '@/features/i18n/i18n-provider';
+import { formatDate } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
 import { lookupProductAction, recordExchangeAction, returnableSalesAction } from '@/server/actions/pos';
 import type { ReturnableSale } from '@/server/services/exchanges';
@@ -20,7 +21,6 @@ type Step =
   | { name: 'scan-new'; returned: CounterProduct; sale: ReturnableSale; returnedQty: number }
   | { name: 'confirm'; returned: CounterProduct; sale: ReturnableSale; returnedQty: number; issued: CounterProduct; operationId: string };
 
-const dateTime = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
 export function ExchangeScreen({ me, staff }: { me: StaffOption; staff: StaffOption[] }) {
   const [step, setStep] = useState<Step>({ name: 'scan-returned' });
@@ -31,6 +31,7 @@ export function ExchangeScreen({ me, staff }: { me: StaffOption; staff: StaffOpt
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [busy, startTransition] = useTransition();
   const t = useT();
+  const locale = useLocale();
   const [scanResult, setScanResult] = useState<{ kind: 'ok' | 'error'; id: number } | null>(null);
   const [done, setDone] = useState<{ amount: string; detail: string } | null>(null);
   const closeDone = useCallback(() => setDone(null), []);
@@ -165,7 +166,7 @@ export function ExchangeScreen({ me, staff }: { me: StaffOption; staff: StaffOpt
             {step.sales.map((sale) => (
               <li key={sale.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
                 <span>
-                  {t('ex.saleLine', { date: dateTime.format(new Date(sale.createdAt)), qty: sale.quantity, price: formatPaise(sale.unitPricePaise), seller: sale.soldByName })}
+                  {t('ex.saleLine', { date: formatDate(locale, sale.createdAt, 'dateTime'), qty: sale.quantity, price: formatPaise(sale.unitPricePaise), seller: sale.soldByName })}
                   <span className={muted}> · {t('ex.canReturn', { n: sale.returnable })}</span>
                 </span>
                 <button type="button" onClick={() => pickSale(sale)} className={secondaryButton}>

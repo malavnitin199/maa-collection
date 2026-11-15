@@ -5,23 +5,24 @@ import { CategoryForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import { createCategoryAction, updateCategoryAction } from '@/server/actions/admin';
 import { requirePermission } from '@/server/auth';
+import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listCategories } from '@/server/services/catalog';
 
 async function AddCategory() {
-  await requirePermission('catalog');
+  const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
   return (
     <details className={card}>
-        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">+ Add category</summary>
+        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">{t('cat.cat.addOpen')}</summary>
         <div className="mt-3">
-          <CategoryForm action={createCategoryAction} submitLabel="Add category" />
+          <CategoryForm action={createCategoryAction} submitLabel={t('cat.cat.add')} />
         </div>
       </details>
   );
 }
 
 async function CategoryList() {
-  await requirePermission('catalog');
+  const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
   const rows = await listCategories(await requestDb(), STORE_ID);
   return (
     <ul data-testid="category-list" className="flex flex-col gap-2">
@@ -32,21 +33,21 @@ async function CategoryList() {
               <span>
                 <span className="font-medium">{c.name}</span>
                 <span className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-800">{c.code}</span>
-                {!c.active && <span className={`ml-1 text-xs ${muted}`}>(inactive)</span>}
+                {!c.active && <span className={`ml-1 text-xs ${muted}`}>{t('cat.inactiveParen')}</span>}
                 <span className={`block text-xs ${muted}`}>
-                  {c.productCount} products · {c.stockUnits} pcs
+                  {t('cat.productsPcs', { products: c.productCount, pcs: c.stockUnits })}
                 </span>
                 <span data-testid="category-sizes" className={`block text-xs ${muted}`}>
-                  Sizes: {c.sizes.length > 0 ? c.sizes.join(' · ') : 'not set'}
+                  {t('cat.cat.sizes', { sizes: c.sizes.length > 0 ? c.sizes.join(' · ') : t('cat.cat.sizesNotSet') })}
                 </span>
               </span>
-              <span className={`text-sm ${link}`}>Edit</span>
+              <span className={`text-sm ${link}`}>{t('cat.cat.edit')}</span>
             </summary>
             <div className="mt-3 flex flex-col gap-3">
-              <CategoryForm action={updateCategoryAction.bind(null, c.id)} initial={c} submitLabel="Save category" />
+              <CategoryForm action={updateCategoryAction.bind(null, c.id)} initial={c} submitLabel={t('cat.cat.save')} />
               {c.productCount > 0 && (
                 <Link href={`/admin/products?category=${c.id}`} className={`text-sm ${link}`}>
-                  View its products →
+                  {t('cat.cat.viewProducts')}
                 </Link>
               )}
             </div>
@@ -57,19 +58,20 @@ async function CategoryList() {
   );
 }
 
-export default function CategoriesPage() {
+export default async function CategoriesPage() {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold">Categories</h1>
-        <p className={`text-sm ${muted}`}>The kinds of items you sell. Each has a short code used in SKUs and the sizes it comes in.</p>
+        <h1 className="text-2xl font-semibold">{t('nav.categories')}</h1>
+        <p className={`text-sm ${muted}`}>{t('cat.cat.subtitle')}</p>
       </div>
       <Suspense fallback={null}>
         <AddCategory />
       </Suspense>
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>All categories</h2>
-        <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+        <h2 className={sectionTitle}>{t('cat.allCategories')}</h2>
+        <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
           <CategoryList />
         </Suspense>
       </section>

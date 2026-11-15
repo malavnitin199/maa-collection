@@ -1,52 +1,54 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { card, muted, sectionTitle } from '@/components/ui/styles';
+import type { MessageKey } from '@/lib/i18n';
 import { canAny, type Permission } from '@/lib/permissions';
 import { requireAnyPermission } from '@/server/auth';
+import { getT } from '@/server/i18n';
 
-type Item = { href: string; label: string; hint: string; needs: readonly Permission[] | 'admin' | 'everyone' };
+type Item = { href: string; label: MessageKey; hint: MessageKey; needs: readonly Permission[] | 'admin' | 'everyone' };
 
-const GROUPS: { title: string; links: Item[] }[] = [
+const GROUPS: { title: MessageKey; links: Item[] }[] = [
   {
-    title: 'Catalog & stock',
+    title: 'cat.menu.catalogStock',
     links: [
-      { href: '/admin/stock/old', label: 'Tag old stock', hint: 'Photo → details → barcode, one item at a time', needs: ['catalog'] },
-      { href: '/admin/catalog/check', label: 'Needs attention', hint: 'Items without photo, company, stock or purchase price', needs: ['catalog'] },
-      { href: '/admin/stock/quick', label: 'Quick add products', hint: 'Many products from one company, each with its own prices', needs: ['catalog'] },
-      { href: '/admin/stock/new', label: 'New design in sizes × colours', hint: 'One design, every size/colour gets a barcode', needs: ['catalog'] },
-      { href: '/admin/stock/receive', label: 'Receive stock (restock)', hint: 'Scan existing items to add pieces', needs: ['stock'] },
-      { href: '/admin/products', label: 'Products', hint: 'Search, photos, edit, rates', needs: ['catalog', 'prices', 'stock'] },
-      { href: '/admin/products/new', label: 'Add a single product', hint: 'One size/colour, or a manufacturer barcode', needs: ['catalog'] },
-      { href: '/admin/categories', label: 'Categories', hint: 'Kurta, Saree… and their SKU codes', needs: ['catalog'] },
-      { href: '/admin/suppliers', label: 'Companies (suppliers)', hint: 'Companies you buy from', needs: ['catalog'] },
-      { href: '/admin/labels', label: 'Print labels', hint: 'Barcode labels for all products', needs: ['catalog', 'stock'] },
+      { href: '/admin/stock/old', label: 'cat.menu.oldStock', hint: 'cat.menu.oldStockHint', needs: ['catalog'] },
+      { href: '/admin/catalog/check', label: 'cat.check.title', hint: 'cat.menu.checkHint', needs: ['catalog'] },
+      { href: '/admin/stock/quick', label: 'cat.menu.quick', hint: 'cat.menu.quickHint', needs: ['catalog'] },
+      { href: '/admin/stock/new', label: 'cat.menu.newDesign', hint: 'cat.menu.newDesignHint', needs: ['catalog'] },
+      { href: '/admin/stock/receive', label: 'cat.menu.receive', hint: 'cat.menu.receiveHint', needs: ['stock'] },
+      { href: '/admin/products', label: 'nav.products', hint: 'cat.menu.productsHint', needs: ['catalog', 'prices', 'stock'] },
+      { href: '/admin/products/new', label: 'cat.menu.single', hint: 'cat.menu.singleHint', needs: ['catalog'] },
+      { href: '/admin/categories', label: 'nav.categories', hint: 'cat.menu.categoriesHint', needs: ['catalog'] },
+      { href: '/admin/suppliers', label: 'cat.menu.suppliers', hint: 'cat.menu.suppliersHint', needs: ['catalog'] },
+      { href: '/admin/labels', label: 'cat.menu.labels', hint: 'cat.menu.labelsHint', needs: ['catalog', 'stock'] },
     ],
   },
   {
-    title: 'Shop (owner)',
+    title: 'cat.menu.shop',
     links: [
-      { href: '/admin/staff', label: 'Staff & permissions', hint: 'People, PINs and what each may do', needs: 'admin' },
-      { href: '/admin/team', label: 'Sales team', hint: 'Number of sellers, each one\'s share and sales graphs', needs: 'admin' },
-      { href: '/admin/reports', label: 'Reports', hint: 'Best sellers, not selling, by category / company / person; Excel export', needs: 'admin' },
-      { href: '/admin/activity', label: 'Activity', hint: 'Every sale and exchange', needs: 'admin' },
-      { href: '/admin/settings', label: 'Settings', hint: 'Code price on tags (secret purchase price)', needs: 'admin' },
+      { href: '/admin/staff', label: 'cat.menu.staff', hint: 'cat.menu.staffHint', needs: 'admin' },
+      { href: '/admin/team', label: 'cat.menu.team', hint: 'cat.menu.teamHint', needs: 'admin' },
+      { href: '/admin/reports', label: 'nav.reports', hint: 'cat.menu.reportsHint', needs: 'admin' },
+      { href: '/admin/activity', label: 'nav.activity', hint: 'cat.menu.activityHint', needs: 'admin' },
+      { href: '/admin/settings', label: 'nav.settings', hint: 'cat.menu.settingsHint', needs: 'admin' },
     ],
   },
   {
-    title: 'Counter',
+    title: 'cat.menu.counter',
     links: [
-      { href: '/pos', label: 'Counter sale', hint: 'Scan and sell', needs: 'everyone' },
-      { href: '/pos/exchange', label: 'Exchange', hint: 'Swap an item from an earlier sale', needs: 'everyone' },
-      { href: '/pos/my-sales', label: 'My sales', hint: 'Your own sales today and this month', needs: 'everyone' },
-      { href: '/guide', label: 'Guide', hint: 'Learn every part of the app: short lessons with pictures', needs: 'everyone' },
-      { href: '/help', label: 'Help & problems', hint: 'Quick reference and fixes for camera, scanner, PIN, printing', needs: 'everyone' },
+      { href: '/pos', label: 'nav.counterSale', hint: 'cat.menu.sellHint', needs: 'everyone' },
+      { href: '/pos/exchange', label: 'nav.exchange', hint: 'cat.menu.exchangeHint', needs: 'everyone' },
+      { href: '/pos/my-sales', label: 'nav.mySales', hint: 'cat.menu.mySalesHint', needs: 'everyone' },
+      { href: '/guide', label: 'nav.guide', hint: 'cat.menu.guideHint', needs: 'everyone' },
+      { href: '/help', label: 'cat.menu.help', hint: 'cat.menu.helpHint', needs: 'everyone' },
     ],
   },
 ];
 
 async function Menu() {
   // Salesmen with no catalog/stock/price rights have nothing here: back to the counter.
-  const me = await requireAnyPermission(['catalog', 'stock', 'prices']);
+  const [me, t] = await Promise.all([requireAnyPermission(['catalog', 'stock', 'prices']), getT()]);
   const allowed = (item: Item) =>
     item.needs === 'everyone' || (item.needs === 'admin' ? me.role === 'admin' : canAny(me, item.needs));
   return (
@@ -56,14 +58,14 @@ async function Menu() {
         if (links.length === 0) return null;
         return (
           <section key={group.title} className="flex flex-col gap-2">
-            <h2 className={sectionTitle}>{group.title}</h2>
+            <h2 className={sectionTitle}>{t(group.title)}</h2>
             <ul className="flex flex-col gap-2">
               {links.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className={`${card} flex items-center justify-between gap-3 py-3 active:bg-zinc-50 dark:active:bg-zinc-900`}>
                     <span>
-                      <span className="block font-medium">{item.label}</span>
-                      <span className={`block text-xs ${muted}`}>{item.hint}</span>
+                      <span className="block font-medium">{t(item.label)}</span>
+                      <span className={`block text-xs ${muted}`}>{t(item.hint)}</span>
                     </span>
                     <span aria-hidden className={muted}>
                       ›
@@ -79,11 +81,12 @@ async function Menu() {
   );
 }
 
-export default function MorePage() {
+export default async function MorePage() {
+  const t = await getT();
   return (
     <main className="flex flex-col gap-5">
-      <h1 className="text-2xl font-semibold">Menu</h1>
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+      <h1 className="text-2xl font-semibold">{t('cat.menu.title')}</h1>
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <Menu />
       </Suspense>
     </main>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { card, link, muted, sectionTitle } from '@/components/ui/styles';
+import { getLocale, getT } from '@/server/i18n';
 
 export const metadata = { title: 'Help · Maa Collection' };
 
@@ -32,187 +33,310 @@ const Tip = ({ children }: { children: React.ReactNode }) => (
   <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-900 dark:bg-amber-950 dark:text-amber-200">💡 {children}</p>
 );
 
-export default function HelpPage() {
+/**
+ * हिन्दी versions of the steps and lists that have bold text (same order as the English
+ * below). Plain lines — headings, tips, the table, problems & fixes — are in i18n/modules/help.ts.
+ */
+const HI = {
+  start: [
+    <>फ़ोन पर ऐप खोलें और <strong>अपने नाम</strong> पर टैप करें, फिर अपना <strong>PIN</strong> डालें (मालिक देंगे)।</>,
+    <>इसे होम स्क्रीन पर लगाएँ: Chrome में ⋮ → <em>Add to Home screen</em> दबाएँ; iPhone में Share → <em>Add to Home Screen</em> दबाएँ। फिर यह ऐप की तरह खुलेगा।</>,
+    <>नीचे के टैब: <strong>बेचें</strong> (स्कैन करके बेचें), <strong>एक्सचेंज</strong>, <strong>मेरी बिक्री</strong>। मालिक ने कैटलॉग का काम दिया हो तो <strong>कैटलॉग</strong> भी दिखेगा।</>,
+    <>स्कैन के लिए <strong>कैमरा से स्कैन करें</strong> दबाएँ और एक बार कैमरा की अनुमति दें। बारकोड को हरे बॉक्स के अंदर सीधा रखें, 15–20 सेमी दूर।</>,
+    <>दिन का काम खत्म? ऊपर <strong>लॉग आउट</strong> दबाएँ, खासकर साझा फ़ोन पर।</>,
+  ],
+  sell: [
+    <><strong>बेचें</strong> टैब → टैग स्कैन करें (कैमरा या USB/ब्लूटूथ स्कैनर) या बारकोड के नीचे का कोड डालें।</>,
+    <>देखें कि फ़ोटो, साइज़ और रंग हाथ वाले आइटम से मिलते हैं।</>,
+    <><strong>यह आइटम बेचें</strong> दबाएँ, मात्रा और ग्राहक से तय हुआ दाम डालें (MRP तक)।</>,
+    <>किसी साथी के लिए बेच रहे हैं? <strong>बिक्री किसके नाम</strong> में उन्हें चुनें। यह भी दर्ज होता है कि बिक्री आपने डाली।</>,
+    <><strong>बिक्री दर्ज करें</strong> दबाएँ। स्टॉक हर फ़ोन पर तुरंत घट जाता है।</>,
+  ],
+  exchange: [
+    <><strong>एक्सचेंज</strong> टैब → ग्राहक जो आइटम वापस लाया उसे स्कैन करें → वह बिक्री चुनें जिससे यह आया था।</>,
+    <>नया आइटम स्कैन करें → दाम जाँचें → ऐप दिखाएगा <em>ग्राहक देगा ₹…</em> या <em>ग्राहक को लौटाएँ ₹…</em>।</>,
+    <><strong>एक्सचेंज पक्का करें</strong> दबाएँ। लौटाया पीस अपने आप स्टॉक में वापस चला जाता है।</>,
+  ],
+  catalogIntro: (
+    <>
+      मालिक यह आपके लिए <em>स्टाफ़ और अधिकार</em> में चालू करते हैं (अधिकार: <strong>कैटलॉग</strong>)। फिर <strong>कैटलॉग → पुराने स्टॉक पर टैग लगाएँ</strong> खोलें।
+    </>
+  ),
+  tagOne: [
+    <>आइटम पर पहले से <strong>कंपनी का बारकोड</strong> है? पहले <strong>टैग का बारकोड स्कैन करें</strong> दबाएँ — ऐप वही इस्तेमाल करेगा (नया स्टिकर नहीं) या बता देगा कि आइटम पहले से ऐप में है।</>,
+    <>आइटम की <strong>📷 फ़ोटो खींचें</strong> (1–4 फ़ोटो)। अच्छी रोशनी, सादा बैकग्राउंड, पूरा आइटम दिखे।</>,
+    <><strong>कैटेगरी</strong> चुनें, <strong>नाम</strong> लिखें (जैसे &ldquo;Phulkari Dupatta&rdquo;), <strong>साइज़</strong> पर टैप करें, <strong>रंग</strong> डालें।</>,
+    <><strong>MRP</strong>, <strong>बिक्री दाम</strong> (खाली छोड़ें = MRP) और <strong>गिने हुए पीस</strong> डालें।</>,
+    <><strong>सेव करें और बारकोड पाएँ</strong> दबाएँ। लेबल दिख जाएगा।</>,
+    <><strong>अगला आइटम →</strong> दबाएँ। अगले आइटम के लिए कैटेगरी, कंपनी और साइज़ भरे रहते हैं।</>,
+    <>आखिर में: <strong>आज के लेबल प्रिंट करें</strong> → हर पीस का एक लेबल → हर पीस पर एक चिपकाएँ। स्टिकर प्रिंटर है? प्रिंट से पहले <strong>स्टिकर प्रिंटर 50×25 mm</strong> चुनें।</>,
+  ],
+  more: [
+    <><strong>एक कंपनी के कई अलग-अलग प्रोडक्ट</strong> → स्टॉक जोड़ें → कई अलग-अलग प्रोडक्ट।</>,
+    <><strong>जो आइटम पहले से हैं, उनके और पीस</strong> → स्टॉक जोड़ें → पहले से मौजूद आइटम के और पीस (<em>स्टॉक</em> अधिकार चाहिए)। वही टैग फिर स्कैन करने पर एक पीस और जुड़ता है।</>,
+    <><strong>प्रोडक्ट या उसकी फ़ोटो बदलें</strong> → प्रोडक्ट → आइटम पर टैप करें।</>,
+    <><strong>क्या ठीक करना बाकी है?</strong> → कैटलॉग → <strong>ध्यान दें</strong>: बिना फ़ोटो, कंपनी या स्टॉक वाले आइटम।</>,
+  ],
+  owner: [
+    <><strong>कंपनी और कैटेगरी</strong>: मेनू → सप्लायर / कैटेगरी। जिन कंपनियों से माल खरीदते हैं और जिस तरह के आइटम बेचते हैं, वे जोड़ें।</>,
+    <><strong>स्टाफ़ और अधिकार</strong>: हर व्यक्ति को PIN के साथ जोड़ें। हर सेल्समैन के लिए और अधिकार टिक करें: <em>कैटलॉग</em> (प्रोडक्ट, फ़ोटो, लेबल), <em>दाम</em> (MRP/बिक्री दाम बदलना), <em>स्टॉक</em> (स्टॉक प्राप्त करना), <em>खरीद दाम</em> (कोड दाम देखना — सिर्फ़ भरोसेमंद स्टाफ़)।</>,
+    <><strong>कोड दाम</strong>: सेटिंग → 10 अक्षरों का एक शब्द चुनें; फिर लेबल पर खरीद दाम ऐसे अक्षरों में दिखेगा जो सिर्फ़ आपका स्टाफ़ पढ़ सके।</>,
+    <><strong>रेट</strong>: कोई भी प्रोडक्ट खोलें → पूरे डिज़ाइन के रेट। बड़े साइज़ का अपना MRP, बिक्री और खरीद दाम <em>साइज़ के हिसाब से दाम</em> में रख सकते हैं — उस साइज़ के हर रंग को वही मिलता है। पुरानी बिक्री के दाम नहीं बदलते।</>,
+    <><strong>नज़र रखें</strong>: होम पर आज और इस महीने की बिक्री, हर सेल्समैन की बिक्री और कम स्टॉक दिखता है; गतिविधि में हर बिक्री और एक्सचेंज की सूची है।</>,
+    <><strong>रिपोर्ट</strong>: सबसे ज़्यादा बिकने वाले, जो नहीं बिक रहा, किसी भी समय की कैटेगरी / कंपनी / सेल्समैन के हिसाब से बिक्री, और अकाउंटेंट के लिए <strong>CSV डाउनलोड</strong> (बिक्री, स्टॉक)।</>,
+  ],
+  plan: [
+    <><strong>एक-एक शेल्फ़</strong> करके चलें (एक बार में एक कैटेगरी) — ऐप अगले आइटम के लिए कैटेगरी याद रखता है।</>,
+    <>एक डिज़ाइन और साइज़ के पीस एक साथ गिनें, और उन्हें उसी गिनती के साथ एक आइटम के रूप में टैग करें।</>,
+    <>हर बार काम के आखिर में <strong>आज के लेबल</strong> प्रिंट करें और उसी दिन चिपकाएँ, ताकि कुछ गड़बड़ न हो।</>,
+    <>हर आइटम पर लेबल एक ही जगह लगाएँ (जैसे दाम वाले टैग पर या कॉलर के अंदर)।</>,
+    <>कैटलॉग वाले दो लोग एक साथ अलग-अलग शेल्फ़ पर काम कर सकते हैं।</>,
+  ],
+  habits: [
+    <>बिक्री दर्ज करने से पहले काउंटर पर हमेशा फ़ोटो मिलाएँ।</>,
+    <>एक डिज़ाइन का एक ही नाम रखें (&ldquo;Cotton Straight Kurta&rdquo;), ताकि साइज़ और रंग एक साथ रहें।</>,
+    <><em>खरीद दाम</em> का अधिकार सिर्फ़ उन्हें दें जिन पर मालिक को पूरा भरोसा हो।</>,
+    <>फ़ोन से प्रिंट: लेबल पेज खोलें → प्रिंट करें → अपना प्रिंटर या &ldquo;Save as PDF&rdquo; चुनें।</>,
+  ],
+};
+
+export default async function HelpPage() {
+  const [t, locale] = await Promise.all([getT(), getLocale()]);
+  const hi = locale === 'hi';
   return (
     <main className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold">Help & guide</h1>
+        <h1 className="text-2xl font-semibold">{t('help.title')}</h1>
         <p className={`text-sm ${muted}`}>
-          Quick reference and fixes. Learning the app? The{' '}
+          {t('help.intro')}{' '}
           <Link href="/guide" className={link}>
-            Guide
+            {t('help.intro.guide')}
           </Link>{' '}
-          has short lessons with pictures.
+          {t('help.intro.end')}
         </p>
       </div>
 
-      <nav aria-label="Help sections" className="flex flex-wrap gap-2 text-sm">
-        {[
-          ['#start', 'New here?'],
-          ['#sell', 'Selling'],
-          ['#catalog', 'Catalog & old stock'],
-          ['#owner', 'Owner'],
-          ['#required', 'Required vs optional'],
-          ['#tips', 'Tips'],
-          ['#faq', 'Problems & fixes'],
-        ].map(([href, label]) => (
+      <nav aria-label={t('help.sections')} className="flex flex-wrap gap-2 text-sm">
+        {(
+          [
+            ['#start', 'help.nav.start'],
+            ['#sell', 'help.nav.sell'],
+            ['#catalog', 'help.nav.catalog'],
+            ['#owner', 'help.nav.owner'],
+            ['#required', 'help.nav.required'],
+            ['#tips', 'help.nav.tips'],
+            ['#faq', 'help.nav.faq'],
+          ] as const
+        ).map(([href, label]) => (
           <a key={href} href={href} className="rounded-full border border-zinc-300 px-3 py-1 dark:border-zinc-700">
-            {label}
+            {t(label)}
           </a>
         ))}
       </nav>
 
-      <Section id="start" title="New here? Start in 2 minutes" intro="Logging in, the tabs, and setting up your phone." open>
+      <Section id="start" title={t('help.start.title')} intro={t('help.start.intro')} open>
         <Steps
-          items={[
-            <>Open the app on your phone and tap <strong>your name</strong>, then type your <strong>PIN</strong> (the owner gives it to you).</>,
-            <>Add it to your home screen: in Chrome tap ⋮ → <em>Add to Home screen</em>; on iPhone tap Share → <em>Add to Home Screen</em>. It then opens like an app.</>,
-            <>Use the tabs at the bottom: <strong>Sell</strong> (scan and sell), <strong>Exchange</strong>, <strong>My sales</strong>. If the owner gave you catalog work you also see <strong>Catalog</strong>.</>,
-            <>To scan, tap <strong>Scan with camera</strong> and allow the camera once. Hold the barcode flat inside the green box, 15–20 cm away.</>,
-            <>Done for the day? Tap <strong>Log out</strong> at the top, especially on a shared phone.</>,
-          ]}
+          items={
+            hi
+              ? HI.start
+              : [
+                  <>Open the app on your phone and tap <strong>your name</strong>, then type your <strong>PIN</strong> (the owner gives it to you).</>,
+                  <>Add it to your home screen: in Chrome tap ⋮ → <em>Add to Home screen</em>; on iPhone tap Share → <em>Add to Home Screen</em>. It then opens like an app.</>,
+                  <>Use the tabs at the bottom: <strong>Sell</strong> (scan and sell), <strong>Exchange</strong>, <strong>My sales</strong>. If the owner gave you catalog work you also see <strong>Catalog</strong>.</>,
+                  <>To scan, tap <strong>Scan with camera</strong> and allow the camera once. Hold the barcode flat inside the green box, 15–20 cm away.</>,
+                  <>Done for the day? Tap <strong>Log out</strong> at the top, especially on a shared phone.</>,
+                ]
+          }
         />
-        <Tip>Can&apos;t log in? Ask the owner to reset your PIN in Staff & permissions.</Tip>
+        <Tip>{t('help.start.tip')}</Tip>
       </Section>
 
-      <Section id="sell" title="Selling and exchanges" intro="For every salesman.">
-        <h3 className="font-semibold">Sell an item</h3>
+      <Section id="sell" title={t('help.sell.title')} intro={t('help.sell.intro')}>
+        <h3 className="font-semibold">{t('help.sell.sellItem')}</h3>
         <Steps
-          items={[
-            <>Tab <strong>Sell</strong> → scan the tag (camera or USB/Bluetooth scanner) or type the code under the barcode.</>,
-            <>Check the photo, size and colour match the item in your hand.</>,
-            <>Tap <strong>Sell this item</strong>, set quantity and the price agreed with the customer (up to MRP).</>,
-            <>Selling for a colleague? Choose them in <strong>Credit sale to</strong>. It is recorded that you entered it.</>,
-            <>Tap <strong>Record sale</strong>. Stock goes down straight away on every phone.</>,
-          ]}
+          items={
+            hi
+              ? HI.sell
+              : [
+                  <>Tab <strong>Sell</strong> → scan the tag (camera or USB/Bluetooth scanner) or type the code under the barcode.</>,
+                  <>Check the photo, size and colour match the item in your hand.</>,
+                  <>Tap <strong>Sell this item</strong>, set quantity and the price agreed with the customer (up to MRP).</>,
+                  <>Selling for a colleague? Choose them in <strong>Credit sale to</strong>. It is recorded that you entered it.</>,
+                  <>Tap <strong>Record sale</strong>. Stock goes down straight away on every phone.</>,
+                ]
+          }
         />
-        <h3 className="font-semibold">Exchange</h3>
+        <h3 className="font-semibold">{t('help.sell.exchange')}</h3>
         <Steps
-          items={[
-            <>Tab <strong>Exchange</strong> → scan the item the customer brought back → choose the sale it came from.</>,
-            <>Scan the new item → check the price → the app shows <em>Customer pays ₹…</em> or <em>Give back ₹…</em>.</>,
-            <>Tap <strong>Confirm exchange</strong>. The returned piece goes back into stock automatically.</>,
-          ]}
+          items={
+            hi
+              ? HI.exchange
+              : [
+                  <>Tab <strong>Exchange</strong> → scan the item the customer brought back → choose the sale it came from.</>,
+                  <>Scan the new item → check the price → the app shows <em>Customer pays ₹…</em> or <em>Give back ₹…</em>.</>,
+                  <>Tap <strong>Confirm exchange</strong>. The returned piece goes back into stock automatically.</>,
+                ]
+          }
         />
-        <Tip>&ldquo;My sales&rdquo; shows your totals for today and this month, including sales you entered for others.</Tip>
+        <Tip>{t('help.sell.tip')}</Tip>
       </Section>
 
-      <Section id="catalog" title="Catalog & old stock (catalog / QC person)" intro="Photos, details, barcodes and labels — including stock already in the shop.">
-        <p>The owner turns this on for you in <em>Staff & permissions</em> (right: <strong>Catalog</strong>). Then open <strong>Catalog → Tag old stock</strong>.</p>
-        <h3 className="font-semibold">Tag one item (about 30 seconds)</h3>
+      <Section id="catalog" title={t('help.catalog.title')} intro={t('help.catalog.intro')}>
+        <p>
+          {hi ? (
+            HI.catalogIntro
+          ) : (
+            <>
+              The owner turns this on for you in <em>Staff & permissions</em> (right: <strong>Catalog</strong>). Then open <strong>Catalog → Tag old stock</strong>.
+            </>
+          )}
+        </p>
+        <h3 className="font-semibold">{t('help.catalog.tagOne')}</h3>
         <Steps
-          items={[
-            <>Item already has a <strong>barcode from the company</strong>? Tap <strong>Scan the tag&apos;s barcode</strong> first — the app uses it (no new sticker) or tells you if the item is already in the app.</>,
-            <><strong>📷 Take photo</strong> of the item (1–4 photos). Good light, plain background, whole item visible.</>,
-            <>Choose the <strong>category</strong>, type the <strong>name</strong> (e.g. &ldquo;Phulkari Dupatta&rdquo;), tap a <strong>size</strong>, add the <strong>colour</strong>.</>,
-            <>Enter <strong>MRP</strong>, the <strong>selling price</strong> (leave empty = MRP) and <strong>pieces counted</strong>.</>,
-            <>Tap <strong>Save and get barcode</strong>. The label appears.</>,
-            <>Tap <strong>Next item →</strong>. Category, company and size stay filled in for the next one.</>,
-            <>At the end: <strong>Print today&apos;s labels</strong> → one label per piece → stick one on each piece. Using a sticker printer? Choose <strong>Sticker printer 50×25 mm</strong> before printing.</>,
-          ]}
+          items={
+            hi
+              ? HI.tagOne
+              : [
+                  <>Item already has a <strong>barcode from the company</strong>? Tap <strong>Scan the tag&apos;s barcode</strong> first — the app uses it (no new sticker) or tells you if the item is already in the app.</>,
+                  <><strong>📷 Take photo</strong> of the item (1–4 photos). Good light, plain background, whole item visible.</>,
+                  <>Choose the <strong>category</strong>, type the <strong>name</strong> (e.g. &ldquo;Phulkari Dupatta&rdquo;), tap a <strong>size</strong>, add the <strong>colour</strong>.</>,
+                  <>Enter <strong>MRP</strong>, the <strong>selling price</strong> (leave empty = MRP) and <strong>pieces counted</strong>.</>,
+                  <>Tap <strong>Save and get barcode</strong>. The label appears.</>,
+                  <>Tap <strong>Next item →</strong>. Category, company and size stay filled in for the next one.</>,
+                  <>At the end: <strong>Print today&apos;s labels</strong> → one label per piece → stick one on each piece. Using a sticker printer? Choose <strong>Sticker printer 50×25 mm</strong> before printing.</>,
+                ]
+          }
         />
-        <Tip>Same item in several sizes or colours? Use <Link href="/admin/stock/new" className={link}>New design in sizes × colours</Link>: one entry creates all of them.</Tip>
-        <h3 className="font-semibold">New deliveries and more stock</h3>
+        <Tip>
+          {t('help.catalog.tip')}{' '}
+          <Link href="/admin/stock/new" className={link}>
+            {t('help.catalog.tipLink')}
+          </Link>
+          {t('help.catalog.tipEnd')}
+        </Tip>
+        <h3 className="font-semibold">{t('help.catalog.more')}</h3>
         <ul className="list-disc pl-5">
-          <li><strong>Many different products from one company</strong> → Add stock → Many different products.</li>
-          <li><strong>More pieces of items you already have</strong> → Add stock → More of existing items (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece.</li>
-          <li><strong>Edit a product or its photos</strong> → Products → tap the item.</li>
-          <li><strong>What&apos;s left to fix?</strong> → Catalog → <strong>Needs attention</strong>: items without photo, company or stock.</li>
+          {hi ? (
+            HI.more.map((item, i) => <li key={i}>{item}</li>)
+          ) : (
+            <>
+              <li><strong>Many different products from one company</strong> → Add stock → Many different products.</li>
+              <li><strong>More pieces of items you already have</strong> → Add stock → More of existing items (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece.</li>
+              <li><strong>Edit a product or its photos</strong> → Products → tap the item.</li>
+              <li><strong>What&apos;s left to fix?</strong> → Catalog → <strong>Needs attention</strong>: items without photo, company or stock.</li>
+            </>
+          )}
         </ul>
       </Section>
 
-      <Section id="owner" title="For the owner" intro="Set-up, permissions, prices and reports.">
+      <Section id="owner" title={t('help.owner.title')} intro={t('help.owner.intro')}>
         <Steps
-          items={[
-            <><strong>Companies & categories</strong>: Menu → Companies / Categories. Add the companies you buy from and the kinds of items you sell.</>,
-            <><strong>Staff & permissions</strong>: add each person with a PIN. Tick extra rights per salesman: <em>Catalog</em> (products, photos, labels), <em>Prices</em> (change MRP/selling price), <em>Stock</em> (receive stock), <em>Purchase price</em> (see the code price — trusted staff only).</>,
-            <><strong>Code price</strong>: Settings → choose a 10-letter word; labels then show the purchase price in letters only your staff can read.</>,
-            <><strong>Rates</strong>: open any product → Rates for the whole design. A bigger size can have its own MRP, selling and purchase price under <em>Price by size</em> — every colour of that size gets it. Past sales keep their prices.</>,
-            <><strong>Track</strong>: Home shows today and this month, sales per salesperson, low stock; Activity lists every sale and exchange.</>,
-            <><strong>Reports</strong>: best sellers, what is not selling, sales by category / company / salesperson for any period, and <strong>CSV downloads</strong> (sales, stock) for your accountant.</>,
-          ]}
+          items={
+            hi
+              ? HI.owner
+              : [
+                  <><strong>Companies & categories</strong>: Menu → Companies / Categories. Add the companies you buy from and the kinds of items you sell.</>,
+                  <><strong>Staff & permissions</strong>: add each person with a PIN. Tick extra rights per salesman: <em>Catalog</em> (products, photos, labels), <em>Prices</em> (change MRP/selling price), <em>Stock</em> (receive stock), <em>Purchase price</em> (see the code price — trusted staff only).</>,
+                  <><strong>Code price</strong>: Settings → choose a 10-letter word; labels then show the purchase price in letters only your staff can read.</>,
+                  <><strong>Rates</strong>: open any product → Rates for the whole design. A bigger size can have its own MRP, selling and purchase price under <em>Price by size</em> — every colour of that size gets it. Past sales keep their prices.</>,
+                  <><strong>Track</strong>: Home shows today and this month, sales per salesperson, low stock; Activity lists every sale and exchange.</>,
+                  <><strong>Reports</strong>: best sellers, what is not selling, sales by category / company / salesperson for any period, and <strong>CSV downloads</strong> (sales, stock) for your accountant.</>,
+                ]
+          }
         />
       </Section>
 
-      <Section id="required" title="What is required and what is optional" intro="So you don't waste time on fields you can skip.">
+      <Section id="required" title={t('help.req.title')} intro={t('help.req.intro')}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className={muted}>
               <tr>
-                <th className="py-1 pr-3 font-medium">When</th>
-                <th className="py-1 pr-3 font-medium">Required</th>
-                <th className="py-1 font-medium">Optional</th>
+                <th className="py-1 pr-3 font-medium">{t('help.req.when')}</th>
+                <th className="py-1 pr-3 font-medium">{t('help.req.required')}</th>
+                <th className="py-1 font-medium">{t('help.req.optional')}</th>
               </tr>
             </thead>
             <tbody className="align-top">
               <tr className="border-t border-zinc-200 dark:border-zinc-800">
-                <td className="py-2 pr-3">Tag old stock</td>
-                <td className="py-2 pr-3">Category, name, MRP, pieces</td>
-                <td className="py-2">Photo (recommended), size (= Free), colour, company, selling price (= MRP), purchase price</td>
+                <td className="py-2 pr-3">{t('help.req.oldStock')}</td>
+                <td className="py-2 pr-3">{t('help.req.oldStock.required')}</td>
+                <td className="py-2">{t('help.req.oldStock.optional')}</td>
               </tr>
               <tr className="border-t border-zinc-200 dark:border-zinc-800">
-                <td className="py-2 pr-3">Quick add</td>
-                <td className="py-2 pr-3">Company, category, each name and MRP</td>
-                <td className="py-2">Brand, bill no., selling/purchase price, size, colour</td>
+                <td className="py-2 pr-3">{t('help.req.quick')}</td>
+                <td className="py-2 pr-3">{t('help.req.quick.required')}</td>
+                <td className="py-2">{t('help.req.quick.optional')}</td>
               </tr>
               <tr className="border-t border-zinc-200 dark:border-zinc-800">
-                <td className="py-2 pr-3">Sale</td>
-                <td className="py-2 pr-3">Scan, quantity, price</td>
-                <td className="py-2">Credit to a colleague</td>
+                <td className="py-2 pr-3">{t('help.req.sale')}</td>
+                <td className="py-2 pr-3">{t('help.req.sale.required')}</td>
+                <td className="py-2">{t('help.req.sale.optional')}</td>
               </tr>
               <tr className="border-t border-zinc-200 dark:border-zinc-800">
-                <td className="py-2 pr-3">Company</td>
-                <td className="py-2 pr-3">Name</td>
-                <td className="py-2">Contact, phone, GSTIN, notes</td>
+                <td className="py-2 pr-3">{t('help.req.company')}</td>
+                <td className="py-2 pr-3">{t('help.req.company.required')}</td>
+                <td className="py-2">{t('help.req.company.optional')}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </Section>
 
-      <Section id="tips" title="Tips & suggestions" intro="How to move all existing stock into the app quickly.">
-        <h3 className="font-semibold">Plan for old stock</h3>
+      <Section id="tips" title={t('help.tips.title')} intro={t('help.tips.intro')}>
+        <h3 className="font-semibold">{t('help.tips.plan')}</h3>
         <Steps
-          items={[
-            <>Go <strong>shelf by shelf</strong> (one category at a time) — the app keeps the category for the next item.</>,
-            <>Count the pieces of one design and size together, tag them as one item with that count.</>,
-            <>Print <strong>today&apos;s labels</strong> at the end of each session and stick them the same day, so nothing is mixed up.</>,
-            <>Put labels in the same place on every item (e.g. on the price tag or inside the collar).</>,
-            <>Two catalog people can work at the same time on different shelves.</>,
-          ]}
+          items={
+            hi
+              ? HI.plan
+              : [
+                  <>Go <strong>shelf by shelf</strong> (one category at a time) — the app keeps the category for the next item.</>,
+                  <>Count the pieces of one design and size together, tag them as one item with that count.</>,
+                  <>Print <strong>today&apos;s labels</strong> at the end of each session and stick them the same day, so nothing is mixed up.</>,
+                  <>Put labels in the same place on every item (e.g. on the price tag or inside the collar).</>,
+                  <>Two catalog people can work at the same time on different shelves.</>,
+                ]
+          }
         />
-        <h3 className="font-semibold">Good habits</h3>
+        <h3 className="font-semibold">{t('help.tips.habits')}</h3>
         <ul className="list-disc pl-5">
-          <li>Always check the photo at the counter before recording a sale.</li>
-          <li>Use one name for one design (&ldquo;Cotton Straight Kurta&rdquo;), so sizes and colours group together.</li>
-          <li>Give the <em>Purchase price</em> right only to people the owner fully trusts.</li>
-          <li>Printing from a phone: open the labels page → Print → choose your printer or &ldquo;Save as PDF&rdquo;.</li>
+          {hi ? (
+            HI.habits.map((item, i) => <li key={i}>{item}</li>)
+          ) : (
+            <>
+              <li>Always check the photo at the counter before recording a sale.</li>
+              <li>Use one name for one design (&ldquo;Cotton Straight Kurta&rdquo;), so sizes and colours group together.</li>
+              <li>Give the <em>Purchase price</em> right only to people the owner fully trusts.</li>
+              <li>Printing from a phone: open the labels page → Print → choose your printer or &ldquo;Save as PDF&rdquo;.</li>
+            </>
+          )}
         </ul>
       </Section>
 
-      <Section id="faq" title="Problems & fixes" intro="Camera, scanner, PIN, printing.">
+      <Section id="faq" title={t('help.faq.title')} intro={t('help.faq.intro')}>
         <dl className="flex flex-col gap-3">
-          {[
-            ['The camera does not open', 'Allow the camera for this site in the browser settings and reload. It only works on the https:// address.'],
-            ['The camera does not read the barcode', 'Hold the label flat in the green box, 15–20 cm away, in good light, and wait a second for focus. You can always type the number under the barcode.'],
-            ['"No item found"', 'This item has no label in the app yet. A catalog person can tag it with Tag old stock.'],
-            ['"Only N left in stock"', 'Stock in the app is lower than on the shelf. Ask a person with the Stock right to receive the missing pieces.'],
-            ['I cannot see Catalog or Prices', 'The owner has not given you that right. Ask them to tick it in Staff & permissions.'],
-            ['Wrong PIN', 'Check your name is selected. The owner can set a new PIN.'],
-            ['Photo will not upload', 'Try a smaller photo or better signal; photos are reduced automatically. Up to 8 photos per product.'],
-          ].map(([q, a]) => (
+          {(
+            [
+              ['help.faq.camera', 'help.faq.camera.fix'],
+              ['help.faq.read', 'help.faq.read.fix'],
+              ['help.faq.notFound', 'help.faq.notFound.fix'],
+              ['help.faq.onlyLeft', 'help.faq.onlyLeft.fix'],
+              ['help.faq.noRight', 'help.faq.noRight.fix'],
+              ['help.faq.pin', 'help.faq.pin.fix'],
+              ['help.faq.photo', 'help.faq.photo.fix'],
+            ] as const
+          ).map(([q, a]) => (
             <div key={q}>
-              <dt className="font-semibold">{q}</dt>
-              <dd className={muted}>{a}</dd>
+              <dt className="font-semibold">{t(q)}</dt>
+              <dd className={muted}>{t(a)}</dd>
             </div>
           ))}
         </dl>
       </Section>
 
       <p className={`text-center text-xs ${muted}`}>
-        Still stuck? Tell the owner what you tapped and what you saw. <Link href="/pos" className={link}>Back to selling</Link>
+        {t('help.stillStuck')} <Link href="/pos" className={link}>{t('help.backToSelling')}</Link>
       </p>
-      <h2 className={`${sectionTitle} sr-only`}>End of help</h2>
+      <h2 className={`${sectionTitle} sr-only`}>{t('help.end')}</h2>
     </main>
   );
 }

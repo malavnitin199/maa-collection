@@ -5,11 +5,13 @@ import { useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { feedback } from '@/features/feedback/sounds';
+import { useT } from '@/features/i18n/i18n-provider';
 import { findRestockItemsAction, receiveStockAction, type RestockItem } from '@/server/actions/admin';
 
 type Line = RestockItem & { quantity: number };
 
 export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id: string; name: string }[]; initialSupplierId?: string }) {
+  const t = useT();
   const router = useRouter();
   const [supplierId, setSupplierId] = useState(initialSupplierId ?? '');
   const [billNumber, setBillNumber] = useState('');
@@ -45,7 +47,7 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
       const found = await findRestockItemsAction(code);
       if (found.length === 0) {
         signal('error');
-        setMessage(`Nothing found for "${code}". New item? Use "+ Stock" to create it.`);
+        setMessage(t('stk.receive.notFound', { code }));
       } else if (found.length === 1) {
         signal('ok');
         addItem(found[0]);
@@ -80,7 +82,7 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
     <div className="flex flex-col gap-4">
       <section className={`${card} flex flex-col gap-3`}>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Supplier (optional)
+          {t('stk.receive.supplierOptional')}
           <select
             value={supplierId}
             onChange={(e) => {
@@ -89,7 +91,7 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
             }}
             className={input}
           >
-            <option value="">No supplier</option>
+            <option value="">{t('stk.noSupplier')}</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -98,7 +100,7 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Supplier bill no. (optional)
+          {t('stk.billNoOptional')}
           <input
             value={billNumber}
             onChange={(e) => {
@@ -110,8 +112,8 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
         </label>
       </section>
 
-      <ScanInput label="Scan a tag, or type SKU / name" onScan={find} busy={busy} result={scanResult} />
-      <p className={`-mt-2 text-xs ${muted}`}>Scanning the same tag again adds one more piece.</p>
+      <ScanInput label={t('stk.receive.scanLabel')} onScan={find} busy={busy} result={scanResult} />
+      <p className={`-mt-2 text-xs ${muted}`}>{t('stk.receive.scanAgain')}</p>
 
       {message && (
         <p role="alert" className={errorBox}>
@@ -121,14 +123,14 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
 
       {choices && (
         <section className={`${card} flex flex-col gap-2`}>
-          <h2 className="text-sm font-semibold">Which one?</h2>
+          <h2 className="text-sm font-semibold">{t('stk.receive.whichOne')}</h2>
           <ul data-testid="restock-choices" className="flex flex-col gap-1">
             {choices.map((item) => (
               <li key={item.id}>
                 <button type="button" onClick={() => addItem(item)} className={`${secondaryButton} w-full text-left`}>
                   {item.name} · {item.color} · {item.size}
                   <span className={`block text-xs ${muted}`}>
-                    {item.sku} · {item.stock} in stock{item.supplierName && ` · ${item.supplierName}`}
+                    {item.sku} · {t('stk.inStock', { n: item.stock })}{item.supplierName && ` · ${item.supplierName}`}
                   </span>
                 </button>
               </li>
@@ -146,21 +148,21 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
                   {line.name} · {line.color} · {line.size}
                 </span>
                 <span className={`block text-xs ${muted}`}>
-                  {line.sku} · now {line.stock} → {line.stock + line.quantity}
+                  {line.sku} · {t('stk.receive.nowTo', { from: line.stock, to: line.stock + line.quantity })}
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-1">
-                <button type="button" aria-label={`One less ${line.name} ${line.size}`} onClick={() => setQuantity(line.id, line.quantity - 1)} className={`${secondaryButton} px-3`}>
+                <button type="button" aria-label={t('stk.receive.oneLess', { name: line.name, size: line.size })} onClick={() => setQuantity(line.id, line.quantity - 1)} className={`${secondaryButton} px-3`}>
                   −
                 </button>
                 <input
-                  aria-label={`Pieces of ${line.name} ${line.color} ${line.size}`}
+                  aria-label={t('stk.receive.piecesOf', { name: line.name, color: line.color, size: line.size })}
                   inputMode="numeric"
                   value={line.quantity}
                   onChange={(e) => setQuantity(line.id, /^\d+$/.test(e.target.value) ? Number(e.target.value) : 0)}
                   className={`${input} w-14 text-center`}
                 />
-                <button type="button" aria-label={`One more ${line.name} ${line.size}`} onClick={() => setQuantity(line.id, line.quantity + 1)} className={`${secondaryButton} px-3`}>
+                <button type="button" aria-label={t('stk.receive.oneMore', { name: line.name, size: line.size })} onClick={() => setQuantity(line.id, line.quantity + 1)} className={`${secondaryButton} px-3`}>
                   +
                 </button>
               </span>
@@ -170,7 +172,11 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
       )}
 
       <button type="button" disabled={busy || totalPieces === 0} onClick={save} className={`${primaryButton} py-3 text-lg`}>
-        {busy ? 'Saving…' : totalPieces === 0 ? 'Scan items to receive' : `Receive ${totalPieces} piece${totalPieces === 1 ? '' : 's'} and print labels`}
+        {busy
+          ? t('common.saving')
+          : totalPieces === 0
+            ? t('stk.receive.scanToReceive')
+            : t(totalPieces === 1 ? 'stk.receive.save.one' : 'stk.receive.save.other', { n: totalPieces })}
       </button>
     </div>
   );

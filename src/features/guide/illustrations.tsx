@@ -189,9 +189,8 @@ export function CountArt() {
   );
 }
 
-/** Goods flow: supplier → receive → tag → shelf → sold → reports. */
-export function StockFlowArt() {
-  const stops = ['Supplier', 'Receive', 'Tag', 'Shelf', 'Sell', 'Report'];
+/** Goods flow: supplier → receive → tag → shelf → sold → reports. `labels`: the six stop names (another language). */
+export function StockFlowArt({ labels: stops = ['Supplier', 'Receive', 'Tag', 'Shelf', 'Sell', 'Report'] }: { labels?: readonly string[] }) {
   return (
     <Svg h={110}>
       <path d="M22 50H258" className={line} strokeWidth="3" />
@@ -243,9 +242,8 @@ export function LoginArt() {
   );
 }
 
-/** Owner ticks rights for a person. */
-export function TeamArt() {
-  const rights = ['Catalog', 'Prices', 'Stock', 'Purchase'];
+/** Owner ticks rights for a person. `labels`: the four right names (another language). */
+export function TeamArt({ labels: rights = ['Catalog', 'Prices', 'Stock', 'Purchase'] }: { labels?: readonly string[] }) {
   return (
     <Svg h={140}>
       <circle cx="50" cy="60" r="22" className={soft} />

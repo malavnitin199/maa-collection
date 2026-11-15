@@ -2,6 +2,8 @@
 
 import { Fragment, useState } from 'react';
 import { muted, secondaryButton } from '@/components/ui/styles';
+import { useT } from '@/features/i18n/i18n-provider';
+import type { MessageKey } from '@/lib/i18n';
 import { sizeFieldName } from '@/lib/size-prices';
 
 // Narrow boxes for a phone (16px text: no zoom on focus). Green = this size's own price.
@@ -18,7 +20,7 @@ export function hasOwnText(own: Partial<RatesText> | undefined): boolean {
   return Boolean(own?.mrp?.trim() || own?.price?.trim() || own?.cost?.trim());
 }
 
-const FIELD_LABEL = { mrp: 'MRP', price: 'selling price', cost: 'purchase price' } as const;
+const FIELD_LABEL: Record<keyof RatesText, MessageKey> = { mrp: 'stk.rates.aria.mrp', price: 'stk.rates.aria.price', cost: 'stk.rates.aria.cost' };
 
 /**
  * "Price by size": one row per size with MRP / selling / purchase boxes. An
@@ -43,6 +45,7 @@ export function SizeRatesEditor({
   /** Give the boxes form field names (forms sent as FormData). */
   named?: boolean;
 }) {
+  const t = useT();
   const ownSizes = sizes.filter((size) => hasOwnText(own[size]));
   const [open, setOpen] = useState(ownSizes.length > 0);
   const fields = showCost ? (['mrp', 'price', 'cost'] as const) : (['mrp', 'price'] as const);
@@ -61,23 +64,20 @@ export function SizeRatesEditor({
       className="rounded-lg border border-zinc-200 dark:border-zinc-800"
     >
       <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-3 py-2.5 text-sm font-medium">
-        Price by size (optional)
+        {t('stk.rates.title')}
         {ownSizes.length > 0 && (
           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-            {ownSizes.length} size{ownSizes.length === 1 ? '' : 's'} with own price
+            {t(ownSizes.length === 1 ? 'stk.rates.ownCount.one' : 'stk.rates.ownCount.other', { n: ownSizes.length })}
           </span>
         )}
       </summary>
       <div className="flex flex-col gap-2 px-3 pb-3">
-        <p className={`text-xs ${muted}`}>
-          Grey = the default above, for all sizes. Type a number to give one size its own price — it applies to every colour of
-          that size. Clear the box to go back to the default.
-        </p>
+        <p className={`text-xs ${muted}`}>{t('stk.rates.help')}</p>
         <div className={`grid items-center gap-1.5 ${showCost ? 'grid-cols-[3rem_repeat(3,minmax(0,1fr))]' : 'grid-cols-[3rem_repeat(2,minmax(0,1fr))]'}`}>
-          <span className={`text-xs ${muted}`}>Size</span>
+          <span className={`text-xs ${muted}`}>{t('stk.size')}</span>
           <span className={`text-xs ${muted}`}>MRP ₹</span>
-          <span className={`text-xs ${muted}`}>Selling ₹</span>
-          {showCost && <span className={`text-xs ${muted}`}>Purchase ₹</span>}
+          <span className={`text-xs ${muted}`}>{t('stk.rates.selling')}</span>
+          {showCost && <span className={`text-xs ${muted}`}>{t('stk.rates.purchase')}</span>}
           {sizes.map((size) => {
             const mine = hasOwnText(own[size]);
             return (
@@ -96,7 +96,7 @@ export function SizeRatesEditor({
                       value={value}
                       onChange={(e) => onChange({ ...own, [size]: { ...own[size], [field]: e.target.value } })}
                       placeholder={placeholder(size, field)}
-                      aria-label={`Size ${size} ${FIELD_LABEL[field]}`}
+                      aria-label={t(FIELD_LABEL[field], { size })}
                       className={value.trim() ? ownBox : defaultBox}
                     />
                   );
@@ -107,7 +107,7 @@ export function SizeRatesEditor({
         </div>
         {ownSizes.length > 0 && (
           <button type="button" onClick={() => onChange({})} className={`${secondaryButton} self-start`}>
-            All sizes back to default
+            {t('stk.rates.reset')}
           </button>
         )}
       </div>

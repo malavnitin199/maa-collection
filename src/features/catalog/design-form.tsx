@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { hasOwnText, SizeRatesEditor, type OwnRatesText } from '@/features/catalog/size-rates-editor';
+import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
+import type { MessageKey } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
 import { ratesForSize, sortSizes } from '@/lib/size-prices';
 import { addPhotoToItemsAction, createDesignAction } from '@/server/actions/admin';
@@ -14,10 +16,10 @@ import { photoForm, PhotoSlot, type PickedPhoto } from './photo-slot';
 type Option = { id: string; name: string };
 type CategoryOption = Option & { code: string; sizes?: string[] };
 
-const SIZE_GROUPS = [
-  { label: 'Clothing', sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'] },
-  { label: 'Waist / chest', sizes: ['26', '28', '30', '32', '34', '36', '38', '40', '42', '44'] },
-  { label: 'Other', sizes: ['Free'] },
+const SIZE_GROUPS: { label: MessageKey; sizes: string[] }[] = [
+  { label: 'stk.design.group.clothing', sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'] },
+  { label: 'stk.design.group.waist', sizes: ['26', '28', '30', '32', '34', '36', '38', '40', '42', '44'] },
+  { label: 'stk.design.group.other', sizes: ['Free'] },
 ];
 
 function Chip({ selected, onClick, children, label }: { selected: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
@@ -50,6 +52,7 @@ export function DesignForm({
   /** Purchase (code) price field — only with the "costs" right. */
   showCost?: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [supplierId, setSupplierId] = useState(initialSupplierId ?? '');
   const [categoryId, setCategoryId] = useState('');
@@ -109,10 +112,10 @@ export function DesignForm({
     <>
       {otherGroups.map((group) => (
         <div key={group.label} className="flex flex-col gap-1.5">
-          <span className={`text-xs ${muted}`}>{group.label}</span>
+          <span className={`text-xs ${muted}`}>{t(group.label)}</span>
           <div className="flex flex-wrap gap-2">
             {group.sizes.map((size) => (
-              <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={`Size ${size}`}>
+              <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={t('stk.sizeAria', { size })}>
                 {size}
               </Chip>
             ))}
@@ -175,7 +178,7 @@ export function DesignForm({
         const photo = colorPhotos[color.toLowerCase()];
         const ids = result.items.filter((item) => item.color.toLowerCase() === color.toLowerCase()).map((item) => item.id);
         if (!photo || ids.length === 0) continue;
-        setProgress(`Saving photo of ${color}…`);
+        setProgress(t('stk.design.savingPhotoOf', { color }));
         const saved = await addPhotoToItemsAction(ids, photoForm(photo));
         if (saved.error) photoFailed = true;
       }
@@ -193,9 +196,9 @@ export function DesignForm({
       className="flex flex-col gap-5"
     >
       <section className={`${card} flex flex-col gap-3`}>
-        <h2 className="font-semibold">1. From whom, what kind</h2>
+        <h2 className="font-semibold">{t('stk.design.step1')}</h2>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Supplier
+          {t('stk.supplier')}
           <select
             required
             value={supplierId}
@@ -207,7 +210,7 @@ export function DesignForm({
             }}
             className={input}
           >
-            <option value="">Choose supplier…</option>
+            <option value="">{t('stk.chooseSupplier')}</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -217,16 +220,16 @@ export function DesignForm({
         </label>
         {suppliers.length === 0 && (
           <p className="text-sm">
-            No suppliers yet.{' '}
+            {t('stk.design.noSuppliers')}{' '}
             <Link href="/admin/suppliers" className={link}>
-              Add one first →
+              {t('stk.design.addOneFirst')}
             </Link>
           </p>
         )}
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Category
+          {t('stk.category')}
           <select required value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={input}>
-            <option value="">Choose category…</option>
+            <option value="">{t('stk.chooseCategory')}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} ({c.code})
@@ -235,33 +238,33 @@ export function DesignForm({
           </select>
         </label>
         <p className={`text-xs ${muted}`}>
-          Missing a category?{' '}
+          {t('stk.design.missingCategory')}{' '}
           <Link href="/admin/categories" className={link}>
-            Add it here
+            {t('stk.design.addItHere')}
           </Link>
           .
         </p>
       </section>
 
       <section className={`${card} flex flex-col gap-3`}>
-        <h2 className="font-semibold">2. The design</h2>
+        <h2 className="font-semibold">{t('stk.design.step2')}</h2>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Design / product name
-          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cotton Straight Kurta" className={input} />
+          {t('stk.design.name')}
+          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('stk.design.namePlaceholder')} className={input} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Brand
+          {t('stk.brand')}
           <input required value={brand} onChange={(e) => setBrand(e.target.value)} className={input} />
         </label>
       </section>
 
       <section className={`${card} flex flex-col gap-3`}>
-        <h2 className="font-semibold">3. Sizes and colours</h2>
+        <h2 className="font-semibold">{t('stk.design.step3')}</h2>
         {category && categorySizes.length > 0 ? (
           <>
             <div data-testid="category-size-chips" className="flex flex-col gap-1.5">
               <span className="flex items-center justify-between gap-2 text-xs font-medium text-emerald-800 dark:text-emerald-300">
-                Sizes for {category.name}
+                {t('stk.design.sizesFor', { name: category.name })}
                 <button
                   type="button"
                   onClick={() => {
@@ -270,25 +273,25 @@ export function DesignForm({
                   }}
                   className={`text-xs ${link}`}
                 >
-                  Pick all
+                  {t('stk.design.pickAll')}
                 </button>
               </span>
               <div className="flex flex-wrap gap-2">
                 {categorySizes.map((size) => (
-                  <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={`Size ${size}`}>
+                  <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={t('stk.sizeAria', { size })}>
                     {size}
                   </Chip>
                 ))}
               </div>
             </div>
             <details open={sizes.some((size) => !inCategory(size)) || undefined}>
-              <summary className={`cursor-pointer text-xs ${muted}`}>More sizes</summary>
+              <summary className={`cursor-pointer text-xs ${muted}`}>{t('stk.design.moreSizes')}</summary>
               <div className="mt-2 flex flex-col gap-3">{sizeGroups}</div>
             </details>
           </>
         ) : (
           <>
-            {!category && <p className={`text-xs ${muted}`}>Choose the category above to see its sizes first.</p>}
+            {!category && <p className={`text-xs ${muted}`}>{t('stk.design.chooseCategoryFirst')}</p>}
             {sizeGroups}
           </>
         )}
@@ -297,7 +300,7 @@ export function DesignForm({
             {sizes
               .filter((s) => !isListed(s))
               .map((size) => (
-                <Chip key={size} selected onClick={() => toggleSize(size)} label={`Size ${size}`}>
+                <Chip key={size} selected onClick={() => toggleSize(size)} label={t('stk.sizeAria', { size })}>
                   {size} ✕
                 </Chip>
               ))}
@@ -313,24 +316,24 @@ export function DesignForm({
                 addCustomSize();
               }
             }}
-            placeholder="Other size, e.g. 5-6Y"
-            aria-label="Other size"
+            placeholder={t('stk.design.otherSizePlaceholder')}
+            aria-label={t('stk.design.otherSize')}
             className={`w-full ${input}`}
           />
           <button type="button" onClick={addCustomSize} className={secondaryButton}>
-            Add size
+            {t('stk.design.addSize')}
           </button>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">Colours</span>
+          <span className="text-sm font-medium">{t('stk.design.colours')}</span>
           {colors.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {colors.map((color) => (
                 <Chip
                   key={color}
                   selected
-                  label={`Remove colour ${color}`}
+                  label={t('stk.design.removeColour', { color })}
                   onClick={() => {
                     setColors(colors.filter((c) => c !== color));
                     touched();
@@ -351,12 +354,12 @@ export function DesignForm({
                   addColor();
                 }
               }}
-              placeholder="e.g. Blue, Red"
-              aria-label="Colour"
+              placeholder={t('stk.design.colourPlaceholder')}
+              aria-label={t('stk.colour')}
               className={`w-full ${input}`}
             />
             <button type="button" onClick={addColor} className={secondaryButton}>
-              Add colour
+              {t('stk.design.addColour')}
             </button>
           </div>
         </div>
@@ -364,9 +367,9 @@ export function DesignForm({
         {allColors.length > 0 && (
           <div data-testid="colour-photos" className="flex flex-col gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-900">
             <span className="text-sm font-medium">
-              Photo of each colour <span className={`font-normal ${muted}`}>(optional)</span>
+              {t('stk.design.photoEach')} <span className={`font-normal ${muted}`}>{t('stk.optional')}</span>
             </span>
-            <p className={`text-xs ${muted}`}>Every size of that colour gets the photo, so staff can recognise the item at the counter.</p>
+            <p className={`text-xs ${muted}`}>{t('stk.design.photoHelp')}</p>
             <ul className="flex flex-col gap-2">
               {allColors.map((color) => (
                 <li key={color} className="flex flex-wrap items-center justify-between gap-2">
@@ -393,24 +396,24 @@ export function DesignForm({
       </section>
 
       <section className={`${card} flex flex-col gap-3`}>
-        <h2 className="font-semibold">4. Rates and pieces</h2>
+        <h2 className="font-semibold">{t('stk.design.step4')}</h2>
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm font-medium">
             MRP (₹)
             <input required inputMode="decimal" value={mrp} onChange={(e) => setMrp(e.target.value)} className={input} />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Selling price (₹)
-            <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={mrp || 'same as MRP'} className={input} />
+            {t('stk.sellingPrice')}
+            <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={mrp || t('stk.sameAsMrp')} className={input} />
           </label>
           {showCost && (
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Purchase price (₹)
-              <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="code price, optional" className={input} />
+              {t('stk.purchasePrice')}
+              <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder={t('stk.codePriceOptional')} className={input} />
             </label>
           )}
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Pieces each
+            {t('stk.design.piecesEach')}
             <input inputMode="numeric" value={quantityEach} onChange={(e) => setQuantityEach(e.target.value)} className={input} />
           </label>
         </div>
@@ -426,41 +429,51 @@ export function DesignForm({
             showCost={showCost}
           />
         )}
-        <p className={`text-xs ${muted}`}>
-          These rates are for every size and colour{bySize ? ', unless a size has its own price' : ''}. &ldquo;Pieces each&rdquo; = pieces of every
-          size in every colour. Purchase (code) price is admin-only; salesmen never see it.
-        </p>
+        <p className={`text-xs ${muted}`}>{t(bySize ? 'stk.design.ratesNoteBySize' : 'stk.design.ratesNote')}</p>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Supplier bill no. (optional)
+          {t('stk.billNoOptional')}
           <input value={billNumber} onChange={(e) => setBillNumber(e.target.value)} className={input} />
         </label>
       </section>
 
       <section data-testid="design-preview" className={`${card} flex flex-col gap-2 bg-zinc-50 dark:bg-zinc-900`}>
-        <h2 className="font-semibold">Preview</h2>
+        <h2 className="font-semibold">{t('stk.design.preview')}</h2>
         {combos === 0 ? (
-          <p className={`text-sm ${muted}`}>Pick at least one size and add at least one colour.</p>
+          <p className={`text-sm ${muted}`}>{t('stk.design.previewEmpty')}</p>
         ) : (
           <>
             <p className="text-sm">
-              <strong>{combos}</strong> new item{combos === 1 ? '' : 's'} ({allColors.length} colour{allColors.length === 1 ? '' : 's'} ×{' '}
-              {sizes.length} size{sizes.length === 1 ? '' : 's'}), each with its own barcode
-              {category && ` and SKU MAA-${category.code}-…`}. <strong>{combos * qty}</strong> pieces in total
-              {purchaseValue > 0 && <> · purchase value {formatPaise(purchaseValue)}</>}.
+              <strong>{combos}</strong>{' '}
+              {t(
+                category
+                  ? combos === 1
+                    ? 'stk.design.itemsSku.one'
+                    : 'stk.design.itemsSku.other'
+                  : combos === 1
+                    ? 'stk.design.items.one'
+                    : 'stk.design.items.other',
+                {
+                  colours: t(allColors.length === 1 ? 'stk.design.colourCount.one' : 'stk.design.colourCount.other', { n: allColors.length }),
+                  sizes: t(sizes.length === 1 ? 'stk.design.sizeCount.one' : 'stk.design.sizeCount.other', { n: sizes.length }),
+                  code: category?.code ?? '',
+                },
+              )}{' '}
+              <strong>{combos * qty}</strong>{' '}
+              {purchaseValue > 0 ? t('stk.design.piecesTotalValue', { value: formatPaise(purchaseValue) }) : t('stk.design.piecesTotal')}
             </p>
             {ownRows.length > 0 && (
               <ul data-testid="size-rates-preview" className="flex flex-col gap-0.5 text-sm">
                 {sizeRows.map((r) => (
                   <li key={r.size}>
                     <strong>{r.size}</strong>: {money(r.pricePaise)} <span className={muted}>· MRP {money(r.mrpPaise)}</span>
-                    {showCost && r.costPaise !== null && <span className={muted}> · purchase {money(r.costPaise)}</span>}
-                    <span className={`text-xs ${muted}`}> {r.own ? '(own price)' : '(default)'}</span>
+                    {showCost && r.costPaise !== null && <span className={muted}> · {t('stk.design.purchase', { value: money(r.costPaise) })}</span>}
+                    <span className={`text-xs ${muted}`}> {r.own ? t('stk.design.ownPrice') : t('stk.design.default')}</span>
                   </li>
                 ))}
               </ul>
             )}
             {aboveMrp.length > 0 && (
-              <p className="text-sm text-red-600">Selling price is above MRP{bySize ? ` for size ${aboveMrp.join(', ')}` : ''}.</p>
+              <p className="text-sm text-red-600">{bySize ? t('stk.design.aboveMrpSizes', { sizes: aboveMrp.join(', ') }) : t('stk.design.aboveMrp')}</p>
             )}
             <ul className={`flex flex-wrap gap-1 text-xs ${muted}`}>
               {allColors.flatMap((c) =>
@@ -481,7 +494,7 @@ export function DesignForm({
         </p>
       )}
       <button type="submit" disabled={saving || combos === 0} className={`${primaryButton} py-3 text-lg`}>
-        {saving ? (progress ?? 'Saving…') : `Save ${combos || ''} item${combos === 1 ? '' : 's'} and print labels`}
+        {saving ? (progress ?? t('common.saving')) : t(combos === 1 ? 'stk.design.save.one' : 'stk.design.save.other', { n: combos || '' })}
       </button>
     </form>
   );

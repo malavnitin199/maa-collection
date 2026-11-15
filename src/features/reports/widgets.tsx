@@ -1,6 +1,6 @@
 import { card, muted, sectionTitle } from '@/components/ui/styles';
 import { formatPaise } from '@/lib/money';
-import { tEnglish, type T } from '@/lib/i18n';
+import { formatDate, tEnglish, type Locale, type T } from '@/lib/i18n';
 import type { ActivityEntry } from '@/server/services/reports';
 
 export function StatTile({ label, value, sub, testId }: { label: string; value: string; sub?: string; testId?: string }) {
@@ -15,10 +15,21 @@ export function StatTile({ label, value, sub, testId }: { label: string; value: 
   );
 }
 
-const time = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
 /** Sales and exchanges, newest first. `t` words it in the reader's language (English by default). */
-export function ActivityList({ entries, title, testId, t = tEnglish }: { entries: ActivityEntry[]; title: string; testId?: string; t?: T }) {
+export function ActivityList({
+  entries,
+  title,
+  testId,
+  t = tEnglish,
+  locale = 'en',
+}: {
+  entries: ActivityEntry[];
+  title: string;
+  testId?: string;
+  t?: T;
+  locale?: Locale;
+}) {
   return (
     <section className="flex flex-col gap-2">
       <h2 className={sectionTitle}>{title}</h2>
@@ -39,7 +50,7 @@ export function ActivityList({ entries, title, testId, t = tEnglish }: { entries
                 )}
                 {entry.swap ? `${t('activity.returned')} ${entry.swap.returned} → ${entry.swap.issued}` : entry.description}
                 <span className={`block text-xs ${muted}`}>
-                  {time.format(new Date(entry.at))} · {t('activity.creditedTo', { name: entry.creditedTo })}
+                  {formatDate(locale, entry.at, 'dateTime')} · {t('activity.creditedTo', { name: entry.creditedTo })}
                   {entry.recordedBy !== entry.creditedTo && ` · ${t('activity.recordedBy', { name: entry.recordedBy })}`}
                 </span>
               </span>
