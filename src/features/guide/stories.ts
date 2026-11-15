@@ -179,6 +179,11 @@ export const STORIES: Story[] = [
         text: { en: '**Record sale** ✓', hi: '**बिक्री दर्ज करें** ✓' },
         say: { en: 'Tap Record sale. Done! Stock goes down on every phone.', hi: 'बिक्री दर्ज करें दबाएँ। हो गया! स्टॉक हर फ़ोन पर घट जाता है।' },
       },
+      {
+        scene: { kind: 'buttons', items: [{ en: 'Enter by hand', hi: 'हाथ से दर्ज करें' }], tap: 0 },
+        text: { en: "Tag won't scan? **Enter by hand**", hi: 'टैग नहीं पढ़ा? **हाथ से दर्ज करें**' },
+        say: { en: 'If the tag will not scan, tap Enter by hand: type the item and the price. The owner checks it later.', hi: 'टैग स्कैन न हो तो हाथ से दर्ज करें दबाएँ: आइटम और दाम लिखें। मालिक बाद में जाँचेंगे।' },
+      },
     ],
     tip: { en: 'Selling for a colleague? Choose them in “Credit sale to”.', hi: 'साथी के लिए बेच रहे हैं? “बिक्री किसके नाम” में उन्हें चुनें।' },
     open: { href: '/pos', label: { en: 'Open Sell', hi: 'बेचें खोलें' } },
@@ -432,6 +437,31 @@ export const STORIES: Story[] = [
       },
     ],
     open: { href: '/admin/team', label: { en: 'Sales team', hi: 'बिक्री टीम' } },
+  },
+  {
+    id: 'approve',
+    audience: 'owner',
+    title: { en: 'Approve sales', hi: 'बिक्री मंज़ूर करें' },
+    goal: { en: 'Only what you approve counts.', hi: 'जो आप मंज़ूर करें वही गिना जाए।' },
+    steps: [
+      {
+        scene: { kind: 'list' },
+        text: { en: 'Open **Approvals**', hi: '**मंज़ूरी** खोलें' },
+        say: { en: 'Home shows how many entries are waiting. Open Approvals to see them day by day.', hi: 'होम पर दिखता है कितनी एंट्री बाकी हैं। मंज़ूरी खोलें, दिन के हिसाब से देखें।' },
+      },
+      {
+        scene: { kind: 'card', button: { en: 'Approve', hi: 'मंज़ूर' } },
+        text: { en: 'Check price, **Approve**', hi: 'दाम देखें, **मंज़ूर** करें' },
+        say: { en: 'Check the price against the MRP and the usual price. Tap Approve, or approve the whole day at once.', hi: 'दाम को MRP और आम दाम से मिलाएँ। मंज़ूर दबाएँ, या पूरे दिन को एक साथ मंज़ूर करें।' },
+      },
+      {
+        scene: { kind: 'buttons', items: [{ en: 'Reject', hi: 'नामंज़ूर' }], tap: 0 },
+        text: { en: 'Wrong? **Reject** with a reason', hi: 'गलत? कारण के साथ **नामंज़ूर**' },
+        say: { en: 'Something wrong? Reject it with a reason. The pieces go back into stock and the sale leaves the totals.', hi: 'कुछ गलत है? कारण के साथ नामंज़ूर करें। पीस वापस स्टॉक में जाते हैं और बिक्री कुल से हट जाती है।' },
+      },
+    ],
+    tip: { en: 'Entries marked “By hand” need a closer look.', hi: '“हाथ से” वाली एंट्री ध्यान से देखें।' },
+    open: { href: '/admin/approvals', label: { en: 'Open Approvals', hi: 'मंज़ूरी खोलें' } },
   },
   {
     id: 'reports',

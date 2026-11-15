@@ -12,15 +12,15 @@ export async function GET(request: Request) {
   const param = new URL(request.url).searchParams.get('period');
   const period: ReportPeriod = REPORT_PERIODS.some((p) => p.value === param) ? (param as ReportPeriod) : 'month';
   const { saleRows, exchangeRows } = await salesExportRows(await requestDb(), STORE_ID, period);
-  const header = ['Type', 'Date & time (IST)', 'SKU', 'Product', 'Size', 'Colour', 'Category', 'Company', 'Qty', 'Unit price ₹', 'Amount ₹', 'MRP ₹', 'Purchase ₹', 'Profit ₹', 'Credited to', 'Recorded by'];
+  const header = ['Type', 'Status', 'By hand', 'Date & time (IST)', 'SKU', 'Product', 'Size', 'Colour', 'Category', 'Company', 'Qty', 'Unit price ₹', 'Amount ₹', 'MRP ₹', 'Purchase ₹', 'Profit ₹', 'Credited to', 'Recorded by'];
   const rows = [
     ...saleRows.map((s) => [
-      'Sale', stamp.format(s.at), s.sku, s.name, s.size, s.color, s.category, s.company ?? '', s.quantity,
+      'Sale', s.status, s.manual ? 'yes' : '', stamp.format(s.at), s.sku, s.name, s.size, s.color, s.category ?? '', s.company ?? '', s.quantity,
       rupees(s.unitPricePaise), rupees(s.totalPaise), rupees(s.mrpPaise), rupees(s.costPaise),
       s.costPaise === null ? '' : rupees(s.quantity * (s.unitPricePaise - s.costPaise)), s.creditedTo, s.recordedBy,
     ]),
     ...exchangeRows.map((e) => [
-      'Exchange', stamp.format(e.at), e.issuedSku, `Returned ${e.returnedQuantity} × ${e.returnedName} → ${e.issuedQuantity} × ${e.issuedName}`,
+      'Exchange', e.status, '', stamp.format(e.at), e.issuedSku, `Returned ${e.returnedQuantity} × ${e.returnedName} → ${e.issuedQuantity} × ${e.issuedName}`,
       '', '', '', '', e.issuedQuantity, '', rupees(e.differencePaise), '', '', '', e.creditedTo, e.recordedBy,
     ]),
   ];

@@ -27,6 +27,11 @@ async function MySales() {
         <StatTile label={t('my.today')} value={formatPaise(todayNet)} sub={`${pcs(data.mine.today.units)} · ${count(data.mine.today.count)}`} testId="my-today" />
         <StatTile label={t('my.month')} value={formatPaise(monthNet)} sub={`${pcs(data.mine.month.units)} · ${count(data.mine.month.count)}`} testId="my-month" />
       </div>
+      {data.waiting.month.count > 0 && (
+        <p data-testid="my-waiting" className="rounded-xl bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          {t('my.waiting', { n: data.waiting.month.count, amount: formatPaise(data.waiting.month.totalPaise) })}
+        </p>
+      )}
       <section className="flex flex-col gap-2">
         <h2 className={sectionTitle}>{t('my.forOthers')}</h2>
         <p data-testid="for-others" className="text-sm">

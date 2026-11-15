@@ -176,6 +176,12 @@ test('sales team dashboard: number of sellers, each one’s share and daily sale
   await expect(page).toHaveURL(/\/pos$/);
 
   await login(page, 'Owner');
+  // Pradeep's sale waits for the owner (plan v12): approve it so it counts on the team page.
+  await page.goto('/admin/approvals');
+  const waiting = page.getByTestId('approval-entry').filter({ hasText: `Team Kurta ${run}` });
+  await waiting.getByRole('button', { name: 'Approve' }).click();
+  await expect(waiting).toHaveCount(0);
+  await page.goto('/admin/dashboard');
   await page.getByRole('link', { name: 'Sales team graphs →' }).click();
   await expect(page).toHaveURL(/\/admin\/team$/);
   await expect(page.getByRole('heading', { name: 'Sales team', level: 1 })).toBeVisible();
@@ -305,4 +311,72 @@ test('scan feedback: green tick, buzz and shake on a failed scan, "Sale done" ca
   await expect(done).toContainText('₹700.00');
   await expect(done).toBeHidden({ timeout: 5000 }); // closes by itself
   await expect(page.getByRole('status')).toContainText('by Balram');
+});
+
+test('sell without scanning, then the owner approves one entry and rejects another with a reason; totals and stock follow', async ({ page }) => {
+  await login(page, 'Owner');
+  const barcode = await addProduct(page, { name: `Plain Shirt ${run}`, size: 'L', mrp: '1499', price: '1299', stock: '2' });
+
+  // Nitin: the tag would not scan → enter by hand; then a normal scanned sale. Both wait for the owner.
+  await login(page, 'Nitin');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await page.getByTestId('by-hand').click();
+  await page.getByLabel('Item name').fill(`Blue kurti ${run}`);
+  await page.getByLabel('Size (optional)').fill('M');
+  await page.getByLabel(/Sale price/).fill('850');
+  await page.getByRole('button', { name: 'Record sale' }).click();
+  await expect(page.getByRole('status')).toContainText(`Sold 1 × Blue kurti ${run} @ ₹850.00 each — by Nitin. Sent to the owner to check.`);
+  await expect(page.getByTestId('by-hand-form')).toHaveCount(0);
+  await page.goto('/pos');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await scan(page, barcode);
+  await page.getByRole('button', { name: 'Sell this item' }).click();
+  await page.getByLabel(/Sale price/).fill('1100');
+  await page.getByRole('button', { name: 'Record sale' }).click();
+  await expect(page.getByRole('status')).toContainText('Stock left: 1. Sent to the owner to check.');
+
+  // The desktop and phone runs share one database, so every check is keyed by this run's names.
+  await page.goto('/pos/my-sales');
+  await expect(page.getByTestId('my-waiting')).toContainText('Waiting for the owner:');
+  const mine = (name: string) => page.getByTestId('my-activity').getByRole('listitem').filter({ hasText: name });
+  await expect(mine(`Blue kurti ${run}`).getByTestId('status-waiting')).toBeVisible();
+  await expect(mine(`Blue kurti ${run}`)).toContainText('By hand');
+  await expect(mine(`Plain Shirt ${run}`).getByTestId('status-waiting')).toBeVisible();
+  await page.goto('/admin/approvals');
+  await expect(page).not.toHaveURL(/\/admin\/approvals/); // salesmen have no Approvals
+
+  // Owner: Home shows the count; approve the by-hand sale, reject the scanned one with a reason.
+  await login(page, 'Owner');
+  await expect(page.getByTestId('approvals-waiting')).toContainText('entries waiting');
+  await page.getByTestId('approvals-waiting').click();
+  await expect(page).toHaveURL(/\/admin\/approvals$/);
+  const byHand = page.getByTestId('approval-entry').filter({ hasText: `Blue kurti ${run}` });
+  await expect(byHand).toHaveCount(1);
+  await expect(byHand).toContainText('By hand');
+  await expect(byHand).toContainText('No MRP (entered by hand)');
+  await byHand.getByRole('button', { name: 'Approve' }).click();
+  await expect(page.getByRole('status')).toHaveText('Approved.');
+  await expect(byHand).toHaveCount(0);
+
+  const scanned = page.getByTestId('approval-entry').filter({ hasText: `Plain Shirt ${run}` });
+  await expect(scanned).toContainText('MRP ₹1,499.00 · usual ₹1,299.00');
+  await expect(scanned).toContainText('27% below MRP');
+  await scanned.getByRole('button', { name: 'Reject' }).click();
+  await scanned.getByRole('radio', { name: 'Wrong price' }).click();
+  await scanned.getByLabel('Note (optional)').fill(`He said 1,000 ${run}`);
+  await scanned.getByRole('button', { name: 'Reject entry' }).click();
+  await expect(page.getByRole('status')).toHaveText('Rejected. 1 pcs back in stock.');
+  await expect(scanned).toHaveCount(0);
+  const decided = page.getByTestId('recent-decisions').getByRole('listitem').filter({ hasText: `Plain Shirt ${run}` });
+  await expect(decided).toContainText('Wrong price');
+  await expect(decided).toContainText(`He said 1,000 ${run}`);
+
+  // Nitin: the piece is back on the shelf; the rejected sale is marked, the approved one no longer waits.
+  await login(page, 'Nitin');
+  await scan(page, barcode);
+  await expect(page.getByTestId('details-stock')).toHaveText('2');
+  await page.goto('/pos/my-sales');
+  await expect(mine(`Plain Shirt ${run}`).getByTestId('status-rejected')).toBeVisible();
+  await expect(mine(`Blue kurti ${run}`).getByTestId('status-waiting')).toHaveCount(0);
+  await expect(mine(`Blue kurti ${run}`).getByTestId('status-rejected')).toHaveCount(0);
 });

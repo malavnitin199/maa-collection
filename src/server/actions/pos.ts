@@ -8,7 +8,8 @@ import { errorText, getT } from '@/server/i18n';
 import { DomainError } from '@/server/services/errors';
 import { findReturnableSales, recordExchange, type ReturnableSale } from '@/server/services/exchanges';
 import { findProductByCode, toCounterProduct, type CounterProduct } from '@/server/services/products';
-import { recordSale } from '@/server/services/sales';
+import { MANUAL_NAME_MAX, MANUAL_SIZE_MAX, recordSale } from '@/server/services/sales';
+import { statusesForSales, type ApprovalStatus } from '@/server/services/approvals';
 import { imageSrc, mainImages } from '@/server/services/images';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -40,7 +41,9 @@ export async function lookupProductAction(code: string): Promise<ActionResult<Co
 
 const saleSchema = z.object({
   operationId: z.string().min(8).max(100),
-  productId: z.uuid(),
+  // A scanned item, or what the salesman typed when the tag would not scan (plan v12).
+  productId: z.uuid().optional(),
+  manual: z.object({ name: z.string().max(MANUAL_NAME_MAX), size: z.string().max(MANUAL_SIZE_MAX).optional() }).optional(),
   quantity: z.number().int(),
   unitPricePaise: z.number().int(),
   soldBy: z.uuid(),
@@ -48,12 +51,14 @@ const saleSchema = z.object({
 
 export async function recordSaleAction(
   input: z.input<typeof saleSchema>,
-): Promise<ActionResult<{ stockLeft: number; totalPaise: number; duplicate: boolean }>> {
+): Promise<ActionResult<{ stockLeft: number; totalPaise: number; duplicate: boolean; status: ApprovalStatus }>> {
   const current = await requireStaff();
   return run(async () => {
     const data = saleSchema.parse(input);
-    const result = await recordSale(await getDb(), STORE_ID, { ...data, recordedBy: current.id });
-    return { stockLeft: result.stockLeft, totalPaise: result.sale.totalPaise, duplicate: result.duplicate };
+    const db = await getDb();
+    const result = await recordSale(db, STORE_ID, { ...data, recordedBy: current.id });
+    const status = (await statusesForSales(db, [result.sale.id])).get(result.sale.id) ?? 'waiting';
+    return { stockLeft: result.stockLeft, totalPaise: result.sale.totalPaise, duplicate: result.duplicate, status };
   });
 }
 

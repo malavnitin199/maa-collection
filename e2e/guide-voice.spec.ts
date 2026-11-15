@@ -53,7 +53,7 @@ test('a lesson plays as a story: few words, the voice says more, and it moves on
   const story = page.getByRole('dialog', { name: 'Sell an item' });
   const text = story.getByTestId('story-text');
   await expect(text).toHaveText('Scan the tag');
-  await expect(story.getByTestId('story-count')).toHaveText('1 of 4');
+  await expect(story.getByTestId('story-count')).toHaveText('1 of 5');
   // On screen: three words. The voice gives the fuller guidance.
   await expect.poll(async () => (await spoken(page)).at(-1)).toEqual({ text: 'Tap Sell, then Scan with camera, and hold the tag in the box. You hear a ting.', lang: 'en-IN' });
 
@@ -76,13 +76,15 @@ test('a lesson plays as a story: few words, the voice says more, and it moves on
   await expect(story.getByRole('button', { name: 'Voice' })).toHaveAttribute('aria-pressed', 'false');
   const before = (await spoken(page)).length;
   await story.getByRole('button', { name: 'Next step' }).click();
-  await expect(text).toHaveText('Scan, price, record.');
+  await expect(text).toHaveText("Tag won't scan? Enter by hand");
   expect((await spoken(page)).length).toBe(before);
+  await story.getByRole('button', { name: 'Next step' }).click();
+  await expect(text).toHaveText('Scan, price, record.');
 
   // "Got it" ticks the lesson and returns to the list.
   await story.getByRole('button', { name: 'Got it ✓' }).click();
   await expect(story).toBeHidden();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 15 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 16 learned');
   await expect(page).not.toHaveURL(/#sell$/);
 });
 
@@ -108,7 +110,7 @@ test('practice sale at the end of the Sell lesson: above MRP is refused, then "S
   await fakeVoice(page);
   await page.goto('/guide#sell');
   const story = page.getByRole('dialog', { name: 'Sell an item' });
-  for (let i = 0; i < 4; i++) await story.getByRole('button', { name: 'Next step' }).click();
+  for (let i = 0; i < 5; i++) await story.getByRole('button', { name: 'Next step' }).click();
   await story.getByRole('button', { name: 'Try it: practice a sale' }).click();
   const practice = story.getByTestId('practice-sale');
   await practice.getByRole('button', { name: 'Scan this tag' }).click();
