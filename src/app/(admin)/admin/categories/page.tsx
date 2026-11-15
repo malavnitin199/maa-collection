@@ -36,6 +36,9 @@ async function CategoryList() {
                 <span className={`block text-xs ${muted}`}>
                   {c.productCount} products · {c.stockUnits} pcs
                 </span>
+                <span data-testid="category-sizes" className={`block text-xs ${muted}`}>
+                  Sizes: {c.sizes.length > 0 ? c.sizes.join(' · ') : 'not set'}
+                </span>
               </span>
               <span className={`text-sm ${link}`}>Edit</span>
             </summary>
@@ -59,7 +62,7 @@ export default function CategoriesPage() {
     <main className="flex flex-col gap-5">
       <div>
         <h1 className="text-2xl font-semibold">Categories</h1>
-        <p className={`text-sm ${muted}`}>The kinds of items you sell. Each has a short code used in SKUs.</p>
+        <p className={`text-sm ${muted}`}>The kinds of items you sell. Each has a short code used in SKUs and the sizes it comes in.</p>
       </div>
       <Suspense fallback={null}>
         <AddCategory />

@@ -232,7 +232,7 @@ export async function updateSupplierAction(supplierId: string, _prev: FormState,
 export async function createCategoryAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requirePermission('catalog');
   try {
-    const created = await createCategory(await getDb(), STORE_ID, { name: text(formData, 'name'), code: text(formData, 'code') });
+    const created = await createCategory(await getDb(), STORE_ID, { name: text(formData, 'name'), code: text(formData, 'code'), sizes: text(formData, 'sizes') });
     revalidatePath('/admin', 'layout');
     return { message: `${created.name} added with code ${created.code}.` };
   } catch (error) {
@@ -247,6 +247,7 @@ export async function updateCategoryAction(categoryId: string, _prev: FormState,
       name: text(formData, 'name'),
       code: text(formData, 'code'),
       active: formData.get('active') === 'on',
+      sizes: text(formData, 'sizes'),
     });
     revalidatePath('/admin', 'layout');
     return { message: 'Saved.' };

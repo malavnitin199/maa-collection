@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, productImages, products, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
+import { cleanSizeList, MAX_SIZES } from '@/lib/size-lists';
 import { DomainError, isUniqueViolation } from './errors';
 
 const int = (expression: ReturnType<typeof sql>) => sql<number>`${expression}`.mapWith(Number);
@@ -27,6 +28,7 @@ export async function listCategories(db: Db, storeId: string, { activeOnly = fal
       storeId: categories.storeId,
       name: categories.name,
       code: categories.code,
+      sizes: categories.sizes,
       active: categories.active,
       createdAt: categories.createdAt,
       productCount: int(sql`count(${products.id})`),
@@ -46,16 +48,30 @@ function cleanCode(code: string | undefined | null): string | null {
   return value;
 }
 
-export async function createCategory(db: Db, storeId: string, input: { name: string; code?: string | null }): Promise<Category> {
+/** A category's size list: cleaned, in the given order, short sizes, at most MAX_SIZES. */
+function checkedSizes(input: string | readonly string[] | undefined): string[] {
+  const sizes = cleanSizeList(input ?? []);
+  if (sizes.length > MAX_SIZES) throw new DomainError(`Up to ${MAX_SIZES} sizes per category.`);
+  const long = sizes.find((s) => s.length > 12);
+  if (long) throw new DomainError(`Size "${long}" is too long (up to 12 characters).`);
+  return sizes;
+}
+
+export async function createCategory(
+  db: Db,
+  storeId: string,
+  input: { name: string; code?: string | null; sizes?: string | readonly string[] },
+): Promise<Category> {
   const name = input.name.trim();
   if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).');
+  const sizes = checkedSizes(input.sizes);
   let code = cleanCode(input.code);
   if (!code) {
     const taken = new Set((await db.select({ code: categories.code }).from(categories).where(eq(categories.storeId, storeId))).map((r) => r.code));
     code = suggestCategoryCode(name, taken);
   }
   try {
-    const [created] = await db.insert(categories).values({ storeId, name, code }).returning();
+    const [created] = await db.insert(categories).values({ storeId, name, code, sizes }).returning();
     return created;
   } catch (error) {
     if (isUniqueViolation(error)) throw new DomainError('A category with that name or code already exists.');
@@ -63,22 +79,24 @@ export async function createCategory(db: Db, storeId: string, input: { name: str
   }
 }
 
-/** Rename / recode / (de)activate. Renaming also updates the name shown on its products. */
+/** Rename / recode / (de)activate / change sizes. Renaming also updates the name shown on its products. */
 export async function updateCategory(
   db: Db,
   storeId: string,
   id: string,
-  input: { name: string; code: string; active: boolean },
+  input: { name: string; code: string; active: boolean; sizes?: string | readonly string[] },
 ): Promise<Category> {
   const name = input.name.trim();
   if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).');
   const code = cleanCode(input.code);
+  // Leaving sizes out keeps the current list.
+  const sizes = input.sizes === undefined ? undefined : checkedSizes(input.sizes);
   if (!code) throw new DomainError('Enter a 2–3 letter code.');
   try {
     return await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(categories)
-        .set({ name, code, active: input.active })
+        .set({ name, code, active: input.active, ...(sizes ? { sizes } : {}) })
         .where(and(eq(categories.storeId, storeId), eq(categories.id, id)))
         .returning();
       if (!updated) throw new DomainError('Category not found.');

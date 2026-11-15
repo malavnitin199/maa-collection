@@ -69,6 +69,8 @@ export const categories = pgTable(
     storeId: text('store_id').notNull().references(() => stores.id),
     name: text('name').notNull(),
     code: text('code').notNull(),
+    /** Sizes this category comes in, shop order (tags print them all; stock entry offers them first). */
+    sizes: text('sizes').array().notNull().default(sql`'{}'::text[]`),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

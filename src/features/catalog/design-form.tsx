@@ -11,7 +11,7 @@ import { ratesForSize, sortSizes } from '@/lib/size-prices';
 import { createDesignAction } from '@/server/actions/admin';
 
 type Option = { id: string; name: string };
-type CategoryOption = Option & { code: string };
+type CategoryOption = Option & { code: string; sizes?: string[] };
 
 const SIZE_GROUPS = [
   { label: 'Clothing', sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'] },
@@ -96,6 +96,27 @@ export function DesignForm({
   const combos = sizes.length * allColors.length;
   const qty = /^\d+$/.test(quantityEach) ? Number(quantityEach) : 0;
   const category = categories.find((c) => c.id === categoryId);
+  // The category's sizes come first; every other size stays one tap away under "More sizes".
+  const categorySizes = category?.sizes ?? [];
+  const inCategory = (size: string) => categorySizes.some((c) => c.toLowerCase() === size.toLowerCase());
+  const otherGroups = SIZE_GROUPS.map((g) => ({ ...g, sizes: g.sizes.filter((size) => !inCategory(size)) })).filter((g) => g.sizes.length > 0);
+  const isListed = (size: string) => inCategory(size) || SIZE_GROUPS.some((g) => g.sizes.includes(size));
+  const sizeGroups = (
+    <>
+      {otherGroups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-1.5">
+          <span className={`text-xs ${muted}`}>{group.label}</span>
+          <div className="flex flex-wrap gap-2">
+            {group.sizes.map((size) => (
+              <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={`Size ${size}`}>
+                {size}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      ))}
+    </>
+  );
 
   // Price by size needs 2+ sizes; what the preview shows is exactly what is sent.
   const orderedSizes = sortSizes(sizes);
@@ -221,22 +242,45 @@ export function DesignForm({
 
       <section className={`${card} flex flex-col gap-3`}>
         <h2 className="font-semibold">3. Sizes and colours</h2>
-        {SIZE_GROUPS.map((group) => (
-          <div key={group.label} className="flex flex-col gap-1.5">
-            <span className={`text-xs ${muted}`}>{group.label}</span>
-            <div className="flex flex-wrap gap-2">
-              {group.sizes.map((size) => (
-                <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={`Size ${size}`}>
-                  {size}
-                </Chip>
-              ))}
+        {category && categorySizes.length > 0 ? (
+          <>
+            <div data-testid="category-size-chips" className="flex flex-col gap-1.5">
+              <span className="flex items-center justify-between gap-2 text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                Sizes for {category.name}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSizes((current) => [...current, ...categorySizes.filter((c) => !current.some((s) => s.toLowerCase() === c.toLowerCase()))]);
+                    touched();
+                  }}
+                  className={`text-xs ${link}`}
+                >
+                  Pick all
+                </button>
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {categorySizes.map((size) => (
+                  <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={`Size ${size}`}>
+                    {size}
+                  </Chip>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-        {sizes.filter((s) => !SIZE_GROUPS.some((g) => g.sizes.includes(s))).length > 0 && (
+            <details open={sizes.some((size) => !inCategory(size)) || undefined}>
+              <summary className={`cursor-pointer text-xs ${muted}`}>More sizes</summary>
+              <div className="mt-2 flex flex-col gap-3">{sizeGroups}</div>
+            </details>
+          </>
+        ) : (
+          <>
+            {!category && <p className={`text-xs ${muted}`}>Choose the category above to see its sizes first.</p>}
+            {sizeGroups}
+          </>
+        )}
+        {sizes.filter((s) => !isListed(s)).length > 0 && (
           <div className="flex flex-wrap gap-2">
             {sizes
-              .filter((s) => !SIZE_GROUPS.some((g) => g.sizes.includes(s)))
+              .filter((s) => !isListed(s))
               .map((size) => (
                 <Chip key={size} selected onClick={() => toggleSize(size)} label={`Size ${size}`}>
                   {size} ✕

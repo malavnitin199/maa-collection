@@ -17,7 +17,7 @@ async function Quick({ searchParams }: { searchParams: Promise<{ supplier?: stri
   return (
     <QuickAddForm
       suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
-      categories={categoryRows.map(({ id, name, code }) => ({ id, name, code }))}
+      categories={categoryRows.map(({ id, name, code, sizes }) => ({ id, name, code, sizes }))}
       initialSupplierId={supplierRows.some((s) => s.id === supplier) ? supplier : undefined}
       showCost={can(me, 'costs')}
     />

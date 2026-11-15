@@ -4,6 +4,7 @@ import { STORE_ID, STORE_NAME, STORE_TIMEZONE } from '../lib/app-config.ts';
 import { hashPin, randomPin } from '../server/security/pin.ts';
 import type { Db } from './client.ts';
 import { categories, products, staff, stockMovements, stores, suppliers } from './schema/index.ts';
+import { DEFAULT_CATEGORY_SIZES } from '../lib/size-lists.ts';
 
 /** Owner's staff list (plan v2, D-ST-1). The admin can add more in the app. */
 export const SEED_STAFF = [
@@ -58,12 +59,11 @@ export async function seedDemoData(
     const categoryRows = await tx
       .insert(categories)
       .values(
-        categoryNames.map((name) => ({
-          storeId: STORE_ID,
-          name,
+        categoryNames.map((name) => {
           // Matches the demo SKUs: T-Shirt → TS, Kurta → KU, …
-          code: (name.toUpperCase().replace(/[^A-Z]/g, '') + 'XX').slice(0, 2),
-        })),
+          const code = (name.toUpperCase().replace(/[^A-Z]/g, '') + 'XX').slice(0, 2);
+          return { storeId: STORE_ID, name, code, sizes: DEFAULT_CATEGORY_SIZES[code] ?? [] };
+        }),
       )
       .returning();
     const categoryId = (name: string) => categoryRows.find((c) => c.name === name)?.id;
@@ -120,6 +120,9 @@ export const SAMPLE_CATEGORIES = [
   { name: 'Dupatta', code: 'DU' },
   { name: 'Leggings', code: 'LG' },
   { name: 'Night Suit', code: 'NS' },
+  // Jeans by gender (owner decision, ADR-015).
+  { name: 'Ladies Jeans', code: 'LJ' },
+  { name: 'Gents Jeans', code: 'GJ' },
 ] as const;
 
 /** Adds the sample suppliers/categories that don't exist yet; safe to run repeatedly. */
@@ -131,7 +134,7 @@ export async function addSampleCatalog(db: Db): Promise<{ suppliers: number; cat
     .returning({ id: suppliers.id });
   const addedCategories = await db
     .insert(categories)
-    .values(SAMPLE_CATEGORIES.map((c) => ({ storeId: STORE_ID, ...c })))
+    .values(SAMPLE_CATEGORIES.map((c) => ({ storeId: STORE_ID, ...c, sizes: DEFAULT_CATEGORY_SIZES[c.code] ?? [] })))
     .onConflictDoNothing()
     .returning({ id: categories.id });
   return { suppliers: addedSuppliers.length, categories: addedCategories.length };

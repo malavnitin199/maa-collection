@@ -6,6 +6,7 @@ import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButt
 import { checkTagBarcodeAction, tagOldStockAction, type OldStockResult, type TagLookup } from '@/server/actions/admin';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { itemLink } from '@/lib/item-link';
+import { tagSizeRange } from '@/lib/size-lists';
 import { HangTag } from './hang-tag';
 import { PhotoPickers } from './photo-manager';
 import { resizePhoto } from './resize-photo';
@@ -17,8 +18,11 @@ type Saved = Extract<OldStockResult, { ok: true }>;
 const QUICK_SIZES = ['Free', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36', '38', '40'];
 let photoKey = 1;
 
-export function OldStockForm({ categories, suppliers, showCost }: { categories: (Option & { code: string })[]; suppliers: Option[]; showCost: boolean }) {
+export function OldStockForm({ categories, suppliers, showCost }: { categories: (Option & { code: string; sizes?: string[] })[]; suppliers: Option[]; showCost: boolean }) {
   const [categoryId, setCategoryId] = useState('');
+  // The category's own sizes first (shop order), then the usual ones.
+  const categorySizes = categories.find((c) => c.id === categoryId)?.sizes ?? [];
+  const sizeChoices = [...categorySizes, ...QUICK_SIZES.filter((s) => !categorySizes.some((c) => c.toLowerCase() === s.toLowerCase()))];
   const [supplierId, setSupplierId] = useState('');
   const [name, setName] = useState('');
   const [size, setSize] = useState('');
@@ -127,7 +131,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
           {saved.photoError && <span className="block text-red-700">Photo problem: {saved.photoError}</span>}
         </p>
         <div className="mx-auto">
-          <HangTag product={saved.product} qrValue={itemLink(window.location.origin, saved.product.barcode)} />
+          <HangTag product={saved.product} sizes={tagSizeRange(categorySizes, [], saved.product.size)} qrValue={itemLink(window.location.origin, saved.product.barcode)} />
         </div>
         <button type="button" onClick={nextItem} className={`${primaryButton} py-3 text-lg`} autoFocus>
           Next item →
@@ -255,7 +259,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">Size</span>
           <div className="flex flex-wrap gap-1.5">
-            {QUICK_SIZES.map((s) => (
+            {sizeChoices.map((s, i) => (
               <button
                 key={s}
                 type="button"
@@ -265,7 +269,11 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
                   touched();
                 }}
                 className={`rounded-full border px-3 py-1.5 text-sm ${
-                  size === s ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 dark:border-zinc-700'
+                  size === s
+                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                    : i < categorySizes.length
+                      ? 'border-emerald-600 font-semibold text-emerald-800 dark:text-emerald-300'
+                      : 'border-zinc-300 dark:border-zinc-700'
                 }`}
               >
                 {s}

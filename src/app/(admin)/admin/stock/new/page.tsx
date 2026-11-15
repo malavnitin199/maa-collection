@@ -17,7 +17,7 @@ async function NewStock({ searchParams }: { searchParams: Promise<{ supplier?: s
   return (
     <DesignForm
       suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
-      categories={categoryRows.map(({ id, name, code }) => ({ id, name, code }))}
+      categories={categoryRows.map(({ id, name, code, sizes }) => ({ id, name, code, sizes }))}
       initialSupplierId={supplierRows.some((s) => s.id === supplier) ? supplier : undefined}
       showCost={can(me, 'costs')}
     />

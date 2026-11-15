@@ -50,6 +50,31 @@ describe('categories', () => {
   });
 });
 
+describe('category sizes', () => {
+  it('seeded categories carry their size lists; owner can set, change and keep them', async () => {
+    const rows = await listCategories(db, STORE_ID);
+    expect(rows.find((c) => c.code === 'KU')?.sizes).toEqual(['M', 'L', 'XL', 'XXL']);
+    expect(rows.find((c) => c.code === 'SA')?.sizes).toEqual(['Free']);
+    const ladies = await createCategory(db, STORE_ID, { name: 'Ladies Jeans 2', code: 'LX', sizes: '26, 28, 30, 32, 28' });
+    expect(ladies.sizes).toEqual(['26', '28', '30', '32']);
+    const changed = await updateCategory(db, STORE_ID, ladies.id, { name: 'Ladies Jeans 2', code: 'LX', active: true, sizes: '24, 26, 28, 30, 32' });
+    expect(changed.sizes).toEqual(['24', '26', '28', '30', '32']);
+    const kept = await updateCategory(db, STORE_ID, ladies.id, { name: 'Ladies Jeans 3', code: 'LX', active: true });
+    expect(kept.sizes).toEqual(['24', '26', '28', '30', '32']); // sizes left out = unchanged
+    await expect(createCategory(db, STORE_ID, { name: 'Too many', sizes: Array.from({ length: 21 }, (_, i) => String(i)) })).rejects.toThrow(/Up to 20 sizes/);
+    await expect(createCategory(db, STORE_ID, { name: 'Too long', sizes: 'Extra Extra Large Plus' })).rejects.toThrow(/too long/);
+  });
+
+  it("tags print the category's whole size list, with the piece's own size added if missing", async () => {
+    const { tagSizesFor } = await import('./products');
+    const kurta = (await findProductByCode(db, STORE_ID, 'MAA-KU-001'))!; // Kurta M (design has M, L)
+    const shirt = (await findProductByCode(db, STORE_ID, 'MAA-SH-001'))!; // Shirt in size 40
+    const sizes = await tagSizesFor(db, STORE_ID, [kurta, shirt]);
+    expect(sizes.get(kurta.id)).toEqual(['M', 'L', 'XL', 'XXL']);
+    expect(sizes.get(shirt.id)).toEqual(['S', 'M', 'L', 'XL', 'XXL', '40']);
+  });
+});
+
 describe('suppliers', () => {
   it('adds, validates and edits suppliers', async () => {
     const xyz = await createSupplier(db, STORE_ID, { name: 'XYZ Textiles', ...supplierInput });

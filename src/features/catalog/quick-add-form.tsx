@@ -21,7 +21,7 @@ export function QuickAddForm({
   showCost = true,
 }: {
   suppliers: Option[];
-  categories: (Option & { code: string })[];
+  categories: (Option & { code: string; sizes?: string[] })[];
   initialSupplierId?: string;
   /** Purchase (code) price field — only with the "costs" right. */
   showCost?: boolean;
@@ -120,6 +120,12 @@ export function QuickAddForm({
             <input value={billNumber} onChange={(e) => { setBillNumber(e.target.value); touched(); }} placeholder="optional" className={input} />
           </label>
         </div>
+        {/* Size suggestions from the chosen category. */}
+        <datalist id="category-sizes">
+          {(categories.find((c) => c.id === categoryId)?.sizes ?? []).map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
         <p className={`text-xs ${muted}`}>
           Missing something?{' '}
           <Link href="/admin/suppliers" className={link}>
@@ -177,7 +183,7 @@ export function QuickAddForm({
             </div>
             {row.more ? (
               <div className="grid grid-cols-2 gap-2">
-                <input aria-label={`Product ${index + 1} size`} value={row.size} onChange={(e) => update(row.key, { size: e.target.value })} placeholder="Size (Free)" className={input} />
+                <input aria-label={`Product ${index + 1} size`} list="category-sizes" value={row.size} onChange={(e) => update(row.key, { size: e.target.value })} placeholder="Size (Free)" className={input} />
                 <input aria-label={`Product ${index + 1} colour`} value={row.color} onChange={(e) => update(row.key, { color: e.target.value })} placeholder="Colour (Assorted)" className={input} />
               </div>
             ) : (

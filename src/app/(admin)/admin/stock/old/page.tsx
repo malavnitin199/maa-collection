@@ -17,7 +17,7 @@ async function Tagger() {
   ]);
   return (
     <OldStockForm
-      categories={categoryRows.map(({ id, name, code }) => ({ id, name, code }))}
+      categories={categoryRows.map(({ id, name, code, sizes }) => ({ id, name, code, sizes }))}
       suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
       showCost={can(me, 'costs')}
     />

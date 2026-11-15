@@ -1,7 +1,8 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { errorBox, input, muted, okBox, primaryButton } from '@/components/ui/styles';
+import { SIZE_PRESETS } from '@/lib/size-lists';
 import type { FormState } from '@/server/actions/admin';
 
 type Action = (state: FormState, formData: FormData) => Promise<FormState>;
@@ -72,13 +73,42 @@ export function SupplierForm({ action, initial, submitLabel }: { action: Action;
   );
 }
 
+/** A category's sizes, typed in shop order, with one-tap presets. */
+function SizesField({ initial }: { initial?: readonly string[] }) {
+  const [value, setValue] = useState((initial ?? []).join(', '));
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="flex flex-col gap-1 text-sm font-medium">
+        Sizes (in shop order)
+        <input name="sizes" value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g. S, M, L, XL, XXL" className={input} />
+      </label>
+      <div role="group" aria-label="Size presets" className="flex flex-wrap gap-2">
+        {SIZE_PRESETS.map((preset) => (
+          <button
+            key={preset.label}
+            type="button"
+            onClick={() => setValue(preset.sizes.join(', '))}
+            className="rounded-full border border-zinc-300 px-3 py-1 text-xs dark:border-zinc-700"
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+      <p className={`text-xs ${muted}`}>
+        Tags print all these sizes with a tick box each (this piece&apos;s size marked), and new stock offers them first. Leave
+        empty if sizes vary.
+      </p>
+    </div>
+  );
+}
+
 export function CategoryForm({
   action,
   initial,
   submitLabel,
 }: {
   action: Action;
-  initial?: { name: string; code: string; active: boolean };
+  initial?: { name: string; code: string; active: boolean; sizes?: readonly string[] };
   submitLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
@@ -98,6 +128,7 @@ export function CategoryForm({
         />
       </div>
       <p className={`text-xs ${muted}`}>The code goes into new SKUs (e.g. MAA-LE-001). Leave it empty to pick one automatically.</p>
+      <SizesField initial={initial?.sizes} />
       {initial && (
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="active" defaultChecked={initial.active} className="h-5 w-5" />
