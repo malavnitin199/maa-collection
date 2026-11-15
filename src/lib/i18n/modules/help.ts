@@ -3,7 +3,6 @@
  * English text is copied exactly from the screens; Hindi uses the shared word list
  * in docs/TECHNICAL_REFERENCE.md §15.
  * Help page plain text is here; its steps with bold/links are Hindi JSX in the page itself.
- * `help.routine.*` = the inventory routine table in the Guide.
  */
 export const helpEn = {
   // Help page: top
@@ -88,22 +87,6 @@ export const helpEn = {
   'help.backToSelling': 'Back to selling',
   'help.end': 'End of help',
 
-  // Guide: inventory routine table
-  'help.routine.caption': 'Inventory routine',
-  'help.routine.morning': 'Every morning · 5 min',
-  'help.routine.morning.text': 'Home: low stock. Catalog → Needs attention: items without photo, company or stock.',
-  'help.routine.arrive': 'When goods arrive',
-  'help.routine.arrive.text': 'Enter them the same day (new design / many products / more of existing) → print tags → attach → shelf.',
-  'help.routine.sale': 'Every sale or exchange',
-  'help.routine.sale.text': 'Always scan. Stock updates by itself on every phone.',
-  'help.routine.evening': 'Every evening',
-  'help.routine.evening.text': 'Print today’s labels; tag any piece still without a tag.',
-  'help.routine.week': 'Every week',
-  'help.routine.week.text': 'Reports → Not selling (move or discount) and Best sellers (reorder). Count one shelf against the stock on Products.',
-  'help.routine.month': 'Every month',
-  'help.routine.month.text': 'Download the sales and stock CSV for the accountant.',
-  'help.routine.note':
-    "Shelf has fewer pieces than the app (lost or damaged)? Tell the owner — reducing stock by hand isn't in the app yet, so the history stays honest.",
 } as const;
 
 export const helpHi: Record<keyof typeof helpEn, string> = {
@@ -183,20 +166,4 @@ export const helpHi: Record<keyof typeof helpEn, string> = {
   'help.backToSelling': 'वापस बिक्री पर',
   'help.end': 'मदद खत्म',
 
-  'help.routine.caption': 'स्टॉक का रोज़ का काम',
-  'help.routine.morning': 'हर सुबह · 5 मिनट',
-  'help.routine.morning.text': 'होम: कम स्टॉक। कैटलॉग → ध्यान दें: बिना फ़ोटो, कंपनी या स्टॉक वाले आइटम।',
-  'help.routine.arrive': 'जब माल आए',
-  'help.routine.arrive.text': 'उसी दिन ऐप में डालें (नया डिज़ाइन / कई प्रोडक्ट / पहले से मौजूद आइटम के और पीस) → टैग प्रिंट करें → लगाएँ → शेल्फ़ पर।',
-  'help.routine.sale': 'हर बिक्री या एक्सचेंज',
-  'help.routine.sale.text': 'हमेशा स्कैन करें। स्टॉक हर फ़ोन पर अपने आप बदल जाता है।',
-  'help.routine.evening': 'हर शाम',
-  'help.routine.evening.text': 'आज के लेबल प्रिंट करें; जिस पीस पर अब भी टैग नहीं है उसे टैग करें।',
-  'help.routine.week': 'हर हफ़्ते',
-  'help.routine.week.text':
-    'रिपोर्ट → नहीं बिक रहे (जगह बदलें या छूट दें) और सबसे ज़्यादा बिकने वाले (फिर से मँगाएँ)। एक शेल्फ़ गिनें और प्रोडक्ट में दिखे स्टॉक से मिलाएँ।',
-  'help.routine.month': 'हर महीने',
-  'help.routine.month.text': 'अकाउंटेंट के लिए बिक्री और स्टॉक की CSV डाउनलोड करें।',
-  'help.routine.note':
-    'शेल्फ़ पर ऐप से कम पीस हैं (खो गए या खराब हो गए)? मालिक को बताएँ — हाथ से स्टॉक घटाना अभी ऐप में नहीं है, ताकि हिसाब सच्चा रहे।',
 };

@@ -95,36 +95,3 @@ export function stopSpeaking(): void {
   }
   window.speechSynthesis.cancel();
 }
-
-/*
- * One reader at a time, and "Listen to all": players announce themselves on
- * window events. `guide-voice-start` {id} stops every other player;
- * `guide-voice-play` {id} asks a lesson to start (queue); `guide-voice-ended` {id}
- * says a lesson finished by itself, so the queue moves on.
- */
-export const VOICE_START = 'guide-voice-start';
-export const VOICE_PLAY = 'guide-voice-play';
-export const VOICE_ENDED = 'guide-voice-ended';
-
-let queue: string[] = [];
-
-export function announce(type: string, id: string): void {
-  window.dispatchEvent(new CustomEvent(type, { detail: { id } }));
-}
-
-/** Play these lessons one after another. */
-export function playQueue(ids: string[]): void {
-  queue = [...ids];
-  const first = queue.shift();
-  if (first) announce(VOICE_PLAY, first);
-}
-
-export function clearQueue(): void {
-  queue = [];
-}
-
-/** Called when a lesson finished by itself: start the next one in the queue, if any. */
-export function nextInQueue(): void {
-  const next = queue.shift();
-  if (next) announce(VOICE_PLAY, next);
-}

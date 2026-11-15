@@ -33,7 +33,7 @@ function parse(raw: string): string[] {
   }
 }
 
-function useDone() {
+export function useDone() {
   const done = parse(useSyncExternalStore(subscribe, snapshot, () => '[]'));
   const toggle = (id: string) => {
     const next = done.includes(id) ? done.filter((d) => d !== id) : [...done, id];
@@ -45,30 +45,6 @@ function useDone() {
     window.dispatchEvent(new Event(EVENT));
   };
   return { done, toggle };
-}
-
-const noop = () => () => {};
-
-export function LessonDone({ id, title }: { id: string; title: string }) {
-  const { done, toggle } = useDone();
-  const t = useT();
-  // Disabled until the page is interactive, so an early tap is never lost.
-  const ready = useSyncExternalStore(noop, () => true, () => false);
-  const checked = done.includes(id);
-  return (
-    <button
-      type="button"
-      aria-pressed={checked}
-      aria-label={t(checked ? 'guide.learnedFor' : 'guide.markLearnedFor', { title })}
-      disabled={!ready}
-      onClick={() => toggle(id)}
-      className={`self-start rounded-full border px-4 py-2 text-sm font-medium ${
-        checked ? 'border-brand-600 bg-brand-600 text-white' : 'border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
-      }`}
-    >
-      {checked ? t('guide.learned') : t('guide.markLearned')}
-    </button>
-  );
 }
 
 export function GuideProgress({ ids }: { ids: string[] }) {
@@ -85,9 +61,4 @@ export function GuideProgress({ ids }: { ids: string[] }) {
       </span>
     </div>
   );
-}
-
-export function LessonTick({ id }: { id: string }) {
-  const { done } = useDone();
-  return done.includes(id) ? <span className="text-brand-600">✓</span> : null;
 }

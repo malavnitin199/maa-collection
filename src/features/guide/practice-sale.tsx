@@ -12,7 +12,7 @@ import type { MessageKey } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
 import { useHydrated } from '@/features/scanning/scan-input';
 import { inStoreEan13 } from '@/features/scanning/ean13';
-import { announce, clearQueue, say, speechSupported, stopSpeaking, VOICE_START } from './voice';
+import { say, speechSupported, stopSpeaking } from './voice';
 
 /** The sample piece (same as the tag in "Read a tag"). Nothing here touches the shop's data. */
 const SAMPLE = { sku: 'MAA-KU-003', barcode: inStoreEan13(1), name: 'Cotton Straight Kurta', brand: 'Laxmi Fashion House', size: 'L', color: 'Blue', mrpPaise: 149900 };
@@ -42,8 +42,6 @@ export function PracticeSale() {
 
   const speak = (key: MessageKey) => {
     if (!voiceHelp || !canSpeak) return;
-    clearQueue();
-    announce(VOICE_START, 'practice'); // lesson readers stop
     say(t(key), { locale });
   };
 

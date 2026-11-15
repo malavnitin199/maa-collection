@@ -236,8 +236,11 @@ test('Hindi or English: switch on the login page or in the header; each person k
   await page.goto('/pos/my-sales');
   await expect(page.getByRole('heading', { name: 'मेरी बिक्री' })).toBeVisible();
   await page.goto('/guide');
-  await expect(page.getByRole('heading', { name: 'आइटम बेचें', level: 3 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'अपना स्टॉक संभालें', level: 3 })).toBeVisible(); // owner lessons in Hindi too
+  // A salesman lands on the selling lessons, in Hindi; owner lessons are in Hindi too.
+  const lessons = page.getByTestId('guide-lessons');
+  await expect(lessons.getByRole('button', { name: /आइटम बेचें/ })).toBeVisible();
+  await page.getByRole('button', { name: 'मालिक', exact: true }).click();
+  await expect(lessons.getByRole('button', { name: /स्टॉक सही रखें/ })).toBeVisible();
 });
 
 test('owner and catalog screens in Hindi: Home dashboard, products, stock entry, reports', async ({ page }) => {

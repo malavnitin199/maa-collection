@@ -598,22 +598,33 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   await page.getByRole('link', { name: 'New here?' }).click();
   await expect(page).toHaveURL(/\/guide#start$/);
   await expect(page.getByRole('heading', { name: 'Guide', level: 1 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Log in and find your way' })).toBeVisible();
-  // Every lesson is listed in the index and present on the page.
-  const index = page.getByRole('navigation', { name: 'Guide lessons' });
-  for (const title of ['Sell an item', 'Colours and day/night', 'Read a tag', 'New stock: one design in sizes × colours', 'Managing your inventory', 'Open an item from its QR code']) {
-    await expect(index.getByRole('link', { name: title })).toBeVisible();
-    await expect(page.getByRole('heading', { name: title, level: 3 })).toBeVisible();
-  }
-  // The tag lesson shows a real tag with its parts explained.
-  await expect(page.locator('#tag').getByTestId('hang-tag')).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Parts of a tag' }).getByRole('listitem')).toHaveCount(6);
-  // Ticking a lesson is remembered on this phone.
+  // "New here?" opens the first lesson straight away: one step at a time.
+  const story = page.getByRole('dialog', { name: 'Log in' });
+  await expect(story.getByTestId('story-text')).toHaveText('Tap your name');
+  await expect(story.getByTestId('story-count')).toHaveText('1 of 4');
+  await story.getByRole('button', { name: 'Close lesson' }).click();
+  await expect(story).toBeHidden();
+  // Lessons are grouped by part; each part shows only its own short lessons.
+  const lessons = page.getByTestId('guide-lessons');
+  for (const title of ['Log in', 'Language and colours', 'Read a tag']) await expect(lessons.getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  await page.getByRole('button', { name: 'Stock & tags', exact: true }).click();
+  for (const title of ['New design', 'Tag old stock', 'Print tags', 'More pieces arrived']) await expect(lessons.getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  await expect(lessons.getByRole('button', { name: /Log in/ })).toHaveCount(0);
+  // The tag lesson shows the real tag with one part ringed at a time.
+  await page.getByRole('button', { name: 'Everyone', exact: true }).click();
+  await lessons.getByRole('button', { name: /Read a tag/ }).click();
+  const tagStory = page.getByRole('dialog', { name: 'Read a tag' });
+  await expect(tagStory.getByTestId('hang-tag')).toBeVisible();
+  await expect(tagStory.getByTestId('story-text')).toHaveText('QR opens the item');
+  // Finishing a lesson ticks it, and that is remembered on this phone.
   await expect(page.getByTestId('guide-progress')).toContainText('0 of 15 learned');
-  await page.getByRole('button', { name: 'Mark as learned: Sell an item' }).click();
+  for (let i = 0; i < 5; i++) await tagStory.getByRole('button', { name: 'Next step' }).click();
+  await expect(tagStory.getByTestId('story-text')).toHaveText('Every part has a job.');
+  await tagStory.getByRole('button', { name: 'Got it ✓' }).click();
+  await expect(tagStory).toBeHidden();
   await expect(page.getByTestId('guide-progress')).toContainText('1 of 15 learned');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Learned: Sell an item' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 15 learned');
   // Quick help & fixes is still there.
   await page.getByRole('link', { name: 'Problems & fixes' }).click();
   await expect(page).toHaveURL(/\/help#faq$/);

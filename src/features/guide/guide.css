@@ -1,207 +1,192 @@
-/* Guide illustrations: small looping animations. Only for people who have not asked for reduced motion. */
+/*
+ * Guide story scenes (plan v10). One loop is --st (2.8 s). The rules outside
+ * the media query are the still picture people with reduced motion get: the
+ * end state of each scene. Animations only run when motion is welcome.
+ */
+.st-root { --st: 2.8s; }
+/* The scene grows on taller screens (transform doesn't take space, so the margin reserves it). */
+.st-stage { transform: scale(1.1); margin-block: 1rem; }
+@media (min-height: 760px) {
+  .st-stage { transform: scale(1.35); margin-block: 3.75rem; }
+}
+
+/* The finger: a soft dot at the control being pressed. */
+.st-tap {
+  position: absolute;
+  z-index: 5;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--b-400) 55%, transparent);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.st-tap::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid var(--b-500);
+  opacity: 0;
+}
+/* The ring around one part of the tag. */
+.st-ring {
+  position: absolute;
+  border-radius: 6px;
+  border: 2px solid var(--b-600);
+  background: color-mix(in oklab, var(--b-300) 25%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--b-400) 35%, transparent);
+  pointer-events: none;
+}
+/* Two pictures that take turns (before → after); still picture = after. */
+.st-a { opacity: 0; }
+.st-b { opacity: 1; }
+/* Three pictures in turn (1, 2, 3); still picture = the last. */
+.st-f3 { opacity: 0; }
+.st-f3[data-last] { opacity: 1; }
+.st-fill { background: var(--b-600); color: #fff; }
+.st-track { background: var(--b-600); }
+.st-knob { transform: translateX(16px); }
+.st-slide { transform: translateX(108%); }
+.st-night { opacity: 0.92; }
+.st-flash, .st-burst { opacity: 0; }
+.st-scanline { box-shadow: 0 0 8px 1px rgb(239 68 68 / 0.7); }
+.st-growx { transform-origin: left; }
+.st-growy { transform-origin: bottom; }
+.st-caret { opacity: 1; }
 
 @media (prefers-reduced-motion: no-preference) {
-  .g-scanline {
-    animation: g-scan 2.4s ease-in-out infinite;
-  }
-  .g-pop {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: g-pop 2.4s ease-out infinite;
-    animation-delay: var(--d, 0s);
-  }
-  .g-blink {
-    animation: g-blink 2.4s ease-in-out infinite;
-    animation-delay: var(--d, 0s);
-  }
-  .g-flash {
-    animation: g-flash 2.8s ease-out infinite;
-  }
-  .g-move {
-    animation: g-move 4s linear infinite;
-    animation-delay: var(--d, 0s);
-  }
-  .g-grow {
-    transform-box: fill-box;
-    transform-origin: bottom;
-    animation: g-grow 2.8s ease-out infinite;
-    animation-delay: var(--d, 0s);
-  }
-  .g-swap-a {
-    animation: g-swap-a 3s ease-in-out infinite;
-  }
-  .g-swap-b {
-    animation: g-swap-b 3s ease-in-out infinite;
-  }
-  .g-drop {
-    animation: g-drop 3s ease-in infinite;
-    animation-delay: var(--d, 0s);
-  }
-  .g-slide {
-    animation: g-slide 3.2s ease-in-out infinite;
-  }
-  .g-frame {
-    opacity: 0;
-    animation: g-frame 3.6s steps(1) infinite;
-    animation-delay: var(--d, 0s);
-  }
+  .st-tap { animation: st-tap var(--st) ease-in-out infinite; }
+  .st-tap::after { animation: st-ripple var(--st) ease-out infinite; }
+  .st-target { animation: st-target var(--st) ease-in-out infinite; }
+  .st-ring { animation: st-ring var(--st) ease-in-out infinite; }
+  .st-char { animation: st-char var(--st) linear infinite backwards; animation-delay: var(--d, 0s); }
+  .st-caret { animation: st-caret 0.9s steps(1) infinite; }
+  .st-pop { animation: st-pop var(--st) ease-out infinite backwards; animation-delay: var(--d, 0s); }
+  .st-burst { animation: st-burst var(--st) ease-out infinite; }
+  .st-a { animation: st-a var(--st) steps(1) infinite; }
+  .st-b { animation: st-b var(--st) steps(1) infinite; }
+  .st-f3 { animation: st-f3 var(--st) steps(1) infinite; animation-delay: calc(var(--i) * var(--st) / 3); }
+  .st-fill { animation: st-fill var(--st) ease-out infinite backwards; animation-delay: var(--d, 0s); }
+  .st-track { animation: st-track var(--st) ease-out infinite backwards; animation-delay: var(--d, 0s); }
+  .st-knob { animation: st-knob var(--st) ease-out infinite backwards; animation-delay: var(--d, 0s); }
+  .st-slide { animation: st-slide var(--st) ease-in-out infinite; }
+  .st-night { animation: st-night var(--st) ease-in-out infinite; }
+  .st-flash { animation: st-flash var(--st) ease-out infinite; }
+  .st-scanline { animation: st-scan 1.4s ease-in-out infinite alternate; }
+  .st-growx { animation: st-growx var(--st) ease-out infinite backwards; animation-delay: var(--d, 0s); }
+  .st-growy { animation: st-growy var(--st) ease-out infinite backwards; animation-delay: var(--d, 0s); }
+  .st-print { animation: st-print var(--st) ease-out infinite backwards; animation-delay: var(--d, 0s); }
+  /* Each new step slides in. */
+  .st-enter { animation: st-enter 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
 }
 
-@keyframes g-scan {
-  0%,
-  100% {
-    transform: translateY(-14px);
-  }
-  50% {
-    transform: translateY(14px);
-  }
+@keyframes st-tap {
+  0%, 14% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
+  28% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  38% { transform: translate(-50%, -50%) scale(0.72); }
+  48% { transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; }
+  92%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
 }
-@keyframes g-pop {
-  0%,
-  15% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  30%,
-  85% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0;
-  }
+@keyframes st-ripple {
+  0%, 36% { opacity: 0; transform: scale(0.7); }
+  40% { opacity: 0.9; }
+  72%, 100% { opacity: 0; transform: scale(2.4); }
 }
-@keyframes g-blink {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 1;
-  }
+@keyframes st-target {
+  0%, 34% { box-shadow: 0 0 0 0 transparent; }
+  44% { box-shadow: 0 0 0 5px color-mix(in oklab, var(--b-400) 60%, transparent); }
+  74%, 100% { box-shadow: 0 0 0 0 transparent; }
 }
-@keyframes g-flash {
-  0%,
-  70% {
-    opacity: 0;
-  }
-  75% {
-    opacity: 0.9;
-  }
-  100% {
-    opacity: 0;
-  }
+@keyframes st-ring {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--b-400) 35%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in oklab, var(--b-400) 15%, transparent); }
 }
-@keyframes g-move {
-  0% {
-    transform: translateX(0);
-    opacity: 0;
-  }
-  10%,
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(var(--dx, 240px));
-    opacity: 0;
-  }
+@keyframes st-char {
+  0% { opacity: 0; }
+  6%, 78% { opacity: 1; }
+  88%, 100% { opacity: 0; }
 }
-@keyframes g-grow {
-  0% {
-    transform: scaleY(0);
-  }
-  40%,
-  100% {
-    transform: scaleY(1);
-  }
+@keyframes st-caret {
+  0% { opacity: 1; }
+  50%, 100% { opacity: 0; }
 }
-@keyframes g-swap-a {
-  0%,
-  20% {
-    transform: translateX(0);
-  }
-  50%,
-  70% {
-    transform: translateX(110px);
-  }
-  100% {
-    transform: translateX(0);
-  }
+@keyframes st-pop {
+  0%, 42% { opacity: 0; transform: scale(0); }
+  56% { opacity: 1; transform: scale(1.25); }
+  64%, 90% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
 }
-@keyframes g-swap-b {
-  0%,
-  20% {
-    transform: translateX(0);
-  }
-  50%,
-  70% {
-    transform: translateX(-110px);
-  }
-  100% {
-    transform: translateX(0);
-  }
+@keyframes st-burst {
+  0%, 46% { opacity: 0; transform: scale(0.6); }
+  52% { opacity: 0.8; }
+  80%, 100% { opacity: 0; transform: scale(1.9); }
 }
-@keyframes g-drop {
-  0% {
-    transform: translateY(-30px);
-    opacity: 0;
-  }
-  25% {
-    opacity: 1;
-  }
-  60%,
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
+@keyframes st-a {
+  0% { opacity: 1; }
+  50%, 100% { opacity: 0; }
 }
-/* Three-frame flip-book: frame n shows during its third of the loop. */
-@keyframes g-frame {
-  0% {
-    opacity: 1;
-  }
-  33.33%,
-  100% {
-    opacity: 0;
-  }
+@keyframes st-b {
+  0% { opacity: 0; }
+  50%, 100% { opacity: 1; }
 }
-
-/* Reduced motion: flip-books show only their final frame. */
-@media (prefers-reduced-motion: reduce) {
-  .g-frame:not(.g-final) {
-    display: none;
-  }
+@keyframes st-f3 {
+  0% { opacity: 1; }
+  33.4%, 100% { opacity: 0; }
 }
-
-/* Read aloud (plan v9): the step being read glows in the theme colour. */
-.voice-now {
-  border-radius: 0.9rem;
-  background: color-mix(in oklab, var(--b-100) 75%, transparent);
-  box-shadow: 0 0 0 6px color-mix(in oklab, var(--b-100) 75%, transparent);
-  transition: background 0.2s, box-shadow 0.2s;
+@keyframes st-fill {
+  0%, 26% { background: transparent; color: inherit; }
+  36%, 92% { background: var(--b-600); color: #fff; }
+  100% { background: transparent; color: inherit; }
 }
-[data-mode="dark"] .voice-now {
-  background: color-mix(in oklab, var(--b-900) 60%, transparent);
-  box-shadow: 0 0 0 6px color-mix(in oklab, var(--b-900) 60%, transparent);
+@keyframes st-track {
+  0%, 30% { background: #d4d4d8; }
+  42%, 92% { background: var(--b-600); }
+  100% { background: #d4d4d8; }
 }
-/* The little sound bars next to the controls move while the voice speaks. */
-.voice-wave > span {
-  height: 30%;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .voice-wave[data-on="true"] > span {
-    animation: voice-bar 0.9s ease-in-out infinite;
-    animation-delay: var(--d, 0s);
-  }
-}
-@keyframes voice-bar {
-  0%, 100% { height: 30%; }
-  50% { height: 100%; }
-}
-
-@keyframes g-slide {
-  0%, 35% { transform: translateX(0); }
-  50%, 85% { transform: translateX(56px); }
+@keyframes st-knob {
+  0%, 30% { transform: translateX(0); }
+  42%, 92% { transform: translateX(16px); }
   100% { transform: translateX(0); }
+}
+@keyframes st-slide {
+  0%, 36% { transform: translateX(0); }
+  50%, 88% { transform: translateX(108%); }
+  100% { transform: translateX(0); }
+}
+@keyframes st-night {
+  0%, 36% { opacity: 0; }
+  50%, 88% { opacity: 0.92; }
+  100% { opacity: 0; }
+}
+@keyframes st-flash {
+  0%, 38% { opacity: 0; }
+  42% { opacity: 0.95; }
+  58%, 100% { opacity: 0; }
+}
+@keyframes st-scan {
+  from { transform: translateY(-26px); }
+  to { transform: translateY(26px); }
+}
+@keyframes st-growx {
+  0% { transform: scaleX(0); }
+  40%, 94% { transform: scaleX(1); }
+  100% { transform: scaleX(0); }
+}
+@keyframes st-growy {
+  0% { transform: scaleY(0); }
+  40%, 94% { transform: scaleY(1); }
+  100% { transform: scaleY(0); }
+}
+@keyframes st-print {
+  0%, 10% { transform: translateY(-85%); opacity: 0; }
+  50%, 90% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+@keyframes st-enter {
+  from { opacity: 0; transform: translateX(18px) scale(0.98); }
+  to { opacity: 1; transform: none; }
 }
