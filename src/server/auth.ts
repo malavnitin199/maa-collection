@@ -15,7 +15,7 @@ import {
   type Role,
 } from './security/session';
 
-export type CurrentStaff = { id: string; name: string; role: Role; permissions: string[] };
+export type CurrentStaff = { id: string; name: string; role: Role; permissions: string[]; language?: string | null };
 
 /** The logged-in staff member, re-checked against the database (still active). Cached per request. */
 export const getCurrentStaff = cache(async function getCurrentStaff(): Promise<CurrentStaff | null> {
@@ -25,7 +25,7 @@ export const getCurrentStaff = cache(async function getCurrentStaff(): Promise<C
   const session = verifySession(token, sessionSecret());
   if (!session) return null;
   const [person] = await db
-    .select({ id: staff.id, name: staff.name, role: staff.role, permissions: staff.permissions })
+    .select({ id: staff.id, name: staff.name, role: staff.role, permissions: staff.permissions, language: staff.language })
     .from(staff)
     .where(and(eq(staff.storeId, STORE_ID), eq(staff.id, session.sid), eq(staff.active, true)))
     .limit(1);

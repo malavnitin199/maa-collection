@@ -1,8 +1,18 @@
-/** A rule was broken (bad input, out of stock, …). The message is safe to show staff. */
+import type { MessageKey, Vars } from '@/lib/i18n';
+
+/**
+ * A rule was broken (bad input, out of stock, …). The message is safe to show
+ * staff. An optional `key` (+ `vars`) lets screens show it in the person's
+ * language; the English `message` is the fallback.
+ */
 export class DomainError extends Error {
-  constructor(message: string) {
+  readonly key?: MessageKey;
+  readonly vars?: Vars;
+  constructor(message: string, translation?: { key: MessageKey; vars?: Vars }) {
     super(message);
     this.name = 'DomainError';
+    this.key = translation?.key;
+    this.vars = translation?.vars;
   }
 }
 

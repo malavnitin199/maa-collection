@@ -38,6 +38,8 @@ export const staff = pgTable(
     /** Extra rights the owner grants a salesman: catalog, prices, stock, costs (admins have all). */
     permissions: text('permissions').array().notNull().default(sql`'{}'::text[]`),
     pinHash: text('pin_hash').notNull(),
+    /** Screen language this person chose ('en' / 'hi'); null = this phone's choice, else English. */
+    language: text('language'),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
