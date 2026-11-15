@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { link, muted, okBox } from '@/components/ui/styles';
+import { errorBox, link, muted, okBox } from '@/components/ui/styles';
 import { StickerLabel } from '@/features/catalog/barcode-label';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { PrintButton } from '@/features/catalog/print-button';
@@ -13,14 +13,14 @@ import { requestDb } from '@/server/request-db';
 import { getMyLabelsToday, getReceiptForLabels, tagSizesFor, type ReceiptLabelLine } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode, type StoreSettings } from '@/server/services/settings';
 
-type Search = { receipt?: string; each?: string; created?: string; mine?: string; format?: string };
+type Search = { receipt?: string; each?: string; created?: string; mine?: string; format?: string; photos?: string };
 const time = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
 /** Builds a link to this page with some query values changed. */
 function hrefWith(params: Search, change: Partial<Search>) {
   const next = new URLSearchParams();
   for (const [key, value] of Object.entries({ ...params, ...change })) {
-    if (value && key !== 'created') next.set(key, value);
+    if (value && key !== 'created' && key !== 'photos') next.set(key, value);
   }
   return `/admin/labels/print?${next.toString()}`;
 }
@@ -144,6 +144,11 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
   return (
     <>
       <div className="mb-3 flex flex-col gap-3 print:hidden">
+        {params.photos === 'failed' && (
+          <p role="alert" className={errorBox}>
+            The items are saved, but a photo could not be saved. Add it on the item&apos;s page: tap the item below → Photos.
+          </p>
+        )}
         {params.created && (
           <p role="status" className={okBox}>
             Saved {params.created} new item{params.created === '1' ? '' : 's'} with barcodes. Print the labels and stick one on each piece.

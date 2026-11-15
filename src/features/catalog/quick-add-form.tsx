@@ -6,13 +6,14 @@ import { useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { formatPaise } from '@/lib/money';
-import { createQuickAction } from '@/server/actions/admin';
+import { addPhotoToItemsAction, createQuickAction } from '@/server/actions/admin';
+import { photoForm, PhotoSlot, type PickedPhoto } from './photo-slot';
 
 type Option = { id: string; name: string };
-type Row = { key: number; name: string; size: string; color: string; mrp: string; price: string; cost: string; quantity: string; more: boolean };
+type Row = { key: number; name: string; size: string; color: string; mrp: string; price: string; cost: string; quantity: string; more: boolean; photo: PickedPhoto | null };
 
 let nextKey = 1;
-const emptyRow = (): Row => ({ key: nextKey++, name: '', size: '', color: '', mrp: '', price: '', cost: '', quantity: '1', more: false });
+const emptyRow = (): Row => ({ key: nextKey++, name: '', size: '', color: '', mrp: '', price: '', cost: '', quantity: '1', more: false, photo: null });
 
 export function QuickAddForm({
   suppliers,
@@ -33,6 +34,7 @@ export function QuickAddForm({
   const [billNumber, setBillNumber] = useState('');
   const [rows, setRows] = useState<Row[]>(() => [emptyRow()]);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   // Same id while nothing changes: a double tap or retry saves once.
   const operationId = useRef<string | null>(null);
@@ -46,7 +48,7 @@ export function QuickAddForm({
   };
   const addRow = (copyFrom?: Row) => {
     touched();
-    setRows((current) => [...current, copyFrom ? { ...copyFrom, key: nextKey++, name: '' } : emptyRow()]);
+    setRows((current) => [...current, copyFrom ? { ...copyFrom, key: nextKey++, name: '', photo: null } : emptyRow()]);
   };
   const removeRow = (key: number) => {
     touched();
@@ -63,6 +65,7 @@ export function QuickAddForm({
 
   function save() {
     setError(null);
+    setProgress(null);
     operationId.current ??= crypto.randomUUID();
     const opId = operationId.current;
     startSaving(async () => {
@@ -75,7 +78,17 @@ export function QuickAddForm({
         rows: rows.map(({ name, size, color, mrp, price, cost, quantity }) => ({ name, size, color, mrp, price, cost, quantity })),
       });
       if (!result.ok) return setError(result.error);
-      router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}`);
+      // Items are saved (same order as the filled cards); now the optional photos.
+      let photoFailed = false;
+      const saved = rows.filter((r) => r.name.trim());
+      for (const [i, row] of saved.entries()) {
+        const item = result.items[i];
+        if (!row.photo || !item) continue;
+        setProgress(`Saving photo ${i + 1}…`);
+        const added = await addPhotoToItemsAction([item.id], photoForm(row.photo));
+        if (added.error) photoFailed = true;
+      }
+      router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}${photoFailed ? '&photos=failed' : ''}`);
     });
   }
 
@@ -159,6 +172,7 @@ export function QuickAddForm({
               placeholder="Product name, e.g. Georgette Saree"
               className={input}
             />
+            <PhotoSlot label={`product ${index + 1}`} photo={row.photo} disabled={saving} onChange={(photo) => update(row.key, { photo })} />
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {(
                 [
@@ -209,7 +223,7 @@ export function QuickAddForm({
         </p>
       )}
       <button type="submit" disabled={saving || filled.length === 0} className={`${primaryButton} py-3 text-lg`}>
-        {saving ? 'Saving…' : `Save ${filled.length || ''} product${filled.length === 1 ? '' : 's'} and print labels`}
+        {saving ? (progress ?? 'Saving…') : `Save ${filled.length || ''} product${filled.length === 1 ? '' : 's'} and print labels`}
       </button>
     </form>
   );

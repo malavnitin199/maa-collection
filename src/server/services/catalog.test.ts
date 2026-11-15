@@ -388,3 +388,43 @@ describe('QC check list', () => {
     expect(after.noPhoto.items.map((i) => i.sku)).not.toContain('MAA-TS-001');
   });
 });
+
+describe('photo taken while creating tags (shared by every size of a colour)', () => {
+  const jpeg = (size = 120) => {
+    const bytes = new Uint8Array(size);
+    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+    return bytes;
+  };
+
+  it('stores the bytes once; the other sizes point to it and keep it when the original is deleted', async () => {
+    const images = await import('./images');
+    const xyz = await createSupplier(db, STORE_ID, { name: 'Photo Co', ...supplierInput });
+    const kurta = (await listCategories(db, STORE_ID)).find((c) => c.code === 'KU')!;
+    const { products: made } = await createDesign(db, STORE_ID, {
+      operationId: 'photo-1', supplierId: xyz.id, categoryId: kurta.id, name: 'Photo Kurta', brand: 'XYZ',
+      sizes: ['M', 'L', 'XL'], colors: ['Blue'], mrpPaise: 100000, pricePaise: null, costPaise: null, quantityEach: 1, staffId: owner,
+    });
+    const ids = made.map((p) => p.id);
+    const [original, ...shared] = await images.addPhotoToProducts(db, STORE_ID, { productIds: ids, bytes: jpeg(), width: 800, height: 1000, staffId: owner });
+    expect(original.url).toBeNull();
+    expect(shared.map((s) => s.url)).toEqual([`/api/product-images/${original.id}`, `/api/product-images/${original.id}`]);
+    expect((await images.getImageData(db, STORE_ID, original.id))?.data?.length).toBe(120);
+    expect(await images.getImageData(db, STORE_ID, shared[0].id)).toMatchObject({ data: null, url: `/api/product-images/${original.id}` });
+    // Every size shows a photo (counter, lists).
+    expect((await images.mainImages(db, STORE_ID, ids)).size).toBe(3);
+
+    // Deleting the photo on size M: one of the other sizes takes over the bytes, the last points to it.
+    await images.deleteImage(db, STORE_ID, original.id);
+    const after = await Promise.all(shared.map((s) => images.getImageData(db, STORE_ID, s.id)));
+    const heirIndex = after.findIndex((row) => row?.data);
+    expect(heirIndex).toBeGreaterThanOrEqual(0);
+    expect(after[heirIndex]).toMatchObject({ url: null });
+    expect(after[heirIndex]?.data?.length).toBe(120);
+    expect(after[1 - heirIndex]?.url).toBe(`/api/product-images/${shared[heirIndex].id}`);
+    expect((await images.mainImages(db, STORE_ID, ids)).size).toBe(2);
+
+    await expect(images.addPhotoToProducts(db, STORE_ID, { productIds: [], bytes: jpeg(), staffId: owner })).rejects.toThrow(/Choose the items/);
+    await expect(images.addPhotoToProducts(db, STORE_ID, { productIds: ['00000000-0000-0000-0000-000000000000'], bytes: jpeg(), staffId: owner })).rejects.toThrow(/Product not found/);
+    await expect(images.addPhotoToProducts(db, STORE_ID, { productIds: ids, bytes: new TextEncoder().encode('<svg/>'), staffId: owner })).rejects.toThrow(/Only JPEG/);
+  });
+});

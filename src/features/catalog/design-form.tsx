@@ -8,7 +8,8 @@ import { hasOwnText, SizeRatesEditor, type OwnRatesText } from '@/features/catal
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { formatPaise } from '@/lib/money';
 import { ratesForSize, sortSizes } from '@/lib/size-prices';
-import { createDesignAction } from '@/server/actions/admin';
+import { addPhotoToItemsAction, createDesignAction } from '@/server/actions/admin';
+import { photoForm, PhotoSlot, type PickedPhoto } from './photo-slot';
 
 type Option = { id: string; name: string };
 type CategoryOption = Option & { code: string; sizes?: string[] };
@@ -66,6 +67,9 @@ export function DesignForm({
   const [quantityEach, setQuantityEach] = useState('1');
   const [billNumber, setBillNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Optional photo per colour (key: colour in lower case); every size of that colour gets it.
+  const [colorPhotos, setColorPhotos] = useState<Record<string, PickedPhoto>>({});
+  const [progress, setProgress] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   // Same id while the form is unchanged: a double tap or retry saves once.
   const operationId = useRef<string | null>(null);
@@ -142,6 +146,7 @@ export function DesignForm({
 
   function save() {
     setError(null);
+    setProgress(null);
     operationId.current ??= crypto.randomUUID();
     const opId = operationId.current;
     startSaving(async () => {
@@ -164,7 +169,17 @@ export function DesignForm({
         setError(result.error);
         return;
       }
-      router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}`);
+      // Items are saved; now the optional photos, one per colour (a failed photo never loses the items).
+      let photoFailed = false;
+      for (const color of allColors) {
+        const photo = colorPhotos[color.toLowerCase()];
+        const ids = result.items.filter((item) => item.color.toLowerCase() === color.toLowerCase()).map((item) => item.id);
+        if (!photo || ids.length === 0) continue;
+        setProgress(`Saving photo of ${color}…`);
+        const saved = await addPhotoToItemsAction(ids, photoForm(photo));
+        if (saved.error) photoFailed = true;
+      }
+      router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}${photoFailed ? '&photos=failed' : ''}`);
     });
   }
 
@@ -345,6 +360,36 @@ export function DesignForm({
             </button>
           </div>
         </div>
+
+        {allColors.length > 0 && (
+          <div data-testid="colour-photos" className="flex flex-col gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+            <span className="text-sm font-medium">
+              Photo of each colour <span className={`font-normal ${muted}`}>(optional)</span>
+            </span>
+            <p className={`text-xs ${muted}`}>Every size of that colour gets the photo, so staff can recognise the item at the counter.</p>
+            <ul className="flex flex-col gap-2">
+              {allColors.map((color) => (
+                <li key={color} className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm">{color}</span>
+                  <PhotoSlot
+                    label={color}
+                    photo={colorPhotos[color.toLowerCase()] ?? null}
+                    disabled={saving}
+                    onChange={(photo) => {
+                      touched();
+                      setColorPhotos((current) => {
+                        const next = { ...current };
+                        if (photo) next[color.toLowerCase()] = photo;
+                        else delete next[color.toLowerCase()];
+                        return next;
+                      });
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       <section className={`${card} flex flex-col gap-3`}>
@@ -436,7 +481,7 @@ export function DesignForm({
         </p>
       )}
       <button type="submit" disabled={saving || combos === 0} className={`${primaryButton} py-3 text-lg`}>
-        {saving ? 'Saving…' : `Save ${combos || ''} item${combos === 1 ? '' : 's'} and print labels`}
+        {saving ? (progress ?? 'Saving…') : `Save ${combos || ''} item${combos === 1 ? '' : 's'} and print labels`}
       </button>
     </form>
   );

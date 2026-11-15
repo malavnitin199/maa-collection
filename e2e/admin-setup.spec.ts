@@ -282,6 +282,69 @@ test('each category has its sizes: owner sets them with a preset; new stock offe
   await expect(chips.getByRole('button', { name: /^Size /, pressed: true })).toHaveCount(5);
 });
 
+test('photos while creating tags: one per colour in a new design (every size gets it), one per product in quick add', async ({ page }) => {
+  await loginOwner(page);
+  const jpeg = Buffer.from(
+    await page.evaluate(() => {
+      const c = document.createElement('canvas');
+      c.width = 400;
+      c.height = 500;
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#1d4ed8';
+      g.fillRect(0, 0, 400, 500);
+      return c.toDataURL('image/jpeg', 0.9).split(',')[1];
+    }),
+    'base64',
+  );
+  const file = { name: 'item.jpg', mimeType: 'image/jpeg', buffer: jpeg };
+
+  // New design: Blue gets a photo, Red does not.
+  await page.goto('/admin/stock/new');
+  await page.getByRole('combobox', { name: /^Supplier/ }).selectOption({ label: 'Royal Garments' });
+  await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
+  await page.getByLabel('Design / product name').fill(`Photo Kurta ${run}`);
+  await page.getByRole('button', { name: 'Size M', exact: true }).click();
+  await page.getByRole('button', { name: 'Size L', exact: true }).click();
+  await page.getByLabel('Colour').fill('Blue, Red');
+  await page.getByRole('button', { name: 'Add colour' }).click();
+  await page.getByLabel('MRP (₹)').fill('999');
+  const photos = page.getByTestId('colour-photos');
+  await photos.getByLabel('Gallery for Blue').setInputFiles(file);
+  await expect(photos.getByRole('img', { name: 'Photo for Blue' })).toBeVisible();
+  await expect(photos.getByRole('button', { name: 'Remove photo for Blue' })).toBeVisible();
+  await expect(photos.getByRole('button', { name: 'Choose photo for Red from gallery' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save 4 items and print labels' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+  await expect(page.getByText('Saved 4 new items with barcodes.')).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'photo could not be saved' })).toHaveCount(0);
+
+  // Blue L (not the first Blue item) shows the photo; Red M has none.
+  const lines = page.getByTestId('receipt-lines');
+  await lines.getByRole('link', { name: `Photo Kurta ${run} · Blue · L` }).click();
+  const photo = page.getByRole('img', { name: 'Product photo 1' });
+  await expect(photo).toBeVisible();
+  await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await page.goBack();
+  await page.getByTestId('receipt-lines').getByRole('link', { name: `Photo Kurta ${run} · Red · M` }).click();
+  await expect(page.getByText('No photos yet.', { exact: false })).toBeVisible();
+
+  // Quick add: a photo on product 1 only.
+  await page.goto('/admin/stock/quick');
+  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
+  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
+  await page.getByLabel('Product 1 name').fill(`Photo Saree ${run}`);
+  await page.getByLabel('Product 1 MRP').fill('1500');
+  await page.getByLabel('Gallery for product 1').setInputFiles(file);
+  await expect(page.getByRole('img', { name: 'Photo for product 1' })).toBeVisible();
+  await page.getByRole('button', { name: '+ Add product' }).click();
+  await page.getByLabel('Product 2 name').fill(`Plain Saree ${run}`);
+  await page.getByLabel('Product 2 MRP').fill('900');
+  await page.getByRole('button', { name: 'Save 2 products and print labels' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+  await page.getByTestId('receipt-lines').getByRole('link', { name: new RegExp(`^Photo Saree ${run}`) }).click();
+  await expect(page.getByRole('img', { name: 'Product photo 1' })).toBeVisible();
+});
+
 test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock/receive');
@@ -546,9 +609,9 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   await expect(page.locator('#tag').getByTestId('hang-tag')).toBeVisible();
   await expect(page.getByRole('list', { name: 'Parts of a tag' }).getByRole('listitem')).toHaveCount(6);
   // Ticking a lesson is remembered on this phone.
-  await expect(page.getByTestId('guide-progress')).toContainText('0 of 13 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('0 of 14 learned');
   await page.getByRole('button', { name: 'Mark as learned: Sell an item' }).click();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 13 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 14 learned');
   await page.reload();
   await expect(page.getByRole('button', { name: 'Learned: Sell an item' })).toHaveAttribute('aria-pressed', 'true');
   // Quick help & fixes is still there.

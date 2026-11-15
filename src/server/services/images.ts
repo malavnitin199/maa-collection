@@ -13,6 +13,8 @@ export type ImageMeta = { id: string; productId: string; sortOrder: number; widt
 export function imageSrc(image: { id: string; url: string | null }): string {
   return image.url ?? `/api/product-images/${image.id}`;
 }
+// A `url` is either an external store (e.g. Vercel Blob) or, for a photo shared by
+// several items, another photo's /api/product-images/<id> address.
 
 /** Recognises JPEG / PNG / WebP by their first bytes, so a renamed file can't pass as an image. */
 export function sniffImageType(bytes: Uint8Array): string | null {
@@ -121,10 +123,83 @@ export async function makeMainImage(db: Db, storeId: string, imageId: string) {
   await db.update(productImages).set({ sortOrder: minSort - 1 }).where(eq(productImages.id, imageId));
 }
 
+/** Our own address for a stored photo — also what shared copies point to. */
+const ownSrc = (imageId: string) => `/api/product-images/${imageId}`;
+
+/**
+ * One photo for several items — e.g. every size of a colour, taken while
+ * creating their tags. The first item stores the bytes; the others get a row
+ * that points to it (no copies of the bytes). Max 60 items at once.
+ */
+export async function addPhotoToProducts(
+  db: Db,
+  storeId: string,
+  input: { productIds: string[]; bytes: Uint8Array; width?: number | null; height?: number | null; staffId: string },
+): Promise<ImageMeta[]> {
+  const ids = [...new Set(input.productIds)];
+  if (ids.length === 0) throw new DomainError('Choose the items for this photo.');
+  if (ids.length > 60) throw new DomainError('Too many items for one photo.');
+  const owned = await db.select({ id: products.id }).from(products).where(and(eq(products.storeId, storeId), inArray(products.id, ids)));
+  if (owned.length !== ids.length) throw new DomainError('Product not found.');
+  const first = await addProductImage(db, storeId, { ...input, productId: ids[0] });
+  const contentType = sniffImageType(input.bytes)!;
+  const shared: ImageMeta[] = [];
+  for (const productId of ids.slice(1)) {
+    const [{ count, maxSort }] = await db
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+        maxSort: sql<number>`coalesce(max(${productImages.sortOrder}), -1)`.mapWith(Number),
+      })
+      .from(productImages)
+      .where(eq(productImages.productId, productId));
+    if (count >= MAX_IMAGES_PER_PRODUCT) continue; // that item is full; it keeps its own photos
+    const [row] = await db
+      .insert(productImages)
+      .values({
+        storeId,
+        productId,
+        contentType,
+        data: null,
+        url: ownSrc(first.id),
+        byteSize: 0,
+        width: input.width ?? null,
+        height: input.height ?? null,
+        sortOrder: maxSort + 1,
+        createdBy: input.staffId,
+      })
+      .returning();
+    shared.push({ id: row.id, productId: row.productId, sortOrder: row.sortOrder, width: row.width, height: row.height, url: row.url });
+  }
+  return [first, ...shared];
+}
+
+/**
+ * Deletes one item's photo. If other items share it (their `url` points here),
+ * the bytes move to the first of them and the rest point to that one, so they
+ * keep their photo.
+ */
 export async function deleteImage(db: Db, storeId: string, imageId: string) {
-  const deleted = await db
-    .delete(productImages)
-    .where(and(eq(productImages.storeId, storeId), eq(productImages.id, imageId)))
-    .returning({ id: productImages.id });
-  if (deleted.length === 0) throw new DomainError('Photo not found.');
+  await db.transaction(async (tx) => {
+    const [image] = await tx
+      .select({ data: productImages.data, byteSize: productImages.byteSize })
+      .from(productImages)
+      .where(and(eq(productImages.storeId, storeId), eq(productImages.id, imageId)))
+      .limit(1);
+    if (!image) throw new DomainError('Photo not found.');
+    if (image.data) {
+      const sharers = await tx
+        .select({ id: productImages.id })
+        .from(productImages)
+        .where(and(eq(productImages.storeId, storeId), eq(productImages.url, ownSrc(imageId))))
+        .orderBy(asc(productImages.createdAt), asc(productImages.id));
+      const [heir, ...rest] = sharers;
+      if (heir) {
+        await tx.update(productImages).set({ data: image.data, url: null, byteSize: image.byteSize }).where(eq(productImages.id, heir.id));
+        if (rest.length > 0) {
+          await tx.update(productImages).set({ url: ownSrc(heir.id) }).where(inArray(productImages.id, rest.map((r) => r.id)));
+        }
+      }
+    }
+    await tx.delete(productImages).where(eq(productImages.id, imageId));
+  });
 }

@@ -25,7 +25,7 @@ import {
   updateProduct,
   type ProductInput,
 } from '@/server/services/products';
-import { addProductImage, deleteImage, makeMainImage } from '@/server/services/images';
+import { addPhotoToProducts, addProductImage, deleteImage, makeMainImage } from '@/server/services/images';
 import { updatePriceCode } from '@/server/services/settings';
 import { createStaff, setStaffActive, setStaffPermissions, setStaffPin } from '@/server/services/staff';
 
@@ -275,7 +275,10 @@ export type DesignActionInput = {
   billNumber: string;
 };
 
-export type DesignActionResult = { ok: true; receiptId: string; created: number } | { ok: false; error: string };
+/** `items`: the saved items (in entry order) so photos can be attached right after. */
+export type DesignActionResult =
+  | { ok: true; receiptId: string; created: number; items: { id: string; color: string }[] }
+  | { ok: false; error: string };
 
 export async function createDesignAction(input: DesignActionInput): Promise<DesignActionResult> {
   const admin = await requirePermission('catalog');
@@ -307,7 +310,7 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
       staffId: admin.id,
     });
     revalidatePath('/admin', 'layout');
-    return { ok: true, receiptId: result.receipt.id, created: result.products.length };
+    return { ok: true, receiptId: result.receipt.id, created: result.products.length, items: result.products.map((p) => ({ id: p.id, color: p.color })) };
   } catch (error) {
     const state = failure(error);
     return { ok: false, error: state.error ?? 'Something went wrong.' };
@@ -444,7 +447,7 @@ export async function createQuickAction(input: QuickActionInput): Promise<Design
       staffId: admin.id,
     });
     revalidatePath('/admin', 'layout');
-    return { ok: true, receiptId: result.receipt.id, created: result.products.length };
+    return { ok: true, receiptId: result.receipt.id, created: result.products.length, items: result.products.map((p) => ({ id: p.id, color: p.color })) };
   } catch (error) {
     return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
   }
@@ -476,6 +479,22 @@ export async function uploadProductImageAction(productId: string, formData: Form
     if (!bytes) throw new DomainError('Choose a photo first.');
     const size = (key: string) => (/^\d+$/.test(text(formData, key)) ? Number(text(formData, key)) : null);
     await addProductImage(await getDb(), STORE_ID, { productId, bytes, width: size('width'), height: size('height'), staffId: me.id });
+    revalidatePath('/admin', 'layout');
+    return { message: 'Photo added.' };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Optional photo taken while creating tags: one photo for the given items (e.g. every size of a colour). */
+export async function addPhotoToItemsAction(productIds: string[], formData: FormData): Promise<FormState> {
+  const me = await requirePermission('catalog');
+  try {
+    const bytes = await readPhoto(formData.get('photo'));
+    if (!bytes) throw new DomainError('Choose a photo first.');
+    const ids = (Array.isArray(productIds) ? productIds : []).map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 60);
+    const size = (key: string) => (/^\d+$/.test(text(formData, key)) ? Number(text(formData, key)) : null);
+    await addPhotoToProducts(await getDb(), STORE_ID, { productIds: ids, bytes, width: size('width'), height: size('height'), staffId: me.id });
     revalidatePath('/admin', 'layout');
     return { message: 'Photo added.' };
   } catch (error) {
