@@ -46,14 +46,19 @@ function useDone() {
   return { done, toggle };
 }
 
+const noop = () => () => {};
+
 export function LessonDone({ id, title }: { id: string; title: string }) {
   const { done, toggle } = useDone();
+  // Disabled until the page is interactive, so an early tap is never lost.
+  const ready = useSyncExternalStore(noop, () => true, () => false);
   const checked = done.includes(id);
   return (
     <button
       type="button"
       aria-pressed={checked}
       aria-label={`${checked ? 'Learned' : 'Mark as learned'}: ${title}`}
+      disabled={!ready}
       onClick={() => toggle(id)}
       className={`self-start rounded-full border px-4 py-2 text-sm font-medium ${
         checked ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
