@@ -63,6 +63,13 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
   - Later: open any of its products → **Rates for the whole design** → change the default or one size → **Apply**. Past sales keep their prices.
 - **More of existing items** (needs *Stock*): scan each piece. Scanning the same tag again adds one more.
 
+### Photos while creating tags (optional)
+
+- **New design**: after adding the colours, each colour has **📷 Photo / 🖼 Gallery**. Every size of that colour gets the photo.
+- **Quick add**: each product card has **📷 Photo / 🖼 Gallery**.
+- **Tag old stock**: 1–4 photos, as before.
+- If a photo fails (e.g. weak signal), the items are still saved; the labels page says so — add it later on the item's page → Photos.
+
 ### Sizes of each category
 
 Each category has its sizes, set by the owner in **Categories** (tap a category → *Sizes*, or a preset: S–XXL, M–XXL, Ladies 26–32, Gents 28–36, Free). Starting lists: shirts, T-shirts, dresses, night suits S–XXL; kurtas and kurtis M–XXL; **Ladies Jeans** 26–32 and **Gents Jeans** 28–36 (separate categories); sarees and dupattas Free. When you add stock, **choose the category first** — its sizes are shown first (tap *Pick all* for every size); other sizes are under *More sizes*.
@@ -79,6 +86,10 @@ Every piece gets a **hang tag, 40 × 60 mm**: shop name, **QR code**, the **size
 ### Photos of an existing product
 
 **Products** → tap the item → **Photos** → *Take photo* / *From gallery*. The first photo is the **main** one, shown at the counter. Use *Make main* to change it, or *Delete*. Up to 8 photos per product; they're made smaller automatically before uploading.
+
+## 5a. Sales team dashboard (owner)
+
+**Team** in the menu (or Home → *Sales team graphs*): number of salesmen; **share of sales** per seller (bar, amount, %); **each seller day by day** (small chart per person, same scale — tap a day for its amount; "below MRP" = how much they bargain down on average); and a table with every number. Pick Today / 7 days / 30 days / This month. A sale counts for the person chosen in *Credit sale to*; exchanges are included.
 
 ## 5. Owner set-up checklist
 

@@ -27,7 +27,20 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Size lists per category + smaller tag with tick boxes (2026-11-15, latest)
+## Sales team dashboard + photos while creating tags (2026-11-15, latest)
+Owner request (chat): a dashboard of the sellers — how many, each one's %, graphs of their sales, all salesmen's data kept; salesmen scan the QR and enter the value; an optional product photo when tags are created (every SKU its own item). Plan: `docs/PLAN_V6_TEAM_DASHBOARD_PHOTOS.md`; ADR-016.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | `/admin/team` (owner): period filter, tiles (salesmen, team sales, bills, pieces), **share of sales** ranked bars, **each seller day by day** (columns on one shared scale), table incl. exchanges and "below MRP"; linked from Home, menu, header, Guide | Done; charts follow the dataviz rules (one validated hue in light/dark, ≤24 px bars, 4 px rounded data-end, hover titles, table view) |
+| 2 | `teamReport` + `periodDays` (shop days in IST; net = sales credited + exchange differences credited) | Done; unit-tested incl. the 23:30 IST edge |
+| 3 | Optional photo per colour (New design) and per product (Quick add); shared photo stored once (`addPhotoToProducts`), safe delete | Done; unit + e2e (Blue L shows the photo taken for Blue; Red has none) |
+| 4 | "Scan the QR and put the value": already the counter flow — `/i/<barcode>` → Sell with the item loaded → agreed price; e2e covers it as Pradeep | Done (interpretation: sale amount; salesmen never enter purchase prices) |
+| 5 | Guide: new lesson "Sales team dashboard" (14 lessons), colour photo step in the New design lesson | Done |
+- Found and fixed: the daily grouping failed because the time zone was sent twice as two parameters (Postgres saw two different expressions) — it's now one constant in the SQL.
+- Verified: lint, typecheck, **104 unit tests**, build, **47 Playwright tests at desktop + phone size** (+1 phone-only skip) on a fresh production build (port 3218, in-memory DB). Screens checked with a week of sample sales (desktop, phone light + dark).
+
+## Size lists per category + smaller tag with tick boxes (2026-11-15)
 Owner request (chat): much smaller tag with little padding; every size of the category on the tag so a size can be ticked by pen on the printed tag; sizes depend on the category (shirts S–XXL, kurtas M–XXL, jeans by gender: girls 26–32, boys 28–36); choose the category first when entering stock. Owner decisions (ADR-015): 40 × 60 mm, jeans as two categories, lists pre-filled + owner-editable, update live. Plan: `docs/PLAN_V5_CATEGORY_SIZES_SMALL_TAG.md`.
 
 | # | Task | Result |

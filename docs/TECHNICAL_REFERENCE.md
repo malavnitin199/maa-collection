@@ -115,6 +115,7 @@ maa-collection/
 | `/pos/my-sales` | `(pos)/pos/my-sales/page.tsx` | staff | Own today/month totals + activity |
 | `/admin/dashboard` | `(admin)/admin/dashboard/page.tsx` | admin | Shop dashboard + quick actions |
 | `/admin/reports` | `…/reports/page.tsx` | admin | Period reports + CSV download buttons |
+| `/admin/team` | `…/team/page.tsx` | admin | Sales team: salesmen count, share bars, daily columns per seller (shared scale), table; `?period=today\|7d\|30d\|month` (default 7d) |
 | `/admin/activity` | `…/activity/page.tsx` | admin | Last 150 sales + exchanges |
 | `/admin/staff` | `…/staff/page.tsx` | admin | Add staff, PINs, activate, **permissions** |
 | `/admin/settings` | `…/settings/page.tsx` | admin | Code-price word, print switch, decoder |
@@ -182,7 +183,7 @@ Route handlers: see [§10](#10-route-handlers-http-endpoints). Layouts `(pos)/la
 | `services/sales.ts` | `recordSale`, `assertActiveStaff` | Atomic, idempotent sale |
 | `services/exchanges.ts` | `findReturnableSales`, `recordExchange` | Row lock on original sale |
 | `services/catalog.ts` | `listCategories`, `createCategory`, `updateCategory`, `suggestCategoryCode`, `listSuppliers`, `getSupplier`, `createSupplier`, `updateSupplier`, `listReceipts`, `catalogAttention` | |
-| `services/images.ts` | `addProductImage`, `listProductImages`, `mainImages`, `getImageData`, `makeMainImage`, `deleteImage`, `sniffImageType`, `imageSrc` | Limits: 8 photos, 1.5 MB, JPEG/PNG/WebP |
+| `services/images.ts` | `addProductImage`, `addPhotoToProducts` (one photo, many items: bytes once + pointer rows), `listProductImages`, `mainImages`, `getImageData`, `makeMainImage`, `deleteImage` (hands bytes to a sharer), `sniffImageType`, `imageSrc` | Limits: 8 photos, 1.5 MB, JPEG/PNG/WebP |
 | `services/reports.ts` | `staffDashboard`, `shopDashboard`, `shopActivity`, `salesReport`, `salesExportRows`, `REPORT_PERIODS` | All periods in `Asia/Kolkata` |
 | `services/staff.ts` | `listStaff`, `verifyLogin`, `createStaff`, `setStaffPin`, `setStaffActive`, `setStaffPermissions` | Last active admin protected |
 | `services/settings.ts` | `getStoreSettings`, `updatePriceCode`, `labelPriceCode` | |
@@ -300,6 +301,8 @@ Idempotent by `operation_id`; a SKU/barcode race retries up to 3 times.
 1. Client: `resizePhoto` → `uploadProductImageAction(productId, FormData{photo,width,height})`, one photo per call.
 2. Server: `addProductImage` sniffs the magic bytes and checks size and count.
 3. Images are served by `/api/product-images/[id]`.
+4. While creating tags: New design keeps one `PickedPhoto` per colour, Quick add one per card (`PhotoSlot`). After `createDesignAction` / `createQuickAction` return `items` (id + colour, entry order), the client calls `addPhotoToItemsAction(ids, FormData)` per photo — one small request each, so a failed photo never loses the items (the labels page then shows `?photos=failed`).
+5. Shared photos: `addPhotoToProducts` stores the bytes on the first item and adds rows with `url = /api/product-images/<first id>`, `data = null`, `byte_size = 0` for the others; `imageSrc` returns that url, so every view loads the one photo. `deleteImage` moves the bytes to the oldest sharer and repoints the rest.
 
 ### 6.6 Labels
 `getReceiptForLabels` (a delivery) or `getMyLabelsToday` (everything the person entered today, IST) → `LabelSheet` in the print page. It shows one label per piece (or per item) as hang tags (`HangTag`, 40 × 60 mm: 16 per A4 page with `@page A4`, or one per page with `@page 40mm 60mm` for a tag printer) or stickers (`StickerLabel` + `@page 50mm 25mm`, barcode only). Each tag gets its size row from `tagSizesFor` (the category's `sizes`, else the design's sizes via `designSizesFor`, plus the piece's own size — `tagSizeRange`) and a QR item link (`itemLink(appOrigin(), barcode)`). The code price is added by `labelPriceCode` when enabled.
@@ -357,6 +360,7 @@ Hard-image benchmark (`docs/PROGRESS.md`): both paths read 5 of 6 deliberately d
 | `receiveStockAction` | stock | JSON lines → `{ok, receiptId}` |
 | `updateDesignRatesAction(id)` | prices (cost only with costs) | FormData → message |
 | `uploadProductImageAction(id)`, `makeMainImageAction(imgId)`, `deleteImageAction(imgId)` | catalog | |
+| `addPhotoToItemsAction(ids, FormData)` | catalog | one photo for several items (colour of a new design, or one quick-add product) |
 | `createStaffAction`, `resetPinAction(id)`, `setStaffActiveAction(id, active)`, `setStaffPermissionsAction(id)` | admin | |
 | `updatePriceCodeAction` | admin | FormData |
 
