@@ -63,4 +63,5 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 **Where the details are**
 - Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V9_GUIDE_VOICE_EDIT.md`, `docs/PLAN_SIZE_PRICES.md`.
 - Decisions: `docs/DECISION_LOG.md` (ADR-001…019); open questions: `docs/DECISIONS.md`.
+- The original starter pack (2026-11-14), what it planned and what changed: `docs/STARTER_PACK_HISTORY.md`; the untouched originals: `docs/archive/starter-pack-2026-11-14/`.
 - How it works (developers): `docs/TECHNICAL_REFERENCE.md`; how to use it (shop): `docs/USER_GUIDE.md`; what was done and verified: `docs/PROGRESS.md`; agent rules + status: `CLAUDE.md`.
