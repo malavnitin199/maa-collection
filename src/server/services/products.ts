@@ -2,6 +2,7 @@ import { and, asc, desc, eq, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, products, staff, stockMovements, stockReceipts, suppliers, type Product, type StockReceipt } from '@/db/schema';
 import { inStoreEan13, isValidEan13 } from '@/features/scanning/ean13';
+import { findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
 import { DomainError, isUniqueViolation } from './errors';
 
 /** What salesman screens may see about a product: never the cost price. */
@@ -116,6 +117,35 @@ function validatePrices(input: { mrpPaise: number; pricePaise: number; costPaise
   if (input.costPaise !== null && (!Number.isSafeInteger(input.costPaise) || input.costPaise < 0)) {
     throw new DomainError('Enter a valid cost price.');
   }
+}
+
+type CheckedRates = { mrpPaise: number; pricePaise: number; costPaise: number | null };
+
+/**
+ * Rates for every size of a design: the defaults, or a size's own MRP / selling /
+ * purchase price. Checked here on the server (errors name the size). Keyed by
+ * lower-case size; every colour of a size gets the same rates.
+ */
+function resolveSizeRates(sizes: readonly string[], defaults: { mrpPaise: number } & Rates, own: readonly SizeRates[] = []): Map<string, CheckedRates> {
+  validatePrices({ ...defaults, pricePaise: defaults.pricePaise ?? defaults.mrpPaise });
+  own.forEach((row, i) => {
+    if (!sizes.some((s) => sameSize(s, row.size))) {
+      throw new DomainError(`Size ${row.size.trim() || '(blank)'} has its own price but is not one of the sizes.`);
+    }
+    if (own.findIndex((other) => sameSize(other.size, row.size)) !== i) throw new DomainError(`Size ${row.size.trim()} is priced twice.`);
+  });
+  return new Map(
+    sizes.map((size) => {
+      const rates = ratesForSize(defaults, findSizeRates(own, size));
+      const checked = { mrpPaise: rates.mrpPaise ?? NaN, pricePaise: rates.pricePaise ?? NaN, costPaise: rates.costPaise };
+      try {
+        validatePrices(checked);
+      } catch (error) {
+        throw error instanceof DomainError ? new DomainError(`Size ${size}: ${error.message}`) : error;
+      }
+      return [size.trim().toLowerCase(), checked];
+    }),
+  );
 }
 
 function validateProductInput(input: ProductInput) {
@@ -265,9 +295,13 @@ export type DesignInput = {
   brand: string;
   sizes: string[];
   colors: string[];
+  /** Defaults for every size. */
   mrpPaise: number;
-  pricePaise: number;
+  /** null = sell at MRP (each size's own MRP). */
+  pricePaise: number | null;
   costPaise: number | null;
+  /** A size's own MRP / selling / purchase price, for all its colours (optional). */
+  sizeRates?: SizeRates[];
   /** Pieces received per size/colour combination (0 = add to catalogue only). */
   quantityEach: number;
   billNumber?: string | null;
@@ -295,7 +329,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   if (sizes.length === 0) throw new DomainError('Pick at least one size.');
   if (colors.length === 0) throw new DomainError('Add at least one colour.');
   if (sizes.length * colors.length > 60) throw new DomainError('Too many combinations at once (max 60). Split the entry.');
-  validatePrices(input);
+  const rates = resolveSizeRates(sizes, input, input.sizeRates);
   if (!Number.isInteger(input.quantityEach) || input.quantityEach < 0 || input.quantityEach > 10_000) {
     throw new DomainError('Pieces per size/colour must be 0 or more.');
   }
@@ -333,9 +367,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
         brand,
         size,
         color,
-        mrpPaise: input.mrpPaise,
-        pricePaise: input.pricePaise,
-        costPaise: input.costPaise,
+        ...rates.get(size.toLowerCase())!,
         quantity: input.quantityEach,
       })),
     ),
@@ -754,28 +786,51 @@ export async function listDesignVariants(db: Db, storeId: string, productId: str
 }
 
 /**
- * Sets MRP, selling price and cost for every size/colour of a design at once.
+ * Sets MRP, selling price and cost for every size/colour of a design at once:
+ * the defaults, or a size's own rates (the same for all colours of that size).
  * Past sales keep their own price/MRP/cost snapshots, so history is unchanged.
  */
 export async function updateDesignRates(
   db: Db,
   storeId: string,
   productId: string,
-  rates: { mrpPaise: number; pricePaise: number; costPaise: number | null | undefined },
+  rates: {
+    mrpPaise: number;
+    /** null = sell at MRP (each size's own MRP). */
+    pricePaise: number | null;
+    /** undefined = keep every item's purchase price (no "costs" right); sizes' own purchase prices are then ignored too. */
+    costPaise: number | null | undefined;
+    sizeRates?: SizeRates[];
+  },
 ): Promise<number> {
-  validatePrices({ ...rates, costPaise: rates.costPaise ?? null });
-  const ids = (await listDesignVariants(db, storeId, productId)).map((p) => p.id);
-  if (ids.length === 0) throw new DomainError('Product not found.');
-  const updated = await db
-    .update(products)
-    .set({
-      mrpPaise: rates.mrpPaise,
-      pricePaise: rates.pricePaise,
-      ...(rates.costPaise !== undefined ? { costPaise: rates.costPaise } : {}),
-    })
-    .where(and(eq(products.storeId, storeId), inArray(products.id, ids)))
-    .returning({ id: products.id });
-  return updated.length;
+  const keepCost = rates.costPaise === undefined;
+  const own = (rates.sizeRates ?? []).map((row) => (keepCost ? { ...row, costPaise: null } : row));
+  const variants = await listDesignVariants(db, storeId, productId);
+  if (variants.length === 0) throw new DomainError('Product not found.');
+  const groups: { size: string; ids: string[] }[] = [];
+  for (const v of variants) {
+    const group = groups.find((g) => sameSize(g.size, v.size));
+    if (group) group.ids.push(v.id);
+    else groups.push({ size: v.size, ids: [v.id] });
+  }
+  const bySize = resolveSizeRates(
+    groups.map((g) => g.size),
+    { mrpPaise: rates.mrpPaise, pricePaise: rates.pricePaise, costPaise: rates.costPaise ?? null },
+    own,
+  );
+  return db.transaction(async (tx) => {
+    let count = 0;
+    for (const group of groups) {
+      const size = bySize.get(group.size.trim().toLowerCase())!;
+      const updated = await tx
+        .update(products)
+        .set({ mrpPaise: size.mrpPaise, pricePaise: size.pricePaise, ...(keepCost ? {} : { costPaise: size.costPaise }) })
+        .where(and(eq(products.storeId, storeId), inArray(products.id, group.ids)))
+        .returning({ id: products.id });
+      count += updated.length;
+    }
+    return count;
+  });
 }
 
 /** Every label line from receipts this person entered today (shop time zone) — "print today's labels". */

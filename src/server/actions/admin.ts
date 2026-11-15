@@ -6,6 +6,7 @@ import { getDb } from '@/db/client';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
+import { sizeFieldName, type SizeRates } from '@/lib/size-prices';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
 import { DomainError } from '@/server/services/errors';
@@ -60,6 +61,33 @@ function productInput(formData: FormData): ProductInput & { categoryId: string; 
 /** Drops the purchase price for people without the "costs" right. */
 function withoutCost<T extends { costPaise: number | null }>(input: T, me: CurrentStaff): T {
   return can(me, 'costs') ? input : { ...input, costPaise: null };
+}
+
+/** A size's own rates as typed (rupees); empty = use the default. */
+export type SizeRatesText = { size: string; mrp: string; price: string; cost: string };
+
+/** Rupee text per size → paise. Purchase prices are dropped without the "costs" right; sizes with nothing of their own are left out. */
+function sizeRatesInput(rows: unknown, me: CurrentStaff): SizeRates[] {
+  if (!Array.isArray(rows)) return [];
+  if (rows.length > 60) throw new DomainError('Too many sizes at once.');
+  return rows
+    .map((row: Partial<Record<keyof SizeRatesText, unknown>>) => {
+      const size = String(row?.size ?? '').trim();
+      const paise = (raw: unknown, label: string) => {
+        const value = String(raw ?? '').trim();
+        if (!value) return null;
+        const result = rupeesToPaise(value);
+        if (result === null) throw new DomainError(`Size ${size}: enter a valid ${label} in rupees.`);
+        return result;
+      };
+      return {
+        size,
+        mrpPaise: paise(row?.mrp, 'MRP'),
+        pricePaise: paise(row?.price, 'selling price'),
+        costPaise: can(me, 'costs') ? paise(row?.cost, 'purchase price') : null,
+      };
+    })
+    .filter((r) => r.mrpPaise !== null || r.pricePaise !== null || r.costPaise !== null);
 }
 
 function failure(error: unknown): FormState {
@@ -239,6 +267,8 @@ export type DesignActionInput = {
   mrp: string;
   price: string;
   cost: string;
+  /** Sizes with their own MRP / selling / purchase price (all colours of that size). */
+  sizeRates?: SizeRatesText[];
   quantityEach: string;
   billNumber: string;
 };
@@ -266,8 +296,10 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
       sizes: Array.isArray(input.sizes) ? input.sizes.map(String) : [],
       colors: Array.isArray(input.colors) ? input.colors.map(String) : [],
       mrpPaise,
-      pricePaise: input.price.trim() ? (toPaise(input.price, 'selling price') as number) : mrpPaise,
-      costPaise: can(admin, 'costs') ? toPaise(input.cost, 'cost price', true) : null,
+      // Empty = each size sells at its own MRP.
+      pricePaise: String(input.price ?? '').trim() ? toPaise(String(input.price), 'selling price') : null,
+      costPaise: can(admin, 'costs') ? toPaise(String(input.cost ?? ''), 'cost price', true) : null,
+      sizeRates: sizeRatesInput(input.sizeRates, admin),
       quantityEach: Number(qty),
       billNumber: input.billNumber,
       staffId: admin.id,
@@ -331,12 +363,22 @@ export async function receiveStockAction(input: {
 export async function updateDesignRatesAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const me = await requirePermission('prices');
   try {
-    const mrpPaise = money(formData, 'mrp', 'MRP') as number;
+    const sizes = formData.getAll('rateSize').map(String);
     const count = await updateDesignRates(await getDb(), STORE_ID, productId, {
-      mrpPaise,
-      pricePaise: text(formData, 'price') ? (money(formData, 'price', 'selling price') as number) : mrpPaise,
+      mrpPaise: money(formData, 'mrp', 'MRP') as number,
+      // Empty = each size sells at its own MRP.
+      pricePaise: money(formData, 'price', 'selling price', { optional: true }),
       // undefined = keep each item's purchase price (no "costs" right).
       costPaise: can(me, 'costs') ? money(formData, 'cost', 'cost price', { optional: true }) : undefined,
+      sizeRates: sizeRatesInput(
+        sizes.map((size) => ({
+          size,
+          mrp: text(formData, sizeFieldName('mrp', size)),
+          price: text(formData, sizeFieldName('price', size)),
+          cost: text(formData, sizeFieldName('cost', size)),
+        })),
+        me,
+      ),
     });
     revalidatePath('/admin', 'layout');
     return { message: `Rates updated for ${count} item${count === 1 ? '' : 's'}.` };

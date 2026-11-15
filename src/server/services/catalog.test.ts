@@ -154,6 +154,93 @@ describe('rates for a whole design', () => {
   });
 });
 
+describe('prices by size (same for every colour of a size)', () => {
+  type Row = { size: string; color: string; mrpPaise: number; pricePaise: number; costPaise: number | null };
+  /** "Black M" → [mrp, price, cost] in rupees, for easy reading. */
+  const priceTable = (rows: Row[]) =>
+    Object.fromEntries(rows.map((p) => [`${p.color} ${p.size}`, [p.mrpPaise / 100, p.pricePaise / 100, p.costPaise === null ? null : p.costPaise / 100]]));
+
+  async function shirt(extra: Partial<Parameters<typeof createDesign>[2]> = {}) {
+    const xyz = (await listSuppliers(db, STORE_ID))[0] ?? (await createSupplier(db, STORE_ID, { name: 'XYZ Textiles', ...supplierInput }));
+    const shirtCategory = (await listCategories(db, STORE_ID)).find((c) => c.code === 'SH')!;
+    return createDesign(db, STORE_ID, {
+      operationId: `shirt-${Math.random()}`, supplierId: xyz.id, categoryId: shirtCategory.id, name: 'Linen Shirt', brand: 'XYZ',
+      sizes: ['M', 'L', 'XL'], colors: ['Black', 'White'], mrpPaise: 70000, pricePaise: 50000, costPaise: 30000, quantityEach: 1, staffId: owner,
+      ...extra,
+    });
+  }
+
+  it('default prices apply to every size and colour', async () => {
+    const { products: created } = await shirt();
+    expect(created).toHaveLength(6);
+    expect(created.every((p) => p.mrpPaise === 70000 && p.pricePaise === 50000 && p.costPaise === 30000)).toBe(true);
+  });
+
+  it("a size's own purchase, selling price and MRP apply to all its colours; other sizes keep the defaults", async () => {
+    const { products: created } = await shirt({
+      sizeRates: [
+        { size: 'L', pricePaise: 55000, costPaise: 33000 },
+        { size: 'xl', mrpPaise: 75000, pricePaise: 60000, costPaise: 36000 }, // size matched without case
+      ],
+    });
+    expect(priceTable(created)).toEqual({
+      'Black M': [700, 500, 300], 'White M': [700, 500, 300],
+      'Black L': [700, 550, 330], 'White L': [700, 550, 330],
+      'Black XL': [750, 600, 360], 'White XL': [750, 600, 360],
+    });
+  });
+
+  it('purchase price alone can differ by size (selling price stays the default)', async () => {
+    const { products: created } = await shirt({ sizeRates: [{ size: 'XL', costPaise: 36000 }] });
+    expect(created.filter((p) => p.size === 'XL').map((p) => [p.pricePaise, p.costPaise])).toEqual([[50000, 36000], [50000, 36000]]);
+    expect(created.filter((p) => p.size !== 'XL').every((p) => p.costPaise === 30000)).toBe(true);
+  });
+
+  it('no selling price = each size sells at its own MRP', async () => {
+    const { products: created } = await shirt({ pricePaise: null, sizeRates: [{ size: 'XL', mrpPaise: 80000 }] });
+    expect(created.map((p) => [p.size, p.pricePaise])).toEqual([['M', 70000], ['L', 70000], ['XL', 80000], ['M', 70000], ['L', 70000], ['XL', 80000]]);
+  });
+
+  it('checks every size on the server and names the size', async () => {
+    await expect(shirt({ sizeRates: [{ size: 'XL', pricePaise: 80000 }] })).rejects.toThrow('Size XL: Selling price cannot be above MRP.');
+    await expect(shirt({ sizeRates: [{ size: 'L', mrpPaise: 40000 }] })).rejects.toThrow('Size L: Selling price cannot be above MRP.');
+    await expect(shirt({ sizeRates: [{ size: 'M', costPaise: -1 }] })).rejects.toThrow('Size M: Enter a valid cost price.');
+    await expect(shirt({ sizeRates: [{ size: 'M', pricePaise: 499.5 }] })).rejects.toThrow('Size M: Enter a valid selling price.');
+    await expect(shirt({ sizeRates: [{ size: 'XXL', pricePaise: 50000 }] })).rejects.toThrow(/Size XXL has its own price but is not one of the sizes/);
+    await expect(shirt({ sizeRates: [{ size: 'M', pricePaise: 1 }, { size: 'm', pricePaise: 2 }] })).rejects.toThrow(/priced twice/);
+    await expect(shirt({ pricePaise: 80000 })).rejects.toThrow('Selling price cannot be above MRP.');
+    expect(await db.select().from(products).where(eq(products.name, 'Linen Shirt'))).toHaveLength(0);
+  });
+
+  it('changing one size on the product page leaves the other sizes alone; colour never splits a price', async () => {
+    const { products: created } = await shirt({ sizeRates: [{ size: 'L', pricePaise: 55000 }, { size: 'XL', pricePaise: 60000, costPaise: 36000 }] });
+    const count = await updateDesignRates(db, STORE_ID, created[0].id, {
+      mrpPaise: 70000, pricePaise: 50000, costPaise: 30000,
+      sizeRates: [{ size: 'L', pricePaise: 52000, costPaise: 31000 }, { size: 'XL', pricePaise: 60000, costPaise: 36000 }],
+    });
+    expect(count).toBe(6);
+    expect(priceTable(await listDesignVariants(db, STORE_ID, created[0].id))).toEqual({
+      'Black M': [700, 500, 300], 'White M': [700, 500, 300],
+      'Black L': [700, 520, 310], 'White L': [700, 520, 310],
+      'Black XL': [700, 600, 360], 'White XL': [700, 600, 360],
+    });
+  });
+
+  it('saving rates makes all colours of a size equal again, and keeps purchase prices without the costs right', async () => {
+    const { products: created } = await shirt({ sizeRates: [{ size: 'XL', costPaise: 36000 }] });
+    const blackM = created.find((p) => p.color === 'Black' && p.size === 'M')!;
+    await db.update(products).set({ pricePaise: 45000 }).where(eq(products.id, blackM.id)); // e.g. edited one item alone
+    // undefined cost = no "costs" right: purchase prices (also sizes' own) are not touched.
+    await updateDesignRates(db, STORE_ID, blackM.id, { mrpPaise: 70000, pricePaise: 48000, costPaise: undefined, sizeRates: [{ size: 'XL', costPaise: 1 }] });
+    expect(priceTable(await listDesignVariants(db, STORE_ID, blackM.id))).toEqual({
+      'Black M': [700, 480, 300], 'White M': [700, 480, 300],
+      'Black L': [700, 480, 300], 'White L': [700, 480, 300],
+      'Black XL': [700, 480, 360], 'White XL': [700, 480, 360],
+    });
+    await expect(updateDesignRates(db, STORE_ID, blackM.id, { mrpPaise: 70000, pricePaise: null, costPaise: null, sizeRates: [{ size: 'S', pricePaise: 1 }] })).rejects.toThrow(/Size S has its own price/);
+  });
+});
+
 describe('code price setting', () => {
   it('saves a valid code word, refuses bad ones, and needs a word to print', async () => {
     const { getStoreSettings, updatePriceCode } = await import('./settings');
