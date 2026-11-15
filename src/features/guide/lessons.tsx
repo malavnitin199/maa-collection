@@ -127,6 +127,7 @@ export const LESSONS: Lesson[] = [
       <>Type the design name (one name per design, e.g. &ldquo;Cotton Straight Kurta&rdquo;), tap the <strong>sizes</strong> (the category&apos;s sizes come first) and add the <strong>colours</strong>.</>,
       <>Enter <strong>MRP</strong>, <strong>selling price</strong> (empty = MRP), <strong>purchase price</strong> and <strong>pieces each</strong>.</>,
       <>Bigger sizes cost more? Open <strong>Price by size</strong> and type that size&apos;s own prices — grey = default, green = the size&apos;s own. Every colour of that size gets it.</>,
+      <>Optional: <strong>📷 a photo of each colour</strong> — every size of that colour gets it, so staff recognise it at the counter.</>,
       <>Check the <strong>preview</strong>, then <strong>Save and print labels</strong>.</>,
     ],
     open: [
@@ -232,6 +233,21 @@ export const LESSONS: Lesson[] = [
       <>Someone leaves? <strong>Deactivate</strong> them — their past sales stay.</>,
     ],
     open: [{ href: '/admin/staff', label: 'Staff & permissions' }],
+  },
+  {
+    id: 'sales-team',
+    title: 'Sales team dashboard',
+    audience: 'owner',
+    minutes: 2,
+    intro: 'How many sellers you have, each one\u2019s share of sales, and their sales day by day.',
+    art: <ReportArt />,
+    steps: [
+      <><strong>Team</strong> (menu) or Home → <strong>Sales team graphs</strong>. Pick Today / 7 days / 30 days / This month.</>,
+      <><strong>Share of sales</strong>: one bar per seller, biggest first, with the amount and %.</>,
+      <><strong>Each seller, day by day</strong>: a small chart per person on the same scale — tap or hover a day to see its amount. &ldquo;Below MRP&rdquo; shows how much they bargain down on average.</>,
+      <>Sales count for the person chosen in <em>Credit sale to</em>; exchanges are included.</>,
+    ],
+    open: [{ href: '/admin/team', label: 'Sales team' }],
   },
   {
     id: 'reports',
