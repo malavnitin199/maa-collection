@@ -343,6 +343,8 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
 }
 
 type NewProductRow = {
+  /** Manufacturer barcode to use instead of generating one. */
+  barcode?: string | null;
   name: string;
   brand: string;
   size: string;
@@ -396,7 +398,7 @@ async function insertNewProducts(
             input.rows.map((row) => ({
               storeId,
               sku: `${prefix}${String(++skuNumber).padStart(3, '0')}`,
-              barcode: inStoreEan13(++barcodeNumber),
+              barcode: row.barcode ?? inStoreEan13(++barcodeNumber),
               name: row.name,
               brand: row.brand,
               category: input.category.name,
@@ -436,6 +438,8 @@ async function insertNewProducts(
 }
 
 export type QuickRowInput = {
+  /** Optional manufacturer EAN-13 already on the tag (no new label needed). */
+  barcode?: string | null;
   name: string;
   size?: string;
   color?: string;
@@ -486,7 +490,10 @@ export async function createProductsBatch(
     if (!Number.isInteger(row.quantity) || row.quantity < 0 || row.quantity > 10_000) {
       throw new DomainError(`${label}: pieces must be 0 or more.`);
     }
+    const barcode = row.barcode?.trim() || null;
+    if (barcode && !isValidEan13(barcode)) throw new DomainError(`${label}: ${barcode} is not a valid 13-digit barcode.`);
     return {
+      barcode,
       name: row.name.trim(),
       brand,
       size: row.size?.trim() || 'Free',
@@ -497,6 +504,17 @@ export async function createProductsBatch(
       quantity: row.quantity,
     };
   });
+  const ownBarcodes = cleaned.flatMap((r) => (r.barcode ? [r.barcode] : []));
+  if (new Set(ownBarcodes).size !== ownBarcodes.length) throw new DomainError('The same barcode is entered twice.');
+  if (ownBarcodes.length > 0) {
+    const taken = await db
+      .select({ barcode: products.barcode, name: products.name, sku: products.sku })
+      .from(products)
+      .where(and(eq(products.storeId, storeId), inArray(products.barcode, ownBarcodes)));
+    if (taken.length > 0) {
+      throw new DomainError(`Barcode already in the app: ${taken.map((t) => `${t.barcode} = ${t.name} (${t.sku})`).join(', ')}. Add pieces to it instead.`);
+    }
+  }
   const keys = cleaned.map((r) => `${r.name}|${r.size}|${r.color}`.toLowerCase());
   const repeated = keys.find((k, i) => keys.indexOf(k) !== i);
   if (repeated) throw new DomainError(`The same product is entered twice: ${repeated.split('|').join(' · ')}.`);

@@ -387,3 +387,37 @@ test('help guide is reachable and first-time tips can be dismissed', async ({ pa
   await expect(page.getByLabel('Scan barcode or enter SKU')).toBeVisible();
   await expect(page.getByRole('note').filter({ hasText: 'First time here?' })).toHaveCount(0);
 });
+
+test('tag old stock with the barcode already on the tag; a known barcode is refused', async ({ page }) => {
+  // A valid EAN-13 unique to this run (manufacturer-style, prefix 890).
+  const first12 = `890${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
+  const sum = first12.split('').reduce((t, d, i) => t + Number(d) * (i % 2 === 0 ? 1 : 3), 0);
+  const ean = first12 + ((10 - (sum % 10)) % 10);
+
+  await loginOwner(page);
+  await page.goto('/admin/stock/old');
+  await page.getByRole('button', { name: "Scan the tag's barcode" }).click();
+  await expect(page.getByLabel("Scan the barcode on the item's tag")).toBeFocused();
+  await page.keyboard.type('8901111000014', { delay: 5 }); // already in the app (Classic Crew Tee)
+  await page.keyboard.press('Enter');
+  await expect(page.getByText(/Already in the app: Classic Crew Tee/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save and get barcode' })).toBeDisabled();
+
+  await page.getByLabel("Scan the barcode on the item's tag").fill(ean);
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('tag-barcode')).toContainText(ean);
+  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Shirt (SH)' });
+  await page.getByLabel('Product name').fill(`Branded Shirt ${run}`);
+  await page.getByLabel('MRP (₹)').fill('1299');
+  await page.getByLabel('Pieces counted').fill('2');
+  await page.getByRole('button', { name: 'Save and get barcode' }).click();
+  await expect(page.getByRole('status')).toContainText(`barcode ${ean}`);
+  await expect(page.getByRole('status')).toContainText('no new sticker is needed');
+
+  // The tag's own barcode now sells at the counter.
+  await page.goto('/pos');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await page.keyboard.type(ean, { delay: 5 });
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('item-details')).toContainText(`Branded Shirt ${run}`);
+});

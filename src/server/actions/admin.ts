@@ -6,12 +6,14 @@ import { getDb } from '@/db/client';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
+import { isValidEan13 } from '@/features/scanning/ean13';
 import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
 import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   createDesign,
   createProductsBatch,
+  findProductByCode,
   getProduct,
   createProduct,
   listProducts,
@@ -485,7 +487,7 @@ export async function tagOldStockAction(formData: FormData): Promise<OldStockRes
       categoryId,
       brand: text(formData, 'brand'),
       note: 'Old stock tagged',
-      rows: [{ name, size: text(formData, 'size'), color: text(formData, 'color'), mrpPaise, pricePaise, costPaise, quantity: Number(qty) }],
+      rows: [{ barcode: text(formData, 'barcode') || null, name, size: text(formData, 'size'), color: text(formData, 'color'), mrpPaise, pricePaise, costPaise, quantity: Number(qty) }],
       staffId: me.id,
     });
     const product = result.products[0];
@@ -510,4 +512,20 @@ export async function tagOldStockAction(formData: FormData): Promise<OldStockRes
   } catch (error) {
     return { ok: false, error: failure(error).error ?? 'Something went wrong.' };
   }
+}
+
+export type TagLookup =
+  | { status: 'new'; barcode: string }
+  | { status: 'exists'; product: { id: string; name: string; size: string; color: string; stock: number; sku: string } }
+  | { status: 'invalid'; code: string };
+
+/** Tag old stock: is this scanned tag barcode usable, or already in the app? */
+export async function checkTagBarcodeAction(code: string): Promise<TagLookup> {
+  await requirePermission('catalog');
+  const value = String(code).trim().slice(0, 64);
+  const existing = await findProductByCode(await getDb(), STORE_ID, value);
+  if (existing) {
+    return { status: 'exists', product: { id: existing.id, name: existing.name, size: existing.size, color: existing.color, stock: existing.stock, sku: existing.sku } };
+  }
+  return isValidEan13(value) ? { status: 'new', barcode: value } : { status: 'invalid', code: value };
 }

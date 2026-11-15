@@ -241,3 +241,19 @@ describe('tag old stock', () => {
     expect(await getMyLabelsToday(db, STORE_ID, someoneElse, 'Asia/Kolkata')).toEqual([]);
   });
 });
+
+describe('old stock with the manufacturer barcode', () => {
+  it('uses a valid manufacturer barcode, refuses invalid or already-used ones', async () => {
+    const { createProductsBatch } = await import('./products');
+    const shirt = (await listCategories(db, STORE_ID)).find((c) => c.code === 'SH')!;
+    const base = { categoryId: shirt.id, staffId: owner };
+    const row = { name: 'Formal Shirt', size: '40', color: 'White', mrpPaise: 149900, pricePaise: 149900, costPaise: null, quantity: 2 };
+    const made = await createProductsBatch(db, STORE_ID, { ...base, operationId: 'mfr-1', rows: [{ ...row, barcode: '4006381333931' }] });
+    expect(made.products[0].barcode).toBe('4006381333931');
+    await expect(createProductsBatch(db, STORE_ID, { ...base, operationId: 'mfr-2', rows: [{ ...row, size: '42', barcode: '4006381333930' }] })).rejects.toThrow(/not a valid 13-digit barcode/);
+    await expect(createProductsBatch(db, STORE_ID, { ...base, operationId: 'mfr-3', rows: [{ ...row, size: '42', barcode: '4006381333931' }] })).rejects.toThrow(/already in the app: 4006381333931 = Formal Shirt/);
+    // Without a barcode one is generated as before.
+    const generated = await createProductsBatch(db, STORE_ID, { ...base, operationId: 'mfr-4', rows: [{ ...row, size: '42' }] });
+    expect(generated.products[0].barcode).toMatch(/^200/);
+  });
+});

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
-import { tagOldStockAction, type OldStockResult } from '@/server/actions/admin';
+import { checkTagBarcodeAction, tagOldStockAction, type OldStockResult, type TagLookup } from '@/server/actions/admin';
+import { ScanInput } from '@/features/scanning/scan-input';
 import { BarcodeLabel } from './barcode-label';
 import { PhotoPickers } from './photo-manager';
 import { resizePhoto } from './resize-photo';
@@ -26,6 +27,8 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
   const [cost, setCost] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [tag, setTag] = useState<TagLookup | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<Saved | null>(null);
   const [count, setCount] = useState(0);
@@ -85,6 +88,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
     form.set('price', price);
     form.set('cost', cost);
     form.set('quantity', quantity);
+    form.set('barcode', tag?.status === 'new' ? tag.barcode : '');
     for (const photo of photos) form.append('photos', new File([photo.blob], 'photo.jpg', { type: 'image/jpeg' }));
     startTransition(async () => {
       const result = await tagOldStockAction(form);
@@ -104,6 +108,8 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
     setPrice('');
     setCost('');
     setQuantity('1');
+    setTag(null);
+    setScanning(false);
     setSaved(null);
     touched();
     // Category, company and size stay: old stock is usually tagged shelf by shelf.
@@ -113,7 +119,10 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
     return (
       <div className="flex flex-col gap-4">
         <p role="status" className={okBox}>
-          Saved {saved.product.name} · barcode {saved.product.barcode}. Stick this label on each piece.
+          Saved {saved.product.name} · barcode {saved.product.barcode}.{' '}
+          {saved.product.barcode.startsWith('200')
+            ? 'Stick this label on each piece.'
+            : 'It uses the barcode already on the tag, so no new sticker is needed.'}
           {saved.photoError && <span className="block text-red-700">Photo problem: {saved.photoError}</span>}
         </p>
         <div className="mx-auto w-64">
@@ -136,6 +145,54 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
   }
 
   return (
+    <div className="flex flex-col gap-4">
+      {/* Outside the main <form>: the scanner has its own form, and forms can't be nested. */}
+      <section className={`${card} flex flex-col gap-3`}>
+        <h2 className="font-semibold">
+          0. Barcode already on the tag? <span className={`text-sm font-normal ${muted}`}>(optional)</span>
+        </h2>
+        {tag?.status === 'new' ? (
+          <p data-testid="tag-barcode" className={okBox}>
+            Will use barcode <span className="font-mono">{tag.barcode}</span> from the tag — no new sticker needed.{' '}
+            <button type="button" onClick={() => { setTag(null); touched(); }} className="underline">
+              Remove
+            </button>
+          </p>
+        ) : scanning ? (
+          <ScanInput
+            label="Scan the barcode on the item's tag"
+            onScan={(code) =>
+              startTransition(async () => {
+                const result = await checkTagBarcodeAction(code);
+                setTag(result);
+                touched();
+                if (result.status === 'new') setScanning(false);
+              })
+            }
+            busy={busy}
+          />
+        ) : (
+          <button type="button" onClick={() => setScanning(true)} className={`${secondaryButton} py-3`}>
+            Scan the tag&apos;s barcode
+          </button>
+        )}
+        {tag?.status === 'exists' && (
+          <p role="alert" className={errorBox}>
+            Already in the app: {tag.product.name} · {tag.product.color} · {tag.product.size} ({tag.product.sku}, {tag.product.stock} in stock).{' '}
+            <Link href={`/admin/products/${tag.product.id}`} className="underline">
+              Open it
+            </Link>{' '}
+            to add pieces or photos instead.
+          </p>
+        )}
+        {tag?.status === 'invalid' && (
+          <p role="alert" className={errorBox}>
+            &ldquo;{tag.code}&rdquo; is not a 13-digit product barcode. Leave it, and the app will make a new barcode.
+          </p>
+        )}
+        {!tag && !scanning && <p className={`text-xs ${muted}`}>Skip this if the item has no barcode: a new one is made for you.</p>}
+      </section>
+
     <form
       onSubmit={(e) => {
         e.preventDefault();
@@ -262,9 +319,10 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
           {error}
         </p>
       )}
-      <button type="submit" disabled={busy || preparing} className={`${primaryButton} py-3 text-lg`}>
+      <button type="submit" disabled={busy || preparing || tag?.status === 'exists'} className={`${primaryButton} py-3 text-lg`}>
         {busy ? 'Saving…' : 'Save and get barcode'}
       </button>
     </form>
+    </div>
   );
 }
