@@ -564,6 +564,8 @@ Gotcha: Playwright's `getByLabel('X')` matches any accessible name *containing* 
 
 ## 18. Guide voice, practice sale, edit after tagging (plan v9, ADR-019)
 
+> Plan v10 (§19) replaced the per-lesson player: the rows "What is read" (`data-voice` marks) and "Player" (`voice-player.tsx`, the Listen-to-all queue) below no longer exist. The speech helper, practice sale and edit after tagging are unchanged.
+
 | Piece | Where | Notes |
 |---|---|---|
 | Speech helper | `src/features/guide/voice.ts` | `say(text, { locale, slow, onEnd })` over `speechSynthesis` with `lang` en-IN / hi-IN and the best matching voice (`voiceFor`); keeps the utterance in a module variable (Chrome drops `onend` otherwise); `stopSpeaking()`. `forSpeech()` cleans screen text (emoji, arrows, ✓ ✎ dropped; `×` → "by" / "और"). `missingVoice()` once voices have loaded. |
@@ -572,4 +574,14 @@ Gotcha: Playwright's `getByLabel('X')` matches any accessible name *containing* 
 | Practice sale | `practice-sale.tsx` (in lesson `sell`, `extra: 'practice-sale'`) | Pure client: sample item (MRP ₹1,499, 4 in stock), real Sell labels (`sell.*`), `feedback()` sounds, WAAPI shake, `DoneOverlay`; voice prompts `prac.say.*`. Never calls the server. |
 | Edit after tagging | `old-stock-form.tsx` (`editing` state) → `editTaggedItemAction` → `correctTaggedItem` | Updates the product row only (no stock movement). Prices allowed when `can(me,'prices')` or `product.createdBy === me` and no `sale` / `exchange_*` movement exists; purchase price only with `costs`; returns `pricesKept`. |
 | Tests | `e2e/guide-voice.spec.ts` | Replaces `window.speechSynthesis` with a recorder (`addInitScript`); `__finishSpeech()` ends the current sentence. Real voices are only checked on phones. |
+
+## 19. The Guide as stories (plan v10, ADR-020)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Lessons | `src/features/guide/stories.ts` | `STORIES`: id, audience, title, goal, 2–5 `steps` ({ `text`, `say`, `scene` }), optional `tip`, `open` link, `practice`. Every string is `{ en, hi }`. `**bold**` in `text` marks the control to press. **Limits (unit test `stories.test.ts`)**: step text ≤ 7 words, spoken line ≤ 26, title ≤ 4, goal ≤ 9, tip ≤ 12, whole guide < 450 words, Hindi on every line. |
+| Scenes | `scenes.tsx` → `PhoneScene({ scene, locale })` | A 208 × 330 px phone in theme colours (`brand-*`, zari band) or, for `kind: 'tag'`, the real `HangTag` with a ring over one part (`TAG_BOX`, % of the tag, calibrated from screenshots). `Tap x y` (% of the scene) is the finger. To add a scene: a new `kind` in the `Scene` union + a `case`. |
+| Animations | `guide.css` (`st-*`) | One loop = `--st` 2.8 s; delays through `--d`. Rules outside the motion media query are the still end state (reduced motion). `.st-stage` scales the scene up on tall screens. |
+| Player | `story-player.tsx` | `GuideBrowser`: part chips, tiles; the open lesson is the address hash (`#sell`), read with `useSyncExternalStore`; tiles `pushState` (Back closes), links open directly, `#for-<part>` selects a part. `StoryPlayer` (portal, `role="dialog"`): progress bars, Next/Back, swipe (60 px), arrow keys, Escape; voice = `say(step.say)` then auto-advance after 0.9 s; voice on/off in `localStorage` `maa-guide-voice`; final card; `Got it` → `useDone().toggle`. |
+| Page | `src/app/(pos)/guide/page.tsx` | Server: title, progress, default part from `getCurrentStaff()` (logged out → Everyone, salesman → Selling, catalog/stock right → Stock & tags, admin → Owner). |
 

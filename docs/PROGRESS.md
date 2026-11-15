@@ -27,7 +27,19 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Edit after tagging + a Guide that talks (2026-11-16, latest)
+## A short Guide: stories with an animation per step (2026-11-16, latest)
+Owner feedback: the look is very good, but the Guide is too long — minimum words, better animations, better guidance. Owner chose the **story player** (one step at a time). Plan: `docs/PLAN_V10_SHORT_GUIDE.md`; reference §19; ADR-020.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | All 15 lessons rewritten: 2–5 steps, each ≤ 7 words on screen, with a fuller spoken line; English + Hindi | Done — ~1,600 words → under 450 |
+| 2 | One animated scene per step (63 steps, 22 scene kinds): phone in the theme's colours, finger tap, typing, scan line, ticks, bars, the real tag with a part ringed | Done |
+| 3 | Story player: progress bars, Next / Back, swipe, arrow keys, voice that moves on by itself, final card (tip, open the screen, practice a sale, Got it ✓) | Done |
+| 4 | Guide page: pick your part (preselected from the login), lesson tiles; `/guide#sell` opens a lesson, `/guide#for-owner` picks a part, Back closes | Done |
+| 5 | Old long lessons, drawings and the page-level Listen player removed; dead dictionary keys removed | Done |
+- Verified: lint, typecheck, **121 unit tests** (incl. the word limits), build, **65 Playwright tests at desktop + phone size** (+1 phone-only skip). Screenshots of every step at phone size (finger positions and tag highlights calibrated against them), and a Hindi lesson in the Rani night theme.
+
+## Edit after tagging + a Guide that talks (2026-11-16)
 Owner request: an **Edit** option at the end of tagging (only *Next item* / *Print today's labels* before); improve the Guide with voice (translated) and interaction; keep the docs and `PROJECT_CONTEXT.md` current. Owner decisions before building: the phone's own voice (not recorded files); Edit does not lower piece counts for now (D-ST-2). Plan: `docs/PLAN_V9_GUIDE_VOICE_EDIT.md`; reference §18; ADR-019.
 
 | # | Task | Result |

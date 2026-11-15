@@ -34,9 +34,9 @@ Live app: https://maa-collection-pi.vercel.app
 
 ## 1c. Listen to the Guide, and practise
 
-- Open **Guide** (top of the screen, or "New here?" on the login page). Tap **▶ Listen** on any lesson: the phone reads it in your language (Hindi or English) and the step being read lights up. Buttons: back, pause, next, stop, **Slow**. **Listen to all** plays every lesson of a part (e.g. Selling).
-- In **Read a tag**, tap the speaker next to a part of the tag to hear what it means.
-- In **Sell an item**, try the **practice sale**: scan the sample tag, type a price, record it. The voice tells you what to do next. Nothing is saved.
+- Open **Guide** (top of the screen, or "New here?" on the login page). Pick your part — **Everyone**, **Selling**, **Stock & tags** or **Owner** — and tap a lesson.
+- A lesson plays like a story: one step at a time, a moving picture of the phone, a few words, and the phone's voice in your language (Hindi or English). It moves on by itself; or tap **Next** / **Back**, or swipe. The speaker button turns the voice off.
+- At the end: **Got it ✓** ticks the lesson. In **Sell an item** you can also try a **practice sale** — nothing is saved.
 - Hearing nothing? Turn the volume up. For Hindi, the phone needs its Hindi voice: Settings → Text-to-speech → Google → install Hindi (most Android phones have it already).
 
 ## 2. Who can do what

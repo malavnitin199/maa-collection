@@ -2,6 +2,8 @@
 
 Owner request (chat): "When we are creating a label, at the end give the option of **edit** too — there is only *Next item* or *Print today's labels*. Improve the **Guide**; if needed add **voice**, translated, and interaction, so it guides a user through. Deploy and commit, and keep the docs (and `PROJECT_CONTEXT.md`) up to date."
 
+> **Update:** the Guide's layout in sections 2 and 4 (long lessons with a ▶ Listen player, Listen to all, tap-the-tag) was replaced the same day by short stories — see `docs/PLAN_V10_SHORT_GUIDE.md`. Edit after tagging, the phone's-voice decision and the practice sale stand.
+
 ## Owner decisions (2026-11-16, asked before building)
 
 | Question | Answer |
