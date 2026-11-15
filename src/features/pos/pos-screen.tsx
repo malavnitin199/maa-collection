@@ -98,7 +98,7 @@ export function PosScreen({
         </Link>
       </div>
 
-      <FirstTimeTip id="sell" text="Scan a tag (or type its code) to start a sale." helpHref="/help#sell" />
+      <FirstTimeTip id="sell" text="Scan a tag (or type its code) to start a sale." helpHref="/guide#sell" />
 
       <ScanInput label="Scan barcode or enter SKU" onScan={handleScan} busy={busy} captureScanner={pending?.step !== 'sell'} />
 

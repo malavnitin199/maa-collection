@@ -501,15 +501,32 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
   await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 });
 
-test('help guide is reachable and first-time tips can be dismissed', async ({ page }) => {
+test('guide and help are reachable logged out; lessons can be ticked; first-time tips can be dismissed', async ({ page }) => {
   await page.context().clearCookies(); // switch user: start logged out
   await page.goto('/login');
   await page.getByRole('link', { name: 'New here?' }).click();
-  await expect(page).toHaveURL(/\/help#start$/);
+  await expect(page).toHaveURL(/\/guide#start$/);
+  await expect(page.getByRole('heading', { name: 'Guide', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Log in and find your way' })).toBeVisible();
+  // Every lesson is listed in the index and present on the page.
+  const index = page.getByRole('navigation', { name: 'Guide lessons' });
+  for (const title of ['Sell an item', 'Read a tag', 'New stock: one design in sizes × colours', 'Managing your inventory', 'Open an item from its QR code']) {
+    await expect(index.getByRole('link', { name: title })).toBeVisible();
+    await expect(page.getByRole('heading', { name: title, level: 3 })).toBeVisible();
+  }
+  // The tag lesson shows a real tag with its parts explained.
+  await expect(page.locator('#tag').getByTestId('hang-tag')).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Parts of a tag' }).getByRole('listitem')).toHaveCount(6);
+  // Ticking a lesson is remembered on this phone.
+  await expect(page.getByTestId('guide-progress')).toContainText('0 of 13 learned');
+  await page.getByRole('button', { name: 'Mark as learned: Sell an item' }).click();
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 13 learned');
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Learned: Sell an item' })).toHaveAttribute('aria-pressed', 'true');
+  // Quick help & fixes is still there.
+  await page.getByRole('link', { name: 'Problems & fixes' }).click();
+  await expect(page).toHaveURL(/\/help#faq$/);
   await expect(page.getByRole('heading', { name: 'Help & guide' })).toBeVisible();
-  await expect(page.getByText('Add it to your home screen')).toBeVisible(); // "New here?" open by default
-  await page.getByText('Catalog & old stock (catalog / QC person)').click();
-  await expect(page.getByText('Tag one item (about 30 seconds)')).toBeVisible();
 
   await page.context().clearCookies(); // switch user: start logged out
 

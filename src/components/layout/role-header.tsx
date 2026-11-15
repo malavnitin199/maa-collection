@@ -44,8 +44,8 @@ async function HeaderContent() {
           )}
         </div>
         <div className="flex items-center gap-4 text-sm">
-          <Link href="/help" className="text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400">
-            Help
+          <Link href="/guide" className="text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400">
+            Guide
           </Link>
           {me ? (
             <form action={logoutAction}>

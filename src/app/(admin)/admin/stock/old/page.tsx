@@ -34,7 +34,7 @@ export default function TagOldStockPage() {
           kept for the next item.
         </p>
       </div>
-      <FirstTimeTip id="old-stock" text="See the 6 steps and tips for tagging shelf by shelf." helpHref="/help#catalog" />
+      <FirstTimeTip id="old-stock" text="See the 6 steps and tips for tagging shelf by shelf." helpHref="/guide#old-stock" />
       <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
         <Tagger />
       </Suspense>

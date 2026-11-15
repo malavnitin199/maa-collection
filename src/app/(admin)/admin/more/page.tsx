@@ -37,7 +37,8 @@ const GROUPS: { title: string; links: Item[] }[] = [
       { href: '/pos', label: 'Counter sale', hint: 'Scan and sell', needs: 'everyone' },
       { href: '/pos/exchange', label: 'Exchange', hint: 'Swap an item from an earlier sale', needs: 'everyone' },
       { href: '/pos/my-sales', label: 'My sales', hint: 'Your own sales today and this month', needs: 'everyone' },
-      { href: '/help', label: 'Help & guide', hint: 'How to use the app, step by step', needs: 'everyone' },
+      { href: '/guide', label: 'Guide', hint: 'Learn every part of the app: short lessons with pictures', needs: 'everyone' },
+      { href: '/help', label: 'Help & problems', hint: 'Quick reference and fixes for camera, scanner, PIN, printing', needs: 'everyone' },
     ],
   },
 ];

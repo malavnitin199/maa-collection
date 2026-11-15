@@ -37,7 +37,13 @@ export default function HelpPage() {
     <main className="flex flex-col gap-4">
       <div>
         <h1 className="text-2xl font-semibold">Help & guide</h1>
-        <p className={`text-sm ${muted}`}>Tap a section to open it. Start with &ldquo;New here?&rdquo;.</p>
+        <p className={`text-sm ${muted}`}>
+          Quick reference and fixes. Learning the app? The{' '}
+          <Link href="/guide" className={link}>
+            Guide
+          </Link>{' '}
+          has short lessons with pictures.
+        </p>
       </div>
 
       <nav aria-label="Help sections" className="flex flex-wrap gap-2 text-sm">
