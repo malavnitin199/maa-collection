@@ -1,6 +1,6 @@
 # Development progress (living)
 
-Last updated: 2026-11-15
+Last updated: 2026-11-16
 
 ## Current milestone
 Phase P1: application foundation, plus an owner-requested dummy scan-to-sell demo.
@@ -27,7 +27,23 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Hindi round 2: owner and catalog screens (2026-11-16, latest)
+## Look and feel v8: five themes, day/night, shop-made design (2026-11-16, latest)
+Owner request: make the app easier and more catchy for retailers — several themes, colours, day/night mode, more interactive, creative (no plain rectangles), take references. Plan + direction: `docs/PLAN_V8_LOOK_AND_FEEL.md`; developer notes: `docs/TECHNICAL_REFERENCE.md` §17; ADR-018.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | Theme system: 5 dye themes (Peacock default, Marigold, Rani, Neel, Mehendi) as CSS variables behind Tailwind `brand-*`; `emerald-*` replaced app-wide; day / night / same as phone; chosen per phone, applied before the first paint | Done |
+| 2 | Theme picker (palette button in the header and on login): swatches like dyed cloth with a zari edge; bottom sheet on phones, pop-over on bigger screens | Done |
+| 3 | Type: Rozha One (titles, big numbers) + Mukta (body), both Latin + Devanagari | Done |
+| 4 | Header band in the theme's dye with the woven **zari border**; icon buttons (theme, sound, language, Guide, log out) | Done |
+| 5 | Floating bottom dock with a raised round **Sell** button; line icons | Done |
+| 6 | Home: hang-tag shaped quick actions, today's net revenue as a dyed hero card; Stock hub options as hang tags | Done |
+| 7 | Login: name circles with initials, big PIN number keypad (typing still works) | Done |
+| 8 | Scan zone on every scanning screen: dyed panel with viewfinder corners, white Find, camera button with icon | Done |
+| 9 | More menu: grouped lists with an icon per row | Done |
+- Verified: lint, typecheck, **114 unit tests**, build, **57 Playwright tests at desktop + phone size** (+1 phone-only skip), incl. new `e2e/look.spec.ts` (theme + night apply at once and stay after reload; keypad fills the PIN and logs in). Phone screenshots of login, Home, Sell, Stock, More in all five themes, day and night. Found and fixed on the way: the theme button's label "Colours…" clashed with the product "Colour" box for screen readers/tests → renamed "Theme and day/night"; the picker opened off-screen on phones → bottom sheet rendered on `<body>`; base CSS moved into `@layer base` so utility colours win.
+
+## Hindi round 2: owner and catalog screens (2026-11-16)
 Owner request: translate the owner and catalog screens too; the live Home dashboard still showed "Net revenue", "Net profit", "Sold", "Exchange", "This month" in English. Approach: `docs/PLAN_V7_HINDI_AND_SCAN_FEEDBACK.md` § Round 2; developer notes + word list: `docs/TECHNICAL_REFERENCE.md` §15.
 
 | # | Task | Result |

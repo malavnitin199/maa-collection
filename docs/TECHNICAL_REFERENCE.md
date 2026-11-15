@@ -544,3 +544,21 @@ Plan v7, ADR-017. Round 1 (salesman screens: login, header/menus/tabs, Sell, Exc
 | Reduced motion | `feedback.css` media query; JS checks `prefers-reduced-motion` | No pops, ripples or shakes; the tick and card just appear, the box only flashes. |
 | Used on | Sell (`pos-screen.tsx`), Exchange (`exchange-screen.tsx`), More of existing items (`restock-form.tsx`) | |
 
+## 17. Look and feel: themes, day/night (plan v8, ADR-018)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Theme colours | `src/app/globals.css` | Each theme defines `--b-50 … --b-950` and `--zari` under `[data-theme="…"]`; `@theme inline` maps them to Tailwind `brand-*`, `zari`, `surface`, `background`. **Use `brand-*` for anything that should follow the theme** (never a fixed hue like `emerald-*`). The 600 step keeps white text ≥ 4.5:1 in every theme. |
+| Day / night | `@custom-variant dark` on `[data-mode="dark"]` | `dark:` follows the app's switch, not the OS directly. "Same as phone" is resolved to light/dark by the script and kept in sync by `AppearanceSync`. Night overrides: `--background`, `--surface`, `--foreground`; Marigold's zari is lightened at night. |
+| No flash | `APPEARANCE_SCRIPT` in `src/features/appearance/appearance.ts`, inlined in `<head>` by the root layout | Reads `localStorage` `maa-theme` / `maa-mode` and sets `data-theme` / `data-mode` before the first paint; `<html suppressHydrationWarning>`. |
+| Picker | `src/features/appearance/appearance-menu.tsx` | Radio groups (theme swatches, Day/Night/Same as phone). Rendered with `createPortal` on `<body>` (the sticky header is its own stacking layer below the dock); bottom sheet on phones, pop-over under the button from `sm`. Escape / outside tap closes. `applyAppearance()` saves + fires `maa-appearance-change`. |
+| Base styles | `@layer base` in globals.css | `h1` uses the display face (Rozha One) in the theme's dark step. Kept in the base layer so utilities (`text-white` on bands) win. |
+| Fonts | `src/app/layout.tsx` (`next/font/google`) | Mukta 400–800 (`--font-mukta`, body), Rozha One (`--font-rozha`, `font-display`), Geist Mono; Latin + Devanagari subsets. |
+| Signature + shapes | `.zari` (masked SVG band), `.tag-shape` (notched clip-path), `TagTile` (`src/components/ui/tag-tile.tsx`), `HeroStat` (`src/features/reports/widgets.tsx`) | Zari only on the header band, login band, hero card; hang-tag tiles only for main actions (Home quick actions, Stock hub) so the shape keeps its meaning. |
+| Shared classes | `src/components/ui/styles.ts` | Pill buttons with press feedback, `card` / `cardMuted`, `headerIconButton`. Icons: `src/components/ui/icons.tsx` (24 px line icons, decorative). |
+| Navigation | `src/components/layout/bottom-nav.tsx` | Floating dock, raised round Sell link (`/pos`) in the middle; tab names unchanged. Page content has `pb-32` on phones. |
+| Motion | `.page-in` (route templates), `.pop-in`, `.look-panel` | All off under `prefers-reduced-motion`. |
+| Print | `@media print` | Paper stays white; tags and labels use fixed white/black and never take the theme. |
+
+Gotcha: Playwright's `getByLabel('X')` matches any accessible name *containing* X — keep new button labels from containing words used by form labels (that is why the picker is "Theme and day/night", not "Colours…", and the keypad is "Number keys", not "PIN keypad").
+

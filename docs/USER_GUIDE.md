@@ -21,9 +21,16 @@ Live app: https://maa-collection-pi.vercel.app
 ## 1a. Hindi or English, and scan sounds
 
 - Tap **हिन्दी** (or **English**) at the top of any screen, or on the login page. The screen changes at once. Your choice is saved **for you**: it follows you to any phone you log in on. Product names, sizes and prices stay as they were entered.
-- Hindi so far covers the selling screens (login, Sell, Exchange, My sales, scanning, the Guide's first lessons). Owner and catalog screens come next.
+- Hindi covers every screen (selling, owner, catalog, Guide). Printed tags stay in English.
 - A good scan shows a **green ✓** with a short **"ting"** (and a small vibration). A failed scan **shakes** with a low buzz. After a sale or exchange a **"Sale done ✓"** card shows the amount with a chime; it closes by itself, or tap it.
 - **🔊 / 🔇** at the top turns the sounds and vibration off or on for that phone.
+
+## 1b. Colours and day/night
+
+- Tap the **palette** button (top of any screen, also on the login page). Pick a colour: **Peacock** (teal, the default), **Marigold** (saffron), **Rani** (pink), **Neel** (indigo) or **Mehendi** (henna green). Then **Day**, **Night** (dark, easier on the eyes in the evening) or **Same as phone**.
+- It changes at once and is saved **on that phone** (each phone can have its own look). Printed tags never change colour.
+- Login: tap your **name circle**, then your PIN on the big number keys (⌫ deletes the last digit), then **Log in**.
+- The round **Sell** button in the middle of the bottom bar opens the counter from anywhere.
 
 ## 2. Who can do what
 
