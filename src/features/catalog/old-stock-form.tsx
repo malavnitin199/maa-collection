@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
-import { checkTagBarcodeAction, tagOldStockAction, type OldStockResult, type TagLookup } from '@/server/actions/admin';
+import { checkTagBarcodeAction, editTaggedItemAction, tagOldStockAction, type OldStockResult, type TagLookup } from '@/server/actions/admin';
 import { useT } from '@/features/i18n/i18n-provider';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { itemLink } from '@/lib/item-link';
 import { tagSizeRange } from '@/lib/size-lists';
+import { IconPencil } from '@/components/ui/icons';
 import { HangTag } from './hang-tag';
 import { PhotoPickers } from './photo-manager';
 import { resizePhoto } from './resize-photo';
@@ -38,6 +39,9 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
   const [tag, setTag] = useState<TagLookup | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<Saved | null>(null);
+  // Edit: the form opens again, filled in, to fix the item just saved (same barcode).
+  const [editing, setEditing] = useState(false);
+  const [updated, setUpdated] = useState(false);
   const [count, setCount] = useState(0);
   const [busy, startTransition] = useTransition();
   const [preparing, setPreparing] = useState(false);
@@ -97,10 +101,23 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
     form.set('quantity', quantity);
     form.set('barcode', tag?.status === 'new' ? tag.barcode : '');
     for (const photo of photos) form.append('photos', new File([photo.blob], 'photo.jpg', { type: 'image/jpeg' }));
+    if (editing && saved) {
+      const productId = saved.product.id;
+      startTransition(async () => {
+        const result = await editTaggedItemAction(productId, form);
+        if (!result.ok) return setError(result.error);
+        setSaved(result);
+        setEditing(false);
+        setUpdated(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      return;
+    }
     startTransition(async () => {
       const result = await tagOldStockAction(form);
       if (!result.ok) return setError(result.error);
       setSaved(result);
+      setUpdated(false);
       setCount((n) => n + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
@@ -118,17 +135,26 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
     setTag(null);
     setScanning(false);
     setSaved(null);
+    setEditing(false);
+    setUpdated(false);
     touched();
     // Category, company and size stay: old stock is usually tagged shelf by shelf.
   }
 
-  if (saved) {
+  if (saved && !editing) {
     return (
       <div className="flex flex-col gap-4">
         <p role="status" className={okBox}>
-          {t('stk.old.saved', { name: saved.product.name, barcode: saved.product.barcode })}{' '}
-          {saved.product.barcode.startsWith('200') ? t('stk.old.stickLabel') : t('stk.old.usesTagBarcode')}
+          {updated ? (
+            t('stk.old.updated')
+          ) : (
+            <>
+              {t('stk.old.saved', { name: saved.product.name, barcode: saved.product.barcode })}{' '}
+              {saved.product.barcode.startsWith('200') ? t('stk.old.stickLabel') : t('stk.old.usesTagBarcode')}
+            </>
+          )}
           {saved.photoError && <span className="block text-red-700">{t('stk.old.photoProblem', { error: saved.photoError })}</span>}
+          {saved.pricesKept && <span className="mt-1 block text-amber-800 dark:text-amber-300">{t('stk.old.pricesKept')}</span>}
         </p>
         <div className="mx-auto">
           <HangTag product={saved.product} sizes={tagSizeRange(categorySizes, [], saved.product.size)} qrValue={itemLink(window.location.origin, saved.product.barcode)} />
@@ -137,13 +163,25 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
           {t('stk.old.nextItem')}
         </button>
         <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setEditing(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`${secondaryButton} py-3`}
+          >
+            <IconPencil className="h-4 w-4" />
+            {t('stk.old.edit')}
+          </button>
           <Link href="/admin/labels/print?mine=today" className={`${secondaryButton} py-3 text-center`}>
             {t('stk.printTodaysLabels')}
           </Link>
-          <Link href={`/admin/products/${saved.product.id}`} className={`${secondaryButton} py-3 text-center`}>
-            {t('stk.old.openItem')}
-          </Link>
         </div>
+        <Link href={`/admin/products/${saved.product.id}`} className={`text-center text-sm ${link}`}>
+          {t('stk.old.openItem')} →
+        </Link>
         <p className={`text-center text-sm ${muted}`}>{t(count === 1 ? 'stk.old.session.one' : 'stk.old.session.other', { n: count })}</p>
       </div>
     );
@@ -151,7 +189,14 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
 
   return (
     <div className="flex flex-col gap-4">
+      {editing && saved && (
+        <div className={`${okBox} flex flex-col gap-1`}>
+          <p className="font-semibold">{t('stk.old.editing', { name: saved.product.name, barcode: saved.product.barcode })}</p>
+          <p>{t('stk.old.editHint')}</p>
+        </div>
+      )}
       {/* Outside the main <form>: the scanner has its own form, and forms can't be nested. */}
+      {!editing && (
       <section className={`${card} flex flex-col gap-3`}>
         <h2 className="font-semibold">
           {t('stk.old.step0')} <span className={`text-sm font-normal ${muted}`}>{t('stk.optional')}</span>
@@ -203,6 +248,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
         )}
         {!tag && !scanning && <p className={`text-xs ${muted}`}>{t('stk.old.skip')}</p>}
       </section>
+      )}
 
     <form
       onSubmit={(e) => {
@@ -212,7 +258,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
       onChange={touched}
       className="flex flex-col gap-4"
     >
-      {count > 0 && (
+      {count > 0 && !editing && (
         <p className={`text-sm ${muted}`}>
           {t('stk.old.soFar', { n: count })}{' '}
           <Link href="/admin/labels/print?mine=today" className={link}>
@@ -221,6 +267,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
         </p>
       )}
 
+      {!editing && (
       <section className={`${card} flex flex-col gap-3`}>
         <h2 className="font-semibold">{t('stk.old.step1')} <span className={`text-sm font-normal ${muted}`}>{t('stk.old.photosHint')}</span></h2>
         {photos.length > 0 && (
@@ -244,6 +291,7 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
         <PhotoPickers onFiles={addPhotos} disabled={preparing || photos.length >= 4} />
         {preparing && <p className={`text-sm ${muted}`}>{t('stk.old.preparingPhoto')}</p>}
       </section>
+      )}
 
       <section className={`${card} flex flex-col gap-3`}>
         <h2 className="font-semibold">{t('stk.old.step2')}</h2>
@@ -322,10 +370,12 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
               <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder={t('stk.codePriceOptional')} className={input} />
             </label>
           )}
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t('stk.old.piecesCounted')}
-            <input required inputMode="numeric" value={quantity} onChange={(e) => setQuantity(e.target.value)} className={input} />
-          </label>
+          {!editing && (
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              {t('stk.old.piecesCounted')}
+              <input required inputMode="numeric" value={quantity} onChange={(e) => setQuantity(e.target.value)} className={input} />
+            </label>
+          )}
         </div>
       </section>
 
@@ -334,9 +384,21 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
           {error}
         </p>
       )}
-      <button type="submit" disabled={busy || preparing || tag?.status === 'exists'} className={`${primaryButton} py-3 text-lg`}>
-        {busy ? t('common.saving') : t('stk.old.save')}
+      <button type="submit" disabled={busy || preparing || (!editing && tag?.status === 'exists')} className={`${primaryButton} py-3 text-lg`}>
+        {busy ? t('common.saving') : t(editing ? 'stk.old.saveChanges' : 'stk.old.save')}
       </button>
+      {editing && (
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setEditing(false);
+          }}
+          className={`${secondaryButton} py-3`}
+        >
+          {t('common.cancel')}
+        </button>
+      )}
     </form>
     </div>
   );

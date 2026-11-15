@@ -428,3 +428,50 @@ describe('photo taken while creating tags (shared by every size of a colour)', (
     await expect(images.addPhotoToProducts(db, STORE_ID, { productIds: ids, bytes: new TextEncoder().encode('<svg/>'), staffId: owner })).rejects.toThrow(/Only JPEG/);
   });
 });
+
+describe('fixing an item right after tagging it (Tag old stock → Edit)', () => {
+  async function tagOne(staffId: string) {
+    const { createProductsBatch } = await import('./products');
+    const kurta = (await listCategories(db, STORE_ID)).find((c) => c.code === 'KU')!;
+    const result = await createProductsBatch(db, STORE_ID, {
+      operationId: `old-${staffId}`, supplierId: null, categoryId: kurta.id, brand: '', note: 'Old stock tagged', staffId,
+      rows: [{ barcode: null, name: 'Cotton Kurta', size: 'M', color: 'Blue', mrpPaise: 99900, pricePaise: 89900, costPaise: 50000, quantity: 3 }],
+    });
+    return { product: result.products[0], kurta };
+  }
+  const fix = (overrides: Record<string, unknown>) => ({
+    name: 'Cotton Kurta Long', size: 'L', color: 'Navy', supplierId: null, mrpPaise: 109900, pricePaise: 99900, costPaise: 55000, canPrices: false, canCosts: false, ...overrides,
+  });
+
+  it('fixes details and prices of an unsold item its creator just tagged; barcode, SKU and pieces stay', async () => {
+    const { correctTaggedItem } = await import('./products');
+    const catalogPerson = (await listStaff(db, STORE_ID)).find((p) => p.name === 'Nitin')!.id;
+    const { product, kurta } = await tagOne(catalogPerson);
+    const { product: fixed, pricesKept } = await correctTaggedItem(db, STORE_ID, { productId: product.id, staffId: catalogPerson, categoryId: kurta.id, ...fix({}) });
+    expect(pricesKept).toBe(false);
+    expect([fixed.name, fixed.size, fixed.color, fixed.mrpPaise, fixed.pricePaise]).toEqual(['Cotton Kurta Long', 'L', 'Navy', 109900, 99900]);
+    expect([fixed.barcode, fixed.sku, fixed.stock]).toEqual([product.barcode, product.sku, 3]);
+    expect(fixed.costPaise).toBe(50000); // purchase price needs the "costs" right
+    const moves = await db.select().from(stockMovements).where(eq(stockMovements.productId, product.id));
+    expect(moves).toHaveLength(1); // no stock entry added or changed
+  });
+
+  it('keeps prices once sold (or for someone else’s item) unless the person has the "prices" right', async () => {
+    const { correctTaggedItem } = await import('./products');
+    const staffList = await listStaff(db, STORE_ID);
+    const nitin = staffList.find((p) => p.name === 'Nitin')!.id;
+    const vishal = staffList.find((p) => p.name === 'Vishal')!.id;
+    const { product, kurta } = await tagOne(nitin);
+    // Someone else without the prices right: details change, prices stay.
+    const other = await correctTaggedItem(db, STORE_ID, { productId: product.id, staffId: vishal, categoryId: kurta.id, ...fix({}) });
+    expect([other.pricesKept, other.product.mrpPaise, other.product.name]).toEqual([true, 99900, 'Cotton Kurta Long']);
+    // Sold once: the creator can't change prices any more…
+    await recordSale(db, STORE_ID, { operationId: 'sold-1', productId: product.id, quantity: 1, unitPricePaise: 85000, soldBy: nitin, recordedBy: nitin });
+    const creator = await correctTaggedItem(db, STORE_ID, { productId: product.id, staffId: nitin, categoryId: kurta.id, ...fix({ mrpPaise: 120000, pricePaise: 110000 }) });
+    expect([creator.pricesKept, creator.product.mrpPaise, creator.product.pricePaise]).toEqual([true, 99900, 89900]);
+    // …but someone with the prices (and costs) right can.
+    const owners = await correctTaggedItem(db, STORE_ID, { productId: product.id, staffId: owner, categoryId: kurta.id, ...fix({ mrpPaise: 120000, pricePaise: 110000, canPrices: true, canCosts: true }) });
+    expect([owners.pricesKept, owners.product.mrpPaise, owners.product.pricePaise, owners.product.costPaise, owners.product.stock]).toEqual([false, 120000, 110000, 55000, 2]);
+    await expect(correctTaggedItem(db, STORE_ID, { productId: product.id, staffId: owner, categoryId: kurta.id, ...fix({ pricePaise: 999999, canPrices: true }) })).rejects.toThrow(/above MRP/);
+  });
+});

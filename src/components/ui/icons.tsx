@@ -39,4 +39,10 @@ export const IconTruck = ({ className }: IconProps) => base(<><path d="M3.5 6.5h
 export const IconGrid = ({ className }: IconProps) => base(<><rect x="4" y="4" width="6.5" height="6.5" rx="1.2" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2" /></>, className);
 export const IconHelp = ({ className }: IconProps) => base(<><circle cx="12" cy="12" r="8" /><path d="M9.8 9.5a2.3 2.3 0 0 1 4.4.9c0 1.6-2.2 2-2.2 3.4" /><path d="M12 16.8v.2" /></>, className);
 export const IconBoxes = ({ className }: IconProps) => base(<><path d="M4 9.5 12 5l8 4.5-8 4.5-8-4.5Z" /><path d="M4 9.5v5L12 19l8-4.5v-5" /></>, className);
+export const IconPencil = ({ className }: IconProps) => base(<><path d="M14.5 5.5 18.5 9.5 9 19H5v-4l9.5-9.5Z" /><path d="m12.5 7.5 4 4" /></>, className);
+export const IconPlay = ({ className }: IconProps) => base(<path d="M8 5.5v13l10.5-6.5L8 5.5Z" fill="currentColor" />, className);
+export const IconPause = ({ className }: IconProps) => base(<><rect x="7" y="5.5" width="3.2" height="13" rx="1" fill="currentColor" /><rect x="13.8" y="5.5" width="3.2" height="13" rx="1" fill="currentColor" /></>, className);
+export const IconStop = ({ className }: IconProps) => base(<rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor" />, className);
+export const IconPrev = ({ className }: IconProps) => base(<><path d="M17.5 6v12L9 12l8.5-6Z" fill="currentColor" /><path d="M6.5 6v12" /></>, className);
+export const IconNext = ({ className }: IconProps) => base(<><path d="M6.5 6v12L15 12 6.5 6Z" fill="currentColor" /><path d="M17.5 6v12" /></>, className);
 export const IconChevron = ({ className }: IconProps) => base(<path d="m9.5 6 6 6-6 6" />, className);

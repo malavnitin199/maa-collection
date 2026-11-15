@@ -192,6 +192,12 @@ export const stockEn = {
   'stk.old.step3': '3. Price and count',
   'stk.old.piecesCounted': 'Pieces counted',
   'stk.old.save': 'Save and get barcode',
+  'stk.old.edit': 'Edit this item',
+  'stk.old.editing': 'Editing {name} · barcode {barcode}',
+  'stk.old.editHint': 'Same item and barcode, so tags already printed stay valid. Pieces can’t be changed here: add more from “Open item”.',
+  'stk.old.saveChanges': 'Save changes',
+  'stk.old.updated': 'Changes saved. Print the tag again if the name, size, colour or MRP changed.',
+  'stk.old.pricesKept': 'Prices were not changed: this item has already been sold, so only someone with the “Prices” right can change them.',
 
   // Pages: Add stock hub and the entry screens
   'stk.hub.title': 'Add stock',
@@ -490,6 +496,12 @@ export const stockHi: Record<keyof typeof stockEn, string> = {
   'stk.old.step3': '3. दाम और गिनती',
   'stk.old.piecesCounted': 'गिने हुए पीस',
   'stk.old.save': 'सेव करें और बारकोड पाएँ',
+  'stk.old.edit': 'यह आइटम बदलें',
+  'stk.old.editing': '{name} में बदलाव · बारकोड {barcode}',
+  'stk.old.editHint': 'आइटम और बारकोड वही रहेंगे, इसलिए छपे हुए टैग चलते रहेंगे। पीस यहाँ नहीं बदलते: और पीस “आइटम खोलें” से जोड़ें।',
+  'stk.old.saveChanges': 'बदलाव सेव करें',
+  'stk.old.updated': 'बदलाव सेव हो गए। नाम, साइज़, रंग या MRP बदला हो तो टैग फिर से प्रिंट करें।',
+  'stk.old.pricesKept': 'दाम नहीं बदले: यह आइटम बिक चुका है, इसलिए दाम सिर्फ़ “दाम” के अधिकार वाला व्यक्ति बदल सकता है।',
 
   // Pages: Add stock hub and the entry screens
   'stk.hub.title': 'स्टॉक जोड़ें',

@@ -612,6 +612,64 @@ export async function createProductsBatch(
   });
 }
 
+/**
+ * Fix an item right after tagging it (Tag old stock → Edit): name, size, colour,
+ * category, company and prices. Same item, barcode and SKU; the piece count is
+ * never touched here (stock only changes through the ledger).
+ * Prices change with the "prices" right, or when the person who created the item
+ * corrects it before it has ever been sold or exchanged (fixing what they just
+ * typed). The purchase price needs the "costs" right. Otherwise the old values stay
+ * and `pricesKept` says so.
+ */
+export async function correctTaggedItem(
+  db: Db,
+  storeId: string,
+  input: {
+    productId: string;
+    staffId: string;
+    canPrices: boolean;
+    canCosts: boolean;
+    name: string;
+    categoryId: string;
+    supplierId: string | null;
+    size: string;
+    color: string;
+    mrpPaise: number;
+    pricePaise: number;
+    costPaise: number | null;
+  },
+): Promise<{ product: Product; pricesKept: boolean }> {
+  const current = await getProduct(db, storeId, input.productId);
+  if (!current) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  let pricesAllowed = input.canPrices;
+  if (!pricesAllowed && current.createdBy === input.staffId) {
+    const [sold] = await db
+      .select({ id: stockMovements.id })
+      .from(stockMovements)
+      .where(and(eq(stockMovements.productId, current.id), inArray(stockMovements.reason, ['sale', 'exchange_return', 'exchange_issue'])))
+      .limit(1);
+    pricesAllowed = !sold;
+  }
+  const mrpPaise = pricesAllowed ? input.mrpPaise : current.mrpPaise;
+  const pricePaise = pricesAllowed ? input.pricePaise : current.pricePaise;
+  const costPaise = input.canCosts ? input.costPaise : current.costPaise;
+  const product = await updateProduct(db, storeId, current.id, {
+    name: input.name,
+    brand: current.brand,
+    category: current.category,
+    categoryId: input.categoryId,
+    supplierId: input.supplierId,
+    size: input.size,
+    color: input.color,
+    mrpPaise,
+    pricePaise,
+    costPaise,
+    active: current.active,
+  });
+  const pricesKept = mrpPaise !== input.mrpPaise || pricePaise !== input.pricePaise;
+  return { product, pricesKept };
+}
+
 export async function updateProduct(
   db: Db,
   storeId: string,

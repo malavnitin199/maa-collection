@@ -15,6 +15,7 @@ import { errorText, getT } from '@/server/i18n';
 import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
+  correctTaggedItem,
   createDesign,
   createProductsBatch,
   findProductByCode,
@@ -547,7 +548,13 @@ export async function deleteImageAction(imageId: string): Promise<FormState> {
 // ------------------------------------------------------------- tag old stock
 
 export type OldStockResult =
-  | { ok: true; product: { id: string; sku: string; barcode: string; name: string; size: string; color: string; mrpPaise: number }; photoError?: string }
+  | {
+      ok: true;
+      product: { id: string; sku: string; barcode: string; name: string; size: string; color: string; mrpPaise: number };
+      photoError?: string;
+      /** Edit only: the price change wasn't allowed, the old prices stayed. */
+      pricesKept?: boolean;
+    }
   | { ok: false; error: string };
 
 /** One old-stock item: details + counted pieces + photos → product with barcode. */
@@ -592,6 +599,39 @@ export async function tagOldStockAction(formData: FormData): Promise<OldStockRes
       product: { id: product.id, sku: product.sku, barcode: product.barcode, name: product.name, size: product.size, color: product.color, mrpPaise: product.mrpPaise },
       photoError,
     };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** Tag old stock → Edit: fix the item just tagged (same barcode, piece count unchanged). */
+export async function editTaggedItemAction(productId: string, formData: FormData): Promise<OldStockResult> {
+  const me = await requirePermission('catalog');
+  try {
+    const name = text(formData, 'name');
+    if (!name) throw new DomainError('Enter the product name.', { key: 'act.err.productName' });
+    const categoryId = text(formData, 'categoryId');
+    if (!categoryId) throw new DomainError('Choose a category.', { key: 'act.err.chooseCategory' });
+    const mrpPaise = money(formData, 'mrp', 'MRP') as number;
+    const pricePaise = text(formData, 'price') ? (money(formData, 'price', 'selling price') as number) : mrpPaise;
+    const canCosts = can(me, 'costs');
+    const { product, pricesKept } = await correctTaggedItem(await getDb(), STORE_ID, {
+      productId: String(productId),
+      staffId: me.id,
+      canPrices: can(me, 'prices'),
+      canCosts,
+      name,
+      categoryId,
+      supplierId: text(formData, 'supplierId') || null,
+      size: text(formData, 'size'),
+      color: text(formData, 'color'),
+      mrpPaise,
+      pricePaise,
+      costPaise: canCosts ? money(formData, 'cost', 'purchase price', { optional: true }) : null,
+    });
+    revalidatePath('/admin', 'layout');
+    const { id, sku, barcode, size, color } = product;
+    return { ok: true, product: { id, sku, barcode, name: product.name, size, color, mrpPaise: product.mrpPaise }, pricesKept };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
