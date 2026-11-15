@@ -225,3 +225,40 @@ describe('owner reports', () => {
     expect(slow).not.toContain('Banarasi Saree · Green · Free'); // out of stock
   });
 });
+
+describe('sales team dashboard', () => {
+  it('counts sellers, each one’s share and sales per shop day (IST), including exchanges credited to them', async () => {
+    const { periodDays, teamReport } = await import('./reports');
+    const kurta = await product('MAA-KU-001'); // MRP ₹1,299
+    const tee = await product('MAA-TS-001');
+    const sell = (p: typeof kurta, qty: number, price: number, soldBy: string) =>
+      recordSale(db, STORE_ID, { operationId: nextOp(), productId: p.id, quantity: qty, unitPricePaise: price, soldBy, recordedBy: soldBy });
+    const now = new Date('2026-11-15T10:00:00Z'); // 15:30 IST
+    const v1 = await sell(kurta, 2, 120000, people.Vishal); // ₹2,400 today
+    const v2 = await sell(tee, 1, 40000, people.Vishal); //    ₹400 on 13 Nov (IST)
+    const n1 = await sell(kurta, 1, 129900, people.Nitin); //  ₹1,299 at 23:30 IST on 14 Nov (18:00 UTC)
+    await db.update(sales).set({ createdAt: now }).where(eq(sales.id, v1.sale.id));
+    await db.update(sales).set({ createdAt: new Date('2026-11-13T06:00:00Z') }).where(eq(sales.id, v2.sale.id));
+    await db.update(sales).set({ createdAt: new Date('2026-11-14T18:00:00Z') }).where(eq(sales.id, n1.sale.id));
+
+    expect(periodDays('7d', now)).toEqual(['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15']);
+    expect(periodDays('month', now)).toHaveLength(15);
+    expect(periodDays('today', new Date('2026-11-14T19:00:00Z'))).toEqual(['2026-11-15']); // 00:30 IST
+
+    const week = await teamReport(db, STORE_ID, '7d', now);
+    expect(week.totals).toEqual({ salesmen: 4, sold: 2, netPaise: 409900, bills: 3, units: 4 });
+    expect(week.sellers.map((s) => s.name).slice(0, 2)).toEqual(['Vishal', 'Nitin']); // most sales first
+    const vishal = week.sellers.find((s) => s.name === 'Vishal')!;
+    expect(vishal).toMatchObject({ bills: 2, units: 3, netPaise: 280000, mrpPaise: 2 * 129900 + tee.mrpPaise });
+    expect(Math.round(vishal.sharePct)).toBe(68); // 2,800 of 4,099
+    expect(vishal.daily).toEqual([0, 0, 0, 0, 40000, 0, 240000]);
+    expect(week.sellers.find((s) => s.name === 'Nitin')!.daily).toEqual([0, 0, 0, 0, 0, 129900, 0]); // 23:30 IST stays on the 14th
+    // Salesmen without sales are still listed (with 0), the owner only when they sold.
+    expect(week.sellers.find((s) => s.name === 'Pradeep')).toMatchObject({ netPaise: 0, sharePct: 0, bills: 0 });
+    expect(week.sellers.some((s) => s.name === 'Owner')).toBe(false);
+
+    const today = await teamReport(db, STORE_ID, 'today', now);
+    expect(today.totals.netPaise).toBe(240000);
+    expect(today.sellers[0]).toMatchObject({ name: 'Vishal', sharePct: 100, daily: [240000] });
+  });
+});

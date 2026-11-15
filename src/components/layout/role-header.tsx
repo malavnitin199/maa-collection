@@ -18,6 +18,7 @@ const ADMIN_LINKS = [
   { href: '/admin/categories', label: 'Categories' },
   { href: '/admin/staff', label: 'Staff' },
   { href: '/admin/reports', label: 'Reports' },
+  { href: '/admin/team', label: 'Team' },
   { href: '/admin/activity', label: 'Activity' },
   { href: '/admin/labels', label: 'Labels' },
   { href: '/admin/settings', label: 'Settings' },

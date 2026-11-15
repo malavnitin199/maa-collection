@@ -62,7 +62,12 @@ async function Dashboard() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>Sales by salesperson</h2>
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className={sectionTitle}>Sales by salesperson</h2>
+          <Link href="/admin/team" className={`text-sm ${link}`}>
+            Sales team graphs →
+          </Link>
+        </div>
         <div className={`${card} overflow-x-auto p-0`}>
           <table data-testid="sales-by-person" className="w-full min-w-[420px] text-left text-sm">
             <thead className={muted}>

@@ -157,3 +157,39 @@ test('admin dashboard, staff and labels pages load with seeded data', async ({ p
   // Hang tags carry a QR code next to the barcode (ADR-014).
   await expect(page.getByRole('img', { name: 'QR code for MAA-TS-001' })).toBeVisible();
 });
+
+test('sales team dashboard: number of sellers, each one’s share and daily sales; a QR scan leads straight to the sale', async ({ page }) => {
+  await login(page, 'Owner');
+  const barcode = await addProduct(page, { name: `Team Kurta ${run}`, size: 'M', mrp: '1000', price: '950', stock: '6' });
+
+  // Pradeep opens the tag's QR link (what the phone camera opens) → the item is ready to sell → enters the agreed price.
+  await login(page, 'Pradeep');
+  await page.goto(`/i/${barcode}`);
+  await expect(page).toHaveURL(new RegExp(`/pos\\?code=${barcode}$`));
+  await expect(page.getByTestId('item-details')).toContainText(`Team Kurta ${run}`);
+  await page.getByRole('button', { name: 'Sell this item' }).click();
+  await page.getByLabel(/Sale price/).fill('900');
+  await page.getByRole('button', { name: 'Record sale' }).click();
+  await expect(page.getByRole('status')).toContainText('by Pradeep');
+  // Salesmen can't see the team page.
+  await page.goto('/admin/team');
+  await expect(page).toHaveURL(/\/pos$/);
+
+  await login(page, 'Owner');
+  await page.getByRole('link', { name: 'Sales team graphs →' }).click();
+  await expect(page).toHaveURL(/\/admin\/team$/);
+  await expect(page.getByRole('heading', { name: 'Sales team', level: 1 })).toBeVisible();
+  await expect(page.getByTestId('team-salesmen')).toHaveText(/^\d+$/);
+  await page.getByRole('link', { name: 'Today' }).click();
+  await expect(page).toHaveURL(/period=today/);
+  const share = page.getByTestId('team-share').getByRole('listitem').filter({ hasText: 'Pradeep' });
+  await expect(share).toContainText('%');
+  await expect(share).toHaveAttribute('aria-label', /^Pradeep: ₹[\d,]+\.\d\d, [\d.]+% of team sales, \d+ bills, \d+ pieces$/);
+  const card = page.getByRole('listitem', { name: 'Seller Pradeep' });
+  await expect(card.getByRole('img', { name: 'Pradeep: sales per day' })).toBeVisible();
+  await expect(card).toContainText('below MRP');
+  await expect(page.getByTestId('team-table').getByRole('row').filter({ hasText: 'Pradeep' })).toContainText('₹');
+  await page.getByRole('link', { name: 'Last 30 days' }).click();
+  await expect(page).toHaveURL(/period=30d/);
+  await expect(page.getByTestId('seller-cards').getByRole('listitem')).not.toHaveCount(0);
+});

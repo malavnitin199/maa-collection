@@ -414,3 +414,122 @@ export async function salesExportRows(db: Db, storeId: string, period: ReportPer
     .orderBy(asc(exchanges.createdAt));
   return { saleRows, exchangeRows };
 }
+
+// ---------------------------------------------------------------- sales team
+
+/** Shop dates (YYYY-MM-DD, shop time zone) covered by a report period, oldest first. */
+export function periodDays(period: ReportPeriod, now = new Date(), timezone: string = STORE_TIMEZONE): string[] {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const [y, m, d] = today.split('-').map(Number);
+  const count = period === 'today' ? 1 : period === '7d' ? 7 : period === '30d' ? 30 : d;
+  return Array.from({ length: count }, (_, i) => new Date(Date.UTC(y, m - 1, d - (count - 1 - i))).toISOString().slice(0, 10));
+}
+
+export type TeamSeller = {
+  id: string;
+  name: string;
+  role: 'admin' | 'salesman';
+  active: boolean;
+  /** Sales credited to this person (sold_by). */
+  bills: number;
+  units: number;
+  salesPaise: number;
+  /** MRP value of the pieces sold: how far below MRP they sold on average. */
+  mrpPaise: number;
+  /** Exchange differences credited to this person. */
+  exchangePaise: number;
+  netPaise: number;
+  /** Share of the team's net sales, 0–100. */
+  sharePct: number;
+  /** Net sales per day, aligned with `days`. */
+  daily: number[];
+};
+
+/**
+ * Owner's sales-team dashboard for a period: every salesman (and anyone else
+ * who sold), their sales, share of the team and day-by-day sales. Net sales =
+ * sales credited to the person + exchange differences credited to them, as on
+ * the dashboard. Days are shop days (IST).
+ */
+export async function teamReport(db: Db, storeId: string, period: ReportPeriod, now = new Date()) {
+  const from = periodStart(period, now);
+  const at = sql`${now.toISOString()}::timestamptz`;
+  // The shop's zone written into the SQL once (a fixed config value), so GROUP BY matches the selected day exactly.
+  const tz = sql.raw(`'${STORE_TIMEZONE.replace(/'/g, "''")}'`);
+  const saleDay = sql<string>`to_char(${sales.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')`;
+  const exchangeDay = sql<string>`to_char(${exchanges.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')`;
+  const salesIn = and(eq(sales.storeId, storeId), gte(sales.createdAt, from), lte(sales.createdAt, at));
+  const exchangesIn = and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, from), lte(exchanges.createdAt, at));
+
+  const [people, saleRows, exchangeRows, saleDays, exchangeDays] = await Promise.all([
+    db.select({ id: staff.id, name: staff.name, role: staff.role, active: staff.active }).from(staff).where(eq(staff.storeId, storeId)).orderBy(asc(staff.name)),
+    db
+      .select({
+        staffId: sales.soldBy,
+        bills: int(sql`count(*)`),
+        units: int(sql`coalesce(sum(${sales.quantity}), 0)`),
+        salesPaise: int(sql`coalesce(sum(${sales.totalPaise}), 0)`),
+        mrpPaise: int(sql`coalesce(sum(${sales.quantity} * ${sales.mrpPaise}), 0)`),
+      })
+      .from(sales)
+      .where(salesIn)
+      .groupBy(sales.soldBy),
+    db
+      .select({ staffId: exchanges.creditedTo, differencePaise: int(sql`coalesce(sum(${exchanges.differencePaise}), 0)`) })
+      .from(exchanges)
+      .where(exchangesIn)
+      .groupBy(exchanges.creditedTo),
+    db
+      .select({ staffId: sales.soldBy, day: saleDay, paise: int(sql`coalesce(sum(${sales.totalPaise}), 0)`) })
+      .from(sales)
+      .where(salesIn)
+      .groupBy(sales.soldBy, saleDay),
+    db
+      .select({ staffId: exchanges.creditedTo, day: exchangeDay, paise: int(sql`coalesce(sum(${exchanges.differencePaise}), 0)`) })
+      .from(exchanges)
+      .where(exchangesIn)
+      .groupBy(exchanges.creditedTo, exchangeDay),
+  ]);
+
+  const days = periodDays(period, now);
+  const sellers = people
+    .filter((p) => p.role === 'salesman' || saleRows.some((s) => s.staffId === p.id) || exchangeRows.some((e) => e.staffId === p.id))
+    .map((p) => {
+      const s = saleRows.find((r) => r.staffId === p.id);
+      const exchangePaise = exchangeRows.find((r) => r.staffId === p.id)?.differencePaise ?? 0;
+      const daily = days.map(
+        (day) =>
+          (saleDays.find((r) => r.staffId === p.id && r.day === day)?.paise ?? 0) +
+          (exchangeDays.find((r) => r.staffId === p.id && r.day === day)?.paise ?? 0),
+      );
+      return {
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        active: p.active,
+        bills: s?.bills ?? 0,
+        units: s?.units ?? 0,
+        salesPaise: s?.salesPaise ?? 0,
+        mrpPaise: s?.mrpPaise ?? 0,
+        exchangePaise,
+        netPaise: (s?.salesPaise ?? 0) + exchangePaise,
+        sharePct: 0,
+        daily,
+      };
+    });
+  const teamNet = sellers.reduce((sum, s) => sum + s.netPaise, 0);
+  for (const s of sellers) s.sharePct = teamNet > 0 ? Math.max(0, (s.netPaise / teamNet) * 100) : 0;
+  sellers.sort((a, b) => b.netPaise - a.netPaise || a.name.localeCompare(b.name));
+
+  return {
+    days,
+    sellers: sellers as TeamSeller[],
+    totals: {
+      salesmen: people.filter((p) => p.role === 'salesman' && p.active).length,
+      sold: sellers.filter((s) => s.bills > 0 || s.exchangePaise !== 0).length,
+      netPaise: teamNet,
+      bills: sellers.reduce((n, s) => n + s.bills, 0),
+      units: sellers.reduce((n, s) => n + s.units, 0),
+    },
+  };
+}
