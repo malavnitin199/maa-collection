@@ -57,7 +57,9 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 1. **Sell** → scan the tag (or type the number under the barcode).
 2. Check the **photo**, size and colour match the item.
 3. **Sell this item** → quantity → agreed price (up to MRP). Selling for a colleague? Pick them in **Credit sale to**.
-4. **Record sale**. Stock goes down on every phone at once.
+4. **Record sale**. Stock goes down on every phone at once. Your sales **wait for the owner's check** (a "Waiting" mark in My sales) and count in your totals once he approves them; the owner's own sales count at once.
+
+**Tag won't scan?** (torn tag, broken scanner, dead camera) Tap **Tag won't scan? Enter by hand** under the scan box: type the **item name** as you call it (e.g. "blue kurti"), a **size** if you know it, quantity and the **price the customer paid** → **Record sale**. No stock changes (the app does not know which piece it was) and there is no MRP limit; the owner sees it marked **By hand** and checks it.
 
 **Exchange:** **Exchange** → scan the returned item → choose the sale → scan the new item → check *Customer pays* / *Give back* → **Confirm exchange**.
 
@@ -120,6 +122,16 @@ For a fresh count or a new season: **More → Clear stock**. It shows what is in
 - Every item's pieces become 0. Items, barcodes, prices, photos and past sales **stay**; each item's history shows "Stock cleared" with your name and the date.
 - It cannot be undone. Afterwards, count the shelves and add pieces with **More of existing items** (scan each piece).
 - Only the owner can do it, and a wrong PIN changes nothing.
+
+## 5c. Approvals (owner)
+
+Every sale and exchange a salesman records **waits for you**. Home shows **"n entries waiting"**; tap it (or **More → Approvals**).
+
+- Entries are grouped by day, newest first. Each card shows what was sold, quantity, the price per piece next to the **MRP and usual price** (and "x% below MRP"), who sold and who recorded it. Hand-entered sales carry a **By hand** mark with the name and size the salesman typed.
+- **Approve** one card, **Approve all for this day**, or **Approve everything**. Approved entries then count in Home, Reports, Sales team, My sales and the CSV.
+- **Reject** → choose a reason (Wrong price · Wrong item · Duplicate · Not sold · Other), add a note if you like → **Reject entry**. A scanned sale's pieces go **back into stock** (the item's history shows it); a hand-entered sale returns nothing. A rejected exchange is undone (the new item comes back, the returned piece goes out again).
+- A decision is final and made once; a second tap, or another phone, changes nothing. If a sale has an exchange on it, reject the exchange first. Your last 50 decisions are listed below the queue.
+- Your own entries are approved as you record them.
 
 ## 5. Owner set-up checklist
 

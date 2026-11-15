@@ -27,7 +27,23 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Fresh start + Clear stock (2026-11-16, latest)
+## Sell without scanning + owner approvals — v0.2.0 (2026-11-16, latest)
+Owner request: tags are stuck on shirts, pants and so on; sometimes a tag will not scan, the scanner breaks or the phone's back camera does not work. The salesman must still capture the sale by typing the item's name and the selling price. Owner chose: **full approval queue** (every salesman entry waits for him) and **name + price + optional size**. Plan: `docs/PLAN_V12_HAND_ENTRY_APPROVALS.md`; ADR-022; new open question D-EX-2.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | **Enter by hand** on `/pos`: item name, optional size, quantity, price paid, credit to → sale with `manual = true`, no item, no stock movement, no MRP cap; retry-safe | Done |
+| 2 | Owner approval decisions (migration 0007, `approval_decisions`, one append-only row per sale / exchange); owner's own entries approved as recorded | Done |
+| 3 | **Approvals** screen `/admin/approvals`: by shop day, MRP + usual price beside a cut price, By hand mark, Approve / Approve the day / Approve everything, Reject with reason + note (pieces back through `sale_rejected`; exchange undone with `exchange_rejected`), last 50 decisions; Home tile with the waiting count; More + header links | Done |
+| 4 | Every total (Home, Reports, Sales team, My sales, CSV) counts **approved** entries only; activity lists show Waiting / Rejected / By hand; My sales shows "Waiting for the owner"; CSV gains Status and By hand columns and includes hand-entered sales | Done |
+| 5 | Guards: one decision per entry (double tap / second phone), reject a sale's exchange first, no stock back after Clear stock, exchange undo refused if the returned piece was sold again, nothing returnable against a rejected or hand-entered sale | Done — unit-tested |
+| 6 | Hindi + English (`modules/approvals.ts`, `sell.byHand*`, …), Guide: 5th step of *Sell an item* + owner lesson *Approve sales* (16 lessons) | Done |
+| 7 | Docs: plan v12, ADR-022, D-EX-2, user guide §3 + §5c, reference §21, context, README, backlog V2-07, CLAUDE.md; version **0.2.0** | Done |
+- Found and fixed during the work: the uncommitted v12 schema left in the folder would have broken production if deployed alone (`recordSale`'s bare `select()` names the new `manual` columns, which Neon did not have) — the 2026-11-16 redeploy before this work used a clean snapshot of `6bb493e` for that reason.
+- Existing tests updated for the new rule: three dashboard/report unit tests now approve before checking totals; the sales-team E2E approves Pradeep's sale first; Guide counts (16 lessons, Sell has 5 steps) and the CSV header.
+- Verified (full gate, one run): lint, typecheck, **135 unit tests** (21 files; 13 new in `approvals.test.ts`), build (36 routes incl. `/admin/approvals`), **Playwright 68 passed + 1 skipped + 1 flaky** at desktop + phone. The flaky one is `guide-voice.spec.ts:46` on phone size: the Next.js **dev** error badge covers the lesson's *Back a step* button. Shown to be **pre-existing**: the same test fails 3 of 5 repeats on the untouched `6bb493e` too (dev mode only; not a production issue). Follow-up: hide the dev badge in that test or set `devIndicators` for E2E.
+
+## Fresh start + Clear stock (2026-11-16)
 Owner request: remove all test records to start fresh, and give the admin a "clear stock" option in the app. Owner chose: remove products/stock/sales now (keep staff, categories, companies); in-app Clear stock = set all pieces to 0. Plan: `docs/PLAN_V11_FRESH_START_CLEAR_STOCK.md`; ADR-021.
 
 | # | Task | Result |

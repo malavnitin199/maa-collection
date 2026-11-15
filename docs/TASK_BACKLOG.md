@@ -130,6 +130,7 @@
 - [x] **V2-04** Admin activity log of all sales and exchanges.
 - [x] **V2-06** Plan v3: owner-granted permissions (catalog/QC, prices, stock, purchase price), product photos, Tag old stock with today's labels, in-app help + user guide.
 - [x] **V2-05** Owner stock workflow: suppliers, categories, sizes × colours entry with generated barcodes, per-piece labels, scan-to-restock, design-wide rates, phone tab bar.
+- [x] **V2-07** Plan v12 (2026-11-16): sell without scanning (item name + price typed, no stock change) and the owner's approval queue — every salesman sale / exchange waits for Approve / Reject; only approved entries count. `docs/PLAN_V12_HAND_ENTRY_APPROVALS.md`, ADR-022.
 
 ## Suggested next tasks
 

@@ -30,7 +30,7 @@ The 12-page uploaded *Retail Shop Stock, Sales & Billing System* PRD is the prod
 - At completion, show commands executed, actual results, modified files, gaps and the next task.
 - Update `docs/PROGRESS.md` and check off backlog ONLY when acceptance criteria pass.
 
-## Current status (2026-11-16, live through plan v11)
+## Current status (2026-11-16, live through plan v12 — v0.2.0)
 
 Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavnitin199/maa-collection · Deployed with the Vercel CLI (repo not Git-connected).
 
@@ -42,6 +42,7 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 - Scan with the phone camera, a USB/Bluetooth scanner, or type the code; a tag's **QR** opens the item straight at the counter (`/i/<barcode>`).
 - One item per sale, no cart: quantity + the **bargained price** (≤ MRP), credited to yourself or a colleague (`sold_by` + `recorded_by`). Exchanges, "My sales" (today / month).
 - Payment-app style feedback: green tick + "ting", shake + buzz on a failed scan, "Sale done" card + chime; mute per phone.
+- **Tag won't scan? Enter by hand** (plan v12): item name as the salesman calls it, optional size, quantity, price paid; no stock change, no MRP cap. **Every salesman entry waits for the owner** ("Waiting" in My sales; counts once approved); the owner's own entries count at once.
 
 **Stock and tags (catalog / stock people)**
 - Companies (suppliers), categories with SKU codes and **size lists** (shirts S–XXL, kurtas M–XXL, Ladies Jeans 26–32, Gents Jeans 28–36; owner-editable).
@@ -51,19 +52,20 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 **Owner**
 - **Fresh start on 2026-11-16**: all test products, stock history and sales were removed from the live database at the owner's request (backup kept on the owner's Mac); staff, categories and companies were kept. Real stock entry starts from an empty shop.
 - **Clear stock** (More / Settings, owner's PIN): sets every item's pieces to 0 and records it in each item's history; nothing is deleted.
+- **Approvals** (`/admin/approvals`, Home tile with the waiting count): every salesman sale / exchange by day; Approve one, a day or everything; Reject with a reason (pieces go back into stock through a new movement; an exchange is undone). Only approved entries count anywhere; hand-entered sales carry a **By hand** mark.
 - Home dashboard (today / month, profit, exchanges, low stock, activity), reports + CSV export, **sales team dashboard** (`/admin/team`: sellers, share, daily sales per seller), activity log, staff and rights, settings (code price).
 
 **Language, look, learning**
 - **Hindi + English** on every screen, chosen per person (`staff.language`).
 - **Five colour themes** (Peacock, Marigold, Rani, Neel, Mehendi) and **Day / Night / Same as phone**, chosen per phone. Shop-made design: zari border, hang-tag action tiles, floating dock with a round Sell button.
-- `/guide`: 15 **short story lessons** by role, in both languages — one step at a time with an animated phone scene, at most 7 words on screen, and the **phone's own voice** saying a fuller line and moving on by itself; a **practice sale** that saves nothing; `/help`: quick reference and problems & fixes; `docs/USER_GUIDE.md`.
+- `/guide`: 16 **short story lessons** by role, in both languages — one step at a time with an animated phone scene, at most 7 words on screen, and the **phone's own voice** saying a fuller line and moving on by itself; a **practice sale** that saves nothing; `/help`: quick reference and problems & fixes; `docs/USER_GUIDE.md`.
 
-**Not built yet**: GST / receipts, payments, refunds, day-close / cash drawer, offline billing, **per-item stock correction** (lowering one item's wrong count; D-ST-2 — only the whole-shop Clear stock exists), photos on Vercel Blob (D-IMG-1).
+**Not built yet**: GST / receipts, payments, refunds, day-close / cash drawer, offline billing, **per-item stock correction** (lowering one item's wrong count; D-ST-2 — only the whole-shop Clear stock exists), **exchange without a bill** (D-EX-2: the schema allows it, no screen), photos on Vercel Blob (D-IMG-1).
 
 **Stack actually in use**: Next.js 16.4.6 (App Router, Cache Components), React 19, TypeScript strict, Tailwind CSS 4, Drizzle ORM on Neon Postgres (PGlite locally and in tests), Zod, Vitest, Playwright (desktop + phone). Not used (yet): shadcn/ui, Better Auth, TanStack Query, Zustand, Dexie. Never put the Neon URL in `.env.local` (it lives in `.env.neon` for migrations only).
 
 **Where the details are**
-- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V11_FRESH_START_CLEAR_STOCK.md`, `docs/PLAN_SIZE_PRICES.md`.
-- Decisions: `docs/DECISION_LOG.md` (ADR-001…021); open questions: `docs/DECISIONS.md`.
+- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V12_HAND_ENTRY_APPROVALS.md`, `docs/PLAN_SIZE_PRICES.md`.
+- Decisions: `docs/DECISION_LOG.md` (ADR-001…022); open questions: `docs/DECISIONS.md`.
 - The original starter pack (2026-11-14), what it planned and what changed: `docs/STARTER_PACK_HISTORY.md`; the untouched originals: `docs/archive/starter-pack-2026-11-14/`.
 - How it works (developers): `docs/TECHNICAL_REFERENCE.md`; how to use it (shop): `docs/USER_GUIDE.md`; what was done and verified: `docs/PROGRESS.md`; agent rules + status: `CLAUDE.md`.

@@ -35,9 +35,10 @@ It starts as a tool for one shop (Maa Collection). The plan is to grow it into a
 | Screen | URL | Who | What it does |
 |---|---|---|---|
 | Login | `/login` | Everyone | Tap your name, enter your PIN |
-| Counter sale | `/pos` | Salesman, Admin | Scan or type a code → item details → quantity, agreed price (≤ MRP), **credit sale to** (me or a colleague) → record |
+| Counter sale | `/pos` | Salesman, Admin | Scan or type a code → item details → quantity, agreed price (≤ MRP), **credit sale to** (me or a colleague) → record. **Tag won't scan? Enter by hand**: item name, optional size, price paid (no stock change) |
+| Approvals | `/admin/approvals` | Admin | Every salesman sale / exchange waits here by day: **Approve** one, a day or everything; **Reject** with a reason (pieces go back into stock). Only approved entries count in totals |
 | Exchange | `/pos/exchange` | Salesman, Admin | Scan the returned item → pick the original sale → scan the new item → "customer pays / give back" → confirm |
-| My sales | `/pos/my-sales` | Salesman, Admin | Own sales **today** and **this month** (Indian time), sales recorded for others, recent activity |
+| My sales | `/pos/my-sales` | Salesman, Admin | Own sales **today** and **this month** (Indian time; approved only, with a "waiting for the owner" line), sales recorded for others, recent activity with Waiting / Rejected / By hand marks |
 | Dashboard | `/admin/dashboard` | Admin | Today / month net revenue, units, estimated profit, exchanges, sales by salesperson, stock value, low stock, latest activity |
 | Tag old stock | `/admin/stock/old` | Catalog | Items already in the shop: 📷 photo → category, name, size, colour → MRP, price, pieces → barcode + label → Next item; **print today's labels** |
 | Help | `/help` | Everyone | Guide for new users and each role, required vs optional, tips, problems & fixes |
@@ -64,6 +65,8 @@ Scan (phone camera / USB or Bluetooth scanner / typed code)
 ```
 
 Every customer bargains a different price, so the price entered is what gets recorded, and the MRP at that moment is stored next to it. There's no multi-item cart (owner decision ADR-004).
+
+A salesman's sale **waits for the owner's approval** before it counts in any total (the owner's own sales count at once); the owner approves or rejects it on `/admin/approvals` (ADR-022). When a tag will not scan, **Enter by hand** records the sale with the item name and price the salesman typed — no stock movement, marked *By hand* for the owner.
 
 ### Exchanges
 
