@@ -63,11 +63,15 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
   - Later: open any of its products → **Rates for the whole design** → change the default or one size → **Apply**. Past sales keep their prices.
 - **More of existing items** (needs *Stock*): scan each piece. Scanning the same tag again adds one more.
 
+### Sizes of each category
+
+Each category has its sizes, set by the owner in **Categories** (tap a category → *Sizes*, or a preset: S–XXL, M–XXL, Ladies 26–32, Gents 28–36, Free). Starting lists: shirts, T-shirts, dresses, night suits S–XXL; kurtas and kurtis M–XXL; **Ladies Jeans** 26–32 and **Gents Jeans** 28–36 (separate categories); sarees and dupattas Free. When you add stock, **choose the category first** — its sizes are shown first (tap *Pick all* for every size); other sizes are under *More sizes*.
+
 ### Tags (labels)
 
-Every piece gets a **hang tag, 50 × 80 mm**: shop name, **QR code**, the **size** big with the colour, the design's sizes with this one in black (e.g. S M **L** XL), the name, **ART.** (item code) with the secret code price on the right if switched on, the **barcode**, and the **MRP**.
+Every piece gets a **hang tag, 40 × 60 mm**: shop name, **QR code**, the **size** big with the colour, **every size of its category with a tick box** — this piece's box is filled (e.g. ☐S ■M ☐L ☐XL ☐XXL), so on a printed tag you can tick another size with a pen — the name, **ART.** (item code) with the secret code price on the right if switched on, the **barcode**, and the **MRP**.
 
-- Print: after saving, or **Labels → print today's labels**. Choose **Tags on A4** (9 per page: cut, punch the circle, thread), **Tag printer 50×80 mm**, or **Sticker printer 50×25 mm** (small barcode sticker, no QR).
+- Print: after saving, or **Labels → print today's labels**. Choose **Tags on A4** (16 per page: cut, punch the circle, thread), **Tag printer 40×60 mm**, or **Sticker printer 50×25 mm** (small barcode sticker, no QR).
 - **QR code:** staff point the normal phone camera at it → the item opens (sellers: Sell screen with the item ready; catalog/stock/owner: the product page). You must be logged in on that phone; customers only see the login page. In-app and USB scanners read the QR too.
 
 **Sample tags to practise scanning:** 8 demo tags in `public/sample-scanner-images/` (in the code), also online at https://maa-collection-pi.vercel.app/sample-scanner-images/all-tags.png, …/all-tags-print-a4.pdf, and one per tag (e.g. …/02-anarkali-kurta-M-MAA-KU-001.png). Open one on a computer screen and scan it with **Sell → Scan with camera**.

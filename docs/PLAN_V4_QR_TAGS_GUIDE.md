@@ -4,6 +4,8 @@ Owner request (chat, with a photo of a fashion-store hang tag): print tags like 
 
 ## Tasks
 
+> Tag size and size row updated by plan v5 (`docs/PLAN_V5_CATEGORY_SIZES_SMALL_TAG.md`): 40 × 60 mm, every size of the category with tick boxes.
+
 | # | Task | Status |
 |---|---|---|
 | 1 | New **hang tag** (50 × 80 mm): shop name, QR, size box (size + colour), size row with this size highlighted, name + brand, ART. = SKU, EAN-13 barcode, MRP box, code price | ✅ Done |

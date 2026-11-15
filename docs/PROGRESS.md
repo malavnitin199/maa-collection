@@ -27,7 +27,19 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## QR hang tags + Guide section (2026-11-15, latest)
+## Size lists per category + smaller tag with tick boxes (2026-11-15, latest)
+Owner request (chat): much smaller tag with little padding; every size of the category on the tag so a size can be ticked by pen on the printed tag; sizes depend on the category (shirts S–XXL, kurtas M–XXL, jeans by gender: girls 26–32, boys 28–36); choose the category first when entering stock. Owner decisions (ADR-015): 40 × 60 mm, jeans as two categories, lists pre-filled + owner-editable, update live. Plan: `docs/PLAN_V5_CATEGORY_SIZES_SMALL_TAG.md`.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | `categories.sizes` (migration 0005: column + default lists for known codes + Ladies/Gents Jeans); `src/lib/size-lists.ts` (presets, defaults, `cleanSizeList`, `tagSizeRange`); seed uses the same defaults | Done |
+| 2 | Categories screen: *Sizes (in shop order)* with presets; list shows each category's sizes | Done |
+| 3 | Stock entry: New design shows the category's sizes first (+ *Pick all*, other sizes under *More sizes*); Tag old stock shows them first; Quick add suggests them | Done |
+| 4 | Tag 40 × 60 mm, 1.5 mm padding, QR 12 mm, tick-box size row (category list; piece's size added if missing, e.g. shirt 40), barcode 37 mm at 0.33 mm/bar; A4 16 per page; tag printer 40×60 | Done; QR and EAN-13 decode (ZXing) |
+| 5 | Sample images in `public/sample-scanner-images/` regenerated with the new tag | Done |
+- Verified: lint, typecheck, **102 unit tests**, build, **43 Playwright tests at desktop + phone size** (+1 phone-only skip) — run against a fresh production build on port 3218 (`next start`, in-memory DB) because the long-running dev server on :3000 still had the old schema and stopping it was not permitted from this session; it needs a restart to pick up migration 0005.
+
+## QR hang tags + Guide section (2026-11-15)
 Owner request (chat, while away; photo of a fashion-store hang tag): tags with a QR code, product name, barcode and the sizes (S M L XL Free) with this one marked; replace and regenerate the test label images; a **Guide** section with steps and animations, including how to manage inventory; log and docs of what was done. Plan and decisions: `docs/PLAN_V4_QR_TAGS_GUIDE.md`, ADR-014, open D-QR-1 / D-TAG-1.
 
 **Work log (tasks covered)**

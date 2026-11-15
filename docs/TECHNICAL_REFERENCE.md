@@ -131,7 +131,7 @@ maa-collection/
 | `/admin/categories` | `…/categories/page.tsx` | catalog | Categories + SKU codes |
 | `/admin/catalog/check` | `…/catalog/check/page.tsx` | catalog | "Needs attention" QC list |
 | `/admin/labels` | `…/labels/page.tsx` | catalog / stock | All active product labels |
-| `/admin/labels/print` | `…/labels/print/page.tsx` | catalog / stock | `?receipt=<id>` or `?mine=today`; `&each=item`; `&format=tag` (tag printer 50×80) / `sticker` (50×25); default hang tags on A4 |
+| `/admin/labels/print` | `…/labels/print/page.tsx` | catalog / stock | `?receipt=<id>` or `?mine=today`; `&each=item`; `&format=tag` (tag printer 40×60) / `sticker` (50×25); default hang tags on A4 |
 
 Route handlers: see [§10](#10-route-handlers-http-endpoints). Layouts `(pos)/layout.tsx` and `(admin)/layout.tsx` render `RoleHeader` and pad for the bottom tab bar. `manifest.ts`, `apple-icon.tsx` and `layout.tsx` hold the PWA metadata and theme colour.
 
@@ -215,7 +215,7 @@ All tables carry `store_id` (FK `stores.id`, currently the single store `maa-col
 | `stores` | `id` (text), `name`, `timezone`, `price_code_word`, `print_price_code` | One row today |
 | `staff` | `id`, `name`, `role` (`admin`/`salesman`), `permissions text[]`, `pin_hash`, `active` | unique (store, name) |
 | `suppliers` | `name`, `contact_name`, `phone`, `gstin`, `notes`, `active` | unique (store, name) |
-| `categories` | `name`, `code` (2–3 letters), `active` | unique (store, name), (store, code) |
+| `categories` | `name`, `code` (2–3 letters), `sizes text[]` (shop order, owner-editable), `active` | unique (store, name), (store, code) |
 | `products` | `sku`, `barcode`, `name`, `brand`, `category` (name snapshot), `category_id`, `supplier_id`, `size`, `color`, `mrp_paise`, `price_paise`, `cost_paise` (admin/costs only), `stock`, `active`, `created_by` | unique (store, sku), (store, barcode); `stock >= 0`; `0 < price ≤ mrp` |
 | `product_images` | `product_id`, `content_type`, `data bytea`, `url`, `byte_size`, `width`, `height`, `sort_order` | lowest `sort_order` = main photo |
 | `stock_receipts` | `operation_id`, `supplier_id` (nullable), `bill_number`, `note`, `staff_id` | unique (store, operation_id); one per delivery / restock / old-stock entry |
@@ -232,6 +232,7 @@ All tables carry `store_id` (FK `stores.id`, currently the single store `maa-col
 | `0002_store_price_code.sql` | stores.price_code_word, print_price_code |
 | `0003_staff_permissions.sql` | staff.permissions `text[] default '{}'` |
 | `0004_product_images.sql` | product_images |
+| `0005_category_sizes.sql` | categories.sizes `text[] default '{}'` + default lists for known codes (only where empty) + Ladies Jeans (LJ) / Gents Jeans (GJ), skipped if present |
 
 ---
 
@@ -301,7 +302,7 @@ Idempotent by `operation_id`; a SKU/barcode race retries up to 3 times.
 3. Images are served by `/api/product-images/[id]`.
 
 ### 6.6 Labels
-`getReceiptForLabels` (a delivery) or `getMyLabelsToday` (everything the person entered today, IST) → `LabelSheet` in the print page. It shows one label per piece (or per item) as hang tags (`HangTag`, 50 × 80 mm: 9 per A4 page with `@page A4`, or one per page with `@page 50mm 80mm` for a tag printer) or stickers (`StickerLabel` + `@page 50mm 25mm`, barcode only). Each tag gets its design's sizes (`designSizesFor` → `designSizesById`) and a QR item link (`itemLink(appOrigin(), barcode)`). The code price is added by `labelPriceCode` when enabled.
+`getReceiptForLabels` (a delivery) or `getMyLabelsToday` (everything the person entered today, IST) → `LabelSheet` in the print page. It shows one label per piece (or per item) as hang tags (`HangTag`, 40 × 60 mm: 16 per A4 page with `@page A4`, or one per page with `@page 40mm 60mm` for a tag printer) or stickers (`StickerLabel` + `@page 50mm 25mm`, barcode only). Each tag gets its size row from `tagSizesFor` (the category's `sizes`, else the design's sizes via `designSizesFor`, plus the piece's own size — `tagSizeRange`) and a QR item link (`itemLink(appOrigin(), barcode)`). The code price is added by `labelPriceCode` when enabled.
 
 ### 6.7 Reports and exports
 `salesReport(period)` returns totals, by category / company / salesperson, top 10 and slow movers (in stock, no sale in 30 days). `salesExportRows` feeds the CSV route; the stock CSV uses `listProducts`.
@@ -319,7 +320,7 @@ Idempotent by `operation_id`; a SKU/barcode race retries up to 3 times.
 - **Category codes:** `suggestCategoryCode` (Kurta → KU, Kurti → KR …), editable.
 - **SVG:** `ean13Svg(code, moduleWidth, barHeight)`. Our own encoder, unit-tested against a published encoding. The SVG is `aria-hidden`; the wrapper has `role="img"` and an `aria-label`.
 - **Sticker:** 50×25 mm with bar height 24 modules, about 0.4 mm per bar across ~47 mm. Rendered at 203 dpi it decodes with `BarcodeDetector`.
-- **Hang tag (ADR-014):** 50 × 80 mm; QR 14 mm (`qrcode` → own SVG squares, error correction M, version 4 for a ~50-character link); EAN-13 42 mm wide with 30-module bars (0.37 mm per module). From a ~190 dpi render both decode with ZXing (QR → item link, EAN-13 → digits).
+- **Hang tag (ADR-014/015):** 40 × 60 mm, 1.5 mm padding; QR 12 mm (`qrcode` → own SVG squares, error correction M, version 4 for a ~50-character link); size row = every size of the category with a 2 mm tick box (this piece's filled); EAN-13 37 mm wide with 30-module bars (0.33 mm per module, 100 %). From a ~190 dpi render both decode with ZXing (QR → item link, EAN-13 → digits).
 - **QR item link:** `itemLink(origin, barcode)` = `<origin>/i/<barcode>`; `appOrigin()` uses `APP_URL` if set, else the request host. `codeFromScan()` turns a scanned link from any domain back into the code — used by `findProductByCode` (counter, exchange), restock search and tag-old-stock checks.
 - **Code price:** a 10 different-letter word maps to digits 1…9,0. `encodePriceCode(paise)` uses whole rupees (BLACKHORSE: ₹450 = CKE). Printed only if `print_price_code`. The decoder is on `/admin/settings`.
 
