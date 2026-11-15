@@ -1,10 +1,15 @@
+import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
+import { getCurrentStaff } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { LoginForm } from '@/features/auth/login-form';
 import { STORE_ID } from '@/lib/app-config';
 import { listStaff } from '@/server/services/staff';
 
 async function StaffLogin() {
+  // Opening the app from the home screen while still logged in goes straight to your screen.
+  const me = await getCurrentStaff();
+  if (me) redirect(me.role === 'admin' ? '/admin/dashboard' : '/pos');
   const people = await listStaff(await requestDb(), STORE_ID, { activeOnly: true });
   return <LoginForm people={people.map(({ id, name, role }) => ({ id, name, role }))} />;
 }

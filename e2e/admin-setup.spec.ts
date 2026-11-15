@@ -4,6 +4,7 @@ const PIN = '1234';
 const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
 
 async function loginOwner(page: Page) {
+  await page.context().clearCookies(); // switch user: start logged out
   await page.goto('/login');
   await page.getByText('Owner', { exact: true }).click();
   await page.getByLabel('PIN').fill(PIN);
@@ -128,6 +129,7 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await expect(page.getByText(/Already in the catalogue: Blue M/)).toBeVisible();
 
   // A salesman scans the new barcode at the counter.
+  await page.context().clearCookies(); // switch user: start logged out
   await page.goto('/login');
   await page.getByText('Vishal', { exact: true }).click();
   await page.getByLabel('PIN').fill(PIN);
@@ -173,6 +175,7 @@ test('owner restocks existing items by scanning each piece and by name search', 
 });
 
 test('a salesman cannot add companies, categories, products, stock or change rates', async ({ page }) => {
+  await page.context().clearCookies(); // switch user: start logged out
   await page.goto('/login');
   await page.getByText('Pradeep', { exact: true }).click();
   await page.getByLabel('PIN').fill(PIN);
@@ -243,6 +246,7 @@ test('quick add: one company + category, several products with their own prices 
   const barcode = (await georgette.getByRole('img').getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
 
   // The seller scans it: selling price ₹2,200 (MRP ₹2,500), no purchase price shown.
+  await page.context().clearCookies(); // switch user: start logged out
   await page.goto('/login');
   await page.getByText('Balram', { exact: true }).click();
   await page.getByLabel('PIN').fill(PIN);
@@ -271,6 +275,8 @@ test('owner makes a salesman a catalog person; they get catalog screens but not 
   await form.getByLabel('Purchase price for Nitin').uncheck();
   await form.getByRole('button', { name: 'Save permissions' }).click();
   await expect(form.getByRole('status')).toHaveText('Saved: catalog, prices, stock.');
+
+  await page.context().clearCookies(); // switch user: start logged out
 
   await page.goto('/login');
   await page.getByText('Nitin', { exact: true }).click();
@@ -315,6 +321,8 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
     g.fillRect(100, 100, 300, 200);
     return c.toDataURL('image/jpeg', 0.9).split(',')[1];
   });
+
+  await page.context().clearCookies(); // switch user: start logged out
 
   await page.goto('/login');
   await page.getByText('Nitin', { exact: true }).click();
@@ -367,6 +375,7 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
 });
 
 test('help guide is reachable and first-time tips can be dismissed', async ({ page }) => {
+  await page.context().clearCookies(); // switch user: start logged out
   await page.goto('/login');
   await page.getByRole('link', { name: 'New here?' }).click();
   await expect(page).toHaveURL(/\/help#start$/);
@@ -374,6 +383,8 @@ test('help guide is reachable and first-time tips can be dismissed', async ({ pa
   await expect(page.getByText('Add it to your home screen')).toBeVisible(); // "New here?" open by default
   await page.getByText('Catalog & old stock (catalog / QC person)').click();
   await expect(page.getByText('Tag one item (about 30 seconds)')).toBeVisible();
+
+  await page.context().clearCookies(); // switch user: start logged out
 
   await page.goto('/login');
   await page.getByText('Vishal', { exact: true }).click();
@@ -433,4 +444,17 @@ test('needs attention: QC to-do list links to the item to fix', async ({ page })
   if (!(await outOfStock.evaluate((d: HTMLDetailsElement) => d.open))) await outOfStock.locator('summary').click();
   await outOfStock.getByRole('link', { name: 'Open →' }).first().click();
   await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
+});
+
+test('installable app: manifest + icons; opening the app while logged in goes to your screen', async ({ page, request }) => {
+  const manifest = await (await request.get('/manifest.webmanifest')).json();
+  expect(manifest).toMatchObject({ name: 'Maa Collection', display: 'standalone', start_url: '/login' });
+  for (const icon of manifest.icons) {
+    const res = await request.get(icon.src);
+    expect(res.status(), icon.src).toBe(200);
+    expect(res.headers()['content-type']).toBe('image/png');
+  }
+  await loginOwner(page);
+  await page.goto('/login'); // e.g. tapping the home-screen icon
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
 });

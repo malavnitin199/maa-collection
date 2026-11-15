@@ -5,6 +5,7 @@ const PIN = '1234';
 const run = Date.now().toString(36);
 
 async function login(page: Page, name: string, pin = PIN) {
+  await page.context().clearCookies(); // switch user: start logged out
   await page.goto('/login');
   await page.getByText(name, { exact: true }).click();
   await page.getByLabel('PIN').fill(pin);
