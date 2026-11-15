@@ -347,6 +347,14 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
   await page.getByRole('link', { name: "print today's labels" }).click();
   await expect(page.getByRole('heading', { name: 'My labels today' })).toBeVisible();
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: `Barcode ${barcode} for MAA-SA-`, exact: false })).toHaveCount(3);
+  // Sticker-printer format: same labels, each exactly 50 × 25 mm.
+  await page.getByRole('link', { name: 'Sticker printer 50×25 mm' }).click();
+  await expect(page).toHaveURL(/format=sticker/);
+  const stickers = page.getByTestId('label-sheet').getByRole('img', { name: `Barcode ${barcode} for MAA-SA-`, exact: false });
+  await expect(stickers).toHaveCount(3);
+  const box = await page.getByTestId('label-sheet').locator('li').first().locator('> div').boundingBox();
+  expect(Math.round(box!.width)).toBe(189); // 50 mm
+  expect(Math.round(box!.height)).toBe(94); // 25 mm
 
   // Seller scans it and sees the photo.
   await page.goto('/pos');

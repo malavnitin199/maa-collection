@@ -55,13 +55,13 @@ export function ean13Modules(code: string): string {
  * Standalone SVG for an EAN-13 code: bars, guard bars, quiet zones, and the
  * human-readable digits underneath. `moduleWidth` is pixels per narrowest bar.
  */
-export function ean13Svg(code: string, moduleWidth = 3): string {
+/** `barHeight` is in modules (bars are this tall; guard bars 5 more). Short bars suit small stickers. */
+export function ean13Svg(code: string, moduleWidth = 3, barHeight = 60): string {
   const bits = ean13Modules(code);
   const quietLeft = 11;
   const quietRight = 7;
   const width = quietLeft + bits.length + quietRight;
   const top = 4;
-  const barHeight = 60;
   const guardHeight = barHeight + 5;
   const height = top + guardHeight + 8;
   const isGuard = (i: number) => i < 3 || (i >= 45 && i < 50) || i >= 92;
