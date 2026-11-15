@@ -26,6 +26,7 @@ const GROUPS: { title: string; links: Item[] }[] = [
     title: 'Shop (owner)',
     links: [
       { href: '/admin/staff', label: 'Staff & permissions', hint: 'People, PINs and what each may do', needs: 'admin' },
+      { href: '/admin/reports', label: 'Reports', hint: 'Best sellers, not selling, by category / company / person; Excel export', needs: 'admin' },
       { href: '/admin/activity', label: 'Activity', hint: 'Every sale and exchange', needs: 'admin' },
       { href: '/admin/settings', label: 'Settings', hint: 'Code price on tags (secret purchase price)', needs: 'admin' },
     ],

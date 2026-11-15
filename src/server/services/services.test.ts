@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPgliteDb, type Db } from '@/db/client';
 import { products, sales, stockMovements } from '@/db/schema';
@@ -193,5 +193,35 @@ describe('dashboards', () => {
     expect(shop.salespeople.find((p) => p.name === 'Vishal')?.today.netPaise).toBe(130000);
     expect(shop.estimatedProfit.month).toBe(420000 - 3 * (dress.costPaise ?? 0));
     expect(shop.lowStock.map((p) => p.sku)).toContain('MAA-SA-001');
+  });
+});
+
+describe('owner reports', () => {
+  it('groups a period by category, company and salesperson; lists top sellers and stock not moving', async () => {
+    const { salesReport } = await import('./reports');
+    const kurta = await product('MAA-KU-001');
+    const tee = await product('MAA-TS-001');
+    const sell = (p: typeof kurta, qty: number, price: number, soldBy: string) =>
+      recordSale(db, STORE_ID, { operationId: nextOp(), productId: p.id, quantity: qty, unitPricePaise: price, soldBy, recordedBy: soldBy });
+    await sell(kurta, 2, 120000, people.Vishal);
+    await sell(tee, 1, 45000, people.Nitin);
+    const old = await sell(tee, 1, 49900, people.Nitin);
+    await db.update(sales).set({ createdAt: new Date('2026-10-01T10:00:00Z') }).where(eq(sales.id, old.sale.id));
+    const now = new Date('2026-11-15T10:00:00Z');
+    await db.update(sales).set({ createdAt: now }).where(sql`${sales.createdAt} > '2026-11-01'`);
+
+    const week = await salesReport(db, STORE_ID, '7d', now);
+    expect(week.totals).toMatchObject({ count: 2, units: 3, revenuePaise: 285000, netRevenuePaise: 285000 });
+    expect(week.byCategory.map((r) => [r.label, r.units, r.revenuePaise])).toEqual([['Kurta', 2, 240000], ['T-Shirt', 1, 45000]]);
+    expect(week.bySupplier).toEqual([expect.objectContaining({ label: 'No company', units: 3 })]);
+    expect(week.bySalesperson.map((r) => r.label)).toEqual(['Vishal', 'Nitin']);
+    expect(week.topProducts[0]).toMatchObject({ label: 'Anarkali Kurta · Blue · M', units: 2 });
+    // The 1 Oct sale is 45 days back: outside both the 7-day and the 30-day window.
+    expect((await salesReport(db, STORE_ID, '30d', now)).totals.count).toBe(2);
+    // Stock not moving: in stock, nothing sold in 30 days → excludes the kurta and tee sold this week.
+    const slow = week.slowMovers.map((s) => s.label);
+    expect(slow).toContain('Slim Fit Jeans · Indigo · 32');
+    expect(slow).not.toContain('Anarkali Kurta · Blue · M');
+    expect(slow).not.toContain('Banarasi Saree · Green · Free'); // out of stock
   });
 });

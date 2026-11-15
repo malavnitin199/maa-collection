@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Db } from '@/db/client';
-import { exchanges, products, sales, staff } from '@/db/schema';
+import { exchanges, products, sales, staff, suppliers } from '@/db/schema';
 import { LOW_STOCK_THRESHOLD, STORE_TIMEZONE } from '@/lib/app-config';
 
 export type Totals = { count: number; units: number; totalPaise: number };
@@ -256,4 +256,161 @@ export async function shopDashboard(db: Db, storeId: string, now = new Date()) {
 /** Full activity log for the admin. */
 export async function shopActivity(db: Db, storeId: string, limit = 100) {
   return recentActivity(db, storeId, { limit });
+}
+
+// ------------------------------------------------------------------ reports
+
+export type ReportPeriod = 'today' | '7d' | '30d' | 'month';
+export const REPORT_PERIODS: { value: ReportPeriod; label: string }[] = [
+  { value: 'today', label: 'Today' },
+  { value: '7d', label: 'Last 7 days' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: 'month', label: 'This month' },
+];
+
+/** Start of the period (shop time zone) as timestamptz SQL. */
+function periodStart(period: ReportPeriod, now: Date): SQL {
+  const at = sql`${now.toISOString()}::timestamptz`;
+  const tz = STORE_TIMEZONE;
+  const today = sql`(date_trunc('day', ${at} AT TIME ZONE ${tz}) AT TIME ZONE ${tz})`;
+  if (period === 'today') return today;
+  if (period === 'month') return sql`(date_trunc('month', ${at} AT TIME ZONE ${tz}) AT TIME ZONE ${tz})`;
+  const days = period === '7d' ? 6 : 29; // today plus the previous 6 / 29 days
+  return sql`(${today} - make_interval(days => ${days}))`;
+}
+
+export type GroupRow = { label: string; units: number; revenuePaise: number; profitPaise: number };
+
+/** Owner report for a period: totals, by category / company / salesperson, top sellers, and stock that isn't moving. */
+export async function salesReport(db: Db, storeId: string, period: ReportPeriod, now = new Date()) {
+  const from = periodStart(period, now);
+  const at = sql`${now.toISOString()}::timestamptz`;
+  const inPeriod = and(eq(sales.storeId, storeId), gte(sales.createdAt, from), lte(sales.createdAt, at));
+  const units = int(sql`coalesce(sum(${sales.quantity}), 0)`);
+  const revenue = int(sql`coalesce(sum(${sales.totalPaise}), 0)`);
+  const profit = int(sql`coalesce(sum(${sales.quantity} * (${sales.unitPricePaise} - ${sales.costPaise})) filter (where ${sales.costPaise} is not null), 0)`);
+  const seller = alias(staff, 'seller');
+
+  const [totals, exchangeTotal, byCategory, bySupplier, bySalesperson, topProducts, slowMovers] = await Promise.all([
+    db.select({ count: int(sql`count(*)`), units, revenuePaise: revenue, profitPaise: profit }).from(sales).where(inPeriod),
+    db
+      .select({ count: int(sql`count(*)`), differencePaise: int(sql`coalesce(sum(${exchanges.differencePaise}), 0)`) })
+      .from(exchanges)
+      .where(and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, from), lte(exchanges.createdAt, at))),
+    db
+      .select({ label: products.category, units, revenuePaise: revenue, profitPaise: profit })
+      .from(sales)
+      .innerJoin(products, eq(products.id, sales.productId))
+      .where(inPeriod)
+      .groupBy(products.category)
+      .orderBy(desc(revenue)),
+    db
+      .select({ label: sql<string>`coalesce(${suppliers.name}, 'No company')`, units, revenuePaise: revenue, profitPaise: profit })
+      .from(sales)
+      .innerJoin(products, eq(products.id, sales.productId))
+      .leftJoin(suppliers, eq(suppliers.id, products.supplierId))
+      .where(inPeriod)
+      .groupBy(suppliers.name)
+      .orderBy(desc(revenue)),
+    db
+      .select({ label: seller.name, units, revenuePaise: revenue, profitPaise: profit })
+      .from(sales)
+      .innerJoin(seller, eq(seller.id, sales.soldBy))
+      .where(inPeriod)
+      .groupBy(seller.name)
+      .orderBy(desc(revenue)),
+    db
+      .select({
+        productId: sales.productId,
+        label: sql<string>`${sales.productName} || ' · ' || ${sales.color} || ' · ' || ${sales.size}`,
+        units,
+        revenuePaise: revenue,
+        profitPaise: profit,
+      })
+      .from(sales)
+      .where(inPeriod)
+      .groupBy(sales.productId, sales.productName, sales.color, sales.size)
+      .orderBy(desc(units), desc(revenue))
+      .limit(10),
+    // In stock but nothing sold in the last 30 days (newest arrivals excluded: added more than 30 days ago or never sold).
+    db
+      .select({
+        productId: products.id,
+        label: sql<string>`${products.name} || ' · ' || ${products.color} || ' · ' || ${products.size}`,
+        stock: products.stock,
+        mrpValuePaise: int(sql`${products.stock} * ${products.mrpPaise}`),
+        lastSoldAt: sql<Date | null>`(select max(${sales.createdAt}) from ${sales} where ${sales.productId} = ${products.id})`,
+      })
+      .from(products)
+      .where(
+        and(
+          eq(products.storeId, storeId),
+          eq(products.active, true),
+          gte(products.stock, 1),
+          sql`not exists (select 1 from ${sales} where ${sales.productId} = ${products.id} and ${sales.createdAt} >= ${at} - interval '30 days')`,
+        ),
+      )
+      .orderBy(desc(sql`${products.stock} * ${products.mrpPaise}`))
+      .limit(20),
+  ]);
+  return {
+    totals: { ...totals[0], exchanges: exchangeTotal[0], netRevenuePaise: totals[0].revenuePaise + exchangeTotal[0].differencePaise },
+    byCategory: byCategory as GroupRow[],
+    bySupplier: bySupplier as GroupRow[],
+    bySalesperson: bySalesperson as GroupRow[],
+    topProducts,
+    slowMovers: slowMovers.map((s) => ({ ...s, lastSoldAt: s.lastSoldAt ? new Date(s.lastSoldAt) : null })),
+  };
+}
+
+/** Every sale and exchange in the period, for the accountant (owner only: includes purchase prices). */
+export async function salesExportRows(db: Db, storeId: string, period: ReportPeriod, now = new Date()) {
+  const from = periodStart(period, now);
+  const at = sql`${now.toISOString()}::timestamptz`;
+  const credited = alias(staff, 'credited');
+  const recorder = alias(staff, 'recorder');
+  const saleRows = await db
+    .select({
+      at: sales.createdAt,
+      sku: sales.sku,
+      name: sales.productName,
+      size: sales.size,
+      color: sales.color,
+      category: products.category,
+      company: suppliers.name,
+      quantity: sales.quantity,
+      unitPricePaise: sales.unitPricePaise,
+      totalPaise: sales.totalPaise,
+      mrpPaise: sales.mrpPaise,
+      costPaise: sales.costPaise,
+      creditedTo: credited.name,
+      recordedBy: recorder.name,
+    })
+    .from(sales)
+    .innerJoin(products, eq(products.id, sales.productId))
+    .leftJoin(suppliers, eq(suppliers.id, products.supplierId))
+    .innerJoin(credited, eq(credited.id, sales.soldBy))
+    .innerJoin(recorder, eq(recorder.id, sales.recordedBy))
+    .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, from), lte(sales.createdAt, at)))
+    .orderBy(asc(sales.createdAt));
+  const returned = alias(products, 'returned');
+  const exchangeRows = await db
+    .select({
+      at: exchanges.createdAt,
+      returnedName: returned.name,
+      returnedQuantity: exchanges.returnedQuantity,
+      issuedSku: exchanges.issuedSku,
+      issuedName: exchanges.issuedProductName,
+      issuedQuantity: exchanges.issuedQuantity,
+      differencePaise: exchanges.differencePaise,
+      creditedTo: credited.name,
+      recordedBy: recorder.name,
+    })
+    .from(exchanges)
+    .innerJoin(returned, eq(returned.id, exchanges.returnedProductId))
+    .innerJoin(credited, eq(credited.id, exchanges.creditedTo))
+    .innerJoin(recorder, eq(recorder.id, exchanges.recordedBy))
+    .where(and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, from), lte(exchanges.createdAt, at)))
+    .orderBy(asc(exchanges.createdAt));
+  return { saleRows, exchangeRows };
 }

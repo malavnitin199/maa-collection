@@ -27,8 +27,8 @@ async function Dashboard() {
           <Link href="/admin/suppliers" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
             Suppliers
           </Link>
-          <Link href="/admin/labels" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
-            Labels
+          <Link href="/admin/reports" className="rounded-xl border border-zinc-300 px-2 py-3 dark:border-zinc-700">
+            Reports
           </Link>
         </div>
       </div>

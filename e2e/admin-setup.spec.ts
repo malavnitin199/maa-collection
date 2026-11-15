@@ -458,3 +458,28 @@ test('installable app: manifest + icons; opening the app while logged in goes to
   await page.goto('/login'); // e.g. tapping the home-screen icon
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
 });
+
+test('owner reports and CSV exports; salesmen cannot download them', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/reports?period=30d');
+  await expect(page.getByRole('link', { name: 'Last 30 days' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByTestId('report-net')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Not selling (no sale in 30 days)' })).toBeVisible();
+
+  const sales = await page.request.get('/admin/export/sales?period=30d');
+  expect(sales.status()).toBe(200);
+  expect(sales.headers()['content-type']).toContain('text/csv');
+  expect((await sales.text()).split('\r\n')[0]).toContain('Type,Date & time (IST),SKU,Product');
+  const stock = await page.request.get('/admin/export/stock');
+  expect(await stock.text()).toContain('MAA-TS-001');
+
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.getByText('Pradeep', { exact: true }).click();
+  await page.getByLabel('PIN').fill(PIN);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  expect((await page.request.get('/admin/export/stock')).status()).toBe(403);
+  await page.goto('/admin/reports');
+  await expect(page).toHaveURL(/\/pos$/);
+});
