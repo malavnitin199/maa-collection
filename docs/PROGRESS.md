@@ -27,7 +27,20 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Look and feel v8: five themes, day/night, shop-made design (2026-11-16, latest)
+## Edit after tagging + a Guide that talks (2026-11-16, latest)
+Owner request: an **Edit** option at the end of tagging (only *Next item* / *Print today's labels* before); improve the Guide with voice (translated) and interaction; keep the docs and `PROJECT_CONTEXT.md` current. Owner decisions before building: the phone's own voice (not recorded files); Edit does not lower piece counts for now (D-ST-2). Plan: `docs/PLAN_V9_GUIDE_VOICE_EDIT.md`; reference §18; ADR-019.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | Tag old stock finish screen: **✎ Edit this item** → same form filled in → **Save changes**; same barcode/SKU/pieces; tag preview refreshes | Done |
+| 2 | Server rule `correctTaggedItem`: prices by the *Prices* right, or by the item's creator before its first sale; purchase price only with *costs* | Done + 2 unit tests |
+| 3 | **▶ Listen** on every lesson (Hindi/English phone voice), step highlight, back / pause / next / stop / slow, sticky controls; **Listen to all** per part; tap-to-hear on the tag's parts | Done |
+| 4 | **Practice a sale** in the Sell lesson with voice help, real labels/sounds/"Sale done" card, nothing saved | Done |
+| 5 | Lessons updated for the new look (login keypad, round Sell button, palette), new lesson **Colours and day/night**, Edit step in Tag old stock; Hindi for all; 15 lessons | Done |
+| 6 | Docs: plan v9, ADR-019, D-ST-2, reference §18, user guide, `PROJECT_CONTEXT.md` (in repo + the copy in the parent `docs/`), CLAUDE.md | Done |
+- Verified: lint, typecheck, **117 unit tests**, build, **65 Playwright tests at desktop + phone size** (+1 phone-only skip) incl. new `e2e/guide-voice.spec.ts` (3 tests × 2 sizes, stand-in voice) and the Edit-after-tagging test. Phone screenshots: finish screen with Edit, edit mode, a lesson being read (step lit up), practice sale refusing a price above MRP.
+
+## Look and feel v8: five themes, day/night, shop-made design (2026-11-16)
 Owner request: make the app easier and more catchy for retailers — several themes, colours, day/night mode, more interactive, creative (no plain rectangles), take references. Plan + direction: `docs/PLAN_V8_LOOK_AND_FEEL.md`; developer notes: `docs/TECHNICAL_REFERENCE.md` §17; ADR-018.
 
 | # | Task | Result |

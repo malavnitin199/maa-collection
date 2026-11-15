@@ -32,6 +32,13 @@ Live app: https://maa-collection-pi.vercel.app
 - Login: tap your **name circle**, then your PIN on the big number keys (⌫ deletes the last digit), then **Log in**.
 - The round **Sell** button in the middle of the bottom bar opens the counter from anywhere.
 
+## 1c. Listen to the Guide, and practise
+
+- Open **Guide** (top of the screen, or "New here?" on the login page). Tap **▶ Listen** on any lesson: the phone reads it in your language (Hindi or English) and the step being read lights up. Buttons: back, pause, next, stop, **Slow**. **Listen to all** plays every lesson of a part (e.g. Selling).
+- In **Read a tag**, tap the speaker next to a part of the tag to hear what it means.
+- In **Sell an item**, try the **practice sale**: scan the sample tag, type a price, record it. The voice tells you what to do next. Nothing is saved.
+- Hearing nothing? Turn the volume up. For Hindi, the phone needs its Hindi voice: Settings → Text-to-speech → Google → install Hindi (most Android phones have it already).
+
 ## 2. Who can do what
 
 | Person | Can do |
@@ -65,6 +72,7 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 5. **MRP**, **selling price** (empty = MRP), **pieces counted**.
 6. **Save and get barcode**. The label appears.
 7. **Next item →**. Category, company and size stay filled in.
+   Typed something wrong? Tap **✎ Edit this item** before *Next item*: the form comes back filled in; fix it and tap **Save changes**. Same item and barcode, so a printed tag stays valid (reprint it if the name, size, colour or MRP changed). Pieces can't be lowered here; more pieces can be added from **Open item**.
 8. At the end: **Print today's labels**. You get one label per piece; stick one on each piece. Choose **A4 sheet** or **Sticker printer 50×25 mm**; stickers print one per label and scan reliably at 203 dpi.
 
 **Needs attention** (Catalog menu) is the catalog to-do list: items without a photo, company or stock (and without a purchase price, for those allowed). Tap an item to fix it.

@@ -30,11 +30,37 @@ The 12-page uploaded *Retail Shop Stock, Sales & Billing System* PRD is the prod
 - At completion, show commands executed, actual results, modified files, gaps and the next task.
 - Update `docs/PROGRESS.md` and check off backlog ONLY when acceptance criteria pass.
 
-## Current status (2026-11-15, plan v3 live)
-- Live app with shared Postgres (Neon): name + PIN login; owner (admin) and salesmen; **owner-granted rights** per salesman: Catalog (catalog / QC person), Prices, Stock, Purchase price.
-- Owner/catalog: companies, categories, add stock (quick add, sizes × colours, restock), **Tag old stock** with photos, product photos, design-wide rates, code price on tags, labels (per delivery / today's).
-- Counter: scan (camera / hardware / typed) with product photo, bargained price ≤ MRP, sale on behalf, exchanges, my sales.
-- In-app Help (`/help`) and `docs/USER_GUIDE.md`.
-- Not yet: GST/receipts, payments, refunds, day-close, offline billing, Vercel Blob for photos (D-IMG-1).
-- Plans: `docs/PLAN_V2_SHOP_OPERATIONS.md`, `docs/PLAN_V3_CATALOG_TEAM.md`. Decisions: `docs/DECISION_LOG.md` (ADR-001…012), open questions `docs/DECISIONS.md`. Log: `docs/PROGRESS.md`.
-- Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavnitin199/maa-collection
+## Current status (2026-11-16, live through plan v9)
+
+Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavnitin199/maa-collection · Deployed with the Vercel CLI (repo not Git-connected).
+
+**Who uses it and how they get in**
+- Staff log in by tapping their **name circle** and entering a 4–6 digit **PIN** on a number keypad. Roles: owner (admin) and salesman; the owner grants extra **rights** per person: Catalog (catalog / QC person), Prices, Stock, Purchase price (`costs`). Without `costs`, purchase prices are never sent to that person.
+- Production PINs are set by the owner (never written in the repo; reset on 2026-11-16 at the owner's request; each person can be given their own PIN in More → Staff).
+
+**Selling (every salesman)**
+- Scan with the phone camera, a USB/Bluetooth scanner, or type the code; a tag's **QR** opens the item straight at the counter (`/i/<barcode>`).
+- One item per sale, no cart: quantity + the **bargained price** (≤ MRP), credited to yourself or a colleague (`sold_by` + `recorded_by`). Exchanges, "My sales" (today / month).
+- Payment-app style feedback: green tick + "ting", shake + buzz on a failed scan, "Sale done" card + chime; mute per phone.
+
+**Stock and tags (catalog / stock people)**
+- Companies (suppliers), categories with SKU codes and **size lists** (shirts S–XXL, kurtas M–XXL, Ladies Jeans 26–32, Gents Jeans 28–36; owner-editable).
+- Add stock: **Quick add** (many products, one company + category), **New design** in sizes × colours with **prices by size** (MRP / selling / purchase per size, same for all colours), **Restock** by scanning, **Tag old stock** one piece at a time with photos, with **✎ Edit this item** right after saving (same barcode; prices fixable by the creator until the first sale). Optional photo per colour / per product while creating tags.
+- Tags: **40 × 60 mm QR hang tags** (QR, name, ART. = SKU + secret code price, every size of the category with tick boxes, EAN-13, MRP); A4 (16 per page), tag printer, or 50 × 25 mm sticker.
+
+**Owner**
+- Home dashboard (today / month, profit, exchanges, low stock, activity), reports + CSV export, **sales team dashboard** (`/admin/team`: sellers, share, daily sales per seller), activity log, staff and rights, settings (code price).
+
+**Language, look, learning**
+- **Hindi + English** on every screen, chosen per person (`staff.language`).
+- **Five colour themes** (Peacock, Marigold, Rani, Neel, Mehendi) and **Day / Night / Same as phone**, chosen per phone. Shop-made design: zari border, hang-tag action tiles, floating dock with a round Sell button.
+- `/guide`: 15 lessons with animated pictures, by role, in both languages, **read aloud with the phone's own voice** (▶ Listen, step highlighting, Listen to all, tap-to-hear tag parts) and a **practice sale** that saves nothing; `/help`: quick reference and problems & fixes; `docs/USER_GUIDE.md`.
+
+**Not built yet**: GST / receipts, payments, refunds, day-close / cash drawer, offline billing, **stock correction** (lowering a wrong piece count needs a new stock-movement kind = a DB change; owner: not now, D-ST-2), photos on Vercel Blob (D-IMG-1).
+
+**Stack actually in use**: Next.js 16.4.6 (App Router, Cache Components), React 19, TypeScript strict, Tailwind CSS 4, Drizzle ORM on Neon Postgres (PGlite locally and in tests), Zod, Vitest, Playwright (desktop + phone). Not used (yet): shadcn/ui, Better Auth, TanStack Query, Zustand, Dexie. Never put the Neon URL in `.env.local` (it lives in `.env.neon` for migrations only).
+
+**Where the details are**
+- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V9_GUIDE_VOICE_EDIT.md`, `docs/PLAN_SIZE_PRICES.md`.
+- Decisions: `docs/DECISION_LOG.md` (ADR-001…019); open questions: `docs/DECISIONS.md`.
+- How it works (developers): `docs/TECHNICAL_REFERENCE.md`; how to use it (shop): `docs/USER_GUIDE.md`; what was done and verified: `docs/PROGRESS.md`; agent rules + status: `CLAUDE.md`.

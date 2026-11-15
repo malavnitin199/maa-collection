@@ -562,3 +562,14 @@ Plan v7, ADR-017. Round 1 (salesman screens: login, header/menus/tabs, Sell, Exc
 
 Gotcha: Playwright's `getByLabel('X')` matches any accessible name *containing* X — keep new button labels from containing words used by form labels (that is why the picker is "Theme and day/night", not "Colours…", and the keypad is "Number keys", not "PIN keypad").
 
+## 18. Guide voice, practice sale, edit after tagging (plan v9, ADR-019)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Speech helper | `src/features/guide/voice.ts` | `say(text, { locale, slow, onEnd })` over `speechSynthesis` with `lang` en-IN / hi-IN and the best matching voice (`voiceFor`); keeps the utterance in a module variable (Chrome drops `onend` otherwise); `stopSpeaking()`. `forSpeech()` cleans screen text (emoji, arrows, ✓ ✎ dropped; `×` → "by" / "और"). `missingVoice()` once voices have loaded. |
+| What is read | `data-voice` on an element = one thing read (and lit up); inside it only `data-voice-text` parts are spoken | Guide page marks: lesson head (title + intro, not the "Lesson n · min" line), each step (not its number), the tip, each tag part. New lesson content is read automatically — no second script to maintain. |
+| Player | `voice-player.tsx`: `LessonVoice`, `ListenAll`, `HearButton` | One reader at a time via window events (`guide-voice-start` stops others; `guide-voice-play` starts a lesson from the "Listen to all" queue; `guide-voice-ended` moves the queue on). Highlight = `.voice-now` + `aria-current="step"` (guide.css). Pause = cancel + resume from the same step (Android has no reliable `pause()`). Hidden when the browser can't speak. |
+| Practice sale | `practice-sale.tsx` (in lesson `sell`, `extra: 'practice-sale'`) | Pure client: sample item (MRP ₹1,499, 4 in stock), real Sell labels (`sell.*`), `feedback()` sounds, WAAPI shake, `DoneOverlay`; voice prompts `prac.say.*`. Never calls the server. |
+| Edit after tagging | `old-stock-form.tsx` (`editing` state) → `editTaggedItemAction` → `correctTaggedItem` | Updates the product row only (no stock movement). Prices allowed when `can(me,'prices')` or `product.createdBy === me` and no `sale` / `exchange_*` movement exists; purchase price only with `costs`; returns `pricesKept`. |
+| Tests | `e2e/guide-voice.spec.ts` | Replaces `window.speechSynthesis` with a recorder (`addInitScript`); `__finishSpeech()` ends the current sentence. Real voices are only checked on phones. |
+
