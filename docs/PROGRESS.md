@@ -27,7 +27,14 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Plan v3: catalog team permissions, product photos, old-stock tagging, in-app help (2026-11-15, latest)
+## Catalog person extras: sticker labels, tag barcodes, Needs attention (2026-11-15, latest)
+- **Sticker printer 50×25 mm** label format (one per page via `@page`), with short bars so the barcode spans ~47 mm. Rendered at 203 dpi it decodes with the browser BarcodeDetector; E2E checks the 50×25 mm size.
+- **Tag old stock with the barcode already on the item**: scan the manufacturer EAN-13 first. Unused + valid → item uses it (no sticker). Already known → shows the item, save blocked. Invalid → explained. The E2E test caught a nested-form bug (Enter submitted the page) — scanner moved above the form. It also showed the duplicate-barcode guard working (desktop and phone runs picked the same random code; the second was refused).
+- **Needs attention** (`/admin/catalog/check`): items without photo / company / stock / purchase price (last only with the costs right).
+- Verified: lint, typecheck, **69 unit tests**, build, **33 Playwright tests (desktop + phone)**. Deployed after each feature.
+- Still waiting on the owner: GitHub `workflow` scope for CI (branch `ci-workflow`), Vercel Blob approval (D-IMG-1), D-PERM-1.
+
+## Plan v3: catalog team permissions, product photos, old-stock tagging, in-app help (2026-11-15)
 - Owner request: a dedicated catalog / QC person (a salesman the owner promotes) photographs items, edits names/prices, generates barcodes and labels — including **old stock already in the shop**; owner grants all rights; app must be easy, with a guide. Plan: `docs/PLAN_V3_CATALOG_TEAM.md`; decisions ADR-009…012, open D-PERM-1, D-IMG-1.
 - Checkpoints (each committed, pushed; deployed when no half-finished links): (1) plan; (2) permissions — `staff.permissions` (migration 0003), `requirePermission`, Staff & permissions toggles, menus/tabs by right, purchase price hidden and ignored without `costs`; (3) photos — `product_images` (migration 0004), camera/gallery upload resized on the phone, gallery with main/delete, thumbnails, photo at the counter; "Tag old stock" flow + "print today's labels"; (4) `/help` guide + first-time tips; (5) docs + `docs/USER_GUIDE.md`.
 - Issues found and fixed: creating a Vercel Blob store was **blocked by the assistant's safety check** → photos stored in Postgres (verified bytes round-trip on Neon inside a rolled-back transaction); test data in the long-lived local DB made the sample "Dupatta" code collide (test switched to a seeded category); admin page shells (empty "Add a person" / "Add supplier" forms) were sent before the permission redirect → moved inside the checked part (no data ever leaked); local dev server had to be restarted twice to apply new migrations.

@@ -45,12 +45,15 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 ### Tag one old item (~30 seconds)
 
 1. **Catalog → Tag old stock**.
-2. **📷 Take photo**: 1–4 photos, good light, plain background, the whole item.
-3. **Category**, **name** (e.g. "Phulkari Dupatta"), tap a **size**, type the **colour**. Company is optional.
-4. **MRP**, **selling price** (empty = MRP), **pieces counted**.
-5. **Save and get barcode**. The label appears.
-6. **Next item →**. Category, company and size stay filled in.
-7. At the end: **Print today's labels**. You get one label per piece; stick one on each piece.
+2. Optional: **Scan the tag's barcode** if the item already has one from the company. The app uses it (no new sticker), or tells you the item is already in the app.
+3. **📷 Take photo**: 1–4 photos, good light, plain background, the whole item.
+4. **Category**, **name** (e.g. "Phulkari Dupatta"), tap a **size**, type the **colour**. Company is optional.
+5. **MRP**, **selling price** (empty = MRP), **pieces counted**.
+6. **Save and get barcode**. The label appears.
+7. **Next item →**. Category, company and size stay filled in.
+8. At the end: **Print today's labels**. You get one label per piece; stick one on each piece. Choose **A4 sheet** or **Sticker printer 50×25 mm**; stickers print one per label and scan reliably at 203 dpi.
+
+**Needs attention** (Catalog menu) is the catalog to-do list: items without a photo, company or stock (and without a purchase price, for those allowed). Tap an item to fix it.
 
 ### Other ways to add stock (Catalog → Add stock)
 

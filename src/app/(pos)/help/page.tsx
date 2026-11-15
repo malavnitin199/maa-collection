@@ -96,12 +96,13 @@ export default function HelpPage() {
         <h3 className="font-semibold">Tag one item (about 30 seconds)</h3>
         <Steps
           items={[
+            <>Item already has a <strong>barcode from the company</strong>? Tap <strong>Scan the tag&apos;s barcode</strong> first — the app uses it (no new sticker) or tells you if the item is already in the app.</>,
             <><strong>📷 Take photo</strong> of the item (1–4 photos). Good light, plain background, whole item visible.</>,
             <>Choose the <strong>category</strong>, type the <strong>name</strong> (e.g. &ldquo;Phulkari Dupatta&rdquo;), tap a <strong>size</strong>, add the <strong>colour</strong>.</>,
             <>Enter <strong>MRP</strong>, the <strong>selling price</strong> (leave empty = MRP) and <strong>pieces counted</strong>.</>,
             <>Tap <strong>Save and get barcode</strong>. The label appears.</>,
             <>Tap <strong>Next item →</strong>. Category, company and size stay filled in for the next one.</>,
-            <>At the end: <strong>Print today&apos;s labels</strong> → one label per piece → stick one on each piece.</>,
+            <>At the end: <strong>Print today&apos;s labels</strong> → one label per piece → stick one on each piece. Using a sticker printer? Choose <strong>Sticker printer 50×25 mm</strong> before printing.</>,
           ]}
         />
         <Tip>Same item in several sizes or colours? Use <Link href="/admin/stock/new" className={link}>New design in sizes × colours</Link>: one entry creates all of them.</Tip>
@@ -110,6 +111,7 @@ export default function HelpPage() {
           <li><strong>Many different products from one company</strong> → Add stock → Many different products.</li>
           <li><strong>More pieces of items you already have</strong> → Add stock → More of existing items (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece.</li>
           <li><strong>Edit a product or its photos</strong> → Products → tap the item.</li>
+          <li><strong>What&apos;s left to fix?</strong> → Catalog → <strong>Needs attention</strong>: items without photo, company or stock.</li>
         </ul>
       </Section>
 
