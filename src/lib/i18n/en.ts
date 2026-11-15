@@ -4,6 +4,7 @@
  * = singular / plural. Shop data (product names, sizes, prices) is never here.
  */
 import { actionsEn } from './modules/actions.ts';
+import { approvalsEn } from './modules/approvals.ts';
 import { catalogEn } from './modules/catalog.ts';
 import { helpEn } from './modules/help.ts';
 import { ownerEn } from './modules/owner.ts';
@@ -31,6 +32,7 @@ const base = {
   'nav.reports': 'Reports',
   'nav.team': 'Team',
   'nav.activity': 'Activity',
+  'nav.approvals': 'Approvals',
   'nav.labels': 'Labels',
   'nav.settings': 'Settings',
   'nav.counterSale': 'Counter sale',
@@ -100,6 +102,16 @@ const base = {
   'sell.outOfStock': '{name} ({size}, {color}) is out of stock.',
   'sell.doneMine': 'Sold {qty} × {name} ({size}, {color}) @ {price} each — by {me}. Stock left: {left}.',
   'sell.doneOther': 'Sold {qty} × {name} ({size}, {color}) @ {price} each — credited to {other} (recorded by {me}). Stock left: {left}.',
+  'sell.byHand': "Tag won't scan? Enter by hand",
+  'sell.byHand.title': 'Enter by hand',
+  'sell.byHand.hint': 'Type what the item is and the price the customer paid. Stock does not change; the owner checks it.',
+  'sell.byHand.name': 'Item name',
+  'sell.byHand.namePlaceholder': 'e.g. blue kurti',
+  'sell.byHand.size': 'Size (optional)',
+  'sell.byHand.priceHint': 'The price the customer paid.',
+  'sell.byHand.doneMine': 'Sold {qty} × {name} @ {price} each — by {me}.',
+  'sell.byHand.doneOther': 'Sold {qty} × {name} @ {price} each — credited to {other} (recorded by {me}).',
+  'sell.sentToOwner': 'Sent to the owner to check.',
   'common.cancel': 'Cancel',
   'common.saving': 'Saving…',
   'common.loading': 'Loading…',
@@ -139,6 +151,10 @@ const base = {
   'error.allExchanged': 'Everything from this sale has already been exchanged.',
   'error.onlyReturnable': 'Only {n} unit(s) from this sale can be returned.',
   'error.newNotFound': 'New item not found.',
+  'error.manualName': 'Type what the item is.',
+  'error.manualNameLong': 'Item name is too long (80 letters max).',
+  'error.manualNoExchange': 'That sale was entered by hand, so nothing can be returned against it.',
+  'error.saleRejected': 'The owner rejected that sale, so nothing can be returned against it.',
   'error.newAboveMrp': 'New item price cannot be above MRP.',
   'error.newOutOfStock': 'The new item is out of stock.',
   'error.newOnlyLeft': 'Only {n} of the new item left.',
@@ -184,6 +200,11 @@ const base = {
   'my.forOthers': 'Recorded by me for others',
   'my.forOthersLine': 'Today {today} ({todayCount}) · This month {month} ({monthCount})',
   'my.activity': 'My recent activity',
+  'my.waiting': 'Waiting for the owner: {n} sales · {amount}',
+  'my.status.waiting': 'Waiting',
+  'my.status.approved': 'Approved',
+  'my.status.rejected': 'Rejected',
+  'my.byHand': 'By hand',
   'activity.none': 'Nothing yet.',
   'activity.exchange': 'Exchange',
   'activity.creditedTo': 'credited to {name}',
@@ -260,7 +281,7 @@ const base = {
 } as const;
 
 /** All English text: the salesman screens above, plus the owner/catalog areas (one module each). */
-export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn } as const;
+export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn, ...approvalsEn } as const;
 
 export type MessageKey = keyof typeof en;
 export type Messages = Record<MessageKey, string>;

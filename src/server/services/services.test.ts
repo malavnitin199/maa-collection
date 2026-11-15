@@ -6,6 +6,7 @@ import { products, sales, stockMovements } from '@/db/schema';
 import { DEV_PIN } from '@/db/seed';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { STORE_ID } from '@/lib/app-config';
+import { approveAll } from './approvals';
 import { recordExchange, findReturnableSales } from './exchanges';
 import { createProduct, findProductByCode, stockIn, toCounterProduct } from './products';
 import { shopDashboard, staffDashboard } from './reports';
@@ -181,12 +182,20 @@ describe('dashboards', () => {
     await db.update(sales).set({ createdAt: new Date('2026-11-14T18:00:00Z') }).where(eq(sales.id, b.sale.id));
     const now = new Date('2026-11-15T10:00:00Z');
     await db.update(sales).set({ createdAt: now }).where(eq(sales.soldBy, people.Vishal));
+    // Salesmen's entries wait for the owner (plan v12): nothing counts until he approves.
+    const before = await staffDashboard(db, STORE_ID, people.Nitin, now);
+    expect(before.mine.month).toEqual({ count: 0, units: 0, totalPaise: 0 });
+    expect(before.waiting.month).toEqual({ count: 2, units: 2, totalPaise: 290000 });
+    expect(before.activity.every((e) => e.status === 'waiting')).toBe(true);
+    expect((await approveAll(db, STORE_ID, { decidedBy: people.Owner, batchId: nextOp() })).total).toBe(3);
 
     const nitin = await staffDashboard(db, STORE_ID, people.Nitin, now);
     expect(nitin.mine.today).toEqual({ count: 1, units: 1, totalPaise: 150000 });
     expect(nitin.mine.month).toEqual({ count: 2, units: 2, totalPaise: 290000 });
     expect(nitin.forOthers.today).toEqual({ count: 1, units: 1, totalPaise: 130000 });
     expect(nitin.activity).toHaveLength(3);
+    expect(nitin.waiting.month.count).toBe(0);
+    expect(nitin.activity.every((e) => e.status === 'approved')).toBe(true);
 
     const shop = await shopDashboard(db, STORE_ID, now);
     expect(shop.netRevenue).toEqual({ today: 280000, month: 420000 });
@@ -209,6 +218,7 @@ describe('owner reports', () => {
     await db.update(sales).set({ createdAt: new Date('2026-10-01T10:00:00Z') }).where(eq(sales.id, old.sale.id));
     const now = new Date('2026-11-15T10:00:00Z');
     await db.update(sales).set({ createdAt: now }).where(sql`${sales.createdAt} > '2026-11-01'`);
+    await approveAll(db, STORE_ID, { decidedBy: people.Owner, batchId: nextOp() });
 
     const week = await salesReport(db, STORE_ID, '7d', now);
     expect(week.totals).toMatchObject({ count: 2, units: 3, revenuePaise: 285000, netRevenuePaise: 285000 });
@@ -240,6 +250,7 @@ describe('sales team dashboard', () => {
     await db.update(sales).set({ createdAt: now }).where(eq(sales.id, v1.sale.id));
     await db.update(sales).set({ createdAt: new Date('2026-11-13T06:00:00Z') }).where(eq(sales.id, v2.sale.id));
     await db.update(sales).set({ createdAt: new Date('2026-11-14T18:00:00Z') }).where(eq(sales.id, n1.sale.id));
+    await approveAll(db, STORE_ID, { decidedBy: people.Owner, batchId: nextOp() });
 
     expect(periodDays('7d', now)).toEqual(['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15']);
     expect(periodDays('month', now)).toHaveLength(15);

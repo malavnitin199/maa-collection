@@ -147,7 +147,8 @@ export const stockMovements = pgTable(
     quantityChange: integer('quantity_change').notNull(),
     reason: text('reason', {
       // 'cleared' = the owner set this item's count to 0 (Settings → Clear stock).
-      enum: ['opening', 'stock_in', 'sale', 'exchange_return', 'exchange_issue', 'cleared'],
+      // 'sale_rejected' / 'exchange_rejected' = the owner rejected an entry, so its stock change is undone by a new row.
+      enum: ['opening', 'stock_in', 'sale', 'exchange_return', 'exchange_issue', 'cleared', 'sale_rejected', 'exchange_rejected'],
     }).notNull(),
     refId: uuid('ref_id'),
     staffId: uuid('staff_id').references(() => staff.id),
@@ -164,12 +165,17 @@ export const sales = pgTable(
     storeId: text('store_id').notNull().references(() => stores.id),
     /** Idempotency key from the client: a retried submit never sells twice. */
     operationId: text('operation_id').notNull(),
-    productId: uuid('product_id').notNull().references(() => products.id),
+    /** The item sold. Empty only for a manual sale of something that is not in the app. */
+    productId: uuid('product_id').references(() => products.id),
     sku: text('sku').notNull(),
     productName: text('product_name').notNull(),
     size: text('size').notNull(),
     color: text('color').notNull(),
-    mrpPaise: integer('mrp_paise').notNull(),
+    /** MRP at sale time; empty when the item is not in the app (no MRP known). */
+    mrpPaise: integer('mrp_paise'),
+    /** Entered without scanning (tag would not scan): the owner looks at each of these himself. */
+    manual: boolean('manual').notNull().default(false),
+    manualNote: text('manual_note'),
     quantity: integer('quantity').notNull(),
     unitPricePaise: integer('unit_price_paise').notNull(),
     totalPaise: integer('total_paise').notNull(),
@@ -186,7 +192,9 @@ export const sales = pgTable(
     index('sales_store_created_idx').on(t.storeId, t.createdAt),
     index('sales_product_idx').on(t.productId, t.createdAt),
     check('sales_quantity_positive', sql`${t.quantity} > 0`),
-    check('sales_price_le_mrp', sql`${t.unitPricePaise} > 0 AND ${t.unitPricePaise} <= ${t.mrpPaise}`),
+    check('sales_price_le_mrp', sql`${t.unitPricePaise} > 0 AND (${t.mrpPaise} IS NULL OR ${t.unitPricePaise} <= ${t.mrpPaise})`),
+    // A sale without an item is only possible as a manual sale; a scanned sale always has its item and MRP.
+    check('sales_item_or_manual', sql`(${t.productId} IS NOT NULL AND ${t.mrpPaise} IS NOT NULL) OR ${t.manual}`),
   ],
 );
 
@@ -196,10 +204,11 @@ export const exchanges = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     storeId: text('store_id').notNull().references(() => stores.id),
     operationId: text('operation_id').notNull(),
-    originalSaleId: uuid('original_sale_id').notNull().references(() => sales.id),
+    /** The sale the returned piece came from. Empty when the app has no bill for it (sold before the app). */
+    originalSaleId: uuid('original_sale_id').references(() => sales.id),
     returnedProductId: uuid('returned_product_id').notNull().references(() => products.id),
     returnedQuantity: integer('returned_quantity').notNull(),
-    /** Price the customer actually paid per unit in the original sale. */
+    /** Price the customer actually paid per unit: from the original sale, or typed by the salesman when there is no bill. */
     returnedUnitPricePaise: integer('returned_unit_price_paise').notNull(),
     issuedProductId: uuid('issued_product_id').notNull().references(() => products.id),
     issuedSku: text('issued_sku').notNull(),
@@ -224,6 +233,40 @@ export const exchanges = pgTable(
       'exchanges_issued_price_le_mrp',
       sql`${t.issuedUnitPricePaise} > 0 AND ${t.issuedUnitPricePaise} <= ${t.issuedMrpPaise}`,
     ),
+  ],
+);
+
+/**
+ * The owner's decision on a sale or an exchange (plan v12). Append-only: one
+ * row per sale / exchange at most (unique indexes), never updated or deleted.
+ * No row = waiting for the owner. Sales and exchanges themselves are never
+ * edited; only approved ones count in totals. `auto` = the owner's own entry
+ * (approved as it is recorded) or a row that existed before approvals.
+ */
+export const approvalDecisions = pgTable(
+  'approval_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    saleId: uuid('sale_id').references(() => sales.id),
+    exchangeId: uuid('exchange_id').references(() => exchanges.id),
+    decision: text('decision', { enum: ['approved', 'rejected'] }).notNull(),
+    /** Why it was rejected. */
+    reason: text('reason', { enum: ['wrong_price', 'wrong_item', 'duplicate', 'not_sold', 'other'] }),
+    note: text('note'),
+    decidedBy: uuid('decided_by').notNull().references(() => staff.id),
+    auto: boolean('auto').notNull().default(false),
+    /** One id per "Approve all" tap, for the audit trail. */
+    batchId: text('batch_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // At most one decision per sale / exchange: a double tap or a second phone can never decide twice.
+    uniqueIndex('approval_decisions_sale_uq').on(t.saleId),
+    uniqueIndex('approval_decisions_exchange_uq').on(t.exchangeId),
+    index('approval_decisions_store_created_idx').on(t.storeId, t.createdAt),
+    check('approval_decisions_one_target', sql`(${t.saleId} IS NULL) <> (${t.exchangeId} IS NULL)`),
+    check('approval_decisions_valid', sql`${t.decision} IN ('approved', 'rejected')`),
   ],
 );
 

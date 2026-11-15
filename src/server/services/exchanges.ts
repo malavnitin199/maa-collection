@@ -2,6 +2,7 @@ import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { Db } from '@/db/client';
 import { exchanges, products, sales, staff, stockMovements, type Exchange } from '@/db/schema';
+import { autoApproveOwnEntry, isOwner, saleRejected } from './approvals';
 import { DomainError, isUniqueViolation } from './errors';
 import { assertActiveStaff } from './sales';
 
@@ -52,6 +53,8 @@ export async function findReturnableSales(
       and(
         eq(sales.storeId, storeId),
         eq(sales.productId, productId),
+        // A sale the owner rejected already put its pieces back; nothing can be returned against it.
+        sql`not ${saleRejected}`,
         gte(sales.createdAt, sql`now() - make_interval(days => ${days})`),
       ),
     )
@@ -111,6 +114,9 @@ export async function recordExchange(
         .for('update')
         .limit(1);
       if (!original) throw new DomainError('Original sale not found.', { key: 'error.saleNotFound' });
+      if (!original.productId) throw new DomainError('That sale was entered by hand, so nothing can be returned against it.', { key: 'error.manualNoExchange' });
+      const [rejected] = await tx.select({ id: sales.id }).from(sales).where(and(eq(sales.id, original.id), saleRejected)).limit(1);
+      if (rejected) throw new DomainError('The owner rejected that sale, so nothing can be returned against it.', { key: 'error.saleRejected' });
       const [{ returned }] = await tx
         .select({ returned: sql<number>`coalesce(sum(${exchanges.returnedQuantity}), 0)::int` })
         .from(exchanges)
@@ -189,6 +195,7 @@ export async function recordExchange(
           staffId: input.recordedBy,
         },
       ]);
+      if (await isOwner(tx, storeId, input.recordedBy)) await autoApproveOwnEntry(tx, { storeId, exchangeId: exchange.id, decidedBy: input.recordedBy });
       return { exchange, duplicate: false };
     });
   } catch (error) {

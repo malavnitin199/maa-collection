@@ -1,5 +1,6 @@
 import type { Messages } from './en';
 import { actionsHi } from './modules/actions.ts';
+import { approvalsHi } from './modules/approvals.ts';
 import { catalogHi } from './modules/catalog.ts';
 import { helpHi } from './modules/help.ts';
 import { ownerHi } from './modules/owner.ts';
@@ -30,6 +31,7 @@ const base = {
   'nav.reports': 'रिपोर्ट',
   'nav.team': 'टीम',
   'nav.activity': 'गतिविधि',
+  'nav.approvals': 'मंज़ूरी',
   'nav.labels': 'लेबल',
   'nav.settings': 'सेटिंग',
   'nav.counterSale': 'काउंटर बिक्री',
@@ -95,6 +97,16 @@ const base = {
   'sell.outOfStock': '{name} ({size}, {color}) स्टॉक में नहीं है।',
   'sell.doneMine': '{qty} × {name} ({size}, {color}) बिका, {price} प्रति पीस — {me} द्वारा। स्टॉक बचा: {left}।',
   'sell.doneOther': '{qty} × {name} ({size}, {color}) बिका, {price} प्रति पीस — {other} के नाम ({me} ने दर्ज किया)। स्टॉक बचा: {left}।',
+  'sell.byHand': 'टैग स्कैन नहीं हो रहा? हाथ से दर्ज करें',
+  'sell.byHand.title': 'हाथ से दर्ज करें',
+  'sell.byHand.hint': 'लिखें कि आइटम क्या है और ग्राहक ने क्या दाम दिया। स्टॉक नहीं बदलता; मालिक जाँचेंगे।',
+  'sell.byHand.name': 'आइटम का नाम',
+  'sell.byHand.namePlaceholder': 'जैसे नीली कुर्ती',
+  'sell.byHand.size': 'साइज़ (वैकल्पिक)',
+  'sell.byHand.priceHint': 'ग्राहक ने जो दाम दिया।',
+  'sell.byHand.doneMine': '{qty} × {name} बिका, {price} प्रति पीस — {me} द्वारा।',
+  'sell.byHand.doneOther': '{qty} × {name} बिका, {price} प्रति पीस — {other} के नाम ({me} ने दर्ज किया)।',
+  'sell.sentToOwner': 'मालिक की जाँच के लिए भेज दिया।',
   'common.cancel': 'रद्द करें',
   'common.saving': 'सेव हो रहा है…',
   'common.loading': 'लोड हो रहा है…',
@@ -131,6 +143,10 @@ const base = {
   'error.allExchanged': 'इस बिक्री का सारा सामान पहले ही बदला जा चुका है।',
   'error.onlyReturnable': 'इस बिक्री से सिर्फ़ {n} पीस लौटाए जा सकते हैं।',
   'error.newNotFound': 'नया आइटम नहीं मिला।',
+  'error.manualName': 'लिखें कि आइटम क्या है।',
+  'error.manualNameLong': 'आइटम का नाम बहुत लंबा है (ज़्यादा से ज़्यादा 80 अक्षर)।',
+  'error.manualNoExchange': 'वह बिक्री हाथ से दर्ज हुई थी, इसलिए उस पर कुछ लौटाया नहीं जा सकता।',
+  'error.saleRejected': 'मालिक ने वह बिक्री नामंज़ूर की थी, इसलिए उस पर कुछ लौटाया नहीं जा सकता।',
   'error.newAboveMrp': 'नए आइटम का दाम MRP से ज़्यादा नहीं हो सकता।',
   'error.newOutOfStock': 'नया आइटम स्टॉक में नहीं है।',
   'error.newOnlyLeft': 'नए आइटम के सिर्फ़ {n} बचे हैं।',
@@ -174,6 +190,11 @@ const base = {
   'my.forOthers': 'मैंने दूसरों के लिए दर्ज की',
   'my.forOthersLine': 'आज {today} ({todayCount}) · इस महीने {month} ({monthCount})',
   'my.activity': 'मेरी हाल की गतिविधि',
+  'my.waiting': 'मालिक की जाँच बाकी: {n} बिक्री · {amount}',
+  'my.status.waiting': 'बाकी',
+  'my.status.approved': 'मंज़ूर',
+  'my.status.rejected': 'नामंज़ूर',
+  'my.byHand': 'हाथ से',
   'activity.none': 'अभी कुछ नहीं।',
   'activity.exchange': 'एक्सचेंज',
   'activity.creditedTo': '{name} के नाम',
@@ -247,4 +268,4 @@ const base = {
   'login.backspace': 'आखिरी अंक मिटाएँ',
 };
 
-export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi };
+export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi };

@@ -3,6 +3,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import type { Db } from '@/db/client';
 import { exchanges, products, sales, staff, suppliers } from '@/db/schema';
 import { LOW_STOCK_THRESHOLD, STORE_TIMEZONE } from '@/lib/app-config';
+import { exchangeApproved, exchangeStatus, exchangeWaiting, saleApproved, saleStatus, saleWaiting, type ApprovalStatus } from './approvals';
 
 export type Totals = { count: number; units: number; totalPaise: number };
 export type PeriodTotals = { today: Totals; month: Totals };
@@ -19,7 +20,7 @@ function periodStarts(now: Date, timezone: string) {
 
 const int = (expression: SQL) => sql<number>`${expression}`.mapWith(Number);
 
-async function saleTotals(db: Db, storeId: string, now: Date, filter?: SQL): Promise<PeriodTotals> {
+async function saleTotals(db: Db, storeId: string, now: Date, filter?: SQL, status: SQL = saleApproved): Promise<PeriodTotals> {
   const p = periodStarts(now, STORE_TIMEZONE);
   const isToday = sql`${sales.createdAt} >= ${p.day}`;
   const [row] = await db
@@ -32,7 +33,7 @@ async function saleTotals(db: Db, storeId: string, now: Date, filter?: SQL): Pro
       monthTotal: int(sql`coalesce(sum(${sales.totalPaise}), 0)`),
     })
     .from(sales)
-    .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month), lte(sales.createdAt, p.now), filter));
+    .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month), lte(sales.createdAt, p.now), filter, status));
   return {
     today: { count: row.todayCount, units: row.todayUnits, totalPaise: row.todayTotal },
     month: { count: row.monthCount, units: row.monthUnits, totalPaise: row.monthTotal },
@@ -41,7 +42,7 @@ async function saleTotals(db: Db, storeId: string, now: Date, filter?: SQL): Pro
 
 export type ExchangeTotals = { today: { count: number; differencePaise: number }; month: { count: number; differencePaise: number } };
 
-async function exchangeTotals(db: Db, storeId: string, now: Date, filter?: SQL): Promise<ExchangeTotals> {
+async function exchangeTotals(db: Db, storeId: string, now: Date, filter?: SQL, status: SQL = exchangeApproved): Promise<ExchangeTotals> {
   const p = periodStarts(now, STORE_TIMEZONE);
   const isToday = sql`${exchanges.createdAt} >= ${p.day}`;
   const [row] = await db
@@ -53,7 +54,7 @@ async function exchangeTotals(db: Db, storeId: string, now: Date, filter?: SQL):
     })
     .from(exchanges)
     .where(
-      and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, p.month), lte(exchanges.createdAt, p.now), filter),
+      and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, p.month), lte(exchanges.createdAt, p.now), filter, status),
     );
   return {
     today: { count: row.todayCount, differencePaise: row.todayDiff },
@@ -71,6 +72,10 @@ export type ActivityEntry = {
   amountPaise: number;
   creditedTo: string;
   recordedBy: string;
+  /** Waiting for the owner, approved, or rejected (plan v12). */
+  status: ApprovalStatus;
+  /** Sale entered without scanning. */
+  manual: boolean;
 };
 
 async function recentActivity(
@@ -92,6 +97,8 @@ async function recentActivity(
       totalPaise: sales.totalPaise,
       creditedTo: credited.name,
       recordedBy: recorder.name,
+      status: saleStatus,
+      manual: sales.manual,
     })
     .from(sales)
     .innerJoin(credited, eq(credited.id, sales.soldBy))
@@ -115,6 +122,7 @@ async function recentActivity(
       differencePaise: exchanges.differencePaise,
       creditedTo: credited.name,
       recordedBy: recorder.name,
+      status: exchangeStatus,
     })
     .from(exchanges)
     .innerJoin(returned, eq(returned.id, exchanges.returnedProductId))
@@ -134,10 +142,12 @@ async function recentActivity(
       kind: 'sale' as const,
       id: r.id,
       at: r.at,
-      description: `${r.quantity} × ${r.name} (${r.size}, ${r.color})`,
+      description: r.manual ? `${r.quantity} × ${r.name}${r.size ? ` (${r.size})` : ''}` : `${r.quantity} × ${r.name} (${r.size}, ${r.color})`,
       amountPaise: r.totalPaise,
       creditedTo: r.creditedTo,
       recordedBy: r.recordedBy,
+      status: r.status,
+      manual: r.manual,
     })),
     ...exchangeRows.map((r) => ({
       kind: 'exchange' as const,
@@ -148,6 +158,8 @@ async function recentActivity(
       amountPaise: r.differencePaise,
       creditedTo: r.creditedTo,
       recordedBy: r.recordedBy,
+      status: r.status,
+      manual: false,
     })),
   ];
   return entries.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, limit);
@@ -155,13 +167,16 @@ async function recentActivity(
 
 /** Salesman's own dashboard: what is credited to them, and what they entered for others. */
 export async function staffDashboard(db: Db, storeId: string, staffId: string, now = new Date()) {
-  const [mine, forOthers, myExchanges, activity] = await Promise.all([
+  const [mine, forOthers, myExchanges, waiting, waitingExchanges, activity] = await Promise.all([
     saleTotals(db, storeId, now, eq(sales.soldBy, staffId)),
     saleTotals(db, storeId, now, and(eq(sales.recordedBy, staffId), ne(sales.soldBy, staffId))),
     exchangeTotals(db, storeId, now, eq(exchanges.creditedTo, staffId)),
+    // Still waiting for the owner (plan v12): shown apart, never in the totals.
+    saleTotals(db, storeId, now, eq(sales.soldBy, staffId), saleWaiting),
+    exchangeTotals(db, storeId, now, eq(exchanges.creditedTo, staffId), exchangeWaiting),
     recentActivity(db, storeId, { staffId, limit: 25 }),
   ]);
-  return { mine, forOthers, exchanges: myExchanges, activity };
+  return { mine, forOthers, exchanges: myExchanges, waiting, waitingExchanges, activity };
 }
 
 export type SalespersonRow = {
@@ -187,7 +202,7 @@ export async function shopDashboard(db: Db, storeId: string, now = new Date()) {
           month: int(sql`coalesce(sum(${sales.quantity} * (${sales.unitPricePaise} - ${sales.costPaise})), 0)`),
         })
         .from(sales)
-        .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month), sql`${sales.costPaise} is not null`)),
+        .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month), saleApproved, sql`${sales.costPaise} is not null`)),
       db.select({ id: staff.id, name: staff.name, active: staff.active, role: staff.role }).from(staff).where(eq(staff.storeId, storeId)).orderBy(asc(staff.name)),
       db
         .select({
@@ -198,7 +213,7 @@ export async function shopDashboard(db: Db, storeId: string, now = new Date()) {
           monthTotal: int(sql`coalesce(sum(${sales.totalPaise}), 0)`),
         })
         .from(sales)
-        .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month)))
+        .where(and(eq(sales.storeId, storeId), gte(sales.createdAt, p.month), saleApproved))
         .groupBy(sales.soldBy),
       db
         .select({
@@ -207,7 +222,7 @@ export async function shopDashboard(db: Db, storeId: string, now = new Date()) {
           monthDiff: int(sql`coalesce(sum(${exchanges.differencePaise}), 0)`),
         })
         .from(exchanges)
-        .where(and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, p.month)))
+        .where(and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, p.month), exchangeApproved))
         .groupBy(exchanges.creditedTo),
       db
         .select({ id: products.id, sku: products.sku, name: products.name, size: products.size, color: products.color, stock: products.stock })
@@ -288,7 +303,7 @@ export type GroupRow = { label: string; units: number; revenuePaise: number; pro
 export async function salesReport(db: Db, storeId: string, period: ReportPeriod, now = new Date()) {
   const from = periodStart(period, now);
   const at = sql`${now.toISOString()}::timestamptz`;
-  const inPeriod = and(eq(sales.storeId, storeId), gte(sales.createdAt, from), lte(sales.createdAt, at));
+  const inPeriod = and(eq(sales.storeId, storeId), gte(sales.createdAt, from), lte(sales.createdAt, at), saleApproved);
   const units = int(sql`coalesce(sum(${sales.quantity}), 0)`);
   const revenue = int(sql`coalesce(sum(${sales.totalPaise}), 0)`);
   const profit = int(sql`coalesce(sum(${sales.quantity} * (${sales.unitPricePaise} - ${sales.costPaise})) filter (where ${sales.costPaise} is not null), 0)`);
@@ -299,7 +314,7 @@ export async function salesReport(db: Db, storeId: string, period: ReportPeriod,
     db
       .select({ count: int(sql`count(*)`), differencePaise: int(sql`coalesce(sum(${exchanges.differencePaise}), 0)`) })
       .from(exchanges)
-      .where(and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, from), lte(exchanges.createdAt, at))),
+      .where(and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, from), lte(exchanges.createdAt, at), exchangeApproved)),
     db
       .select({ label: products.category, units, revenuePaise: revenue, profitPaise: profit })
       .from(sales)
@@ -388,9 +403,11 @@ export async function salesExportRows(db: Db, storeId: string, period: ReportPer
       costPaise: sales.costPaise,
       creditedTo: credited.name,
       recordedBy: recorder.name,
+      status: saleStatus,
+      manual: sales.manual,
     })
     .from(sales)
-    .innerJoin(products, eq(products.id, sales.productId))
+    .leftJoin(products, eq(products.id, sales.productId))
     .leftJoin(suppliers, eq(suppliers.id, products.supplierId))
     .innerJoin(credited, eq(credited.id, sales.soldBy))
     .innerJoin(recorder, eq(recorder.id, sales.recordedBy))
@@ -408,6 +425,7 @@ export async function salesExportRows(db: Db, storeId: string, period: ReportPer
       differencePaise: exchanges.differencePaise,
       creditedTo: credited.name,
       recordedBy: recorder.name,
+      status: exchangeStatus,
     })
     .from(exchanges)
     .innerJoin(returned, eq(returned.id, exchanges.returnedProductId))
@@ -461,8 +479,8 @@ export async function teamReport(db: Db, storeId: string, period: ReportPeriod, 
   const tz = sql.raw(`'${STORE_TIMEZONE.replace(/'/g, "''")}'`);
   const saleDay = sql<string>`to_char(${sales.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')`;
   const exchangeDay = sql<string>`to_char(${exchanges.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')`;
-  const salesIn = and(eq(sales.storeId, storeId), gte(sales.createdAt, from), lte(sales.createdAt, at));
-  const exchangesIn = and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, from), lte(exchanges.createdAt, at));
+  const salesIn = and(eq(sales.storeId, storeId), gte(sales.createdAt, from), lte(sales.createdAt, at), saleApproved);
+  const exchangesIn = and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, from), lte(exchanges.createdAt, at), exchangeApproved);
 
   const [people, saleRows, exchangeRows, saleDays, exchangeDays] = await Promise.all([
     db.select({ id: staff.id, name: staff.name, role: staff.role, active: staff.active }).from(staff).where(eq(staff.storeId, storeId)).orderBy(asc(staff.name)),
