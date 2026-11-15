@@ -585,3 +585,15 @@ Gotcha: Playwright's `getByLabel('X')` matches any accessible name *containing* 
 | Player | `story-player.tsx` | `GuideBrowser`: part chips, tiles; the open lesson is the address hash (`#sell`), read with `useSyncExternalStore`; tiles `pushState` (Back closes), links open directly, `#for-<part>` selects a part. `StoryPlayer` (portal, `role="dialog"`): progress bars, Next/Back, swipe (60 px), arrow keys, Escape; voice = `say(step.say)` then auto-advance after 0.9 s; voice on/off in `localStorage` `maa-guide-voice`; final card; `Got it` → `useDone().toggle`. |
 | Page | `src/app/(pos)/guide/page.tsx` | Server: title, progress, default part from `getCurrentStaff()` (logged out → Everyone, salesman → Selling, catalog/stock right → Stock & tags, admin → Owner). |
 
+## 20. Clear stock (plan v11, ADR-021)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Rule | `clearAllStock(db, storeId, { staffId, note? })`, `stockTotals` in `src/server/services/products.ts` | One transaction: lock the products with stock > 0, insert a `stock_movements` row per product (`quantity_change = -stock`, `reason = 'cleared'`, staff), set `stock = 0`. Returns `{ items, pieces }`; a second run returns zeros. Never deletes. |
+| Reason | `stockMovements.reason` enum gains `'cleared'` | The column is plain `text` (no CHECK), so no migration. Label `cat.reason.cleared` on the product page's stock history. |
+| Action | `clearStockAction` in `src/server/actions/admin.ts` | `requireAdmin()` + `verifyLogin(db, STORE_ID, me.id, pin)` (the owner's own PIN); message key `own.clear.*`. |
+| UI | `src/features/catalog/clear-stock-form.tsx` in `/admin/settings#clear-stock`; link in More | Two steps (open → PIN → confirm). |
+| Tests | `catalog.test.ts` (rule), `e2e/admin-setup.spec.ts` (safe paths only — the e2e database is shared by parallel tests, so the real clear is not run there) | |
+
+Removing data for real (as in the 2026-11-16 fresh start) is deliberately **not** in the app: back up all tables, then delete exchanges → sales → stock_movements → stock_receipts → product_images → products in one transaction with a one-off script run with `.env.neon`, and only on the owner's explicit request.
+

@@ -113,6 +113,14 @@ Every piece gets a **hang tag, 40 × 60 mm**: shop name, **QR code**, the **size
 
 **Team** in the menu (or Home → *Sales team graphs*): number of salesmen; **share of sales** per seller (bar, amount, %); **each seller day by day** (small chart per person, same scale — tap a day for its amount; "below MRP" = how much they bargain down on average); and a table with every number. Pick Today / 7 days / 30 days / This month. A sale counts for the person chosen in *Credit sale to*; exchanges are included.
 
+## 5b. Clear stock (owner)
+
+For a fresh count or a new season: **More → Clear stock**. It shows what is in stock now; tap **Clear all stock…**, enter **your PIN** and tap **Set all pieces to 0**.
+
+- Every item's pieces become 0. Items, barcodes, prices, photos and past sales **stay**; each item's history shows "Stock cleared" with your name and the date.
+- It cannot be undone. Afterwards, count the shelves and add pieces with **More of existing items** (scan each piece).
+- Only the owner can do it, and a wrong PIN changes nothing.
+
 ## 5. Owner set-up checklist
 
 1. **Companies** (Menu → Companies) and **categories** (Menu → Categories, each with a 2-letter code used in SKUs).

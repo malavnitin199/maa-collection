@@ -27,7 +27,16 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## A short Guide: stories with an animation per step (2026-11-16, latest)
+## Fresh start + Clear stock (2026-11-16, latest)
+Owner request: remove all test records to start fresh, and give the admin a "clear stock" option in the app. Owner chose: remove products/stock/sales now (keep staff, categories, companies); in-app Clear stock = set all pieces to 0. Plan: `docs/PLAN_V11_FRESH_START_CLEAR_STOCK.md`; ADR-021.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | Live database: full backup file on the owner's Mac, then test products (35), photo (1), receipts (2), stock history (41), sales (5), exchange (1) deleted in one transaction | Done — verified empty; staff 5, categories 13, companies 5 kept |
+| 2 | **Clear stock** for the owner (More / Settings): totals, two-step confirmation with the owner's PIN, every count to 0, "Stock cleared" entry in each item's history | Done — no DB migration |
+- Verified: lint, typecheck, **122 unit tests**, build, **67 Playwright tests at desktop + phone size** (+1 phone-only skip). Real clear run in a browser on a private demo database. Live after deploy: Owner sees an empty shop and "Nothing is in stock right now."
+
+## A short Guide: stories with an animation per step (2026-11-16)
 Owner feedback: the look is very good, but the Guide is too long — minimum words, better animations, better guidance. Owner chose the **story player** (one step at a time). Plan: `docs/PLAN_V10_SHORT_GUIDE.md`; reference §19; ADR-020.
 
 | # | Task | Result |
