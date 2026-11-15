@@ -222,13 +222,14 @@ test('hang tags: QR code, size boxed, the design\'s sizes with this one highligh
   await expect(tag.getByRole('img', { name: 'QR code for MAA-KU-001' })).toBeVisible();
   await expect(tag.getByRole('img', { name: 'Barcode 8902222000016 for MAA-KU-001' })).toBeVisible();
   await expect(tag.getByTestId('tag-size')).toHaveText('M');
-  await expect(tag.getByRole('list', { name: 'Sizes of this design' }).getByRole('listitem')).toHaveText(['M', 'L']);
+  // Every size of the category (Kurta: M–XXL) with a tick box; this piece's box is filled.
+  await expect(tag.getByRole('list', { name: 'Sizes — tick one with a pen' }).getByRole('listitem')).toHaveText(['M', 'L', 'XL', 'XXL']);
   await expect(tag.locator('[aria-current="true"]')).toHaveText('M');
   await expect(tag).toContainText('ART.: MAA-KU-001');
   await expect(tag).toContainText('Anarkali Kurta');
   await expect(tag).toContainText('MRP ₹1,299.00');
   const box = await tag.boundingBox();
-  expect([Math.round(box!.width), Math.round(box!.height)]).toEqual([189, 302]); // 50 × 80 mm
+  expect([Math.round(box!.width), Math.round(box!.height)]).toEqual([151, 227]); // 40 × 60 mm
   const productUrl = page.url();
 
   // The QR holds /i/<barcode>: the owner lands on the product page…
@@ -252,6 +253,33 @@ test('hang tags: QR code, size boxed, the design\'s sizes with this one highligh
   await page.keyboard.type('https://maa-collection-pi.vercel.app/i/8901111000014', { delay: 2 });
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('item-details')).toContainText('Classic Crew Tee');
+});
+
+test('each category has its sizes: owner sets them with a preset; new stock offers them first', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/categories');
+  await page.getByText('+ Add category').click();
+  const addForm = page.locator('details', { hasText: '+ Add category' });
+  await addForm.getByLabel('Category name').fill(`Gents Trousers ${run}`);
+  await addForm.getByRole('group', { name: 'Size presets' }).getByRole('button', { name: 'Gents 28–36' }).click();
+  await expect(addForm.getByLabel('Sizes (in shop order)')).toHaveValue('28, 30, 32, 34, 36');
+  await addForm.getByRole('button', { name: 'Add category' }).click();
+  await expect(page.getByRole('status')).toContainText(`Gents Trousers ${run} added`);
+  await page.reload();
+  const row = page.getByTestId('category-list').getByRole('listitem').filter({ hasText: `Gents Trousers ${run}` });
+  await expect(row.getByTestId('category-sizes')).toHaveText('Sizes: 28 · 30 · 32 · 34 · 36');
+  // The built-in jeans categories by gender.
+  await expect(page.getByTestId('category-list').getByRole('listitem').filter({ hasText: 'Ladies Jeans' }).getByTestId('category-sizes')).toHaveText('Sizes: 26 · 28 · 30 · 32');
+
+  // New stock: choose the category first → its sizes come first; "Pick all" takes them all.
+  await page.goto('/admin/stock/new');
+  await expect(page.getByText('Choose the category above to see its sizes first.')).toBeVisible();
+  const option = page.getByLabel('Category').locator('option', { hasText: `Gents Trousers ${run}` });
+  await page.getByLabel('Category').selectOption((await option.getAttribute('value'))!);
+  const chips = page.getByTestId('category-size-chips');
+  await expect(chips.getByRole('button', { name: /^Size / })).toHaveText(['28', '30', '32', '34', '36']);
+  await chips.getByRole('button', { name: 'Pick all' }).click();
+  await expect(chips.getByRole('button', { name: /^Size /, pressed: true })).toHaveCount(5);
 });
 
 test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {
@@ -475,11 +503,11 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
   await page.getByRole('link', { name: "print today's labels" }).click();
   await expect(page.getByRole('heading', { name: 'My labels today' })).toBeVisible();
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: `Barcode ${barcode} for MAA-SA-`, exact: false })).toHaveCount(3);
-  // Hang tags on A4 by default; tag printer: one 50 × 80 mm tag each.
+  // Hang tags on A4 by default; tag printer: one 40 × 60 mm tag each.
   const myTags = page.getByTestId('label-sheet').getByTestId('hang-tag').filter({ has: page.getByRole('img', { name: `Barcode ${barcode} for MAA-SA-`, exact: false }) });
   await expect(myTags).toHaveCount(3);
   await expect(myTags.first().getByRole('img', { name: /^QR code for MAA-SA-/ })).toBeVisible();
-  await page.getByRole('link', { name: 'Tag printer 50×80 mm' }).click();
+  await page.getByRole('link', { name: 'Tag printer 40×60 mm' }).click();
   await expect(page).toHaveURL(/format=tag/);
   await expect(myTags).toHaveCount(3);
   // Sticker-printer format: same labels, each exactly 50 × 25 mm.

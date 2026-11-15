@@ -5,28 +5,31 @@ import { HangTag } from '@/features/catalog/hang-tag';
 import { PrintButton } from '@/features/catalog/print-button';
 import { STORE_ID } from '@/lib/app-config';
 import { itemLink } from '@/lib/item-link';
+import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById } from '@/lib/size-prices';
 import { appOrigin } from '@/server/app-origin';
 import { requireAnyPermission } from '@/server/auth';
+import { listCategories } from '@/server/services/catalog';
 import { listProducts } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
 
 async function Labels() {
   await requireAnyPermission(['catalog', 'stock']);
   const db = await requestDb();
-  const [all, settings, origin] = await Promise.all([listProducts(db, STORE_ID), getStoreSettings(db, STORE_ID), appOrigin()]);
+  const [all, settings, origin, categoryRows] = await Promise.all([listProducts(db, STORE_ID), getStoreSettings(db, STORE_ID), appOrigin(), listCategories(db, STORE_ID)]);
   const items = all.filter((p) => p.active);
-  const sizes = designSizesById(all);
+  const designSizes = designSizesById(all);
+  const categorySizes = new Map(categoryRows.map((c) => [c.id, c.sizes]));
   return (
     <>
-      {/* A4, 3 × 3 tags per page. */}
+      {/* A4, 4 × 4 tags per page. */}
       <style>{'@media print { @page { size: A4; margin: 8mm; } }'}</style>
       <ul data-testid="label-sheet" className="flex flex-wrap gap-[3mm]">
         {items.map((item) => (
           <li key={item.id} className="break-inside-avoid">
             <HangTag
               product={item}
-              sizes={sizes.get(item.id)}
+              sizes={tagSizeRange((item.categoryId && categorySizes.get(item.categoryId)) || [], designSizes.get(item.id) ?? [], item.size)}
               qrValue={itemLink(origin, item.barcode)}
               priceCode={labelPriceCode(settings, item.costPaise)}
             />
@@ -44,8 +47,8 @@ export default function LabelsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Test labels</h1>
           <p className={`mt-1 text-sm ${muted}`}>
-            One tag per item (50 × 80 mm). Scan the barcode or the QR code with the phone camera on the Sell screen or
-            with a USB/Bluetooth scanner, or print this page (9 tags per A4 sheet).
+            One tag per item (40 × 60 mm). Scan the barcode or the QR code with the phone camera on the Sell screen or
+            with a USB/Bluetooth scanner, or print this page (16 tags per A4 sheet).
           </p>
         </div>
         <PrintButton label="Print all labels" />

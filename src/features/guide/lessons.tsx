@@ -124,7 +124,7 @@ export const LESSONS: Lesson[] = [
     art: <DesignGridArt />,
     steps: [
       <><strong>+ Stock</strong> → <strong>One design in sizes × colours</strong>. Choose the company and category.</>,
-      <>Type the design name (one name per design, e.g. &ldquo;Cotton Straight Kurta&rdquo;), tap the <strong>sizes</strong>, add the <strong>colours</strong>.</>,
+      <>Type the design name (one name per design, e.g. &ldquo;Cotton Straight Kurta&rdquo;), tap the <strong>sizes</strong> (the category&apos;s sizes come first) and add the <strong>colours</strong>.</>,
       <>Enter <strong>MRP</strong>, <strong>selling price</strong> (empty = MRP), <strong>purchase price</strong> and <strong>pieces each</strong>.</>,
       <>Bigger sizes cost more? Open <strong>Price by size</strong> and type that size&apos;s own prices — grey = default, green = the size&apos;s own. Every colour of that size gets it.</>,
       <>Check the <strong>preview</strong>, then <strong>Save and print labels</strong>.</>,
@@ -144,7 +144,7 @@ export const LESSONS: Lesson[] = [
     art: <PrintArt />,
     steps: [
       <>After saving, the <strong>Labels</strong> page opens. Or later: <strong>print today&apos;s labels</strong>.</>,
-      <>Pick the format: <strong>Tags on A4</strong> (9 per page — cut and punch the circle), <strong>Tag printer 50×80 mm</strong>, or the small <strong>Sticker printer 50×25 mm</strong>.</>,
+      <>Pick the format: <strong>Tags on A4</strong> (16 per page, 40 × 60 mm — cut and punch the circle), <strong>Tag printer 40×60 mm</strong>, or the small <strong>Sticker printer 50×25 mm</strong>.</>,
       <>Tap <strong>Print</strong> → choose the printer (or &ldquo;Save as PDF&rdquo;). One tag per piece by default.</>,
       <>Attach each tag to its piece with the thread through the hole, in the same place on every item.</>,
     ],

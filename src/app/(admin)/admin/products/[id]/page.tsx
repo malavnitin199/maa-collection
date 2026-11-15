@@ -11,6 +11,7 @@ import { formatPaise } from '@/lib/money';
 import { stockInAction, updateDesignRatesAction, updateProductAction } from '@/server/actions/admin';
 import { can } from '@/lib/permissions';
 import { itemLink } from '@/lib/item-link';
+import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById, splitDesignRates } from '@/lib/size-prices';
 import { appOrigin } from '@/server/app-origin';
 import { requireAnyPermission } from '@/server/auth';
@@ -70,7 +71,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
         <div className="mx-auto sm:mx-0">
           <HangTag
             product={product}
-            sizes={designSizesById(variants).get(product.id)}
+            sizes={tagSizeRange(categoryRows.find((c) => c.id === product.categoryId)?.sizes ?? [], designSizesById(variants).get(product.id) ?? [], product.size)}
             qrValue={itemLink(origin, product.barcode)}
             priceCode={labelPriceCode(settings, product.costPaise)}
           />

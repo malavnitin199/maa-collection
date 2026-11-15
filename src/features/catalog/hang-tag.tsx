@@ -7,8 +7,9 @@ import { QrCode } from './qr-code';
 export type TagProduct = { sku: string; barcode: string; name: string; brand?: string; size: string; color: string; mrpPaise: number };
 
 /**
- * Hang tag, exactly 50 × 80 mm (ADR-014): shop, QR (opens the item), size boxed
- * big with the colour, the design's sizes with this one highlighted, name,
+ * Hang tag, exactly 40 × 60 mm with ~1.5 mm padding (ADR-014, ADR-015): shop
+ * and punch hole, size big with the colour, QR (opens the item), every size of
+ * the category with a tick box (this piece's filled; tick another by pen), name,
  * ART. (= SKU) and code price, the EAN-13 barcode, and the MRP.
  */
 export function HangTag({
@@ -18,7 +19,7 @@ export function HangTag({
   priceCode = null,
 }: {
   product: TagProduct;
-  /** All sizes of this design in shop order; 2+ shows the size row. */
+  /** The size row: the category's sizes in shop order (see `tagSizeRange`); 2+ shows it. */
   sizes?: string[];
   /** Item link for the QR code; no QR when absent. */
   qrValue?: string | null;
@@ -30,50 +31,52 @@ export function HangTag({
   return (
     <div
       data-testid="hang-tag"
-      className="relative flex h-[80mm] w-[50mm] shrink-0 flex-col overflow-hidden rounded-[3mm] border border-zinc-300 bg-white px-[3mm] pt-[2mm] pb-[2.5mm] text-zinc-900 break-inside-avoid print:rounded-[3mm] print:border-zinc-400"
+      className="flex h-[60mm] w-[40mm] shrink-0 flex-col overflow-hidden rounded-[2mm] border border-zinc-300 bg-white p-[1.5mm] text-zinc-900 break-inside-avoid print:border-zinc-400"
     >
-      {/* Punch-hole guide for the thread. */}
-      <span aria-hidden className="absolute top-[2.5mm] left-1/2 h-[3mm] w-[3mm] -translate-x-1/2 rounded-full border border-zinc-400" />
-      <div className="flex items-start justify-between gap-[1mm]">
-        <div className="max-w-[19mm] min-w-0 pt-[1mm]">
-          <p className="text-[7pt] leading-[1.15] font-bold tracking-[0.12em] uppercase">{STORE_NAME}</p>
-          {product.brand && <p className="mt-[0.6mm] truncate text-[5.5pt] tracking-wide text-zinc-500 uppercase">{product.brand}</p>}
+      <div className="flex items-start gap-[1mm]">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <p className="flex items-center gap-[0.8mm] text-[5pt] leading-none font-bold tracking-[0.08em] uppercase">
+            {/* Punch-hole guide for the thread. */}
+            <span aria-hidden className="h-[2.2mm] w-[2.2mm] shrink-0 rounded-full border border-zinc-400" />
+            <span className="truncate">{STORE_NAME}</span>
+          </p>
+          {product.brand && <p className="mt-[0.5mm] truncate text-[4.5pt] leading-none text-zinc-500 uppercase">{product.brand}</p>}
+          <div className="mt-[0.8mm] border border-zinc-800 px-[1mm] pt-[0.3mm] pb-[0.5mm]">
+            <p className="flex justify-between text-[4pt] leading-none font-semibold tracking-wide uppercase">
+              <span>Size</span>
+              <span>Colour</span>
+            </p>
+            <p className="mt-[0.4mm] flex items-end justify-between gap-[1mm]">
+              <span data-testid="tag-size" className={`${longSize ? 'text-[9pt]' : 'text-[15pt]'} leading-none font-bold`}>
+                {product.size}
+              </span>
+              <span className="min-w-0 truncate text-right text-[6pt] leading-tight font-medium">{product.color}</span>
+            </p>
+          </div>
         </div>
         {qrValue ? (
-          <QrCode value={qrValue} label={`QR code for ${product.sku}`} className="h-[14mm] w-[14mm] shrink-0" />
+          <QrCode value={qrValue} label={`QR code for ${product.sku}`} className="h-[12mm] w-[12mm] shrink-0" />
         ) : (
-          <span className="h-[14mm] w-[14mm] shrink-0" />
+          <span className="h-[12mm] w-[12mm] shrink-0" />
         )}
       </div>
 
-      <div className="mt-[1.5mm] border border-zinc-800">
-        <p className="flex justify-between border-b border-zinc-800 px-[1.5mm] text-[5pt] leading-[2.2mm] font-semibold tracking-wider uppercase">
-          <span>Size</span>
-          <span>Colour</span>
-        </p>
-        <p className="flex items-center justify-between gap-[1.5mm] px-[1.5mm] py-[0.6mm]">
-          <span data-testid="tag-size" className={`${longSize ? 'text-[11pt]' : 'text-[19pt]'} leading-none font-bold`}>
-            {product.size}
-          </span>
-          <span className="min-w-0 truncate text-right text-[7.5pt] font-medium">{product.color}</span>
-        </p>
-      </div>
-
       {sizes.length > 1 && (
-        <ul aria-label="Sizes of this design" className="mt-[1.3mm] flex flex-wrap justify-center gap-x-[1.2mm] gap-y-[0.4mm] text-[7pt] leading-[3mm] font-semibold">
+        <ul aria-label="Sizes — tick one with a pen" className="mt-[1mm] flex flex-wrap gap-x-[1.4mm] gap-y-[0.4mm] text-[6pt] leading-[2.6mm]">
           {sizes.map((size) => {
             const current = sameSize(size, product.size);
             return (
-              <li key={size} aria-current={current ? 'true' : undefined} className={current ? 'bg-zinc-900 px-[0.8mm] text-white' : 'px-[0.3mm] text-zinc-600'}>
-                {size}
+              <li key={size} aria-current={current ? 'true' : undefined} className="flex items-center gap-[0.5mm]">
+                <span aria-hidden className={`h-[2mm] w-[2mm] shrink-0 border border-zinc-800 ${current ? 'bg-zinc-900' : 'bg-white'}`} />
+                <span className={current ? 'font-bold' : 'font-medium text-zinc-700'}>{size}</span>
               </li>
             );
           })}
         </ul>
       )}
 
-      <p className="mt-[1.3mm] line-clamp-2 text-center text-[8pt] leading-tight font-semibold">{product.name}</p>
-      <p className="mt-[0.8mm] flex justify-between gap-[1mm] font-mono text-[6pt] leading-tight">
+      <p className="mt-[0.8mm] line-clamp-2 text-[6.5pt] leading-tight font-semibold">{product.name}</p>
+      <p className="mt-[0.3mm] flex justify-between gap-[1mm] font-mono text-[5pt] leading-tight">
         <span className="truncate">
           ART.: <span className="font-semibold">{product.sku}</span>
         </span>
@@ -84,22 +87,22 @@ export function HangTag({
         <div
           role="img"
           aria-label={`Barcode ${product.barcode} for ${product.sku}`}
-          className="mx-auto mt-[0.5mm] w-[42mm] [&>svg]:h-auto [&>svg]:w-full"
-          // Our own SVG built from 13 validated digits; no user text inside.
+          className="mt-[0.3mm] w-[37mm] [&>svg]:h-auto [&>svg]:w-full"
+          // Our own SVG built from 13 validated digits; no user text inside. ~0.33 mm per bar.
           dangerouslySetInnerHTML={{ __html: ean13Svg(product.barcode, 3, 30) }}
         />
       ) : (
-        <p className="mt-[1mm] text-center font-mono text-[8pt]">{product.barcode}</p>
+        <p className="mt-[0.5mm] text-center font-mono text-[7pt]">{product.barcode}</p>
       )}
 
-      <div className="mt-auto border border-zinc-800 pt-[1.2mm] pb-[0.6mm]">
-        <span aria-hidden className="mx-[4mm] block h-[0.7mm] bg-red-600" />
-        <p className="mt-[0.6mm] text-center leading-none">
-          <span className="text-[7pt] font-semibold">MRP </span>
-          <span className="text-[15pt] font-bold">{rupees}</span>
-          {paise && <sup className="text-[7pt] font-bold">.{paise}</sup>}
+      <div className="mt-auto border border-zinc-800 pt-[0.8mm] pb-[0.4mm]">
+        <span aria-hidden className="mx-[3mm] block h-[0.5mm] bg-red-600" />
+        <p className="mt-[0.4mm] text-center leading-none">
+          <span className="text-[5.5pt] font-semibold">MRP </span>
+          <span className="text-[11pt] font-bold">{rupees}</span>
+          {paise && <sup className="text-[5.5pt] font-bold">.{paise}</sup>}
         </p>
-        <p className="mt-[0.4mm] text-center text-[5pt] text-zinc-500">(incl. of all taxes)</p>
+        <p className="mt-[0.3mm] text-center text-[4pt] leading-none text-zinc-500">(incl. of all taxes)</p>
       </div>
     </div>
   );

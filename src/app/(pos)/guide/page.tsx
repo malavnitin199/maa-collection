@@ -10,13 +10,13 @@ export const metadata = { title: 'Guide · Maa Collection' };
 
 const SAMPLE_TAG = {
   product: { sku: 'MAA-KU-003', barcode: inStoreEan13(1), name: 'Cotton Straight Kurta', brand: 'Laxmi Fashion House', size: 'L', color: 'Blue', mrpPaise: 149900 },
-  sizes: ['S', 'M', 'L', 'XL'],
+  sizes: ['M', 'L', 'XL', 'XXL'],
 };
 
 const TAG_PARTS = [
   ['QR code', 'Staff open the item with the phone camera. Customers only see the login page.'],
   ['Size, big — and the colour', 'The first thing to check against the piece.'],
-  ['All sizes of this design', 'This piece’s size is in black: easy to find another size for the customer.'],
+  ['All sizes of the category', 'This piece’s size box is filled. On a printed tag, another size can be ticked with a pen.'],
   ['Name and ART. number', 'ART. is the item code (SKU). On the right: the purchase price in your secret letters, if switched on.'],
   ['Barcode', 'Scan it at the counter (camera or scanner), or type the number under it.'],
   ['MRP', 'The highest price. The agreed (bargained) price is entered when selling.'],

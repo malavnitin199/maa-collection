@@ -3,6 +3,7 @@ import type { Db } from '@/db/client';
 import { categories, products, staff, stockMovements, stockReceipts, suppliers, type Product, type StockReceipt } from '@/db/schema';
 import { inStoreEan13, isValidEan13 } from '@/features/scanning/ean13';
 import { codeFromScan } from '@/lib/item-link';
+import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById, findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
 import { DomainError, isUniqueViolation } from './errors';
 
@@ -795,6 +796,20 @@ export async function designSizesFor(db: Db, storeId: string, items: readonly { 
     .from(products)
     .where(and(eq(products.storeId, storeId), inArray(sql`lower(${products.name})`, names)));
   return designSizesById(rows);
+}
+
+/** The size row printed on each item's tag: its category's sizes (else its design's), including its own size. */
+export async function tagSizesFor(
+  db: Db,
+  storeId: string,
+  items: readonly { id: string; name: string; size: string; categoryId: string | null }[],
+): Promise<Map<string, string[]>> {
+  const [design, categoryRows] = await Promise.all([
+    designSizesFor(db, storeId, items),
+    db.select({ id: categories.id, sizes: categories.sizes }).from(categories).where(eq(categories.storeId, storeId)),
+  ]);
+  const byCategory = new Map(categoryRows.map((c) => [c.id, c.sizes]));
+  return new Map(items.map((p) => [p.id, tagSizeRange((p.categoryId && byCategory.get(p.categoryId)) || [], design.get(p.id) ?? [], p.size)]));
 }
 
 /**
