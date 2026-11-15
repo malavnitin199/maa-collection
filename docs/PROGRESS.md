@@ -27,7 +27,24 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Prices by size (2026-11-15, latest)
+## QR hang tags + Guide section (2026-11-15, latest)
+Owner request (chat, while away; photo of a fashion-store hang tag): tags with a QR code, product name, barcode and the sizes (S M L XL Free) with this one marked; replace and regenerate the test label images; a **Guide** section with steps and animations, including how to manage inventory; log and docs of what was done. Plan and decisions: `docs/PLAN_V4_QR_TAGS_GUIDE.md`, ADR-014, open D-QR-1 / D-TAG-1.
+
+**Work log (tasks covered)**
+| # | Task | Result |
+|---|---|---|
+| 1 | Hang tag 50 × 80 mm (`HangTag`, `QrCode`): shop, QR, size box + colour, design's sizes with this one highlighted, name, ART. (SKU) + code price, EAN-13, MRP box | Done — product page, all print sheets, test labels, tag old stock |
+| 2 | QR item link `/i/<barcode>` (`src/app/i/[code]/route.ts`): owner/catalog → product page, seller → `/pos?code=` (item preloaded), logged out → login; `codeFromScan` so in-app/USB scanners accept the link | Done |
+| 3 | Label formats: Tags on A4 (9/page, default) · Tag printer 50×80 mm · Sticker 50×25 mm (barcode only, unchanged) | Done |
+| 4 | Regenerated `../Maa-Collection-test-labels.png` and `.pdf` (8 demo items, from a fresh in-memory DB, QR → live app). Old versions kept outside the repo in the session scratchpad | Done |
+| 5 | `/guide`: 13 lessons in 4 groups (everyone, selling, stock & tags, owner), animated SVG/CSS illustrations (static for reduced motion), steps, "Open" buttons, tips, real tag anatomy, inventory routine, "Mark as learned" progress (localStorage). Linked from header, menu, login, first-time tips; `/help` kept as quick reference & fixes | Done |
+| 6 | Tests, docs, commits, push, deploy, live check | See verification below |
+
+- Verification of codes: tags rendered at ~190 dpi decode with ZXing — QR → `https://maa-collection-pi.vercel.app/i/<barcode>`, EAN-13 → the same barcode (also checked on the regenerated test image). The browser `BarcodeDetector` hangs in headless Chromium, so ZXing was used instead.
+- Issues found and fixed: punch hole overlapped the shop name (name now wraps into a fixed width); an old e2e assertion "no QR on labels" (ADR-005) updated for ADR-014; a new e2e count included other items entered today in the long-lived local DB (now filtered by this run's barcode); port 3100 was taken by another app, so the test images were made on 3217.
+- Verified: lint, typecheck, **95 unit tests**, build, **41 Playwright tests at desktop + phone size** (+1 phone-only skip): tag contents and 50 × 80 mm size, QR link for owner / seller / logged out, scanning a typed item link at the counter, tag-printer format, guide lessons and progress, help still reachable.
+
+## Prices by size (2026-11-15)
 - Owner request: one default MRP / selling / purchase price for a design, and any **size** can have its own (all its colours share it). Owner decisions (ADR-013): MRP by size too; product-page rates by size too. Plan: `docs/PLAN_SIZE_PRICES.md`.
 - **No migration**: each size × colour was already its own product with its own prices. Shared rule `src/lib/size-prices.ts` (`ratesForSize`, `splitDesignRates`, `sortSizes`); `createDesign` / `updateDesignRates` check every size on the server (errors name the size; a price for a size not in the design is refused). Empty selling price = each size's own MRP.
 - Screens: **Price by size (optional)** fold-out on `/admin/stock/new` (2+ sizes) and in *Rates for the whole design* on the product page (`SizeRatesEditor`): grey = default, green = the size's own price; preview lists the price per size and the purchase value; sizes whose colours differ today are named and made equal on save.

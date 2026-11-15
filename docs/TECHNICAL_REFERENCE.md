@@ -107,7 +107,9 @@ maa-collection/
 |---|---|---|---|
 | `/` | `page.tsx` | public | Landing, link to login |
 | `/login` | `(auth)/login/page.tsx` | public | Tap name + PIN; logged-in users redirected to their screen |
-| `/help` | `(pos)/help/page.tsx` | public | In-app guide (new users, roles, required/optional, tips, FAQ) |
+| `/guide` | `(pos)/guide/page.tsx` | public | **Guide**: 13 lessons by role with animated illustrations (`src/features/guide/`), steps, "Open" links, tag anatomy, inventory routine; lesson ticks in localStorage |
+| `/help` | `(pos)/help/page.tsx` | public | Quick reference & FAQ (required/optional fields, problems & fixes) |
+| `/i/[code]` | `i/[code]/route.ts` | staff (else → /login) | Tag QR link: catalog/prices/stock rights → product page; others → `/pos?code=<barcode>` (item preloaded) |
 | `/pos` | `(pos)/pos/page.tsx` | staff | Counter sale (`PosScreen`) |
 | `/pos/exchange` | `(pos)/pos/exchange/page.tsx` | staff | Exchange (`ExchangeScreen`) |
 | `/pos/my-sales` | `(pos)/pos/my-sales/page.tsx` | staff | Own today/month totals + activity |
@@ -129,7 +131,7 @@ maa-collection/
 | `/admin/categories` | `…/categories/page.tsx` | catalog | Categories + SKU codes |
 | `/admin/catalog/check` | `…/catalog/check/page.tsx` | catalog | "Needs attention" QC list |
 | `/admin/labels` | `…/labels/page.tsx` | catalog / stock | All active product labels |
-| `/admin/labels/print` | `…/labels/print/page.tsx` | catalog / stock | `?receipt=<id>` or `?mine=today`; `&each=item`; `&format=sticker` |
+| `/admin/labels/print` | `…/labels/print/page.tsx` | catalog / stock | `?receipt=<id>` or `?mine=today`; `&each=item`; `&format=tag` (tag printer 50×80) / `sticker` (50×25); default hang tags on A4 |
 
 Route handlers: see [§10](#10-route-handlers-http-endpoints). Layouts `(pos)/layout.tsx` and `(admin)/layout.tsx` render `RoleHeader` and pad for the bottom tab bar. `manifest.ts`, `apple-icon.tsx` and `layout.tsx` hold the PWA metadata and theme colour.
 
@@ -299,7 +301,7 @@ Idempotent by `operation_id`; a SKU/barcode race retries up to 3 times.
 3. Images are served by `/api/product-images/[id]`.
 
 ### 6.6 Labels
-`getReceiptForLabels` (a delivery) or `getMyLabelsToday` (everything the person entered today, IST) → `LabelSheet` in the print page. It shows one label per piece (or per item) in A4 (`BarcodeLabel compact`) or sticker (`StickerLabel` + `@page 50mm 25mm`) format. The code price is added by `labelPriceCode` when enabled.
+`getReceiptForLabels` (a delivery) or `getMyLabelsToday` (everything the person entered today, IST) → `LabelSheet` in the print page. It shows one label per piece (or per item) as hang tags (`HangTag`, 50 × 80 mm: 9 per A4 page with `@page A4`, or one per page with `@page 50mm 80mm` for a tag printer) or stickers (`StickerLabel` + `@page 50mm 25mm`, barcode only). Each tag gets its design's sizes (`designSizesFor` → `designSizesById`) and a QR item link (`itemLink(appOrigin(), barcode)`). The code price is added by `labelPriceCode` when enabled.
 
 ### 6.7 Reports and exports
 `salesReport(period)` returns totals, by category / company / salesperson, top 10 and slow movers (in stock, no sale in 30 days). `salesExportRows` feeds the CSV route; the stock CSV uses `listProducts`.
@@ -317,6 +319,8 @@ Idempotent by `operation_id`; a SKU/barcode race retries up to 3 times.
 - **Category codes:** `suggestCategoryCode` (Kurta → KU, Kurti → KR …), editable.
 - **SVG:** `ean13Svg(code, moduleWidth, barHeight)`. Our own encoder, unit-tested against a published encoding. The SVG is `aria-hidden`; the wrapper has `role="img"` and an `aria-label`.
 - **Sticker:** 50×25 mm with bar height 24 modules, about 0.4 mm per bar across ~47 mm. Rendered at 203 dpi it decodes with `BarcodeDetector`.
+- **Hang tag (ADR-014):** 50 × 80 mm; QR 14 mm (`qrcode` → own SVG squares, error correction M, version 4 for a ~50-character link); EAN-13 42 mm wide with 30-module bars (0.37 mm per module). From a ~190 dpi render both decode with ZXing (QR → item link, EAN-13 → digits).
+- **QR item link:** `itemLink(origin, barcode)` = `<origin>/i/<barcode>`; `appOrigin()` uses `APP_URL` if set, else the request host. `codeFromScan()` turns a scanned link from any domain back into the code — used by `findProductByCode` (counter, exchange), restock search and tag-old-stock checks.
 - **Code price:** a 10 different-letter word maps to digits 1…9,0. `encodePriceCode(paise)` uses whole rupees (BLACKHORSE: ₹450 = CKE). Printed only if `print_price_code`. The decoder is on `/admin/settings`.
 
 ---
@@ -363,6 +367,7 @@ Hard-image benchmark (`docs/PROGRESS.md`): both paths read 5 of 6 deliberately d
 
 | Endpoint | Auth | Returns |
 |---|---|---|
+| `GET /i/[code]` | logged-in staff (else redirect /login) | redirect to the product page or `/pos?code=` |
 | `GET /api/product-images/[id]` | logged-in staff | image bytes, `Cache-Control: private, max-age=31536000, immutable`, `nosniff`; redirect if `url` set |
 | `GET /app-icon/192`, `/app-icon/512` | public | PNG icon (next/og) |
 | `GET /apple-icon` | public | 180 px PNG |

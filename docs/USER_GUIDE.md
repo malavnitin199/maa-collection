@@ -1,6 +1,6 @@
 # Maa Collection — user guide
 
-For everyone who uses the app in the shop. The same guide is inside the app: tap **Help** at the top of any screen, or open `/help`.
+For everyone who uses the app in the shop. Inside the app: tap **Guide** at the top of any screen (`/guide`: short lessons with pictures, tick each one when learned), or **Help & problems** (`/help`) for quick fixes.
 
 Live app: https://maa-collection-pi.vercel.app
 
@@ -62,6 +62,13 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
   - Enter one MRP, selling and purchase price for all sizes. If a size costs more (e.g. XL), open **Price by size**, and type that size's own MRP / selling / purchase price. Grey numbers are the default; green ones are the size's own. Every colour of that size gets the same price; colour never changes the price.
   - Later: open any of its products → **Rates for the whole design** → change the default or one size → **Apply**. Past sales keep their prices.
 - **More of existing items** (needs *Stock*): scan each piece. Scanning the same tag again adds one more.
+
+### Tags (labels)
+
+Every piece gets a **hang tag, 50 × 80 mm**: shop name, **QR code**, the **size** big with the colour, the design's sizes with this one in black (e.g. S M **L** XL), the name, **ART.** (item code) with the secret code price on the right if switched on, the **barcode**, and the **MRP**.
+
+- Print: after saving, or **Labels → print today's labels**. Choose **Tags on A4** (9 per page: cut, punch the circle, thread), **Tag printer 50×80 mm**, or **Sticker printer 50×25 mm** (small barcode sticker, no QR).
+- **QR code:** staff point the normal phone camera at it → the item opens (sellers: Sell screen with the item ready; catalog/stock/owner: the product page). You must be logged in on that phone; customers only see the login page. In-app and USB scanners read the QR too.
 
 ### Photos of an existing product
 
