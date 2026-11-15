@@ -5,7 +5,8 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { checkTagBarcodeAction, tagOldStockAction, type OldStockResult, type TagLookup } from '@/server/actions/admin';
 import { ScanInput } from '@/features/scanning/scan-input';
-import { BarcodeLabel } from './barcode-label';
+import { itemLink } from '@/lib/item-link';
+import { HangTag } from './hang-tag';
 import { PhotoPickers } from './photo-manager';
 import { resizePhoto } from './resize-photo';
 
@@ -125,8 +126,8 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
             : 'It uses the barcode already on the tag, so no new sticker is needed.'}
           {saved.photoError && <span className="block text-red-700">Photo problem: {saved.photoError}</span>}
         </p>
-        <div className="mx-auto w-64">
-          <BarcodeLabel product={saved.product} />
+        <div className="mx-auto">
+          <HangTag product={saved.product} qrValue={itemLink(window.location.origin, saved.product.barcode)} />
         </div>
         <button type="button" onClick={nextItem} className={`${primaryButton} py-3 text-lg`} autoFocus>
           Next item →

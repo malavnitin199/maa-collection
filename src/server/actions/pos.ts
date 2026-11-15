@@ -28,7 +28,7 @@ export async function lookupProductAction(code: string): Promise<ActionResult<Co
   await requireStaff();
   return run(async () => {
     const db = await getDb();
-    const product = await findProductByCode(db, STORE_ID, z.string().max(64).parse(code));
+    const product = await findProductByCode(db, STORE_ID, z.string().max(200).parse(code));
     if (!product) return null;
     const photo = (await mainImages(db, STORE_ID, [product.id])).get(product.id);
     return { ...toCounterProduct(product), imageSrc: photo ? imageSrc(photo) : null };
@@ -61,7 +61,7 @@ export async function returnableSalesAction(
   await requireStaff();
   return run(async () => {
     const db = await getDb();
-    const product = await findProductByCode(db, STORE_ID, z.string().max(64).parse(code));
+    const product = await findProductByCode(db, STORE_ID, z.string().max(200).parse(code));
     if (!product) return null;
     return { product: toCounterProduct(product), sales: await findReturnableSales(db, STORE_ID, product.id) };
   });

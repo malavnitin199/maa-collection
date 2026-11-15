@@ -2,12 +2,15 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { link, muted, okBox } from '@/components/ui/styles';
-import { BarcodeLabel, StickerLabel } from '@/features/catalog/barcode-label';
+import { StickerLabel } from '@/features/catalog/barcode-label';
+import { HangTag } from '@/features/catalog/hang-tag';
 import { PrintButton } from '@/features/catalog/print-button';
 import { STORE_ID, STORE_TIMEZONE } from '@/lib/app-config';
+import { itemLink } from '@/lib/item-link';
+import { appOrigin } from '@/server/app-origin';
 import { requireAnyPermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
-import { getMyLabelsToday, getReceiptForLabels, type ReceiptLabelLine } from '@/server/services/products';
+import { designSizesFor, getMyLabelsToday, getReceiptForLabels, type ReceiptLabelLine } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode, type StoreSettings } from '@/server/services/settings';
 
 type Search = { receipt?: string; each?: string; created?: string; mine?: string; format?: string };
@@ -22,10 +25,26 @@ function hrefWith(params: Search, change: Partial<Search>) {
   return `/admin/labels/print?${next.toString()}`;
 }
 
-/** Shared controls + sheet: one label per piece (or per item), A4 sheet or 50×25 mm stickers. */
-function LabelSheet({ lines, params, settings }: { lines: ReceiptLabelLine[]; params: Search; settings: StoreSettings }) {
+type SheetData = { settings: StoreSettings; origin: string; sizes: Map<string, string[]> };
+
+/** Everything the tags need besides the lines: settings (code price), app address (QR), each design's sizes. */
+async function sheetData(lines: ReceiptLabelLine[], settings: StoreSettings): Promise<SheetData> {
+  const [origin, sizes] = await Promise.all([appOrigin(), designSizesFor(await requestDb(), STORE_ID, lines)]);
+  return { settings, origin, sizes };
+}
+
+const FORMATS = [
+  [undefined, 'Tags on A4'],
+  ['tag', 'Tag printer 50×80 mm'],
+  ['sticker', 'Sticker printer 50×25 mm'],
+] as const;
+
+/** Shared controls + sheet: one label per piece (or per item); hang tags on A4 or a tag printer, or small stickers. */
+function LabelSheet({ lines, params, data }: { lines: ReceiptLabelLine[]; params: Search; data: SheetData }) {
+  const { settings, origin, sizes } = data;
   const onePerItem = params.each === 'item';
   const sticker = params.format === 'sticker';
+  const tagPrinter = params.format === 'tag';
   const pieces = lines.reduce((n, l) => n + Math.max(l.quantity, 0), 0);
   const labels = lines.flatMap((line, n) =>
     Array.from({ length: onePerItem ? 1 : Math.max(line.quantity, 0) }, (_, i) => ({ key: `${line.id}-${n}-${i}`, line })),
@@ -40,10 +59,7 @@ function LabelSheet({ lines, params, settings }: { lines: ReceiptLabelLine[]; pa
           </Link>
         </div>
         <div role="group" aria-label="Label format" className="flex gap-2 text-sm">
-          {[
-            [undefined, 'A4 sheet'],
-            ['sticker', 'Sticker printer 50×25 mm'],
-          ].map(([value, label]) => {
+          {FORMATS.map(([value, label]) => {
             const active = (params.format ?? undefined) === value;
             return (
               <Link
@@ -57,11 +73,13 @@ function LabelSheet({ lines, params, settings }: { lines: ReceiptLabelLine[]; pa
             );
           })}
         </div>
-        {sticker && (
-          <p className={`text-xs ${muted}`}>
-            Choose your label printer and set the paper to 50 × 25 mm (no margins). Each sticker prints on its own label.
-          </p>
-        )}
+        <p className={`text-xs ${muted}`}>
+          {sticker
+            ? 'Choose your label printer and set the paper to 50 × 25 mm (no margins). Each sticker prints on its own label (barcode only).'
+            : tagPrinter
+              ? 'Choose your tag printer and set the paper to 50 × 80 mm (no margins). Each tag prints on its own label.'
+              : 'Hang tags, 50 × 80 mm, 9 per A4 page: cut along the border and punch the circle for the thread.'}
+        </p>
       </div>
       {sticker ? (
         <>
@@ -76,13 +94,21 @@ function LabelSheet({ lines, params, settings }: { lines: ReceiptLabelLine[]; pa
           </ul>
         </>
       ) : (
-        <ul data-testid="label-sheet" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 print:mt-0 print:grid-cols-3 print:gap-1">
-          {labels.map(({ key, line }) => (
-            <li key={key}>
-              <BarcodeLabel product={line} compact priceCode={labelPriceCode(settings, line.costPaise)} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <style>{tagPrinter ? '@media print { @page { size: 50mm 80mm; margin: 0; } }' : '@media print { @page { size: A4; margin: 8mm; } }'}</style>
+          <ul data-testid="label-sheet" className={`mt-4 flex flex-wrap gap-[3mm] print:m-0 ${tagPrinter ? 'print:block' : ''}`}>
+            {labels.map(({ key, line }) => (
+              <li key={key} className={tagPrinter ? 'print:break-after-page [&>div]:print:border-0' : 'break-inside-avoid'}>
+                <HangTag
+                  product={line}
+                  sizes={sizes.get(line.id)}
+                  qrValue={itemLink(origin, line.barcode)}
+                  priceCode={labelPriceCode(settings, line.costPaise)}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       {labels.length === 0 && <p className={`mt-4 text-sm ${muted}`}>No pieces here. Switch to one label per item.</p>}
     </>
@@ -101,7 +127,7 @@ async function MyLabelsToday({ params }: { params: Search }) {
           {lines.length} item{lines.length === 1 ? '' : 's'} you entered today
         </p>
       </div>
-      <LabelSheet lines={lines} params={params} settings={settings} />
+      <LabelSheet lines={lines} params={params} data={await sheetData(lines, settings)} />
     </>
   );
 }
@@ -141,7 +167,7 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
           ))}
         </ul>
       </div>
-      <LabelSheet lines={receipt.lines} params={params} settings={settings} />
+      <LabelSheet lines={receipt.lines} params={params} data={await sheetData(receipt.lines, settings)} />
     </>
   );
 }

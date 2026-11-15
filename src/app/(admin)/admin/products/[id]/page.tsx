@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { card, link, muted, okBox, sectionTitle } from '@/components/ui/styles';
-import { BarcodeLabel } from '@/features/catalog/barcode-label';
+import { HangTag } from '@/features/catalog/hang-tag';
 import { PrintButton } from '@/features/catalog/print-button';
 import { ProductForm } from '@/features/catalog/product-form';
 import { DesignRatesForm, StockInForm } from '@/features/catalog/small-forms';
@@ -10,7 +10,9 @@ import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { stockInAction, updateDesignRatesAction, updateProductAction } from '@/server/actions/admin';
 import { can } from '@/lib/permissions';
-import { splitDesignRates } from '@/lib/size-prices';
+import { itemLink } from '@/lib/item-link';
+import { designSizesById, splitDesignRates } from '@/lib/size-prices';
+import { appOrigin } from '@/server/app-origin';
 import { requireAnyPermission } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
@@ -36,13 +38,14 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const db = await requestDb();
   const product = await getProduct(db, STORE_ID, id);
   if (!product) notFound();
-  const [movements, variants, categoryRows, supplierRows, settings, photos] = await Promise.all([
+  const [movements, variants, categoryRows, supplierRows, settings, photos, origin] = await Promise.all([
     listMovements(db, STORE_ID, id),
     listDesignVariants(db, STORE_ID, id),
     listCategories(db, STORE_ID),
     listSuppliers(db, STORE_ID),
     getStoreSettings(db, STORE_ID),
     listProductImages(db, STORE_ID, id),
+    appOrigin(),
   ]);
   const supplier = supplierRows.find((s) => s.id === product.supplierId);
   // Today's rates as a default + each size's own; purchase prices only with the "costs" right.
@@ -64,8 +67,13 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
       )}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <div className="mx-auto w-60 sm:mx-0">
-          <BarcodeLabel product={product} priceCode={labelPriceCode(settings, product.costPaise)} />
+        <div className="mx-auto sm:mx-0">
+          <HangTag
+            product={product}
+            sizes={designSizesById(variants).get(product.id)}
+            qrValue={itemLink(origin, product.barcode)}
+            priceCode={labelPriceCode(settings, product.costPaise)}
+          />
         </div>
         <div className="flex flex-col gap-1 print:hidden">
           <h1 className="text-2xl font-semibold">{product.name}</h1>

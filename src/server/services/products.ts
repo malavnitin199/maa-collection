@@ -2,7 +2,8 @@ import { and, asc, desc, eq, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, products, staff, stockMovements, stockReceipts, suppliers, type Product, type StockReceipt } from '@/db/schema';
 import { inStoreEan13, isValidEan13 } from '@/features/scanning/ean13';
-import { findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
+import { codeFromScan } from '@/lib/item-link';
+import { designSizesById, findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
 import { DomainError, isUniqueViolation } from './errors';
 
 /** What salesman screens may see about a product: never the cost price. */
@@ -38,9 +39,9 @@ export function toCounterProduct(p: Product): CounterProduct {
   };
 }
 
-/** Finds an active product by scanned barcode or typed SKU (case-insensitive). */
+/** Finds an active product by scanned barcode, typed SKU (case-insensitive) or a tag's QR item link. */
 export async function findProductByCode(db: Db, storeId: string, code: string): Promise<Product | null> {
-  const needle = code.trim();
+  const needle = codeFromScan(code);
   if (!needle) return null;
   const [row] = await db
     .select()
@@ -783,6 +784,17 @@ export async function listDesignVariants(db: Db, storeId: string, productId: str
       ),
     )
     .orderBy(asc(products.color), asc(products.size));
+}
+
+/** For each product (and its design siblings): the sizes its design is made in, in shop order — the size row on tags. */
+export async function designSizesFor(db: Db, storeId: string, items: readonly { name: string }[]): Promise<Map<string, string[]>> {
+  const names = [...new Set(items.map((p) => p.name.trim().toLowerCase()))];
+  if (names.length === 0) return new Map();
+  const rows = await db
+    .select({ id: products.id, name: products.name, brand: products.brand, categoryId: products.categoryId, category: products.category, size: products.size })
+    .from(products)
+    .where(and(eq(products.storeId, storeId), inArray(sql`lower(${products.name})`, names)));
+  return designSizesById(rows);
 }
 
 /**

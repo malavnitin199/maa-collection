@@ -6,6 +6,7 @@ import { getDb } from '@/db/client';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
+import { codeFromScan } from '@/lib/item-link';
 import { sizeFieldName, type SizeRates } from '@/lib/size-prices';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
@@ -319,7 +320,7 @@ export type RestockItem = { id: string; sku: string; barcode: string; name: stri
 /** Admin search for the restock screen: by scanned code, SKU, name or colour. */
 export async function findRestockItemsAction(term: string): Promise<RestockItem[]> {
   await requirePermission('stock');
-  const query = String(term).trim().slice(0, 64);
+  const query = codeFromScan(String(term)).slice(0, 64);
   if (!query) return [];
   const rows = await listProducts(await getDb(), STORE_ID, { search: query });
   const exact = rows.filter((p) => p.barcode === query || p.sku.toUpperCase() === query.toUpperCase());
@@ -564,7 +565,7 @@ export type TagLookup =
 /** Tag old stock: is this scanned tag barcode usable, or already in the app? */
 export async function checkTagBarcodeAction(code: string): Promise<TagLookup> {
   await requirePermission('catalog');
-  const value = String(code).trim().slice(0, 64);
+  const value = codeFromScan(String(code)).slice(0, 64);
   const existing = await findProductByCode(await getDb(), STORE_ID, value);
   if (existing) {
     return { status: 'exists', product: { id: existing.id, name: existing.name, size: existing.size, color: existing.color, stock: existing.stock, sku: existing.sku } };

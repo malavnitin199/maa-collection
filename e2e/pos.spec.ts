@@ -154,5 +154,6 @@ test('admin dashboard, staff and labels pages load with seeded data', async ({ p
   await page.goto('/admin/labels');
   await expect(page.getByRole('heading', { name: 'Test labels' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Barcode 8901111000014 for MAA-TS-001' })).toBeVisible();
-  await expect(page.getByRole('img', { name: /QR code/ })).toHaveCount(0);
+  // Hang tags carry a QR code next to the barcode (ADR-014).
+  await expect(page.getByRole('img', { name: 'QR code for MAA-TS-001' })).toBeVisible();
 });

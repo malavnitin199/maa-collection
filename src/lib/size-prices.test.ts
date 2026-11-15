@@ -88,3 +88,21 @@ describe('splitDesignRates', () => {
     expect(split.own).toEqual([]);
   });
 });
+
+describe('designSizesById (size row on tags)', () => {
+  it("lists each design's sizes in shop order; other designs and brands stay apart", async () => {
+    const { designSizesById } = await import('./size-prices');
+    const p = (id: string, name: string, size: string, brand = 'XYZ', categoryId: string | null = 'kurta') => ({ id, name, brand, categoryId, category: 'Kurta', size });
+    const sizes = designSizesById([
+      p('1', 'Linen Shirt', 'XL'),
+      p('2', 'linen shirt ', 'M'),
+      p('3', 'Linen Shirt', 'm'), // same size, other colour
+      p('4', 'Linen Shirt', 'L', 'Other brand'),
+      p('5', 'Saree', 'Free', 'XYZ', 'saree'),
+    ]);
+    expect(sizes.get('1')).toEqual(['M', 'XL']);
+    expect(sizes.get('3')).toEqual(['M', 'XL']);
+    expect(sizes.get('4')).toEqual(['L']);
+    expect(sizes.get('5')).toEqual(['Free']);
+  });
+});

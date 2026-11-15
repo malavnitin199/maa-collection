@@ -213,6 +213,47 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await expect(list.filter({ hasText: '₹600.00 · MRP ₹750.00' })).toHaveCount(2);
 });
 
+test('hang tags: QR code, size boxed, the design\'s sizes with this one highlighted; the QR link opens the item', async ({ page }) => {
+  await loginOwner(page);
+  // Anarkali Kurta M Blue (MAA-KU-001); the design also has L.
+  await page.goto('/admin/products?q=MAA-KU-001');
+  await page.getByTestId('product-list').getByRole('link').first().click();
+  const tag = page.getByTestId('hang-tag');
+  await expect(tag.getByRole('img', { name: 'QR code for MAA-KU-001' })).toBeVisible();
+  await expect(tag.getByRole('img', { name: 'Barcode 8902222000016 for MAA-KU-001' })).toBeVisible();
+  await expect(tag.getByTestId('tag-size')).toHaveText('M');
+  await expect(tag.getByRole('list', { name: 'Sizes of this design' }).getByRole('listitem')).toHaveText(['M', 'L']);
+  await expect(tag.locator('[aria-current="true"]')).toHaveText('M');
+  await expect(tag).toContainText('ART.: MAA-KU-001');
+  await expect(tag).toContainText('Anarkali Kurta');
+  await expect(tag).toContainText('MRP ₹1,299.00');
+  const box = await tag.boundingBox();
+  expect([Math.round(box!.width), Math.round(box!.height)]).toEqual([189, 302]); // 50 × 80 mm
+  const productUrl = page.url();
+
+  // The QR holds /i/<barcode>: the owner lands on the product page…
+  await page.goto('/i/8902222000016');
+  await expect(page).toHaveURL(productUrl);
+  // …a salesman on the counter with the item ready to sell; logged out → login.
+  await page.context().clearCookies();
+  await page.goto('/i/8902222000016');
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByText('Pradeep', { exact: true }).click();
+  await page.getByLabel('PIN').fill(PIN);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  await page.goto('/i/8902222000016');
+  await expect(page).toHaveURL(/\/pos\?code=8902222000016$/);
+  await expect(page.getByTestId('item-details')).toContainText('Anarkali Kurta');
+  await expect(page.getByTestId('item-details')).not.toContainText(/purchase/i);
+  // A scanner that reads the QR types the whole link: it still finds the item.
+  await page.goto('/pos');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await page.keyboard.type('https://maa-collection-pi.vercel.app/i/8901111000014', { delay: 2 });
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('item-details')).toContainText('Classic Crew Tee');
+});
+
 test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock/receive');
@@ -237,7 +278,7 @@ test('owner restocks existing items by scanning each piece and by name search', 
   await page.getByLabel('Supplier bill no. (optional)').fill('RS-1');
   await page.getByRole('button', { name: 'Receive 5 pieces and print labels' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
-  await expect(page.getByTestId('label-sheet').getByRole('img')).toHaveCount(5);
+  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode/ })).toHaveCount(5);
   await expect(page.getByText(/bill RS-1/)).toBeVisible();
 
   // Stock went up by exactly 3.
@@ -314,7 +355,7 @@ test('quick add: one company + category, several products with their own prices 
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(7);
   await expect(page.getByTestId('receipt-lines')).toContainText(`Georgette Saree ${run} · Assorted · Free`);
   const georgette = page.getByTestId('label-sheet').getByRole('listitem').filter({ hasText: `Georgette Saree ${run}` }).first();
-  const barcode = (await georgette.getByRole('img').getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
+  const barcode = (await georgette.getByRole('img', { name: /^Barcode/ }).getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
 
   // The seller scans it: selling price ₹2,200 (MRP ₹2,500), no purchase price shown.
   await page.context().clearCookies(); // switch user: start logged out
@@ -434,6 +475,13 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
   await page.getByRole('link', { name: "print today's labels" }).click();
   await expect(page.getByRole('heading', { name: 'My labels today' })).toBeVisible();
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: `Barcode ${barcode} for MAA-SA-`, exact: false })).toHaveCount(3);
+  // Hang tags on A4 by default; tag printer: one 50 × 80 mm tag each.
+  const myTags = page.getByTestId('label-sheet').getByTestId('hang-tag').filter({ has: page.getByRole('img', { name: `Barcode ${barcode} for MAA-SA-`, exact: false }) });
+  await expect(myTags).toHaveCount(3);
+  await expect(myTags.first().getByRole('img', { name: /^QR code for MAA-SA-/ })).toBeVisible();
+  await page.getByRole('link', { name: 'Tag printer 50×80 mm' }).click();
+  await expect(page).toHaveURL(/format=tag/);
+  await expect(myTags).toHaveCount(3);
   // Sticker-printer format: same labels, each exactly 50 × 25 mm.
   await page.getByRole('link', { name: 'Sticker printer 50×25 mm' }).click();
   await expect(page).toHaveURL(/format=sticker/);

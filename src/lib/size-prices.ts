@@ -107,3 +107,21 @@ export function splitDesignRates(variants: readonly VariantRates[]): {
     .filter(hasOwnRates);
   return { sizes, defaults: { mrpPaise, pricePaise, costPaise }, own, mixedSizes: sizes.filter((s) => mixed.has(s)) };
 }
+
+type DesignMember = { id: string; name: string; brand: string; categoryId: string | null; category: string; size: string };
+
+/** Same design = same name, brand and category (as `listDesignVariants` on the server). */
+function designKey(p: Omit<DesignMember, 'id' | 'size'>): string {
+  return [p.name.trim().toLowerCase(), p.brand.trim().toLowerCase(), p.categoryId ?? p.category.trim().toLowerCase()].join('|');
+}
+
+/** For each product: the sizes its design is made in, in shop order (for the size row on tags). */
+export function designSizesById(members: readonly DesignMember[]): Map<string, string[]> {
+  const sizesByDesign = new Map<string, string[]>();
+  for (const p of members) {
+    const sizes = sizesByDesign.get(designKey(p)) ?? [];
+    if (!sizes.some((s) => sameSize(s, p.size))) sizes.push(p.size);
+    sizesByDesign.set(designKey(p), sizes);
+  }
+  return new Map(members.map((p) => [p.id, sortSizes(sizesByDesign.get(designKey(p))!)]));
+}

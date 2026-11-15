@@ -15,12 +15,25 @@ import { StaffSelect, type StaffOption } from './staff-select';
 type Message = { kind: 'ok' | 'error'; text: string };
 type Pending = { product: CounterProduct; step: 'details' | 'sell'; operationId: string };
 
-export function PosScreen({ me, staff }: { me: StaffOption; staff: StaffOption[] }) {
-  const [pending, setPending] = useState<Pending | null>(null);
+export function PosScreen({
+  me,
+  staff,
+  initial,
+}: {
+  me: StaffOption;
+  staff: StaffOption[];
+  /** Item opened from a tag's QR code (looked up on the server). */
+  initial?: { code: string; product: CounterProduct | null };
+}) {
+  const [pending, setPending] = useState<Pending | null>(() =>
+    initial?.product ? { product: initial.product, step: 'details', operationId: crypto.randomUUID() } : null,
+  );
   const [qtyText, setQtyText] = useState('1');
   const [priceText, setPriceText] = useState('');
   const [creditTo, setCreditTo] = useState(me.id);
-  const [message, setMessage] = useState<Message | null>(null);
+  const [message, setMessage] = useState<Message | null>(() =>
+    initial && !initial.product ? { kind: 'error', text: `No item found for "${initial.code}".` } : null,
+  );
   const [busy, startTransition] = useTransition();
 
   function handleScan(code: string) {
