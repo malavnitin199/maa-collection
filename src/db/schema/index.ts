@@ -146,7 +146,8 @@ export const stockMovements = pgTable(
     productId: uuid('product_id').notNull().references(() => products.id),
     quantityChange: integer('quantity_change').notNull(),
     reason: text('reason', {
-      enum: ['opening', 'stock_in', 'sale', 'exchange_return', 'exchange_issue'],
+      // 'cleared' = the owner set this item's count to 0 (Settings → Clear stock).
+      enum: ['opening', 'stock_in', 'sale', 'exchange_return', 'exchange_issue', 'cleared'],
     }).notNull(),
     refId: uuid('ref_id'),
     staffId: uuid('staff_id').references(() => staff.id),

@@ -2,16 +2,19 @@ import { Suspense } from 'react';
 import { card, muted, sectionTitle } from '@/components/ui/styles';
 import { PriceCodeDecoder, PriceCodeForm } from '@/features/catalog/price-code-forms';
 import { STORE_ID } from '@/lib/app-config';
-import { updatePriceCodeAction } from '@/server/actions/admin';
+import { ClearStockForm } from '@/features/catalog/clear-stock-form';
+import { clearStockAction, updatePriceCodeAction } from '@/server/actions/admin';
 import { requireAdmin } from '@/server/auth';
 import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
+import { stockTotals } from '@/server/services/products';
 import { getStoreSettings } from '@/server/services/settings';
 
 async function Settings() {
   await requireAdmin();
   const t = await getT();
-  const settings = await getStoreSettings(await requestDb(), STORE_ID);
+  const db = await requestDb();
+  const [settings, totals] = await Promise.all([getStoreSettings(db, STORE_ID), stockTotals(db, STORE_ID)]);
   return (
     <>
       <section className={`${card} flex flex-col gap-3`}>
@@ -25,6 +28,11 @@ async function Settings() {
           <PriceCodeDecoder word={settings.priceCodeWord} />
         </section>
       )}
+      <section id="clear-stock" className={`${card} flex scroll-mt-28 flex-col gap-3`}>
+        <h2 className={sectionTitle}>{t('own.clear.title')}</h2>
+        <p className={`text-sm ${muted}`}>{t('own.clear.intro')}</p>
+        <ClearStockForm action={clearStockAction} items={totals.items} pieces={totals.pieces} />
+      </section>
     </>
   );
 }

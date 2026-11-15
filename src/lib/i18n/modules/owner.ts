@@ -115,6 +115,18 @@ export const ownerEn = {
   'own.perm.costs.desc': 'See and enter the purchase (code) price. Give only to trusted staff.',
 
   // Settings: code price
+  'own.clear.title': 'Clear stock',
+  'own.clear.intro': 'Sets the piece count of every item to 0 — for a fresh count or a new season. Items, barcodes, prices, photos and past sales stay. Each item’s history shows “Stock cleared” with your name and the date.',
+  'own.clear.now': 'In stock now: {items} items, {pieces} pieces.',
+  'own.clear.empty': 'Nothing is in stock right now.',
+  'own.clear.open': 'Clear all stock…',
+  'own.clear.warn': 'This cannot be undone. All {pieces} pieces will be set to 0. To confirm, enter your PIN.',
+  'own.clear.pin': 'Your PIN',
+  'own.clear.confirm': 'Set all pieces to 0',
+  'own.clear.working': 'Clearing…',
+  'own.clear.done': 'Stock cleared: {items} items, {pieces} pieces set to 0.',
+  'own.clear.nothing': 'Nothing to clear: every item is already at 0.',
+  'own.clear.wrongPin': 'Wrong PIN. Nothing was changed.',
   'own.set.codeOnTags': 'Code price on tags',
   'own.set.codeIntro':
     "The purchase price is printed on the label as letters, so your staff know the lowest price while customers can't read it. Each letter of your code word stands for a digit: 1, 2, 3 … 9, 0.",
@@ -246,6 +258,18 @@ export const ownerHi: Record<keyof typeof ownerEn, string> = {
   'own.perm.costs': 'खरीद दाम',
   'own.perm.costs.desc': 'खरीद (कोड) दाम देखें और डालें। सिर्फ़ भरोसेमंद स्टाफ़ को दें।',
 
+  'own.clear.title': 'स्टॉक खाली करें',
+  'own.clear.intro': 'हर आइटम के पीस की गिनती 0 कर देता है — नई गिनती या नए सीज़न के लिए। आइटम, बारकोड, दाम, फ़ोटो और पुरानी बिक्री बनी रहती है। हर आइटम के इतिहास में आपके नाम और तारीख के साथ “स्टॉक खाली किया गया” दिखेगा।',
+  'own.clear.now': 'अभी स्टॉक में: {items} आइटम, {pieces} पीस।',
+  'own.clear.empty': 'अभी स्टॉक में कुछ नहीं है।',
+  'own.clear.open': 'सारा स्टॉक खाली करें…',
+  'own.clear.warn': 'यह वापस नहीं हो सकता। सभी {pieces} पीस 0 हो जाएँगे। पक्का करने के लिए अपना PIN डालें।',
+  'own.clear.pin': 'आपका PIN',
+  'own.clear.confirm': 'सभी पीस 0 करें',
+  'own.clear.working': 'खाली हो रहा है…',
+  'own.clear.done': 'स्टॉक खाली हो गया: {items} आइटम, {pieces} पीस 0 किए गए।',
+  'own.clear.nothing': 'खाली करने को कुछ नहीं: हर आइटम पहले से 0 पर है।',
+  'own.clear.wrongPin': 'गलत PIN। कुछ नहीं बदला।',
   'own.set.codeOnTags': 'टैग पर कोड दाम',
   'own.set.codeIntro':
     'खरीद दाम लेबल पर अक्षरों में छपता है, ताकि आपके स्टाफ़ को सबसे कम दाम पता रहे पर ग्राहक उसे पढ़ न सकें। आपके कोड शब्द का हर अक्षर एक अंक है: 1, 2, 3 … 9, 0।',

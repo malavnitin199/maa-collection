@@ -31,6 +31,7 @@ const REASONS: Record<string, MessageKey> = {
   sale: 'cat.reason.sale',
   exchange_return: 'cat.reason.exchangeReturn',
   exchange_issue: 'cat.reason.exchangeIssue',
+  cleared: 'cat.reason.cleared',
 };
 const rupees = (paise: number | null) => (paise === null ? '' : (paise / 100).toString());
 /** A translated sentence with its `{name}` parts drawn by `part` (e.g. as a link or in a code font). */

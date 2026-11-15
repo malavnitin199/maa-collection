@@ -33,6 +33,7 @@ const GROUPS: { title: MessageKey; links: Item[] }[] = [
       { href: '/admin/reports', Icon: IconRupee, label: 'nav.reports', hint: 'cat.menu.reportsHint', needs: 'admin' },
       { href: '/admin/activity', Icon: IconClock, label: 'nav.activity', hint: 'cat.menu.activityHint', needs: 'admin' },
       { href: '/admin/settings', Icon: IconGear, label: 'nav.settings', hint: 'cat.menu.settingsHint', needs: 'admin' },
+      { href: '/admin/settings#clear-stock', Icon: IconBoxes, label: 'own.clear.title', hint: 'cat.menu.clearHint', needs: 'admin' },
     ],
   },
   {

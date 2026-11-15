@@ -475,3 +475,40 @@ describe('fixing an item right after tagging it (Tag old stock → Edit)', () =>
     await expect(correctTaggedItem(db, STORE_ID, { productId: product.id, staffId: owner, categoryId: kurta.id, ...fix({ pricePaise: 999999, canPrices: true }) })).rejects.toThrow(/above MRP/);
   });
 });
+
+describe('clear stock (owner): every count to 0, nothing erased', () => {
+  it('zeroes all stock with a "cleared" history entry per item; sales and items stay; running again does nothing', async () => {
+    const { clearAllStock, stockTotals } = await import('./products');
+    const tee = (await findProductByCode(db, STORE_ID, 'MAA-TS-001'))!;
+    await recordSale(db, STORE_ID, { operationId: 'before-clear', productId: tee.id, quantity: 1, unitPricePaise: 10000, soldBy: owner, recordedBy: owner });
+    const before = await stockTotals(db, STORE_ID);
+    const itemCount = (await db.select().from(products)).length;
+    expect(before.pieces).toBeGreaterThan(0);
+
+    const cleared = await clearAllStock(db, STORE_ID, { staffId: owner });
+    expect(cleared).toEqual(before);
+    expect(await stockTotals(db, STORE_ID)).toEqual({ items: 0, pieces: 0 });
+    const all = await db.select().from(products);
+    expect(all).toHaveLength(itemCount); // no item deleted
+    expect(all.every((p) => p.stock === 0)).toBe(true);
+    expect(await db.select().from(sales)).toHaveLength(1); // past sales stay
+
+    // Each item that had stock has one 'cleared' entry for exactly what it held, by the owner.
+    const entries = await db.select().from(stockMovements).where(eq(stockMovements.reason, 'cleared'));
+    expect(entries).toHaveLength(before.items);
+    expect(entries.reduce((n, e) => n + e.quantityChange, 0)).toBe(-before.pieces);
+    expect(entries.every((e) => e.staffId === owner)).toBe(true);
+    const teeEntry = entries.find((e) => e.productId === tee.id)!;
+    expect(teeEntry.quantityChange).toBe(-(tee.stock - 1));
+
+    // The ledger still adds up to the stock, and a second run changes nothing.
+    const teeMoves = await db.select().from(stockMovements).where(eq(stockMovements.productId, tee.id));
+    expect(teeMoves.reduce((n, m) => n + m.quantityChange, 0)).toBe(0);
+    expect(await clearAllStock(db, STORE_ID, { staffId: owner })).toEqual({ items: 0, pieces: 0 });
+    expect(await db.select().from(stockMovements).where(eq(stockMovements.reason, 'cleared'))).toHaveLength(before.items);
+    // Selling a cleared item is refused; receiving stock works again.
+    await expect(recordSale(db, STORE_ID, { operationId: 'after-clear', productId: tee.id, quantity: 1, unitPricePaise: 10000, soldBy: owner, recordedBy: owner })).rejects.toThrow('Out of stock.');
+    await receiveStock(db, STORE_ID, { operationId: 'refill', lines: [{ productId: tee.id, quantity: 4 }], staffId: owner });
+    expect((await findProductByCode(db, STORE_ID, 'MAA-TS-001'))!.stock).toBe(4);
+  });
+});

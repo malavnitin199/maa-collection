@@ -778,6 +778,44 @@ export async function receiveStock(
 }
 
 /** Single-product stock-in (product page). Same guarantees as receiveStock. */
+/** How much stock the shop holds right now (for the Clear stock screen). */
+export async function stockTotals(db: Db, storeId: string): Promise<{ items: number; pieces: number }> {
+  const [row] = await db
+    .select({ items: sql<number>`count(*)::int`, pieces: sql<number>`coalesce(sum(${products.stock}), 0)::int` })
+    .from(products)
+    .where(and(eq(products.storeId, storeId), sql`${products.stock} > 0`));
+  return { items: row?.items ?? 0, pieces: row?.pieces ?? 0 };
+}
+
+/**
+ * Clear stock (owner only): every item's count becomes 0. Nothing is erased —
+ * items, barcodes, prices, photos and past sales stay, and each item gets a
+ * 'cleared' entry in its stock history (minus what it had, who, when), so the
+ * ledger still explains every number. Running it again changes nothing.
+ */
+export async function clearAllStock(db: Db, storeId: string, input: { staffId: string; note?: string }): Promise<{ items: number; pieces: number }> {
+  return db.transaction(async (tx) => {
+    const held = await tx
+      .select({ id: products.id, stock: products.stock })
+      .from(products)
+      .where(and(eq(products.storeId, storeId), sql`${products.stock} > 0`))
+      .for('update');
+    if (held.length === 0) return { items: 0, pieces: 0 };
+    await tx.insert(stockMovements).values(
+      held.map((p) => ({
+        storeId,
+        productId: p.id,
+        quantityChange: -p.stock,
+        reason: 'cleared' as const,
+        staffId: input.staffId,
+        note: input.note?.trim().slice(0, 200) || 'Stock cleared',
+      })),
+    );
+    await tx.update(products).set({ stock: 0 }).where(and(eq(products.storeId, storeId), inArray(products.id, held.map((p) => p.id))));
+    return { items: held.length, pieces: held.reduce((n, p) => n + p.stock, 0) };
+  });
+}
+
 export async function stockIn(
   db: Db,
   storeId: string,

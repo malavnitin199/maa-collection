@@ -15,6 +15,7 @@ import { errorText, getT } from '@/server/i18n';
 import { DomainError } from '@/server/services/errors';
 import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
+  clearAllStock,
   correctTaggedItem,
   createDesign,
   createProductsBatch,
@@ -30,7 +31,7 @@ import {
 } from '@/server/services/products';
 import { addPhotoToProducts, addProductImage, deleteImage, makeMainImage } from '@/server/services/images';
 import { updatePriceCode } from '@/server/services/settings';
-import { createStaff, setStaffActive, setStaffPermissions, setStaffPin } from '@/server/services/staff';
+import { createStaff, setStaffActive, setStaffPermissions, setStaffPin, verifyLogin } from '@/server/services/staff';
 
 export type FormState = { error?: string; message?: string };
 
@@ -422,6 +423,21 @@ export async function updatePriceCodeAction(_prev: FormState, formData: FormData
     });
     revalidatePath('/admin', 'layout');
     return { message: (await getT())('act.saved') };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Settings → Clear stock: owner only, confirmed with the owner's own PIN. Sets every count to 0. */
+export async function clearStockAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireAdmin();
+  try {
+    const db = await getDb();
+    if (!(await verifyLogin(db, STORE_ID, me.id, text(formData, 'pin')))) throw new DomainError('Wrong PIN. Nothing was changed.', { key: 'own.clear.wrongPin' });
+    const { items, pieces } = await clearAllStock(db, STORE_ID, { staffId: me.id });
+    revalidatePath('/', 'layout');
+    const t = await getT();
+    return { message: items === 0 ? t('own.clear.nothing') : t('own.clear.done', { items, pieces }) };
   } catch (error) {
     return failure(error);
   }

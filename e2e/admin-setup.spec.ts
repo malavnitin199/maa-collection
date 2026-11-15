@@ -769,3 +769,36 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   await expect(page.getByText(`Chikan Kurta Long ${run}`)).toHaveCount(1);
   await expect(page.getByText(`Chikan Kurta ${run}`, { exact: true })).toHaveCount(0);
 });
+
+test('clear stock: owner only, two steps, and a wrong PIN changes nothing', async ({ page }) => {
+  // (The real clearing is covered by the service test: doing it here would empty the shop under the other tests.)
+  await loginOwner(page);
+  await page.goto('/admin/more');
+  await page.getByRole('link', { name: /Clear stock/ }).click();
+  await expect(page).toHaveURL(/\/admin\/settings#clear-stock$/);
+  const now = page.getByTestId('stock-now');
+  await expect(now).toContainText(/In stock now: \d+ items, \d+ pieces\./);
+
+  await page.getByRole('button', { name: 'Clear all stock…' }).click();
+  await expect(page.getByText(/This cannot be undone\. All \d+ pieces will be set to 0\./)).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByLabel('Your PIN')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Clear all stock…' }).click();
+  await page.getByLabel('Your PIN').fill('9999');
+  await page.getByRole('button', { name: 'Set all pieces to 0' }).click();
+  await expect(page.getByText('Wrong PIN. Nothing was changed.')).toBeVisible();
+  await page.reload();
+  // Still in stock (other tests add items meanwhile, so the exact number may have grown).
+  await expect(page.getByTestId('stock-now')).toContainText(/In stock now: [1-9]\d* items, [1-9]\d* pieces\./);
+
+  // A salesman can't reach it.
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.getByText('Vishal', { exact: true }).click();
+  await page.getByLabel('PIN').fill(PIN);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  await page.goto('/admin/settings');
+  await expect(page.getByTestId('stock-now')).toHaveCount(0);
+});
