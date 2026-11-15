@@ -1,0 +1,51 @@
+/* Scan / sale feedback animations. Reduced motion: no movement, the tick and card simply appear. */
+@keyframes fb-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  35% { transform: scale(1.12); opacity: 1; }
+  55% { transform: scale(1); }
+  85% { opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+@keyframes fb-ripple {
+  0% { transform: scale(0.6); opacity: 0.55; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@keyframes fb-draw {
+  from { stroke-dashoffset: var(--fb-len, 60); }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fb-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+@keyframes fb-rise {
+  from { transform: translateY(16px) scale(0.94); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes fb-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fb-flash-red {
+  0% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0); }
+  30% { box-shadow: 0 0 0 4px rgb(220 38 38 / 0.45); }
+  100% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0); }
+}
+
+.fb-tick { animation: fb-pop 1.1s ease-out forwards; }
+.fb-ripple { animation: fb-ripple 0.8s ease-out forwards; }
+.fb-draw { stroke-dasharray: var(--fb-len, 60); animation: fb-draw 0.45s ease-out 0.15s both; }
+.fb-shake { animation: fb-shake 0.4s ease-in-out, fb-flash-red 0.8s ease-out; border-radius: 0.75rem; }
+.fb-backdrop { animation: fb-fade 0.18s ease-out; }
+.fb-card { animation: fb-rise 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-tick { animation: fb-fade 0.15s ease-out; }
+  .fb-ripple { display: none; }
+  .fb-draw { animation: none; stroke-dasharray: none; }
+  .fb-shake { animation: fb-flash-red 0.8s ease-out; }
+  .fb-backdrop, .fb-card { animation: none; }
+}
