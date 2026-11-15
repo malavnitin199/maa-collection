@@ -257,3 +257,22 @@ describe('old stock with the manufacturer barcode', () => {
     expect(generated.products[0].barcode).toMatch(/^200/);
   });
 });
+
+describe('QC check list', () => {
+  it('lists items without photo, company, stock or purchase price', async () => {
+    const { catalogAttention } = await import('./catalog');
+    const images = await import('./images');
+    const before = await catalogAttention(db, STORE_ID);
+    expect(before.noPhoto.count).toBe(8);
+    expect(before.noSupplier.count).toBe(8); // demo items have no company
+    expect(before.outOfStock.items.map((i) => i.sku)).toEqual(['MAA-SA-001']);
+    expect(before.noCost.count).toBe(0);
+    const tee = (await findProductByCode(db, STORE_ID, 'MAA-TS-001'))!;
+    const jpeg = new Uint8Array(50);
+    jpeg.set([0xff, 0xd8, 0xff, 0xe0]);
+    await images.addProductImage(db, STORE_ID, { productId: tee.id, bytes: jpeg, staffId: owner });
+    const after = await catalogAttention(db, STORE_ID);
+    expect(after.noPhoto.count).toBe(7);
+    expect(after.noPhoto.items.map((i) => i.sku)).not.toContain('MAA-TS-001');
+  });
+});

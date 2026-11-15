@@ -421,3 +421,16 @@ test('tag old stock with the barcode already on the tag; a known barcode is refu
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('item-details')).toContainText(`Branded Shirt ${run}`);
 });
+
+test('needs attention: QC to-do list links to the item to fix', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/more');
+  await page.getByRole('link', { name: /Needs attention/ }).click();
+  await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();
+  for (const id of ['photo', 'company', 'stock', 'cost']) await expect(page.getByTestId(`count-${id}`)).toBeVisible();
+  const outOfStock = page.locator('#stock');
+  // Short lists start open; open it only if it is closed.
+  if (!(await outOfStock.evaluate((d: HTMLDetailsElement) => d.open))) await outOfStock.locator('summary').click();
+  await outOfStock.getByRole('link', { name: 'Open →' }).first().click();
+  await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
+});

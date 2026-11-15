@@ -11,6 +11,7 @@ const GROUPS: { title: string; links: Item[] }[] = [
     title: 'Catalog & stock',
     links: [
       { href: '/admin/stock/old', label: 'Tag old stock', hint: 'Photo → details → barcode, one item at a time', needs: ['catalog'] },
+      { href: '/admin/catalog/check', label: 'Needs attention', hint: 'Items without photo, company, stock or purchase price', needs: ['catalog'] },
       { href: '/admin/stock/quick', label: 'Quick add products', hint: 'Many products from one company, each with its own prices', needs: ['catalog'] },
       { href: '/admin/stock/new', label: 'New design in sizes × colours', hint: 'One design, every size/colour gets a barcode', needs: ['catalog'] },
       { href: '/admin/stock/receive', label: 'Receive stock (restock)', hint: 'Scan existing items to add pieces', needs: ['stock'] },

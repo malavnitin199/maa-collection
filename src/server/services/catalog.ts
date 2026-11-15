@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
-import { categories, products, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
+import { categories, productImages, products, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
 import { DomainError, isUniqueViolation } from './errors';
 
 const int = (expression: ReturnType<typeof sql>) => sql<number>`${expression}`.mapWith(Number);
@@ -208,4 +208,37 @@ export async function listReceipts(
     .orderBy(desc(stockReceipts.createdAt))
     .limit(limit);
   return rows;
+}
+
+// ------------------------------------------------------------- QC check list
+
+export type AttentionItem = { id: string; name: string; size: string; color: string; sku: string; stock: number };
+export type CatalogAttention = {
+  noPhoto: { count: number; items: AttentionItem[] };
+  noSupplier: { count: number; items: AttentionItem[] };
+  outOfStock: { count: number; items: AttentionItem[] };
+  noCost: { count: number; items: AttentionItem[] };
+};
+
+/** What a catalog / QC person still has to fix, among active products (up to `limit` items per list). */
+export async function catalogAttention(db: Db, storeId: string, limit = 50): Promise<CatalogAttention> {
+  const columns = { id: products.id, name: products.name, size: products.size, color: products.color, sku: products.sku, stock: products.stock };
+  const active = and(eq(products.storeId, storeId), eq(products.active, true));
+  const noPhotoWhere = and(active, sql`not exists (select 1 from ${productImages} where ${productImages.productId} = ${products.id})`);
+  const lists = {
+    noPhoto: noPhotoWhere,
+    noSupplier: and(active, sql`${products.supplierId} is null`),
+    outOfStock: and(active, sql`${products.stock} <= 0`),
+    noCost: and(active, sql`${products.costPaise} is null`),
+  };
+  const entries = await Promise.all(
+    Object.entries(lists).map(async ([key, where]) => {
+      const [items, [{ count }]] = await Promise.all([
+        db.select(columns).from(products).where(where).orderBy(asc(products.name), asc(products.color), asc(products.size)).limit(limit),
+        db.select({ count: int(sql`count(*)`) }).from(products).where(where),
+      ]);
+      return [key, { count, items }] as const;
+    }),
+  );
+  return Object.fromEntries(entries) as CatalogAttention;
 }
