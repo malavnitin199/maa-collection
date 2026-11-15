@@ -227,6 +227,24 @@ const base = {
   'tag.part5.text': 'Scan it at the counter (camera or scanner), or type the number under it.',
   'tag.part6': 'MRP',
   'tag.part6.text': 'The highest price. The agreed (bargained) price is entered when selling.',
+
+  // Look: theme and day/night (plan v8)
+  'look.open': 'Theme and day/night',
+  'look.title': 'Look',
+  'look.theme': 'Colour theme',
+  'look.mode': 'Day or night',
+  'look.light': 'Day',
+  'look.dark': 'Night',
+  'look.system': 'Same as phone',
+  'look.close': 'Close',
+  'theme.peacock': 'Peacock',
+  'theme.marigold': 'Marigold',
+  'theme.rani': 'Rani',
+  'theme.neel': 'Neel',
+  'theme.mehendi': 'Mehendi',
+  'login.keypad': 'Number keys',
+  'login.hello': 'Hello {name}, enter your PIN',
+  'login.backspace': 'Delete last digit',
 } as const;
 
 /** All English text: the salesman screens above, plus the owner/catalog areas (one module each). */

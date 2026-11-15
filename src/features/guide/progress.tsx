@@ -63,7 +63,7 @@ export function LessonDone({ id, title }: { id: string; title: string }) {
       disabled={!ready}
       onClick={() => toggle(id)}
       className={`self-start rounded-full border px-4 py-2 text-sm font-medium ${
-        checked ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
+        checked ? 'border-brand-600 bg-brand-600 text-white' : 'border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
       }`}
     >
       {checked ? t('guide.learned') : t('guide.markLearned')}
@@ -78,7 +78,7 @@ export function GuideProgress({ ids }: { ids: string[] }) {
   return (
     <div className="flex items-center gap-3 text-sm" data-testid="guide-progress">
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-        <div className="h-full rounded-full bg-emerald-600 transition-[width]" style={{ width: `${(count / ids.length) * 100}%` }} />
+        <div className="h-full rounded-full bg-brand-600 transition-[width]" style={{ width: `${(count / ids.length) * 100}%` }} />
       </div>
       <span className="tabular-nums">
         {t('guide.progress', { done: count, total: ids.length })}
@@ -89,5 +89,5 @@ export function GuideProgress({ ids }: { ids: string[] }) {
 
 export function LessonTick({ id }: { id: string }) {
   const { done } = useDone();
-  return done.includes(id) ? <span className="text-emerald-600">✓</span> : null;
+  return done.includes(id) ? <span className="text-brand-600">✓</span> : null;
 }

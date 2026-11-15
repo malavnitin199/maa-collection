@@ -68,7 +68,7 @@ function LabelSheet({ lines, params, data, t }: { lines: ReceiptLabelLine[]; par
                 key={label}
                 href={hrefWith(params, { format: value })}
                 aria-current={active ? 'true' : undefined}
-                className={`rounded-full border px-3 py-1 ${active ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
+                className={`rounded-full border px-3 py-1 ${active ? 'border-brand-600 bg-brand-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
               >
                 {t(label)}
               </Link>

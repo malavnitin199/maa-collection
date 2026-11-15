@@ -53,13 +53,13 @@ async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
       </Link>
       <Link
         href={`/admin/stock/new?supplier=${supplier.id}`}
-        className="rounded-lg border border-emerald-600 px-5 py-3 text-center font-medium text-emerald-700 dark:text-emerald-400"
+        className="rounded-lg border border-brand-600 px-5 py-3 text-center font-medium text-brand-700 dark:text-brand-400"
       >
         {t('cat.sup.newDesign')}
       </Link>
       <Link
         href={`/admin/stock/receive?supplier=${supplier.id}`}
-        className="rounded-lg border border-emerald-600 px-5 py-3 text-center font-medium text-emerald-700 dark:text-emerald-400"
+        className="rounded-lg border border-brand-600 px-5 py-3 text-center font-medium text-brand-700 dark:text-brand-400"
       >
         {t('cat.sup.receive')}
       </Link>

@@ -19,7 +19,7 @@ function List({ id, title, hint, count, items, fix, t }: { id: string; title: st
         </span>
         <span
           data-testid={`count-${id}`}
-          className={`rounded-full px-2.5 py-0.5 text-sm font-semibold ${count ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'}`}
+          className={`rounded-full px-2.5 py-0.5 text-sm font-semibold ${count ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' : 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-200'}`}
         >
           {count || '✓'}
         </span>

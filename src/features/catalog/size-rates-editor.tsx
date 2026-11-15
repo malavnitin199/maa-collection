@@ -9,7 +9,7 @@ import { sizeFieldName } from '@/lib/size-prices';
 // Narrow boxes for a phone (16px text: no zoom on focus). Green = this size's own price.
 const box = 'w-full min-w-0 rounded-lg border px-2 py-2 text-base tabular-nums';
 const defaultBox = `${box} border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900`;
-const ownBox = `${box} border-emerald-600 bg-emerald-50 font-semibold dark:border-emerald-500 dark:bg-emerald-950`;
+const ownBox = `${box} border-brand-600 bg-brand-50 font-semibold dark:border-brand-500 dark:bg-brand-950`;
 
 /** Rates as typed, in rupees. */
 export type RatesText = { mrp: string; price: string; cost: string };
@@ -66,7 +66,7 @@ export function SizeRatesEditor({
       <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-3 py-2.5 text-sm font-medium">
         {t('stk.rates.title')}
         {ownSizes.length > 0 && (
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+          <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs text-brand-800 dark:bg-brand-950 dark:text-brand-200">
             {t(ownSizes.length === 1 ? 'stk.rates.ownCount.one' : 'stk.rates.ownCount.other', { n: ownSizes.length })}
           </span>
         )}
@@ -82,7 +82,7 @@ export function SizeRatesEditor({
             const mine = hasOwnText(own[size]);
             return (
               <Fragment key={size}>
-                <span className={`break-words text-sm font-semibold ${mine ? 'text-emerald-700 dark:text-emerald-400' : ''}`}>
+                <span className={`break-words text-sm font-semibold ${mine ? 'text-brand-700 dark:text-brand-400' : ''}`}>
                   {named && <input type="hidden" name="rateSize" value={size} />}
                   {size}
                 </span>

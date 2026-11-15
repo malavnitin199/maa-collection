@@ -27,7 +27,7 @@ function Steps({ items }: { items: React.ReactNode[] }) {
     <ol className="flex flex-col gap-2">
       {items.map((item, i) => (
         <li key={i} className="flex gap-3">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-semibold text-white">{i + 1}</span>
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">{i + 1}</span>
           <span>{item}</span>
         </li>
       ))}

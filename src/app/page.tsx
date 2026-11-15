@@ -9,7 +9,7 @@ export default function HomePage() {
       </p>
       <Link
         href="/login"
-        className="w-fit rounded-xl bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-700"
+        className="w-fit rounded-xl bg-brand-600 px-6 py-3 font-medium text-white hover:bg-brand-700"
       >
         Get started
       </Link>

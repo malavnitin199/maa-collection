@@ -8,7 +8,7 @@ const frame = 'h-auto w-full max-w-[280px] text-zinc-800 dark:text-zinc-200';
 const paper = 'fill-white dark:fill-zinc-900';
 const soft = 'fill-zinc-100 dark:fill-zinc-800';
 const line = 'stroke-zinc-300 dark:stroke-zinc-700';
-const green = 'fill-emerald-600';
+const green = 'fill-brand-600';
 
 function Svg({ children, h = 150 }: { children: React.ReactNode; h?: number }) {
   return (
@@ -69,8 +69,8 @@ export function QrArt() {
       <Qr x={70} y={40} s={24} />
       <text x="34" y="92" className="fill-current text-[22px] font-bold">M</text>
       <Bars x={34} y={102} w={56} h={16} />
-      <path d="M112 75h26" className="g-blink stroke-emerald-600" strokeWidth="3" strokeDasharray="5 4" />
-      <path d="M134 69l8 6-8 6" className="g-blink stroke-emerald-600" strokeWidth="3" fill="none" />
+      <path d="M112 75h26" className="g-blink stroke-brand-600" strokeWidth="3" strokeDasharray="5 4" />
+      <path d="M134 69l8 6-8 6" className="g-blink stroke-brand-600" strokeWidth="3" fill="none" />
       <rect x="150" y="10" width="110" height="130" rx="14" className={`${paper} ${line}`} strokeWidth="2" />
       <rect x="162" y="26" width="86" height="40" rx="6" className={`g-pop ${soft}`} style={{ '--d': '0.4s' } as React.CSSProperties} />
       <rect x="162" y="74" width="60" height="8" rx="4" className="g-pop fill-zinc-400" style={{ '--d': '0.6s' } as React.CSSProperties} />
@@ -105,7 +105,7 @@ export function DesignGridArt() {
   return (
     <Svg h={160}>
       {sizes.map((s, i) => (
-        <text key={s} x={90 + i * 62} y="22" textAnchor="middle" className={`text-[13px] font-semibold ${s === 'XL' ? 'fill-emerald-600' : 'fill-current'}`}>
+        <text key={s} x={90 + i * 62} y="22" textAnchor="middle" className={`text-[13px] font-semibold ${s === 'XL' ? 'fill-brand-600' : 'fill-current'}`}>
           {s}
         </text>
       ))}
@@ -120,14 +120,14 @@ export function DesignGridArt() {
               width="52"
               height="30"
               rx="6"
-              className={`g-pop ${s === 'XL' ? 'fill-emerald-100 stroke-emerald-600 dark:fill-emerald-950' : `${soft} ${line}`}`}
+              className={`g-pop ${s === 'XL' ? 'fill-brand-100 stroke-brand-600 dark:fill-brand-950' : `${soft} ${line}`}`}
               strokeWidth="1.5"
               style={{ '--d': `${(r * 3 + i) * 0.12}s` } as React.CSSProperties}
             />
           ))}
         </g>
       ))}
-      <text x="214" y="153" textAnchor="middle" className="g-blink fill-emerald-600 text-[11px] font-semibold">₹600</text>
+      <text x="214" y="153" textAnchor="middle" className="g-blink fill-brand-600 text-[11px] font-semibold">₹600</text>
       <text x="121" y="153" textAnchor="middle" className="fill-zinc-500 text-[11px]">₹500</text>
     </Svg>
   );
@@ -179,7 +179,7 @@ export function CountArt() {
           x="210"
           y="68"
           textAnchor="middle"
-          className={`g-frame ${i === 2 ? 'g-final' : ''} fill-emerald-700 text-[20px] font-bold dark:fill-emerald-400`}
+          className={`g-frame ${i === 2 ? 'g-final' : ''} fill-brand-700 text-[20px] font-bold dark:fill-brand-400`}
           style={{ '--d': `${i * 1.2}s` } as React.CSSProperties}
         >
           {t}
@@ -196,7 +196,7 @@ export function StockFlowArt({ labels: stops = ['Supplier', 'Receive', 'Tag', 'S
       <path d="M22 50H258" className={line} strokeWidth="3" />
       {stops.map((s, i) => (
         <g key={s}>
-          <circle cx={22 + i * 47.2} cy="50" r="9" className={i === 5 ? green : 'fill-emerald-100 stroke-emerald-600 dark:fill-emerald-950'} strokeWidth="2" />
+          <circle cx={22 + i * 47.2} cy="50" r="9" className={i === 5 ? green : 'fill-brand-100 stroke-brand-600 dark:fill-brand-950'} strokeWidth="2" />
           <text x={22 + i * 47.2} y="80" textAnchor="middle" className="fill-current text-[10px]">
             {s}
           </text>
@@ -216,7 +216,7 @@ export function ReportArt() {
     <Svg h={130}>
       <path d="M30 110H250" className={line} strokeWidth="2" />
       {heights.map((h, i) => (
-        <rect key={i} x={45 + i * 42} y={110 - h} width="26" height={h} rx="3" className={`g-grow ${i === 3 ? green : 'fill-emerald-300 dark:fill-emerald-800'}`} style={{ '--d': `${i * 0.15}s` } as React.CSSProperties} />
+        <rect key={i} x={45 + i * 42} y={110 - h} width="26" height={h} rx="3" className={`g-grow ${i === 3 ? green : 'fill-brand-300 dark:fill-brand-800'}`} style={{ '--d': `${i * 0.15}s` } as React.CSSProperties} />
       ))}
     </Svg>
   );
@@ -273,7 +273,7 @@ export function PricesArt() {
     <Svg h={130}>
       {rows.map(([size, price, own], i) => (
         <g key={size}>
-          <text x="40" y={34 + i * 36} className={`text-[14px] font-bold ${own ? 'fill-emerald-600' : 'fill-current'}`}>
+          <text x="40" y={34 + i * 36} className={`text-[14px] font-bold ${own ? 'fill-brand-600' : 'fill-current'}`}>
             {size}
           </text>
           <rect
@@ -283,7 +283,7 @@ export function PricesArt() {
             height="28"
             rx="6"
             strokeWidth="1.5"
-            className={own ? 'g-blink fill-emerald-50 stroke-emerald-600 dark:fill-emerald-950' : `${paper} ${line}`}
+            className={own ? 'g-blink fill-brand-50 stroke-brand-600 dark:fill-brand-950' : `${paper} ${line}`}
             style={{ '--d': `${i * 0.4}s` } as React.CSSProperties}
           />
           <text x="165" y={33 + i * 36} textAnchor="middle" className={`text-[13px] ${own ? 'fill-current font-semibold' : 'fill-zinc-400'}`}>

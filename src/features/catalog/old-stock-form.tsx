@@ -276,9 +276,9 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
                 }}
                 className={`rounded-full border px-3 py-1.5 text-sm ${
                   size === s
-                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                    ? 'border-brand-600 bg-brand-600 text-white'
                     : i < categorySizes.length
-                      ? 'border-emerald-600 font-semibold text-emerald-800 dark:text-emerald-300'
+                      ? 'border-brand-600 font-semibold text-brand-800 dark:text-brand-300'
                       : 'border-zinc-300 dark:border-zinc-700'
                 }`}
               >

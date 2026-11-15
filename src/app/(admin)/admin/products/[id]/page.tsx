@@ -136,7 +136,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
                   href={`/admin/products/${v.id}`}
                   aria-current={v.id === product.id ? 'page' : undefined}
                   className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
-                    v.id === product.id ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950' : 'border-zinc-200 dark:border-zinc-800'
+                    v.id === product.id ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-zinc-200 dark:border-zinc-800'
                   }`}
                 >
                   <span>
@@ -227,7 +227,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
                   {m.note && ` · ${m.note}`}
                 </span>
               </span>
-              <span className={`font-medium tabular-nums ${m.quantityChange < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-700'}`}>
+              <span className={`font-medium tabular-nums ${m.quantityChange < 0 ? 'text-red-600 dark:text-red-400' : 'text-brand-700'}`}>
                 {m.quantityChange > 0 ? `+${m.quantityChange}` : m.quantityChange}
               </span>
             </li>

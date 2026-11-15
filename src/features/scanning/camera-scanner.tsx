@@ -269,7 +269,7 @@ export function CameraScanner({ onDecode, onClose }: Props) {
             <video ref={videoRef} muted playsInline className="aspect-[4/3] w-full object-cover" />
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-[8%] top-1/2 h-[38%] -translate-y-1/2 rounded-lg border-2 border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+              className="pointer-events-none absolute inset-x-[8%] top-1/2 h-[38%] -translate-y-1/2 rounded-lg border-2 border-brand-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
             />
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">

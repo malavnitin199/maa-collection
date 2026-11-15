@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
-import { card, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { card, cardMuted, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { hasOwnText, SizeRatesEditor, type OwnRatesText } from '@/features/catalog/size-rates-editor';
 import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
@@ -31,7 +31,7 @@ function Chip({ selected, onClick, children, label }: { selected: boolean; onCli
       onClick={onClick}
       className={`min-w-12 rounded-full border px-3 py-2 text-sm font-medium ${
         selected
-          ? 'border-emerald-600 bg-emerald-600 text-white'
+          ? 'border-brand-600 bg-brand-600 text-white'
           : 'border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
       }`}
     >
@@ -263,7 +263,7 @@ export function DesignForm({
         {category && categorySizes.length > 0 ? (
           <>
             <div data-testid="category-size-chips" className="flex flex-col gap-1.5">
-              <span className="flex items-center justify-between gap-2 text-xs font-medium text-emerald-800 dark:text-emerald-300">
+              <span className="flex items-center justify-between gap-2 text-xs font-medium text-brand-800 dark:text-brand-300">
                 {t('stk.design.sizesFor', { name: category.name })}
                 <button
                   type="button"
@@ -436,7 +436,7 @@ export function DesignForm({
         </label>
       </section>
 
-      <section data-testid="design-preview" className={`${card} flex flex-col gap-2 bg-zinc-50 dark:bg-zinc-900`}>
+      <section data-testid="design-preview" className={`${cardMuted} flex flex-col gap-2`}>
         <h2 className="font-semibold">{t('stk.design.preview')}</h2>
         {combos === 0 ? (
           <p className={`text-sm ${muted}`}>{t('stk.design.previewEmpty')}</p>

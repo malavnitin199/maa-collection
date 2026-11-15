@@ -5,7 +5,7 @@
   --viz-axis: #c3c2b7;
   --viz-track: #f0efec;
 }
-@media (prefers-color-scheme: dark) {
+[data-mode="dark"] {
   .viz-root {
     --series-1: #3987e5;
     --viz-grid: #2c2c2a;

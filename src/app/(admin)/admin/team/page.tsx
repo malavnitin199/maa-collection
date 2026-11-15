@@ -42,7 +42,7 @@ async function Team({ searchParams }: { searchParams: Promise<{ period?: string 
             key={p.value}
             href={`/admin/team?period=${p.value}`}
             aria-current={p.value === period ? 'page' : undefined}
-            className={`rounded-full border px-3 py-1 ${p.value === period ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
+            className={`rounded-full border px-3 py-1 ${p.value === period ? 'border-brand-600 bg-brand-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
           >
             {t(PERIOD_KEYS[p.value])}
           </Link>

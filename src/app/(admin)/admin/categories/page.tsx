@@ -13,7 +13,7 @@ async function AddCategory() {
   const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
   return (
     <details className={card}>
-        <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">{t('cat.cat.addOpen')}</summary>
+        <summary className="cursor-pointer font-medium text-brand-700 dark:text-brand-400">{t('cat.cat.addOpen')}</summary>
         <div className="mt-3">
           <CategoryForm action={createCategoryAction} submitLabel={t('cat.cat.add')} />
         </div>

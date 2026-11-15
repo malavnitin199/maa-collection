@@ -50,7 +50,7 @@ async function StaffList() {
           </div>
           {person.role === 'salesman' ? (
             <details>
-              <summary className="cursor-pointer text-sm text-emerald-700 dark:text-emerald-400">
+              <summary className="cursor-pointer text-sm text-brand-700 dark:text-brand-400">
                 {t('own.staff.permissions', {
                   list: person.permissions.length
                     ? person.permissions.map((p) => (isPermission(p) ? t(PERMISSION_KEYS[p].label) : p)).join(', ')

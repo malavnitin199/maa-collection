@@ -95,7 +95,7 @@ export function ResetPinForm({ action, name }: { action: Action; name: string })
         {t('cat.staff.setPin')}
       </button>
       {state.error && <span className="text-xs text-red-600">{state.error}</span>}
-      {state.message && <span className="text-xs text-emerald-700">{state.message}</span>}
+      {state.message && <span className="text-xs text-brand-700">{state.message}</span>}
     </form>
   );
 }
@@ -214,7 +214,7 @@ export function PermissionsForm({
           {pending ? t('common.saving') : t('cat.perm.save')}
         </button>
         {state.error && <span className="text-xs text-red-600">{state.error}</span>}
-        {state.message && <span role="status" className="text-xs text-emerald-700">{state.message}</span>}
+        {state.message && <span role="status" className="text-xs text-brand-700">{state.message}</span>}
       </div>
     </form>
   );

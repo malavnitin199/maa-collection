@@ -87,13 +87,13 @@ export function PhotoManager({ productId, photos, canEdit }: { productId: string
                 {/* eslint-disable-next-line @next/next/no-img-element -- our own resized photos, served with caching */}
                 <img src={photo.src} alt={t('cat.photo.alt', { n: index + 1 })} className="h-full w-full object-cover" loading="lazy" />
                 {index === 0 && (
-                  <span className="absolute left-1 top-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">{t('cat.photo.main')}</span>
+                  <span className="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">{t('cat.photo.main')}</span>
                 )}
               </div>
               {canEdit && (
                 <div className="flex justify-between text-xs">
                   {index > 0 ? (
-                    <button type="button" disabled={busy} onClick={() => run(() => makeMainImageAction(photo.id))} className="text-emerald-700 dark:text-emerald-400">
+                    <button type="button" disabled={busy} onClick={() => run(() => makeMainImageAction(photo.id))} className="text-brand-700 dark:text-brand-400">
                       {t('cat.photo.makeMain')}
                     </button>
                   ) : (

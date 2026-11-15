@@ -216,6 +216,23 @@ const base = {
   'tag.part5.text': 'काउंटर पर स्कैन करें (कैमरा या स्कैनर), या नीचे लिखा नंबर डालें।',
   'tag.part6': 'MRP',
   'tag.part6.text': 'सबसे ज़्यादा दाम। मोलभाव वाला दाम बेचते समय डाला जाता है।',
+
+  'look.open': 'थीम और दिन/रात',
+  'look.title': 'रंग-रूप',
+  'look.theme': 'रंग की थीम',
+  'look.mode': 'दिन या रात',
+  'look.light': 'दिन',
+  'look.dark': 'रात',
+  'look.system': 'फ़ोन जैसा',
+  'look.close': 'बंद करें',
+  'theme.peacock': 'मोर',
+  'theme.marigold': 'गेंदा',
+  'theme.rani': 'रानी',
+  'theme.neel': 'नील',
+  'theme.mehendi': 'मेहंदी',
+  'login.keypad': 'अंक बटन',
+  'login.hello': 'नमस्ते {name}, अपना PIN डालें',
+  'login.backspace': 'आखिरी अंक मिटाएँ',
 };
 
 export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi };

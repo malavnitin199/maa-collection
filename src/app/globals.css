@@ -1,26 +1,158 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Look and feel (plan v8). Five themes named after Indian dyes, each a full
+ * brand scale (the 600 step keeps white text ≥ 4.5:1) plus a zari accent, and
+ * a day/night mode. Both are attributes on <html>, set before the first paint
+ * by the script in the root layout: data-theme="peacock|marigold|rani|neel|mehendi",
+ * data-mode="light|dark". Tailwind's `dark:` follows data-mode, not the OS
+ * directly (the script maps "follow the phone" to light/dark).
+ */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
 
 @theme inline {
+  --color-brand-50: var(--b-50);
+  --color-brand-100: var(--b-100);
+  --color-brand-200: var(--b-200);
+  --color-brand-300: var(--b-300);
+  --color-brand-400: var(--b-400);
+  --color-brand-500: var(--b-500);
+  --color-brand-600: var(--b-600);
+  --color-brand-700: var(--b-700);
+  --color-brand-800: var(--b-800);
+  --color-brand-900: var(--b-900);
+  --color-brand-950: var(--b-950);
+  --color-zari: var(--zari);
+  --color-surface: var(--surface);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-rozha), var(--font-mukta), serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Peacock / मोर — teal + zari gold (default). */
+:root,
+[data-theme="peacock"] {
+  --b-50: #effcf9; --b-100: #ccf6ec; --b-200: #99ead9; --b-300: #5fd6c1; --b-400: #2bb8a3;
+  --b-500: #12998a; --b-600: #0f766e; --b-700: #115e59; --b-800: #134e4a; --b-900: #0f3b38; --b-950: #062523;
+  --zari: #d4a017;
+}
+/* Marigold / गेंदा — saffron + maroon. */
+[data-theme="marigold"] {
+  --b-50: #fff7ed; --b-100: #ffedd5; --b-200: #fed7aa; --b-300: #fdba74; --b-400: #fb923c;
+  --b-500: #ea580c; --b-600: #c2410c; --b-700: #9a3412; --b-800: #7c2d12; --b-900: #5c1f0b; --b-950: #3a1306;
+  --zari: #7a1f2b;
+}
+/* Rani / रानी — rani pink + mustard. */
+[data-theme="rani"] {
+  --b-50: #fdf2f8; --b-100: #fce7f3; --b-200: #fbcfe8; --b-300: #f9a8d4; --b-400: #f472b6;
+  --b-500: #db2777; --b-600: #be185d; --b-700: #9d174d; --b-800: #831843; --b-900: #5f0f30; --b-950: #3d081e;
+  --zari: #e0a800;
+}
+/* Neel / नील — indigo + haldi. */
+[data-theme="neel"] {
+  --b-50: #eef2ff; --b-100: #e0e7ff; --b-200: #c7d2fe; --b-300: #a5b4fc; --b-400: #818cf8;
+  --b-500: #6366f1; --b-600: #4f46e5; --b-700: #4338ca; --b-800: #3730a3; --b-900: #2a2675; --b-950: #1a1748;
+  --zari: #eab308;
+}
+/* Mehendi / मेहंदी — henna green + terracotta. */
+[data-theme="mehendi"] {
+  --b-50: #f6f8ea; --b-100: #ebf0cf; --b-200: #d8e2a3; --b-300: #bccd6c; --b-400: #9db43f;
+  --b-500: #7a8f27; --b-600: #5c6c1d; --b-700: #4a5719; --b-800: #3d4718; --b-900: #2e3614; --b-950: #1a1f0a;
+  --zari: #c2562f;
+}
+
+/* Surfaces: the page wears a whisper of the theme; cards stay white (day) or deep (night). */
+:root {
+  --background: color-mix(in oklab, var(--b-50) 60%, #ffffff);
+  --surface: #ffffff;
+  --foreground: #18181b;
+  color-scheme: light;
+}
+/* Marigold's maroon zari is too dark on a night background: a lighter rose. */
+[data-mode="dark"][data-theme="marigold"] {
+  --zari: #d9546a;
+}
+[data-mode="dark"] {
+  --background: color-mix(in oklab, var(--b-950) 45%, #09090b);
+  --surface: #18181b;
+  --foreground: #f4f4f5;
+  color-scheme: dark;
+}
+
+/* Base styles sit in the base layer so utility classes (text-white, …) win. */
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-synthesis: none;
+    letter-spacing: 0.01em;
+    color: var(--b-900);
+  }
+  [data-mode="dark"] h1 {
+    color: var(--b-100);
+  }
+
+  ::selection {
+    background: var(--b-200);
+    color: var(--b-900);
+  }
+  :focus-visible {
+    outline: 2px solid var(--b-500);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/*
+ * Signature: the zari border — a woven saree-border strip (a band of small
+ * diamonds between two fine lines), painted in the theme's accent through a mask.
+ */
+.zari {
+  height: 10px;
+  background-color: var(--zari);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10'%3E%3Crect width='20' height='1.2'/%3E%3Crect y='8.8' width='20' height='1.2'/%3E%3Cpath d='M10 2.4 13 5 10 7.6 7 5Z'/%3E%3Ccircle cx='0' cy='5' r='1.1'/%3E%3Ccircle cx='20' cy='5' r='1.1'/%3E%3C/svg%3E") repeat-x left center / 20px 10px;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10'%3E%3Crect width='20' height='1.2'/%3E%3Crect y='8.8' width='20' height='1.2'/%3E%3Cpath d='M10 2.4 13 5 10 7.6 7 5Z'/%3E%3Ccircle cx='0' cy='5' r='1.1'/%3E%3Ccircle cx='20' cy='5' r='1.1'/%3E%3C/svg%3E") repeat-x left center / 20px 10px;
+}
+
+/* Hang-tag shape for the big action tiles: notched top corners and a punch hole. */
+.tag-shape {
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%, 0 14px);
+}
+
+/* Each page slides in gently. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.page-in { animation: page-in 0.28s ease-out both; }
+
+/* Small panels (theme picker) pop open from their button. */
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.pop-in { animation: pop-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; transform-origin: top right; }
+/* The theme picker: a sheet rising from the bottom on phones, a pop-over on bigger screens. */
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+.look-panel { animation: sheet-in 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+@media (min-width: 40rem) {
+  .look-panel { animation: pop-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; transform-origin: top right; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-in, .pop-in, .look-panel { animation: none; }
+}
+
+/* Paper is white: printed tags and sheets never take the theme. */
+@media print {
+  :root, [data-mode="dark"] { --background: #ffffff; --foreground: #000000; color-scheme: light; }
 }
