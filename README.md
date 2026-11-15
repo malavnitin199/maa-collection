@@ -349,6 +349,8 @@ vercel deploy --prod                 # production
 
 | Document | Read it for |
 |---|---|
+| [`docs/TECHNICAL_REFERENCE.md`](docs/TECHNICAL_REFERENCE.md) | **Code reference**: architecture, every file, data model, flows, actions, endpoints, tests, deployment, gotchas |
+| [`docs/CONTEXT_BRIEF.md`](docs/CONTEXT_BRIEF.md) | Short business/context hand-off for another person or AI |
 | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) | **How to use the app** (all roles): new users, selling, catalog & old stock, owner set-up, tips, fixes |
 | [`docs/PLAN_V3_CATALOG_TEAM.md`](docs/PLAN_V3_CATALOG_TEAM.md) | Plan v3: permissions, photos, old-stock tagging, help |
 | [`CLAUDE.md`](CLAUDE.md) | Single source of truth: product, stack, core rules, workflow, status |

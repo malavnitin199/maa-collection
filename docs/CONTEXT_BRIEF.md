@@ -110,6 +110,7 @@
 
 ## 9. Where to read more (in the code repository)
 
+- `docs/TECHNICAL_REFERENCE.md`: full code reference (architecture, files, data model, flows, tests, deployment)
 - `docs/USER_GUIDE.md`: how each role uses the app
 - `docs/PLAN_V2_SHOP_OPERATIONS.md`, `docs/PLAN_V3_CATALOG_TEAM.md`: plans with flows and data model
 - `docs/DECISION_LOG.md`: all decisions (ADR-001 … ADR-012)
