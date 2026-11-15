@@ -18,6 +18,13 @@ Live app: https://maa-collection-pi.vercel.app
 4. To scan: **Scan with camera**, allow the camera once, hold the barcode flat in the green box 15–20 cm away. A USB/Bluetooth scanner works without tapping anything.
 5. **Log out** at the end of the day, especially on a shared phone.
 
+## 1a. Hindi or English, and scan sounds
+
+- Tap **हिन्दी** (or **English**) at the top of any screen, or on the login page. The screen changes at once. Your choice is saved **for you**: it follows you to any phone you log in on. Product names, sizes and prices stay as they were entered.
+- Hindi so far covers the selling screens (login, Sell, Exchange, My sales, scanning, the Guide's first lessons). Owner and catalog screens come next.
+- A good scan shows a **green ✓** with a short **"ting"** (and a small vibration). A failed scan **shakes** with a low buzz. After a sale or exchange a **"Sale done ✓"** card shows the amount with a chime; it closes by itself, or tap it.
+- **🔊 / 🔇** at the top turns the sounds and vibration off or on for that phone.
+
 ## 2. Who can do what
 
 | Person | Can do |

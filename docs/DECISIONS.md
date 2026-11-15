@@ -60,4 +60,6 @@ Evidence (shop walkthrough, printer model, sample invoice):
 | D-PERM-1 | Should a catalog person without the *Prices* right be allowed to set prices when **creating** an item (needed to tag old stock)? | Yes when creating; existing prices can't be changed without *Prices* |
 | D-QR-1 | What should the tag's QR code hold? | A link to the item in this app (`https://<app>/i/<barcode>`): staff land on the item; anyone not logged in only sees the login page. Alternative: public product info for customers (would show prices/photos publicly) |
 | D-TAG-1 | Should tags also show the selling price (like a sale sticker), or MRP only? | MRP only, with "(incl. of all taxes)"; the bargained price is entered at the sale |
+| D-LANG-1 | Hindi wording: should someone in the shop review the Hindi lines (`src/lib/i18n/hi.ts`, `src/features/guide/lessons.hi.tsx`) before the owner/catalog screens are translated? | Written by the assistant in simple shop Hindi; staff can report lines that read oddly |
+| D-LANG-2 | Round 2 of Hindi: owner/catalog screens (stock forms, products, categories, labels, reports, team, settings), Help, remaining Guide lessons — when? | English on those screens for now |
 | D-IMG-1 | Move photos to Vercel Blob (needs the owner to approve creating a Blob store on the Vercel account)? | Photos in Postgres; switch before ~5k photos |

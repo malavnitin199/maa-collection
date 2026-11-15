@@ -27,7 +27,19 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 
-## Sales team dashboard + photos while creating tags (2026-11-15, latest)
+## Hindi + English, and payment-app style scan feedback (2026-11-15, latest)
+Owner request (chat): multi-language (Hindi + English for now) with a smooth switch; after a successful scan, a completion effect with a sound like payment apps; write every approach into `docs/`. Owner decisions (ADR-017): salesman screens first, choice saved per person, sound on by default with mute. Plan + approach: `docs/PLAN_V7_HINDI_AND_SCAN_FEEDBACK.md`; developer notes: `docs/TECHNICAL_REFERENCE.md` §15–16.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | i18n core: `src/lib/i18n` (en/hi dictionaries, typed keys, placeholders, plurals), `getLocale`/`getT`, `I18nProvider`/`useT`, `LocaleRoot` in the root layout | Done |
+| 2 | `staff.language` (migration 0006) + `maa-lang` cookie; `LanguageSwitch` in header and login page; `setLanguageAction` + `router.refresh()` | Done |
+| 3 | Translated: login, header/menus/tabs, Sell, Exchange, My sales + activity, scan box + camera, first-time tips, sale/exchange/login errors (keys on `DomainError`), Guide page + 5 lessons | Done (owner/catalog screens: next round, D-LANG-2) |
+| 4 | Feedback: Web Audio "ting" / chime / buzz + vibration, green tick with ripple, shake + red flash on failure, "Sale done ✓" card; 🔊/🔇 per phone; reduced-motion safe; on Sell, Exchange, restock | Done |
+| 5 | Phone checks (Hindi login, Sell with tick, sale card): fixed the tick covering the Find button and a cramped header (buttons now wrap to a second row) | Done |
+- Verified: lint, typecheck, **114 unit tests** (dictionaries complete with matching placeholders and real Devanagari, plurals, Hindi sale errors, sound on/off with a fake AudioContext, error keys from the sale service), build, **51 Playwright tests at desktop + phone size** (+1 phone-only skip): Hindi on the login page → a new salesman gets Hindi, switches in place, keeps Hindi on another phone; Hindi server message; tick/shake markers, "Sale done" card closes by itself, mute remembered.
+
+## Sales team dashboard + photos while creating tags (2026-11-15)
 Owner request (chat): a dashboard of the sellers — how many, each one's %, graphs of their sales, all salesmen's data kept; salesmen scan the QR and enter the value; an optional product photo when tags are created (every SKU its own item). Plan: `docs/PLAN_V6_TEAM_DASHBOARD_PHOTOS.md`; ADR-016.
 
 | # | Task | Result |

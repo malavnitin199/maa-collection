@@ -22,6 +22,8 @@ Audience: a developer or AI agent picking up the code. For the business brief se
 12. [Environments, deployment and operations](#12-environments-deployment-and-operations)
 13. [Conventions and gotchas](#13-conventions-and-gotchas)
 14. [Known limitations and open items](#14-known-limitations-and-open-items)
+15. [Languages (Hindi / English)](#15-languages-hindi--english)
+16. [Scan and sale feedback (sound, vibration, animation)](#16-scan-and-sale-feedback-sound-vibration-animation)
 
 ---
 
@@ -214,7 +216,7 @@ All tables carry `store_id` (FK `stores.id`, currently the single store `maa-col
 | Table | Key columns | Constraints / notes |
 |---|---|---|
 | `stores` | `id` (text), `name`, `timezone`, `price_code_word`, `print_price_code` | One row today |
-| `staff` | `id`, `name`, `role` (`admin`/`salesman`), `permissions text[]`, `pin_hash`, `active` | unique (store, name) |
+| `staff` | `id`, `name`, `role` (`admin`/`salesman`), `permissions text[]`, `pin_hash`, `language` (`en`/`hi`, null = phone's choice), `active` | unique (store, name) |
 | `suppliers` | `name`, `contact_name`, `phone`, `gstin`, `notes`, `active` | unique (store, name) |
 | `categories` | `name`, `code` (2–3 letters), `sizes text[]` (shop order, owner-editable), `active` | unique (store, name), (store, code) |
 | `products` | `sku`, `barcode`, `name`, `brand`, `category` (name snapshot), `category_id`, `supplier_id`, `size`, `color`, `mrp_paise`, `price_paise`, `cost_paise` (admin/costs only), `stock`, `active`, `created_by` | unique (store, sku), (store, barcode); `stock >= 0`; `0 < price ≤ mrp` |
@@ -233,6 +235,7 @@ All tables carry `store_id` (FK `stores.id`, currently the single store `maa-col
 | `0002_store_price_code.sql` | stores.price_code_word, print_price_code |
 | `0003_staff_permissions.sql` | staff.permissions `text[] default '{}'` |
 | `0004_product_images.sql` | product_images |
+| `0006_staff_language.sql` | staff.language `text` (nullable) — each person's screen language |
 | `0005_category_sizes.sql` | categories.sizes `text[] default '{}'` + default lists for known codes (only where empty) + Ladies Jeans (LJ) / Gents Jeans (GJ), skipped if present |
 
 ---
@@ -468,6 +471,7 @@ Migrations so far were backward-compatible (added tables or nullable/defaulted c
   - Dropdown accessible names include the selected option.
 - **Mobile:** fixed bottom nav must not be inside an element with `backdrop-filter`; layouts reserve `pb-24`.
 - **Images:** resize on the client; one photo per server action call; body limit 4 MB.
+- **Text on salesman screens:** never hard-code it — add a key to `src/lib/i18n/en.ts` and the Hindi line to `hi.ts` (see §15). E2E tests assert English (the default).
 
 ---
 
@@ -486,3 +490,37 @@ Migrations so far were backward-compatible (added tables or nullable/defaulted c
   - Blob (D-IMG-1)
   - P0 policy items (GST, payments, hardware)
 - **Security housekeeping:** production PINs have been shared in chat; change them in Staff & permissions.
+
+---
+
+## 15. Languages (Hindi / English)
+
+Plan v7, ADR-017. Round 1 covers the salesman screens (login, header/menus/tabs, Sell, Exchange, My sales, scanning, sale/exchange errors, tips, Guide page + everyone/selling lessons); owner/catalog screens and Help are still English.
+
+| Piece | Where | What it does |
+|---|---|---|
+| Dictionaries | `src/lib/i18n/en.ts`, `hi.ts` | Flat keys (`sell.record`). `en` is the source; `hi` is typed `Record<MessageKey, string>`, so a missing Hindi line fails `pnpm typecheck`. `{name}` placeholders; `.one` / `.other` plurals. |
+| Helpers | `src/lib/i18n/index.ts` | `LOCALES`, `isLocale`, `makeT(messages)`, `fill`, `plural`, `tEnglish` |
+| Which language | `src/server/i18n.ts` → `getLocale()` (React `cache`) | `staff.language` of the logged-in person → cookie `maa-lang` (this phone) → `en` |
+| Server components / actions | `await getT()` | e.g. My sales, login page, Guide, header; `errorText(domainError, t)` for errors |
+| Client components | `useT()` / `useLocale()` from `src/features/i18n/i18n-provider.tsx` | `LocaleRoot` in the root layout (inside one `<Suspense>`) passes the person's dictionary and wraps pages in `<div lang>` |
+| Switching | `LanguageSwitch` (header + login page) → `setLanguageAction` (`src/server/actions/i18n.ts`) | Saves `staff.language` when logged in and always the cookie; then `router.refresh()` re-renders in place |
+| Server errors | `DomainError(message, { key, vars })` (`services/errors.ts`) | Sale/exchange errors carry keys; `pos.ts` `run()` and `loginAction` translate. The English message remains for logs and untranslated screens. |
+| Guide lessons | `src/features/guide/lessons.hi.tsx` | Hindi versions by lesson id; lessons without one show in English with a note |
+
+**Add a sentence:** add the key + English to `en.ts`, the Hindi to `hi.ts`, use `t('key')`. The unit test `src/lib/i18n/i18n.test.ts` checks every key, that placeholders match, and that Hindi lines are in Devanagari.
+**Add a language:** add its code to `LOCALES`, a dictionary file typed `Messages`, and its entry in `MESSAGES`; give `LanguageSwitch` a picker instead of a toggle.
+**Not translated (by design):** shop data — product names, sizes, colours, brands, staff names, SKUs, barcodes; money stays `₹1,299.00`; dates use the Indian English format.
+
+## 16. Scan and sale feedback (sound, vibration, animation)
+
+| Piece | Where | Behaviour |
+|---|---|---|
+| Sounds | `src/features/feedback/sounds.ts` | Web Audio API tones (no audio files): `feedback('scan')` = short 1568 Hz "ting" + 35 ms vibration; `'done'` = rising C6→G6 chime + vibration pattern; `'error'` = two low triangle-wave buzzes + longer vibration. Silent no-op where audio/vibration isn't available. |
+| Setting | `soundEnabled()` / `setSoundEnabled()` — `localStorage` `maa-sound`, default on | `SoundToggle` (🔊/🔇) in the header; also unlocks audio on the first tap/key (phones block sound until a gesture). The camera button unlocks it too, because camera scans aren't a gesture. |
+| Good scan | `ScanInput` prop `result={{ kind: 'ok', id }}` → `ScanTick` | Green tick pops with a ripple at the end of the text box; the item card rises in (`fb-card`). `data-last-scan="ok"` for tests. |
+| Failed scan | `result={{ kind: 'error', id }}` | The box shakes and flashes red via the Web Animations API (keeps the text box focused); buzz. |
+| Sale / exchange done | `DoneOverlay` (`effects.tsx`) | Card with a self-drawing tick, title, amount, detail; closes after 1.6 s, on a tap, or on the next key press (scanner). Not `role=status` (the page's own message keeps that role). |
+| Reduced motion | `feedback.css` media query; JS checks `prefers-reduced-motion` | No pops, ripples or shakes; the tick and card just appear, the box only flashes. |
+| Used on | Sell (`pos-screen.tsx`), Exchange (`exchange-screen.tsx`), More of existing items (`restock-form.tsx`) | |
+
