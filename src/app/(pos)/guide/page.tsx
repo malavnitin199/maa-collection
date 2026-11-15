@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { card, link, muted, secondaryButton } from '@/components/ui/styles';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { GuideProgress, LessonDone, LessonTick } from '@/features/guide/progress';
+import { PracticeSale } from '@/features/guide/practice-sale';
+import { HearButton, LessonVoice, ListenAll } from '@/features/guide/voice-player';
 import { AUDIENCES, LESSONS, type Lesson } from '@/features/guide/lessons';
 import { HI_LESSONS } from '@/features/guide/lessons.hi';
 import { inStoreEan13 } from '@/features/scanning/ean13';
@@ -26,9 +28,9 @@ function Steps({ items }: { items: React.ReactNode[] }) {
   return (
     <ol className="flex flex-col gap-2">
       {items.map((item, i) => (
-        <li key={i} className="flex gap-3">
+        <li key={i} data-voice className="flex gap-3">
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">{i + 1}</span>
-          <span>{item}</span>
+          <span data-voice-text>{item}</span>
         </li>
       ))}
     </ol>
@@ -41,14 +43,17 @@ function TagAnatomy({ t }: { t: T }) {
       <HangTag product={SAMPLE_TAG.product} sizes={SAMPLE_TAG.sizes} qrValue="Sample tag – Maa Collection guide" priceCode="CKE" />
       <ol className="flex flex-col gap-2" aria-label={t('guide.partsLabel')}>
         {TAG_PARTS.map(([title, text], i) => (
-          <li key={title} className="flex gap-3">
+          <li key={title} data-voice className="flex gap-3">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
               {i + 1}
             </span>
-            <span>
-              <strong>{t(title)}</strong>
-              <span className={`block ${muted}`}>{t(text)}</span>
+            <span className="flex-1">
+              <strong data-voice-text>{t(title)}</strong>
+              <span data-voice-text className={`block ${muted}`}>
+                {t(text)}
+              </span>
             </span>
+            <HearButton text={`${t(title)}. ${t(text)}`} label={t('guide.hearPart', { part: t(title) })} />
           </li>
         ))}
       </ol>
@@ -80,16 +85,19 @@ function Routine({ t }: { t: T }) {
 function LessonCard({ lesson, number, t, englishOnly }: { lesson: Lesson; number: number; t: T; englishOnly: boolean }) {
   return (
     <section id={lesson.id} aria-labelledby={`${lesson.id}-title`} className={`${card} flex scroll-mt-20 flex-col gap-4`}>
-      <div className="flex flex-col gap-1">
+      <div data-voice className="flex flex-col gap-1">
         <p className={`text-xs font-medium tracking-wide uppercase ${muted}`}>
           {t('guide.lesson', { n: number, min: lesson.minutes })}
         </p>
-        <h3 id={`${lesson.id}-title`} className="text-lg font-semibold">
+        <h3 id={`${lesson.id}-title`} data-voice-text className="text-lg font-semibold">
           {lesson.title}
         </h3>
-        <p className={`text-sm ${muted}`}>{lesson.intro}</p>
+        <p data-voice-text className={`text-sm ${muted}`}>
+          {lesson.intro}
+        </p>
         {englishOnly && <p className="text-xs text-amber-700 dark:text-amber-400">{t('guide.englishOnly')}</p>}
       </div>
+      <LessonVoice id={lesson.id} title={lesson.title} />
       {lesson.extra === 'tag-anatomy' ? (
         <TagAnatomy t={t} />
       ) : (
@@ -101,7 +109,12 @@ function LessonCard({ lesson, number, t, englishOnly }: { lesson: Lesson; number
           </div>
         </div>
       )}
-      {lesson.tip && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">💡 {lesson.tip}</p>}
+      {lesson.tip && (
+        <p data-voice className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          💡 <span data-voice-text>{lesson.tip}</span>
+        </p>
+      )}
+      {lesson.extra === 'practice-sale' && <PracticeSale />}
       <div className="flex flex-wrap items-center gap-2">
         {lesson.open?.map((o) => (
           <Link key={o.href} href={o.href} className={secondaryButton}>
@@ -127,6 +140,7 @@ export default async function GuidePage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">{t('guide.title')}</h1>
         <p className={`text-sm ${muted}`}>{t('guide.intro', { n: lessons.length })}</p>
+        <p className="text-sm font-medium text-brand-800 dark:text-brand-200">{t('guide.listenHint')}</p>
         <GuideProgress ids={lessons.map((l) => l.id)} />
       </div>
 
@@ -152,9 +166,12 @@ export default async function GuidePage() {
 
       {AUDIENCES.map((a) => (
         <div key={a.id} id={`for-${a.id}`} className="flex scroll-mt-20 flex-col gap-4">
-          <h2 className="text-xl font-semibold">
-            {audience(a.id)} <span className={`text-sm font-normal ${muted}`}>· {who(a.id)}</span>
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-xl font-semibold">
+              {audience(a.id)} <span className={`text-sm font-normal ${muted}`}>· {who(a.id)}</span>
+            </h2>
+            <ListenAll ids={lessons.filter((l) => l.audience === a.id).map((l) => l.id)} label={audience(a.id)} />
+          </div>
           {lessons.filter((l) => l.audience === a.id).map((lesson) => (
             <LessonCard key={lesson.id} lesson={lesson} number={++number} t={t} englishOnly={englishOnly(lesson.id)} />
           ))}

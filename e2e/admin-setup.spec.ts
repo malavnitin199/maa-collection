@@ -601,7 +601,7 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   await expect(page.getByRole('heading', { name: 'Log in and find your way' })).toBeVisible();
   // Every lesson is listed in the index and present on the page.
   const index = page.getByRole('navigation', { name: 'Guide lessons' });
-  for (const title of ['Sell an item', 'Read a tag', 'New stock: one design in sizes × colours', 'Managing your inventory', 'Open an item from its QR code']) {
+  for (const title of ['Sell an item', 'Colours and day/night', 'Read a tag', 'New stock: one design in sizes × colours', 'Managing your inventory', 'Open an item from its QR code']) {
     await expect(index.getByRole('link', { name: title })).toBeVisible();
     await expect(page.getByRole('heading', { name: title, level: 3 })).toBeVisible();
   }
@@ -609,9 +609,9 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   await expect(page.locator('#tag').getByTestId('hang-tag')).toBeVisible();
   await expect(page.getByRole('list', { name: 'Parts of a tag' }).getByRole('listitem')).toHaveCount(6);
   // Ticking a lesson is remembered on this phone.
-  await expect(page.getByTestId('guide-progress')).toContainText('0 of 14 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('0 of 15 learned');
   await page.getByRole('button', { name: 'Mark as learned: Sell an item' }).click();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 14 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 15 learned');
   await page.reload();
   await expect(page.getByRole('button', { name: 'Learned: Sell an item' })).toHaveAttribute('aria-pressed', 'true');
   // Quick help & fixes is still there.
@@ -717,4 +717,44 @@ test('owner reports and CSV exports; salesmen cannot download them', async ({ pa
   expect((await page.request.get('/admin/export/stock')).status()).toBe(403);
   await page.goto('/admin/reports');
   await expect(page).toHaveURL(/\/pos$/);
+});
+
+test('after tagging an old item, Edit fixes it in place: same barcode, no new item, pieces unchanged', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/stock/old');
+  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Kurta (KU)' });
+  await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
+  await page.getByRole('button', { name: 'M', exact: true }).click();
+  await page.getByLabel('Colour').fill('White');
+  await page.getByLabel('MRP (₹)').fill('999');
+  await page.getByLabel('Pieces counted').fill('2');
+  await page.getByRole('button', { name: 'Save and get barcode' }).click();
+  const status = page.getByRole('status');
+  await expect(status).toContainText(`Saved Chikan Kurta ${run}`);
+  const barcode = (await status.innerText()).match(/barcode (\d{13})/)?.[1];
+  expect(barcode).toMatch(/^200/);
+
+  // Edit: the same form comes back filled in, without photos, tag scan or piece count.
+  await page.getByRole('button', { name: 'Edit this item' }).click();
+  await expect(page.getByText(`Editing Chikan Kurta ${run} · barcode ${barcode}`)).toBeVisible();
+  await expect(page.getByLabel('Product name')).toHaveValue(`Chikan Kurta ${run}`);
+  await expect(page.getByLabel('Pieces counted')).toHaveCount(0);
+  await expect(page.getByLabel('Choose photos')).toHaveCount(0);
+  await page.getByLabel('Product name').fill(`Chikan Kurta Long ${run}`);
+  await page.getByRole('button', { name: 'L', exact: true }).click();
+  await page.getByLabel('MRP (₹)').fill('1099');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+
+  await expect(page.getByRole('status')).toContainText('Changes saved.');
+  const tag = page.getByTestId('hang-tag');
+  await expect(tag).toContainText(`Chikan Kurta Long ${run}`);
+  await expect(tag.getByRole('img', { name: new RegExp(`^Barcode ${barcode}`) })).toBeVisible();
+
+  // Still one item with that barcode, now size L, MRP 1,099, 2 pieces.
+  await page.getByRole('link', { name: /Open item/ }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(`Chikan Kurta Long ${run}`);
+  await expect(page.getByText(barcode!).first()).toBeVisible();
+  await page.goto(`/admin/products?q=${run}`);
+  await expect(page.getByText(`Chikan Kurta Long ${run}`)).toHaveCount(1);
+  await expect(page.getByText(`Chikan Kurta ${run}`, { exact: true })).toHaveCount(0);
 });

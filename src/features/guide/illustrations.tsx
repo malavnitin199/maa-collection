@@ -4,6 +4,8 @@
  * next to it, so they are hidden from screen readers.
  */
 
+import { THEME_SWATCH, THEMES } from '@/features/appearance/appearance';
+
 const frame = 'h-auto w-full max-w-[280px] text-zinc-800 dark:text-zinc-200';
 const paper = 'fill-white dark:fill-zinc-900';
 const soft = 'fill-zinc-100 dark:fill-zinc-800';
@@ -226,18 +228,62 @@ export function ReportArt() {
 export function LoginArt() {
   return (
     <Svg h={140}>
-      <rect x="85" y="8" width="110" height="124" rx="14" className={`${paper} ${line}`} strokeWidth="2" />
-      {['Vishal', 'Nitin'].map((n, i) => (
+      <rect x="85" y="4" width="110" height="132" rx="14" className={`${paper} ${line}`} strokeWidth="2" />
+      {/* Name circles: the first one is chosen (zari ring). */}
+      {['V', 'N', 'P'].map((n, i) => (
         <g key={n}>
-          <rect x="100" y={24 + i * 26} width="80" height="20" rx="10" className={i === 0 ? green : soft} />
-          <text x="140" y={38 + i * 26} textAnchor="middle" className={`text-[11px] ${i === 0 ? 'fill-white font-semibold' : 'fill-current'}`}>
+          <circle cx={112 + i * 28} cy="24" r="10" className={i === 0 ? green : 'fill-brand-800/70'} />
+          {i === 0 && <circle cx="112" cy="24" r="13" className="stroke-zari" strokeWidth="2" />}
+          <text x={112 + i * 28} y="28" textAnchor="middle" className="fill-white text-[10px] font-semibold">
             {n}
           </text>
         </g>
       ))}
+      {/* PIN dots fill in as keys are pressed. */}
       {[0, 1, 2, 3].map((i) => (
-        <circle key={i} cx={113 + i * 18} cy="98" r="6" className="g-pop fill-current" style={{ '--d': `${i * 0.25}s` } as React.CSSProperties} />
+        <circle key={i} cx={122 + i * 12} cy="50" r="3.5" className="g-pop fill-current" style={{ '--d': `${i * 0.35}s` } as React.CSSProperties} />
       ))}
+      {/* Number keys. */}
+      {Array.from({ length: 12 }, (_, k) => (
+        <rect
+          key={k}
+          x={103 + (k % 3) * 25}
+          y={62 + Math.floor(k / 3) * 17}
+          width="21"
+          height="13"
+          rx="4"
+          className={k === 9 ? 'fill-none' : `${soft} g-blink`}
+          style={{ '--d': `${(k % 4) * 0.35}s` } as React.CSSProperties}
+        />
+      ))}
+    </Svg>
+  );
+}
+
+/** Colours and day/night: the five dye swatches (one ticked) and the day/night switch. */
+export function ThemeArt() {
+  return (
+    <Svg h={140}>
+      {THEMES.map((name, i) => {
+        const cx = 40 + i * 50;
+        return (
+          <g key={name}>
+            <clipPath id={`g-swatch-${name}`}>
+              <circle cx={cx} cy="46" r="17" />
+            </clipPath>
+            <g clipPath={`url(#g-swatch-${name})`}>
+              <rect x={cx - 17} y="29" width="34" height="34" style={{ fill: THEME_SWATCH[name].main }} />
+              <rect x={cx - 17} y="54" width="34" height="9" style={{ fill: THEME_SWATCH[name].accent }} />
+            </g>
+            {i === 0 && <path d={`M${cx - 6} 46l4 4 8-9`} className="g-pop stroke-white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+          </g>
+        );
+      })}
+      {/* Day / night switch: the knob slides from the sun to the moon. */}
+      <rect x="95" y="90" width="90" height="34" rx="17" className={`${soft} ${line}`} strokeWidth="1.5" />
+      <circle cx="112" cy="107" r="5" className="stroke-current" strokeWidth="2" />
+      <path d="M170 101a7 7 0 1 0 5 10a6 6 0 0 1-5-10Z" className="fill-current" />
+      <circle cx="112" cy="107" r="12" className="g-slide fill-brand-600 opacity-60" />
     </Svg>
   );
 }

@@ -11,6 +11,7 @@ import {
   ScanArt,
   StockFlowArt,
   TeamArt,
+  ThemeArt,
 } from './illustrations';
 
 export type Audience = 'everyone' | 'sellers' | 'stock' | 'owner';
@@ -28,7 +29,7 @@ export type Lesson = {
   open?: { href: string; label: string }[];
   tip?: React.ReactNode;
   /** Extra content under the steps (tables, the tag picture). */
-  extra?: 'tag-anatomy' | 'routine';
+  extra?: 'tag-anatomy' | 'routine' | 'practice-sale';
 };
 
 export const AUDIENCES: { id: Audience; label: string; who: string }[] = [
@@ -44,17 +45,32 @@ export const LESSONS: Lesson[] = [
     title: 'Log in and find your way',
     audience: 'everyone',
     minutes: 2,
-    intro: 'Your name, your PIN, and the tabs at the bottom of the screen.',
+    intro: 'Your name, your PIN, and the bar at the bottom of the screen.',
     art: <LoginArt />,
     steps: [
-      <>Open the app and tap <strong>your name</strong>, then type your <strong>PIN</strong> (the owner gives it to you).</>,
+      <>Open the app, tap <strong>your name circle</strong>, enter your <strong>PIN</strong> on the number keys (the owner gives it to you) and tap <strong>Log in</strong>.</>,
       <>Put it on your home screen: Chrome ⋮ → <em>Add to Home screen</em>; iPhone Share → <em>Add to Home Screen</em>. It then opens like an app.</>,
-      <>Use the tabs at the bottom: <strong>Sell</strong>, <strong>Exchange</strong>, <strong>My sales</strong> — plus <strong>Catalog</strong> or <strong>+ Stock</strong> if the owner gave you those rights.</>,
-      <>Switch language with the <strong>हिन्दी / English</strong> button at the top (your choice is remembered), and turn scan sounds on or off with 🔊.</>,
-      <>Finished on a shared phone? Tap <strong>Log out</strong> at the top.</>,
+      <>The bar at the bottom: the big round <strong>Sell</strong> button in the middle opens the counter from anywhere; next to it <strong>Exchange</strong> and <strong>My sales</strong> — or <strong>Products</strong>, <strong>+ Stock</strong> and <strong>More</strong> if the owner gave you those rights.</>,
+      <>At the top: <strong>हिन्दी / English</strong> switches the language (remembered for you), 🔊 turns scan sounds on or off, and the palette button changes the colours.</>,
+      <>Finished on a shared phone? Tap the <strong>log out</strong> button (arrow, top right).</>,
     ],
     open: [{ href: '/pos', label: 'Open Sell' }],
     tip: <>Can&apos;t log in? The owner can set a new PIN in Staff &amp; permissions.</>,
+  },
+  {
+    id: 'look',
+    title: 'Colours and day/night',
+    audience: 'everyone',
+    minutes: 1,
+    intro: 'Make the app yours: five shop colours, and a dark screen for the evening.',
+    art: <ThemeArt />,
+    steps: [
+      <>Tap the <strong>palette</strong> button at the top (it is on the login page too).</>,
+      <>Pick a colour: <strong>Peacock</strong> (teal), <strong>Marigold</strong> (saffron), <strong>Rani</strong> (pink), <strong>Neel</strong> (indigo) or <strong>Mehendi</strong> (henna green).</>,
+      <>Pick <strong>Day</strong>, <strong>Night</strong> (easier on the eyes in the evening) or <strong>Same as phone</strong>.</>,
+      <>It changes at once and stays on <strong>this phone</strong>. Printed tags never change colour.</>,
+    ],
+    tip: <>Each phone can have its own colour, so the counter phone can look different from the stockroom phone.</>,
   },
   {
     id: 'tag',
@@ -74,7 +90,7 @@ export const LESSONS: Lesson[] = [
     intro: 'Scan, check, agree the price, record. Stock goes down on every phone at once.',
     art: <ScanArt />,
     steps: [
-      <>Tab <strong>Sell</strong> → tap <strong>Scan with camera</strong> (or use the USB/Bluetooth scanner, or type the number under the barcode). A good scan shows a green ✓ with a &ldquo;ting&rdquo;.</>,
+      <>Tap the round <strong>Sell</strong> button (middle of the bottom bar) → <strong>Scan with camera</strong> (or use the USB/Bluetooth scanner, or type the number under the barcode). A good scan shows a green ✓ with a &ldquo;ting&rdquo;.</>,
       <>Check the <strong>photo, size and colour</strong> match the piece in your hand.</>,
       <>Tap <strong>Sell this item</strong> → quantity → the <strong>price you agreed</strong> with the customer (never above MRP).</>,
       <>Selling for a colleague? Pick them in <strong>Credit sale to</strong>.</>,
@@ -85,6 +101,7 @@ export const LESSONS: Lesson[] = [
       { href: '/pos/my-sales', label: 'My sales' },
     ],
     tip: <>Camera won&apos;t read it? Hold the tag flat, 15–20 cm away, in good light — or type the number.</>,
+    extra: 'practice-sale',
   },
   {
     id: 'qr',
@@ -165,6 +182,7 @@ export const LESSONS: Lesson[] = [
       <><strong>📷 Take photo</strong> (1–4): good light, plain background, whole item.</>,
       <>Category, name, size, colour, <strong>MRP</strong> and <strong>pieces counted</strong>.</>,
       <><strong>Save and get barcode</strong> → <strong>Next item →</strong> (category and company stay filled in).</>,
+      <>Typed something wrong? Tap <strong>✎ Edit this item</strong>, fix it and <strong>Save changes</strong> — same barcode, so the tag stays valid.</>,
       <>At the end: <strong>print today&apos;s labels</strong>.</>,
     ],
     open: [{ href: '/admin/stock/old', label: 'Tag old stock' }],

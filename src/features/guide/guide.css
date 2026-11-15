@@ -37,6 +37,9 @@
     animation: g-drop 3s ease-in infinite;
     animation-delay: var(--d, 0s);
   }
+  .g-slide {
+    animation: g-slide 3.2s ease-in-out infinite;
+  }
   .g-frame {
     opacity: 0;
     animation: g-frame 3.6s steps(1) infinite;
@@ -169,4 +172,36 @@
   .g-frame:not(.g-final) {
     display: none;
   }
+}
+
+/* Read aloud (plan v9): the step being read glows in the theme colour. */
+.voice-now {
+  border-radius: 0.9rem;
+  background: color-mix(in oklab, var(--b-100) 75%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--b-100) 75%, transparent);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+[data-mode="dark"] .voice-now {
+  background: color-mix(in oklab, var(--b-900) 60%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--b-900) 60%, transparent);
+}
+/* The little sound bars next to the controls move while the voice speaks. */
+.voice-wave > span {
+  height: 30%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .voice-wave[data-on="true"] > span {
+    animation: voice-bar 0.9s ease-in-out infinite;
+    animation-delay: var(--d, 0s);
+  }
+}
+@keyframes voice-bar {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}
+
+@keyframes g-slide {
+  0%, 35% { transform: translateX(0); }
+  50%, 85% { transform: translateX(56px); }
+  100% { transform: translateX(0); }
 }
