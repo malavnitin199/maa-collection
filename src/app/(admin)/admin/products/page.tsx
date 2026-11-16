@@ -154,7 +154,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
       </p>
 
       {show === 'combined' ? (
-        <ul data-testid="design-list" className="grid gap-3 sm:grid-cols-2">
+        <ul data-testid="design-list" className="rise-in grid gap-3 sm:grid-cols-2">
           {designs.map((d) => (
             <li key={d.key}>
               <DesignCard

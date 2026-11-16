@@ -42,7 +42,7 @@ const OPTIONS: { href: string; Icon: (p: { className?: string }) => React.ReactN
 async function Options() {
   const [me, t] = await Promise.all([requireAnyPermission(['catalog', 'stock']), getT()]);
   return (
-    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <ul className="rise-in grid grid-cols-1 gap-3 sm:grid-cols-2">
       {OPTIONS.filter((option) => can(me, option.needs)).map((option) => (
         <li key={option.href}>
           <TagTile href={option.href} primary={option.primary} icon={<option.Icon />} title={t(option.title)} hint={t(option.hint)} />

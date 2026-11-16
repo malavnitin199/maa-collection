@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { AllDoneArt } from '@/components/ui/art';
 import { card, errorBox, input, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
 import { formatDate, type MessageKey } from '@/lib/i18n';
@@ -79,9 +80,12 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
         </p>
       )}
       {total === 0 ? (
-        <p data-testid="approvals-empty" className={`text-sm ${muted}`}>
-          {t('appr.none')}
-        </p>
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <AllDoneArt className="art-tap h-24 w-24 text-brand-600 dark:text-brand-300" />
+          <p data-testid="approvals-empty" className={`text-sm ${muted}`}>
+            {t('appr.none')}
+          </p>
+        </div>
       ) : (
         total > 1 && (
           <button type="button" data-testid="approve-all" disabled={busy} onClick={() => approveMany()} className={`${secondaryButton} w-fit`}>

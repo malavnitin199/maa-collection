@@ -4,6 +4,7 @@ import { getCurrentStaff } from '@/server/auth';
 import { requestDb } from '@/server/request-db';
 import { LoginForm } from '@/features/auth/login-form';
 import { LanguageSwitch } from '@/features/i18n/language-switch';
+import { ScanTagArt } from '@/components/ui/art';
 import { AppearanceMenu } from '@/features/appearance/appearance-menu';
 import { getT } from '@/server/i18n';
 import { STORE_ID } from '@/lib/app-config';
@@ -23,11 +24,15 @@ export default async function LoginPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col">
       {/* The shop's band: its dye, its name in the display face, a zari edge. */}
       <header className="relative bg-brand-800 px-6 pt-4 pb-12 text-white dark:bg-brand-950 sm:mt-6 sm:rounded-t-3xl">
-        <div className="flex items-center justify-end gap-2">
-          <AppearanceMenu />
-          <LanguageSwitch onBand />
+        <div className="flex items-start justify-between gap-2">
+          {/* A tag hanging from the band, in the theme's zari colour; it swings, and nudges when tapped. */}
+          <ScanTagArt className="art-tap -mt-4 h-16 w-16 text-zari" />
+          <div className="flex items-center gap-1.5">
+            <AppearanceMenu />
+            <LanguageSwitch onBand />
+          </div>
         </div>
-        <h1 className="mt-3 font-display text-[2.4rem] leading-none text-white">Maa Collection</h1>
+        <h1 className="mt-1 font-display text-[2.4rem] leading-none text-white">Maa Collection</h1>
         <p className="mt-2 text-sm text-white/80">
           {t('login.subtitle')}{' '}
           <a href="/guide#start" className="font-semibold text-white underline decoration-zari decoration-2 underline-offset-4">

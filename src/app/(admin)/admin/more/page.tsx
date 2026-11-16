@@ -62,7 +62,7 @@ async function Menu() {
         return (
           <section key={group.title} className="flex flex-col gap-2">
             <h2 className={sectionTitle}>{t(group.title)}</h2>
-            <ul className="divide-y divide-zinc-100 overflow-hidden rounded-3xl border border-zinc-200/80 bg-surface shadow-sm shadow-brand-900/[0.05] dark:divide-zinc-800 dark:border-zinc-800">
+            <ul className="rise-in divide-y divide-zinc-100 overflow-hidden rounded-3xl border border-zinc-200/80 bg-surface shadow-sm shadow-brand-900/[0.05] dark:divide-zinc-800 dark:border-zinc-800">
               {links.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="flex items-center gap-3 px-4 py-3 transition active:bg-brand-50 dark:active:bg-zinc-800">
