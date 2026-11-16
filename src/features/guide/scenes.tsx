@@ -207,7 +207,7 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
           <div className={`${row} w-1/2`} />
           <div className="mt-auto rounded-2xl bg-surface p-2.5 shadow-lg ring-1 ring-black/5 dark:ring-white/10">
             <div className="grid grid-cols-5 gap-1.5">
-              {THEMES.map((name, i) => (
+              {THEMES.slice(0, 5).map((name, i) => (
                 <span key={name} className={`relative block aspect-square overflow-hidden rounded-full ${i === 2 ? 'st-target' : ''}`} style={{ background: THEME_SWATCH[name].main }}>
                   <span className="absolute inset-x-0 bottom-0 h-1.5" style={{ background: THEME_SWATCH[name].accent }} />
                   {i === 2 && <span className="st-pop absolute inset-0 flex items-center justify-center text-xs font-bold text-white">✓</span>}

@@ -3,14 +3,15 @@
  * localStorage; applied as data-theme / data-mode on <html> before the first
  * paint by APPEARANCE_SCRIPT, so there is no flash of the wrong colours.
  */
-export const THEMES = ['peacock', 'marigold', 'rani', 'neel', 'mehendi'] as const;
+// Bahi (plan v16) is last in the picker but the default for a phone that never picked a theme.
+export const THEMES = ['peacock', 'marigold', 'rani', 'neel', 'mehendi', 'bahi'] as const;
 export type Theme = (typeof THEMES)[number];
 export const MODES = ['light', 'dark', 'system'] as const;
 export type Mode = (typeof MODES)[number];
 
 export const THEME_KEY = 'maa-theme';
 export const MODE_KEY = 'maa-mode';
-export const DEFAULT_THEME: Theme = 'peacock';
+export const DEFAULT_THEME: Theme = 'bahi';
 
 /** Swatch colours for the picker (main colour + zari accent), same as globals.css. */
 export const THEME_SWATCH: Record<Theme, { main: string; accent: string }> = {
@@ -19,6 +20,7 @@ export const THEME_SWATCH: Record<Theme, { main: string; accent: string }> = {
   rani: { main: '#be185d', accent: '#e0a800' },
   neel: { main: '#4f46e5', accent: '#eab308' },
   mehendi: { main: '#5c6c1d', accent: '#c2562f' },
+  bahi: { main: '#4c3cce', accent: '#db631a' },
 };
 
 export const isTheme = (v: unknown): v is Theme => typeof v === 'string' && (THEMES as readonly string[]).includes(v);

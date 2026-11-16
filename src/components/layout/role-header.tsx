@@ -45,7 +45,7 @@ async function HeaderContent() {
         <div className="flex min-w-0 flex-col">
           <Link
             href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'}
-            className="font-display text-[1.2rem] leading-none whitespace-nowrap text-white min-[390px]:text-[1.35rem]"
+            className="header-brand truncate font-display text-[1.2rem] leading-tight whitespace-nowrap text-white min-[390px]:text-[1.35rem]"
           >
             Maa Collection
           </Link>

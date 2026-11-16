@@ -63,6 +63,15 @@
   --zari: #c2562f;
 }
 
+/* Bahi / बही — a clean billing-app look (plan v16, inspired by Indian billing apps): indigo
+   with an orange accent, a light grey page with white cards, Poppins, and a plain line
+   in place of the zari strip. The default theme; the five dye themes stay one tap away. */
+[data-theme="bahi"] {
+  --b-50: #f1f0fd; --b-100: #e4e1fb; --b-200: #cbc5f6; --b-300: #a99fef; --b-400: #8676e4;
+  --b-500: #6553da; --b-600: #4c3cce; --b-700: #3d2fb0; --b-800: #33298c; --b-900: #241d63; --b-950: #15113b;
+  --zari: #db631a;
+}
+
 /* Surfaces: the page wears a whisper of the theme; cards stay white (day) or deep (night). */
 :root {
   --background: color-mix(in oklab, var(--b-50) 60%, #ffffff);
@@ -79,6 +88,14 @@
   --surface: #18181b;
   --foreground: #f4f4f5;
   color-scheme: dark;
+}
+/* Bahi by day: a neutral light grey page and near-black text, like a billing app. */
+[data-theme="bahi"]:not([data-mode="dark"]) {
+  --background: #f5f6f8;
+  --foreground: #292d35;
+}
+[data-mode="dark"][data-theme="bahi"] {
+  --zari: #f08a4b;
 }
 
 /* Base styles sit in the base layer so utility classes (text-white, …) win. */
@@ -118,6 +135,30 @@
   background-color: var(--zari);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10'%3E%3Crect width='20' height='1.2'/%3E%3Crect y='8.8' width='20' height='1.2'/%3E%3Cpath d='M10 2.4 13 5 10 7.6 7 5Z'/%3E%3Ccircle cx='0' cy='5' r='1.1'/%3E%3Ccircle cx='20' cy='5' r='1.1'/%3E%3C/svg%3E") repeat-x left center / 20px 10px;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10'%3E%3Crect width='20' height='1.2'/%3E%3Crect y='8.8' width='20' height='1.2'/%3E%3Cpath d='M10 2.4 13 5 10 7.6 7 5Z'/%3E%3Ccircle cx='0' cy='5' r='1.1'/%3E%3Ccircle cx='20' cy='5' r='1.1'/%3E%3C/svg%3E") repeat-x left center / 20px 10px;
+}
+
+/* Bahi: Poppins for text and headings (no print display face), and a plain accent line. */
+[data-theme="bahi"] body {
+  font-family: var(--font-poppins), var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
+}
+[data-theme="bahi"] h1,
+[data-theme="bahi"] .font-display {
+  font-family: var(--font-poppins), var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+/* Poppins is wider than the print face: a smaller shop name so the header's symbols fit. */
+[data-theme="bahi"] .header-brand {
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+@media (min-width: 390px) {
+  [data-theme="bahi"] .header-brand { font-size: 1.12rem; }
+}
+[data-theme="bahi"] .zari {
+  height: 3px;
+  -webkit-mask: none;
+  mask: none;
 }
 
 /* Hang-tag shape for the big action tiles: notched top corners and a punch hole. */

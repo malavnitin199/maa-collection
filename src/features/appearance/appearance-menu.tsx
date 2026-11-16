@@ -106,7 +106,7 @@ export function AppearanceMenu() {
               className="look-panel fixed inset-x-3 bottom-3 z-50 rounded-3xl pb-[calc(1rem+env(safe-area-inset-bottom))] sm:inset-x-auto sm:top-[var(--look-top)] sm:right-[var(--look-right)] sm:bottom-auto sm:w-72 sm:pb-4 border border-zinc-200 bg-surface p-4 text-zinc-900 shadow-2xl dark:border-zinc-700 dark:text-zinc-100"
             >
               <p className="text-xs font-bold tracking-[0.12em] text-zinc-500 uppercase dark:text-zinc-400">{t('look.theme')}</p>
-              <div role="radiogroup" aria-label={t('look.theme')} className="mt-2 grid grid-cols-5 gap-2">
+              <div role="radiogroup" aria-label={t('look.theme')} className="mt-2 grid grid-cols-3 gap-x-2 gap-y-3">
                 {THEMES.map((name) => {
                   const swatch = THEME_SWATCH[name];
                   const selected = name === theme;

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { LocaleRoot } from "@/features/i18n/locale-root";
 import { BRAND_GREEN } from "@/lib/app-icon";
-import { Geist_Mono, Mukta, Rozha_One } from "next/font/google";
+import { Geist_Mono, Mukta, Poppins, Rozha_One } from "next/font/google";
 import { AppearanceSync } from "@/features/appearance/appearance-sync";
 import { APPEARANCE_SCRIPT } from "@/features/appearance/appearance";
 import "./globals.css";
@@ -17,6 +17,13 @@ const mukta = Mukta({
 const rozha = Rozha_One({
   variable: "--font-rozha",
   weight: "400",
+  subsets: ["latin", "devanagari"],
+});
+
+// Bahi theme (plan v16): a clean, round business sans, Latin + Devanagari.
+const poppins = Poppins({
+  variable: "--font-poppins",
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin", "devanagari"],
 });
 
@@ -38,10 +45,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       // Theme and day/night are set by the script below before the first paint (per phone).
-      data-theme="peacock"
+      data-theme="bahi"
       data-mode="light"
       suppressHydrationWarning
-      className={`${mukta.variable} ${rozha.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${mukta.variable} ${rozha.variable} ${poppins.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: APPEARANCE_SCRIPT }} />

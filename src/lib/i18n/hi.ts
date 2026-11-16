@@ -266,6 +266,7 @@ const base = {
   'theme.rani': 'रानी',
   'theme.neel': 'नील',
   'theme.mehendi': 'मेहंदी',
+  'theme.bahi': 'बही',
   'login.keypad': 'अंक बटन',
   'login.hello': 'नमस्ते {name}, अपना PIN डालें',
   'login.backspace': 'आखिरी अंक मिटाएँ',

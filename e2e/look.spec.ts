@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 test('theme and day/night apply at once and stay after a reload', async ({ page }) => {
   await page.goto('/login');
   const html = page.locator('html');
-  await expect(html).toHaveAttribute('data-theme', 'peacock');
+  await expect(html).toHaveAttribute('data-theme', 'bahi'); // default since plan v16
 
   await page.getByRole('button', { name: 'Theme and day/night' }).click();
   const panel = page.getByRole('dialog', { name: 'Look' });

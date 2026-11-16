@@ -278,6 +278,7 @@ const base = {
   'theme.rani': 'Rani',
   'theme.neel': 'Neel',
   'theme.mehendi': 'Mehendi',
+  'theme.bahi': 'Bahi',
   'login.keypad': 'Number keys',
   'login.hello': 'Hello {name}, enter your PIN',
   'login.backspace': 'Delete last digit',
