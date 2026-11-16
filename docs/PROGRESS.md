@@ -1,9 +1,9 @@
 # Development progress (living)
 
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 
 ## Current milestone
-v0.5.0 (plan v15): **cleaner UI** — header of round symbols only, small pictures and gentle motion, a counter card led by price / size / stock, a shorter Home.
+v0.6.0 (plan v16): **Bahi theme** — a clean billing-app look (indigo + orange, light grey, Poppins) as the default; owner testing.
 
 ## Task status
 - [x] P1-01: bootstrap Next.js project + quality baseline (DONE 2026-11-14)
@@ -14,6 +14,7 @@ v0.5.0 (plan v15): **cleaner UI** — header of round symbols only, small pictur
 - [x] Plan v13 All tags: grouped, filtered, grid or rows, print a group (DONE 2026-11-16; see below)
 - [x] Plan v14 combined view: one card per design on Products and All tags (DONE 2026-11-16; see below)
 - [x] Plan v15 cleaner UI: icon header, pictures, motion, counter card, shorter Home (DONE 2026-11-16; see below)
+- [x] Plan v16 Bahi theme (DONE 2026-11-17; owner feedback pending)
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -35,8 +36,22 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-16 | Plan v13 All tags | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except 2 known timing-dependent tests | 146 unit tests (9 new); build 36 routes; Playwright 71 passed, 1 skipped, 2 failed: `pos.spec.ts:59` camera popup and `guide-voice.spec.ts:46` — both fail the same way on the untouched `f0d5505` under load (see the v13 entry); the new All tags test passes at desktop + phone |
 | 2026-11-16 | Plan v14 combined view | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except known timing-dependent tests | 150 unit tests (5 new + 1 extended); Playwright 72 passed, 1 skipped, 3 failed: `pos.spec.ts:59`, `guide-voice.spec.ts:46` (known) and `pos.spec.ts:378` on phone (sell by hand + approvals: the scanned item card did not appear within 5 s; 3/8 then 0/8 on repeat with the same code; it visits no changed page). The new combined-view test passes at desktop + phone |
 | 2026-11-16 | Plan v15 cleaner UI | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e --workers=3` | PASS | 150 unit tests; Playwright **75 passed, 1 skipped (phone-only), 0 failed** with 3 workers. At default parallelism on the busy Mac (load 8–12) random tests timed out; the camera and Guide tests that used to flake now pass 16/16 and 24/24 on repeat |
+| 2026-11-17 | Plan v16 Bahi theme | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e --workers=3` | PASS | 150 unit tests; Playwright 75 passed, 1 skipped, 0 failed (2.0 min) |
 
-## Cleaner UI: icon header, pictures, gentle motion — v0.5.0 (2026-11-16, latest)
+## Bahi theme: a billing-app touch — v0.6.0 (2026-11-17, latest)
+Owner request: explore the Bill Book app and give our app one touch of its theme; deploy; the owner will test and give feedback. Taken as **myBillBook**: its public site's colours (indigo #4C3CCE, orange #DB631A, light grey #F6F7F7, white cards, borders #E0E2E7) and font (Poppins) were read; only the feel is borrowed (no logo / name / trade dress). Plan: `docs/PLAN_V16_BAHI_THEME.md`; ADR-026; reference §26.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | Sixth theme **Bahi / बही**: indigo scale on #4C3CCE (white on 600 ≈ 7.6 : 1), orange accent, light grey page, near-black text; night mode like the others | Done |
+| 2 | Poppins (Latin + Devanagari) for text, headings and big numbers in this theme; the zari strip becomes a plain 3 px orange line | Done |
+| 3 | **Default** for phones that never chose a theme; picker 3 × 2 with Bahi last; Guide picture keeps the five dye themes | Done |
+| 4 | Header name smaller in Bahi so the five symbols fit (measured: 24 px gap at 412 px, 30 px at 360 px) | Done |
+| 5 | Docs (plan, ADR-026, reference §26, user guide, context, backlog V2-11, CLAUDE.md); version **0.6.0** | Done |
+- No database change. Revert = `DEFAULT_THEME` back to `peacock`.
+- Verified: lint, typecheck, **150 unit tests**, build; Playwright `--workers=3`: **75 passed, 1 skipped, 0 failed**. Phone screenshots: login, Sell with an item, Products, the picker, Home by night; header at 360 px.
+
+## Cleaner UI: icon header, pictures, gentle motion — v0.5.0 (2026-11-16)
 Owner request: make the UI very clean, with animations, small pictures, interactive images and symbols; easier for salesmen and the admin; for the day / dark theme mode just an icon at the top; push with proper commits and deploy. Plan posted in chat, then built. Plan: `docs/PLAN_V15_UI_CLEANUP.md`; ADR-025; reference §25.
 
 | # | Task | Result |

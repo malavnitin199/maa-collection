@@ -658,3 +658,15 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Home | `dashboard/page.tsx` | `Title` (section title with a symbol), `StatTile icon`, `LOW_STOCK_SHOWN = 6` with a `<details>` *Show all N*, `ActivityList limit={6} more={…}`. |
 | Widgets | `src/features/reports/widgets.tsx` | `StatTile` takes `icon`; `ActivityList` takes `limit`, `more` (`href`, `label`) and `icon`. |
 | Test settings | `playwright.config.ts` (`E2E=1`), `next.config.ts` (`devIndicators` off when `E2E=1`), `guide-voice.spec.ts` (hides `nextjs-portal`), `pos.spec.ts` camera test (waits for a still layout) | On a busy Mac run `pnpm test:e2e --workers=3`. |
+
+## 26. Bahi theme — the default look (plan v16, ADR-026)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Theme list | `src/features/appearance/appearance.ts` | `THEMES = [peacock, marigold, rani, neel, mehendi, bahi]`; `DEFAULT_THEME = 'bahi'` (used by `APPEARANCE_SCRIPT` when a phone has no valid choice, and as the server snapshot); swatch `#4c3cce` / `#db631a`. |
+| Colours | `globals.css` `[data-theme="bahi"]` | `--b-50…950` indigo (600 = #4c3cce), `--zari` #db631a (night #f08a4b); by day `--background` #f5f6f8, `--foreground` #292d35. |
+| Type | `layout.tsx` (`Poppins`, `--font-poppins`, Latin + Devanagari), `globals.css` | `[data-theme="bahi"] body` and `h1, .font-display` use Poppins (headings 600). These rules are unlayered on purpose (they must beat the base layer and the `font-display` utility). |
+| Header name | `role-header.tsx` `.header-brand` (+ `truncate`) | Smaller in Bahi (1rem, 1.12rem from 390 px) so the five symbols fit. |
+| Zari | `globals.css` | `[data-theme="bahi"] .zari` = 3 px flat line (no mask). |
+| Picker | `appearance-menu.tsx` | 3 × 2 swatches. The Guide's picker picture shows `THEMES.slice(0, 5)`. |
+| Tests | `e2e/look.spec.ts` | Default `data-theme` is `bahi`. |

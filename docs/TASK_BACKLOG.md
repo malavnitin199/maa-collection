@@ -134,6 +134,7 @@
 - [x] **V2-08** Plan v13 (2026-11-16): **All tags** — every generated tag grouped by date / company / category / delivery, filters, Grid or sideways Rows, print one group; links from print pages and company pages. `docs/PLAN_V13_TAG_LIBRARY.md`, ADR-023.
 - [x] **V2-09** Plan v14 (2026-11-16): **combined view** — one card per design (same name, company, MRP) on Products and All tags with sizes / colours / pieces and a design QR; every item / tag one tap away; print one design. `docs/PLAN_V14_COMBINED_VIEW.md`, ADR-024.
 - [x] **V2-10** Plan v15 (2026-11-16): **cleaner UI** — header of round symbols only, pictures and gentle motion, counter card led by price / size / stock, shorter Home. `docs/PLAN_V15_UI_CLEANUP.md`, ADR-025.
+- [x] **V2-11** Plan v16 (2026-11-17): **Bahi theme** (billing-app look, default; dye themes still selectable) — owner feedback pending. `docs/PLAN_V16_BAHI_THEME.md`, ADR-026.
 
 ## Suggested next tasks
 

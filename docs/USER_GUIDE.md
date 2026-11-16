@@ -29,7 +29,7 @@ Live app: https://maa-collection-pi.vercel.app
 
 ## 1b. Colours and day/night
 
-- Tap the round **☀ / ☾** symbol (top right of any screen, also on the login page; its small dot shows your colour). Pick a colour: **Peacock** (teal, the default), **Marigold** (saffron), **Rani** (pink), **Neel** (indigo) or **Mehendi** (henna green). Then **Day**, **Night** (dark, easier on the eyes in the evening) or **Same as phone**.
+- Tap the round **☀ / ☾** symbol (top right of any screen, also on the login page; its small dot shows your colour). Pick a colour: **Bahi** (the default: a clean billing-app look in indigo and orange), **Peacock** (teal), **Marigold** (saffron), **Rani** (pink), **Neel** (indigo) or **Mehendi** (henna green). Then **Day**, **Night** (dark, easier on the eyes in the evening) or **Same as phone**.
 - It changes at once and is saved **on that phone** (each phone can have its own look). Printed tags never change colour.
 - Login: tap your **name circle**, then your PIN on the big number keys (⌫ deletes the last digit), then **Log in**.
 - The round **Sell** button in the middle of the bottom bar opens the counter from anywhere.
