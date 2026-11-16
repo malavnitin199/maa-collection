@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { IconPrinter } from '@/components/ui/icons';
 import { input, link, muted, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
+import { DesignCard } from '@/features/catalog/design-card';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { TagFilterForm } from '@/features/tag-library/filter-form';
 import { groupNote, groupTitle } from '@/features/tag-library/group-title';
 import { TagViews } from '@/features/tag-library/tag-views';
 import { STORE_ID } from '@/lib/app-config';
+import { groupDesigns } from '@/lib/design-groups';
 import type { MessageKey } from '@/lib/i18n';
 import { itemLink } from '@/lib/item-link';
 import {
@@ -31,6 +33,7 @@ import { getLocale, getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
 import { tagSizesFor } from '@/server/services/products';
+import { imageSrc, mainImages } from '@/server/services/images';
 import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
 import { listStaff } from '@/server/services/staff';
 import { listTagLibrary } from '@/server/services/tag-library';
@@ -85,7 +88,23 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
   const now = new Date();
   const grouped = groupTags(rows, p.group);
   const { groups, shown, total } = capGroups(grouped, p.limit);
-  const sizes = await tagSizesFor(db, STORE_ID, groups.flatMap((g) => g.shown));
+  const shownRows = groups.flatMap((g) => g.shown);
+  const [sizes, photos] = await Promise.all([tagSizesFor(db, STORE_ID, shownRows), mainImages(db, STORE_ID, shownRows.map((r) => r.id))]);
+  const photoOf = (id: string) => {
+    const image = photos.get(id);
+    return image ? imageSrc(image) : undefined;
+  };
+  const combined = p.show === 'designs';
+  const designCount = groupDesigns(rows).length;
+  /** One real hang tag: tap to open the item; pieces in stock under it. */
+  const tagCell = (item: (typeof shownRows)[number]) => (
+    <li key={item.id} className="tag-cell">
+      <Link href={`/admin/products/${item.id}`} aria-label={t('stk.lib.open', { name: `${item.name} · ${item.color} · ${item.size}` })} className="tag-open">
+        <HangTag product={item} sizes={sizes.get(item.id)} qrValue={itemLink(origin, item.barcode)} priceCode={labelPriceCode(settings, item.costPaise)} />
+      </Link>
+      <p className={`mt-1 text-center text-xs tabular-nums ${item.stock > 0 ? muted : 'text-red-600 dark:text-red-400'}`}>{t('stk.labels.pcs', { n: item.stock })}</p>
+    </li>
+  );
   const pieces = rows.reduce((n, r) => n + Math.max(r.stock, 0), 0);
   const filtered = hasTagFilters(p);
 
@@ -95,6 +114,7 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
       <TagFilterForm key={tagLibraryHref(p)} label={t('stk.lib.searchAria')}>
         {p.group !== 'date' && <input type="hidden" name="group" value={p.group} />}
         {p.when !== 'all' && <input type="hidden" name="when" value={p.when} />}
+        {p.show === 'tags' && <input type="hidden" name="show" value="tags" />}
         <div className="flex gap-2">
           <input
             type="search"
@@ -157,6 +177,13 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
           names={(g) => t(GROUP_LABEL[g])}
         />
         <ChipRow label={t('stk.lib.when')} values={TAG_WHEN} current={p.when} href={(when) => tagLibraryHref(p, { when })} names={(w) => t(WHEN_LABEL[w])} />
+        <ChipRow
+          label={t('cat.view.show')}
+          values={['designs', 'tags'] as const}
+          current={p.show}
+          href={(show) => tagLibraryHref(p, { show })}
+          names={(v) => t(v === 'designs' ? 'cat.view.combined' : 'stk.lib.view.tags')}
+        />
       </div>
 
       {rows.length === 0 ? (
@@ -180,7 +207,9 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
             labels={{ view: t('stk.lib.view'), grid: t('stk.lib.view.grid'), rows: t('stk.lib.view.rows'), swipeHint: t('stk.lib.swipeHint') }}
             summary={
               <span data-testid="tag-summary">
-                {t('stk.lib.summary', { tags: total, pcs: pieces, groups: grouped.length })}
+                {combined
+                  ? t('stk.lib.summaryDesigns', { designs: designCount, tags: total, pcs: pieces, groups: grouped.length })
+                  : t('stk.lib.summary', { tags: total, pcs: pieces, groups: grouped.length })}
                 {shown < total && (
                   <>
                     <br />
@@ -217,23 +246,27 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
                       {t('stk.lib.printGroup')}
                     </Link>
                   </div>
-                  <ul className="tag-row">
-                    {g.shown.map((item) => (
-                      <li key={item.id} className="tag-cell">
-                        <Link href={`/admin/products/${item.id}`} aria-label={t('stk.lib.open', { name: `${item.name} · ${item.color} · ${item.size}` })} className="tag-open">
-                          <HangTag
-                            product={item}
-                            sizes={sizes.get(item.id)}
-                            qrValue={itemLink(origin, item.barcode)}
-                            priceCode={labelPriceCode(settings, item.costPaise)}
-                          />
-                        </Link>
-                        <p className={`mt-1 text-center text-xs tabular-nums ${item.stock > 0 ? muted : 'text-red-600 dark:text-red-400'}`}>
-                          {t('stk.labels.pcs', { n: item.stock })}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
+                  {combined ? (
+                    <ul className="tag-row">
+                      {groupDesigns(g.shown).map((d) => (
+                        <li key={d.key} className="design-cell">
+                          <DesignCard
+                            design={d}
+                            t={t}
+                            photos={d.items.map((r) => photoOf(r.id)).filter((src): src is string => Boolean(src))}
+                            href={`/admin/products/${d.items[0].id}`}
+                            qrValue={`${origin}/admin/products/${d.items[0].id}`}
+                            printHref={tagPrintHref(p, g.key, d.key)}
+                            expandLabel={t(d.items.length === 1 ? 'cat.design.showTags.one' : 'cat.design.showTags.other', { n: d.items.length })}
+                          >
+                            <ul className="tag-grid">{d.items.map(tagCell)}</ul>
+                          </DesignCard>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <ul className="tag-row">{g.shown.map(tagCell)}</ul>
+                  )}
                 </section>
               );
             })}

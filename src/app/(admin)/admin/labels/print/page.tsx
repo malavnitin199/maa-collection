@@ -17,6 +17,8 @@ import { getStoreSettings, labelPriceCode, type StoreSettings } from '@/server/s
 import { listTagLibrary } from '@/server/services/tag-library';
 import { groupNote, groupTitle } from '@/features/tag-library/group-title';
 import { formatDate } from '@/lib/i18n';
+import { designKey } from '@/lib/design-groups';
+import { formatPaise } from '@/lib/money';
 import { groupTags, parseTagParams, tagFilter, tagLibraryHref, TAG_PRINT_MAX } from '@/lib/tag-library';
 
 type Search = {
@@ -36,6 +38,7 @@ type Search = {
   stock?: string;
   group?: string;
   key?: string;
+  design?: string;
 };
 
 /** Builds a link to this page with some query values changed. */
@@ -159,16 +162,23 @@ async function LibraryLabels({ params }: { params: Search }) {
   const db = await requestDb();
   const [rows, settings] = await Promise.all([listTagLibrary(db, STORE_ID, tagFilter(filters)), getStoreSettings(db, STORE_ID)]);
   const group = filters.key ? groupTags(rows, filters.group).find((g) => g.key === filters.key) : undefined;
-  const picked = filters.key ? (group?.items ?? []) : rows;
+  const inGroup = filters.key ? (group?.items ?? []) : rows;
+  // One design (plan v14): same name, company and MRP.
+  const picked = filters.design ? inGroup.filter((row) => designKey(row) === filters.design) : inGroup;
+  const design = filters.design ? picked[0] : undefined;
   const lines: ReceiptLabelLine[] = picked.slice(0, TAG_PRINT_MAX).map((row) => ({ ...row, quantity: row.stock }));
-  const note = group ? groupNote(group, t, locale) : null;
+  const note = design
+    ? `${design.supplierName ?? t('stk.lib.noCompany')} · ${t('cat.design.mrp', { mrp: formatPaise(design.mrpPaise) })}`
+    : group
+      ? groupNote(group, t, locale)
+      : null;
   return (
     <>
       <div className="mb-3 flex flex-col gap-1 print:hidden">
         <Link href={tagLibraryHref(filters)} className={`text-sm ${link}`}>
           {t('stk.lib.backToAll')}
         </Link>
-        <h1 className="text-2xl font-semibold">{group ? groupTitle(group, t, locale) : t('stk.lib.printTitle')}</h1>
+        <h1 className="text-2xl font-semibold">{design ? design.name : group ? groupTitle(group, t, locale) : t('stk.lib.printTitle')}</h1>
         <p className={`text-sm ${muted}`}>
           {note && `${note} · `}
           {t('stk.lib.printCount', { n: lines.length })}

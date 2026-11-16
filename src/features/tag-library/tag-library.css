@@ -53,3 +53,22 @@
     transform: none;
   }
 }
+
+/* Combined view (plan v14): one card per design; its real tags fold out inside the card. */
+.design-cell {
+  flex: none;
+  width: min(100%, 22rem);
+}
+
+.tag-library[data-view='rows'] .design-cell {
+  width: min(85vw, 21rem);
+}
+
+.tag-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3mm;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

@@ -62,7 +62,7 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
   await page.getByRole('link', { name: /Categories/ }).click();
   await expect(page).toHaveURL(/\/admin\/categories$/);
   await tabs.getByRole('link', { name: 'Products' }).click();
-  await expect(page.getByTestId('product-list')).toContainText('Classic Crew Tee');
+  await expect(page.getByTestId('design-list')).toContainText('Classic Crew Tee'); // combined view by default (plan v14)
   await expect(tabs.getByRole('link', { name: 'Products' })).toHaveAttribute('aria-current', 'page');
 });
 
@@ -114,7 +114,7 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await rates.getByLabel('Price (₹)').fill('1499');
   await rates.getByRole('button', { name: 'Apply to all 4 sizes/colours' }).click();
   await expect(page.getByText('Rates updated for 4 items.')).toBeVisible();
-  await page.goto(`/admin/products?q=${encodeURIComponent(`Chikan Kurta ${run}`)}`);
+  await page.goto(`/admin/products?q=${encodeURIComponent(`Chikan Kurta ${run}`)}&show=items`);
   await expect(page.getByTestId('product-list').getByRole('listitem').filter({ hasText: '₹1,499.00' })).toHaveCount(4);
 
   // Same entry again is refused (sizes/colours already exist).
@@ -191,7 +191,7 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await expect(labels.filter({ hasText: 'MRP ₹700.00' })).toHaveCount(4);
 
   const list = page.getByTestId('product-list').getByRole('listitem');
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}`);
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
   await expect(list).toHaveCount(6);
   await expect(list.filter({ hasText: '₹500.00 · MRP ₹700.00 · purchase ₹300.00' })).toHaveCount(2);
   await expect(list.filter({ hasText: '₹550.00 · MRP ₹700.00 · purchase ₹330.00' })).toHaveCount(2);
@@ -207,7 +207,7 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await rates.getByLabel('Size L selling price').fill('520');
   await rates.getByRole('button', { name: 'Apply to all 6 sizes/colours' }).click();
   await expect(page.getByText('Rates updated for 6 items.')).toBeVisible();
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}`);
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
   await expect(list.filter({ hasText: '₹520.00 · MRP ₹700.00 · purchase ₹330.00' })).toHaveCount(2);
   await expect(list.filter({ hasText: '₹500.00 · MRP ₹700.00' })).toHaveCount(2);
   await expect(list.filter({ hasText: '₹600.00 · MRP ₹750.00' })).toHaveCount(2);
@@ -216,7 +216,7 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
 test('hang tags: QR code, size boxed, the design\'s sizes with this one highlighted; the QR link opens the item', async ({ page }) => {
   await loginOwner(page);
   // Anarkali Kurta M Blue (MAA-KU-001); the design also has L.
-  await page.goto('/admin/products?q=MAA-KU-001');
+  await page.goto('/admin/products?q=MAA-KU-001&show=items');
   await page.getByTestId('product-list').getByRole('link').first().click();
   const tag = page.getByTestId('hang-tag');
   await expect(tag.getByRole('img', { name: 'QR code for MAA-KU-001' })).toBeVisible();
@@ -373,7 +373,7 @@ test('owner restocks existing items by scanning each piece and by name search', 
   await expect(page.getByText(/bill RS-1/)).toBeVisible();
 
   // Stock went up by exactly 3.
-  await page.goto('/admin/products?q=MAA-SH-001');
+  await page.goto('/admin/products?q=MAA-SH-001&show=items');
   await expect(page.getByTestId('product-list')).toContainText(String(Number(before) + 3));
 });
 
@@ -409,7 +409,7 @@ test('owner sets a code word; labels print the purchase price in code and the de
   await expect(page.getByTestId('decoded')).toHaveText('= ₹299');
 
   // Classic Crew Tee M Black: purchase ₹299 → "LSS" on its label.
-  await page.goto('/admin/products?q=MAA-TS-001');
+  await page.goto('/admin/products?q=MAA-TS-001&show=items');
   await page.getByTestId('product-list').getByRole('link').first().click();
   await expect(page.getByTestId('price-code')).toHaveText('LSS');
 });
@@ -540,7 +540,8 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
   await page.getByRole('button', { name: 'Grid' }).click();
   await expect(library).toHaveAttribute('data-view', 'grid');
 
-  // A tag opens its item.
+  // A tag opens its item (combined view: open the design's tags first).
+  await page.getByTestId('design-card').filter({ hasText: `Silk TagLib ${run}` }).getByText('Show 1 tag').click();
   await page.getByRole('link', { name: `Open Silk TagLib ${run} · Assorted · Free` }).click();
   await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
 
@@ -555,6 +556,80 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
   await page.getByRole('link', { name: 'One per item instead (2)' }).click();
   await expect(printed).toHaveCount(2);
   await expect(page.getByTestId('label-sheet')).toContainText(`Net TagLib ${run}`);
+});
+
+test('combined view: one card per design (name + company + MRP) on Products and All tags; every item one tap away; print one design', async ({ page }) => {
+  await loginOwner(page);
+  const company = `Combo Co ${run}`;
+  const name = `Combo Kurta ${run}`;
+  await page.goto('/admin/suppliers');
+  await page.getByText('+ Add supplier').click();
+  await page.getByLabel('Company name').fill(company);
+  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await expect(page.getByRole('status')).toContainText(`${company} added.`);
+
+  // One design in 2 sizes × 2 colours = 4 items, 2 pieces each.
+  await page.goto('/admin/stock/new');
+  await page.getByRole('combobox', { name: /^Supplier/ }).selectOption({ label: company });
+  await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
+  await page.getByLabel('Design / product name').fill(name);
+  await page.getByRole('button', { name: 'Size M' }).click();
+  await page.getByRole('button', { name: 'Size L' }).click();
+  await page.getByLabel('Colour').fill('Blue, Pink');
+  await page.getByRole('button', { name: 'Add colour' }).click();
+  await page.getByLabel('MRP (₹)').fill('1499');
+  await page.getByLabel('Selling price (₹)').fill('1399');
+  await page.getByLabel('Purchase price (₹)').fill('800');
+  await page.getByLabel('Pieces each').fill('2');
+  await page.getByRole('button', { name: 'Save 4 items and print labels' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+
+  // Products: one card for the 4 items, with every size and colour and their pieces.
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}`);
+  const cards = page.getByTestId('design-list').getByTestId('design-card');
+  await expect(cards).toHaveCount(1);
+  const designCard = cards.first();
+  await expect(designCard).toContainText(name);
+  await expect(designCard).toContainText(`${company} · MRP ₹1,499.00 · selling ₹1,399.00`);
+  await expect(designCard.getByTestId('design-sizes')).toHaveText('M · 4L · 4');
+  await expect(designCard.getByTestId('design-colours')).toHaveText('Blue · 4Pink · 4');
+  await expect(designCard).toContainText('Items: 4 · In stock: 8 pcs');
+  await expect(designCard.getByRole('img', { name: `Design QR for ${name}` })).toBeVisible();
+  const items = designCard.getByTestId('design-items').getByRole('listitem');
+  await expect(items.first()).toBeHidden();
+  await designCard.getByText('Show 4 items').click();
+  await expect(items).toHaveCount(4);
+  await expect(items.first()).toBeVisible();
+  // Every item: the old one-row-per-item list.
+  await page.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: 'Every item' }).click();
+  await expect(page).toHaveURL(/show=items/);
+  await expect(page.getByTestId('product-list').getByRole('listitem')).toHaveCount(4);
+
+  // All tags: the same card; its 4 real tags fold out; Every tag shows them all at once.
+  await page.goto(`/admin/labels?q=${encodeURIComponent(name)}`);
+  const tagCard = page.getByTestId('tag-library').getByTestId('design-card');
+  await expect(tagCard).toHaveCount(1);
+  await expect(page.getByTestId('tag-summary')).toContainText('Designs: 1 · Tags: 4 · In stock: 8 pcs · Groups: 1');
+  const tags = tagCard.getByTestId('hang-tag');
+  await expect(tags.first()).toBeHidden();
+  await tagCard.getByText('Show 4 tags').click();
+  await expect(tags).toHaveCount(4);
+  await expect(tags.first()).toBeVisible();
+  await page.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: 'Every tag' }).click();
+  await expect(page).toHaveURL(/show=tags/);
+  await expect(page.getByTestId('tag-library').getByTestId('design-card')).toHaveCount(0);
+  await expect(page.getByTestId('tag-library').getByTestId('hang-tag')).toHaveCount(4);
+  await expect(page.getByTestId('tag-library').getByTestId('hang-tag').first()).toBeVisible();
+
+  // Print one design: one tag per piece (8), or one per item (4).
+  await page.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: 'Combined' }).click();
+  await tagCard.getByRole('link', { name: 'Print tags' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?.*list=1.*design=/);
+  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+  const printed = page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ });
+  await expect(printed).toHaveCount(8);
+  await page.getByRole('link', { name: 'One per item instead (4)' }).click();
+  await expect(printed).toHaveCount(4);
 });
 
 test('owner makes a salesman a catalog person; they get catalog screens but not costs, staff or dashboard', async ({ page }) => {
@@ -856,7 +931,7 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   await page.getByRole('link', { name: /Open item/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Chikan Kurta Long ${run}`);
   await expect(page.getByText(barcode!).first()).toBeVisible();
-  await page.goto(`/admin/products?q=${run}`);
+  await page.goto(`/admin/products?q=${run}&show=items`); // one row per item: still exactly one
   await expect(page.getByText(`Chikan Kurta Long ${run}`)).toHaveCount(1);
   await expect(page.getByText(`Chikan Kurta ${run}`, { exact: true })).toHaveCount(0);
 });
