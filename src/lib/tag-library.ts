@@ -4,6 +4,7 @@
  * All tags page and its print page, and unit-tested.
  */
 import { STORE_TIMEZONE } from './app-config';
+import { parseDesignKey } from './design-groups';
 
 export const TAG_GROUPS = ['date', 'company', 'category', 'delivery'] as const;
 export type TagGroupBy = (typeof TAG_GROUPS)[number];
@@ -31,6 +32,10 @@ export type TagParams = {
   group: TagGroupBy;
   /** One group (print page): a day `YYYY-MM-DD`, an id, or 'none'. */
   key?: string;
+  /** One design (print page): `designKey` of its items. */
+  design?: string;
+  /** Combined design cards (default) or every tag (plan v14). */
+  show: 'designs' | 'tags';
   limit: number;
 };
 
@@ -67,6 +72,8 @@ export function parseTagParams(raw: Raw): TagParams {
     stock: one(raw.stock) === 'in',
     group: pick(TAG_GROUPS, one(raw.group), 'date'),
     key: key && GROUP_KEY.test(key) ? key : undefined,
+    design: parseDesignKey(one(raw.design)),
+    show: one(raw.show) === 'tags' ? 'tags' : 'designs',
     limit: Number.isFinite(limit) ? Math.min(Math.max(limit, TAG_PAGE), TAG_LIMIT_MAX) : TAG_PAGE,
   };
 }
@@ -89,6 +96,7 @@ function query(p: TagParams, extra: [string, string][] = []): string {
   if (p.when !== 'all') s.set('when', p.when);
   if (p.stock) s.set('stock', 'in');
   if (p.group !== 'date') s.set('group', p.group);
+  if (p.show === 'tags') s.set('show', 'tags');
   for (const [k, v] of extra) s.set(k, v);
   return s.toString();
 }
@@ -100,11 +108,12 @@ export function tagLibraryHref(p: TagParams, change: Partial<TagParams> = {}): s
   return q ? `/admin/labels?${q}` : '/admin/labels';
 }
 
-/** The print page for what the filters show, or for one group of it. */
-export function tagPrintHref(p: TagParams, key?: string): string {
+/** The print page for what the filters show, for one group of it, or for one design (in that group). */
+export function tagPrintHref(p: TagParams, key?: string, design?: string): string {
   const extra: [string, string][] = [['list', '1']];
   if (key) extra.push(['group', p.group], ['key', key]);
-  return `/admin/labels/print?${query(p, extra)}`;
+  if (design) extra.push(['design', design]);
+  return `/admin/labels/print?${query({ ...p, show: 'designs' }, extra)}`;
 }
 
 /** The calendar day (YYYY-MM-DD) in the shop's time zone. */

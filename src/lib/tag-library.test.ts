@@ -36,7 +36,7 @@ const row = (id: string, over: Partial<Row> = {}): Row => ({
 
 describe('All tags address', () => {
   it('uses defaults and drops anything malformed', () => {
-    expect(parseTagParams({})).toEqual({ q: '', when: 'all', stock: false, group: 'date', limit: TAG_PAGE, supplier: undefined, category: undefined, made: undefined, key: undefined });
+    expect(parseTagParams({})).toEqual({ q: '', when: 'all', stock: false, group: 'date', show: 'designs', limit: TAG_PAGE, supplier: undefined, category: undefined, made: undefined, key: undefined, design: undefined });
     const p = parseTagParams({ supplier: 'x', category: "1' or 1=1", made: '12', when: 'year', group: 'colour', key: '../etc', limit: 'lots', stock: 'yes' });
     expect(p).toMatchObject({ supplier: undefined, category: undefined, made: undefined, when: 'all', group: 'date', key: undefined, limit: TAG_PAGE, stock: false });
   });
@@ -61,6 +61,15 @@ describe('All tags address', () => {
     expect(tagLibraryHref(p, { group: 'date' })).toBe(`/admin/labels?supplier=${A}&when=30d`);
     expect(tagPrintHref(p)).toBe(`/admin/labels/print?supplier=${A}&when=30d&group=company&list=1`);
     expect(tagPrintHref(p, A)).toBe(`/admin/labels/print?supplier=${A}&when=30d&group=company&list=1&key=${A}`);
+    // Every tag (plan v14) stays in the page address; a design prints on its own.
+    const tags = parseTagParams({ show: 'tags', group: 'company' });
+    expect(tags.show).toBe('tags');
+    expect(tagLibraryHref(tags)).toBe('/admin/labels?group=company&show=tags');
+    expect(tagLibraryHref(tags, { show: 'designs' })).toBe('/admin/labels?group=company');
+    const design = `${A}~149900~silk saree`;
+    expect(parseTagParams({ design }).design).toBe(design);
+    expect(parseTagParams({ design: 'drop table' }).design).toBeUndefined();
+    expect(tagPrintHref(tags, A, design)).toBe(`/admin/labels/print?group=company&list=1&key=${A}&${new URLSearchParams({ design })}`);
   });
 });
 
