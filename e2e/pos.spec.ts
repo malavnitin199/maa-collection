@@ -68,6 +68,8 @@ test('camera scanner opens over the current screen without moving the scan form'
   const before = await geometry();
   const cameraButton = page.getByRole('button', { name: 'Scan with camera' });
   const buttonBefore = await cameraButton.boundingBox();
+  expect(buttonBefore).not.toBeNull();
+  expect(buttonBefore!.height).toBeGreaterThanOrEqual(44);
 
   await cameraButton.click();
 
@@ -75,19 +77,42 @@ test('camera scanner opens over the current screen without moving the scan form'
   await expect(dialog).toBeVisible();
   await expect(dialog).toBeFocused();
   const dialogBounds = await dialog.boundingBox();
+  const closeButton = dialog.getByRole('button', { name: 'Close' });
+  const closeBounds = await closeButton.boundingBox();
   expect(dialogBounds).not.toBeNull();
-  expect(buttonBefore).not.toBeNull();
+  expect(closeBounds).not.toBeNull();
   const buttonCenterX = buttonBefore!.x + buttonBefore!.width / 2;
+  const closeCenterX = closeBounds!.x + closeBounds!.width / 2;
+  const dialogCenterX = dialogBounds!.x + dialogBounds!.width / 2;
   expect(dialogBounds!.x).toBeLessThanOrEqual(buttonCenterX);
   expect(dialogBounds!.x + dialogBounds!.width).toBeGreaterThanOrEqual(buttonCenterX);
   expect(Math.abs(dialogBounds!.y + dialogBounds!.height - (buttonBefore!.y - 8))).toBeLessThan(20);
+  expect(Math.abs(closeCenterX - dialogCenterX)).toBeLessThan(1);
+  expect(closeBounds!.width).toBeGreaterThanOrEqual(44);
+  expect(closeBounds!.height).toBeGreaterThanOrEqual(44);
   const after = await geometry();
   expect(after.x).toBeCloseTo(before.x, 1);
   expect(Math.abs(after.y - before.y)).toBeLessThan(4);
   expect(after.width).toBeCloseTo(before.width, 1);
   expect(after.height).toBeCloseTo(before.height, 1);
 
+  await closeButton.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(cameraButton).toBeFocused();
+
+  await cameraButton.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
   await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(cameraButton).toBeFocused();
+
+  await cameraButton.click();
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(4, 4);
   await expect(dialog).toHaveCount(0);
   await expect(cameraButton).toBeFocused();
 });

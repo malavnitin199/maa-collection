@@ -10,7 +10,7 @@ v0.2.0 live app (plan v12); current follow-up is camera-scanning UX polish.
 - [x] P1-02: admin, cashier and login route shells (DONE 2026-11-15)
 - [x] Demo scan-to-sell flow on dummy data (owner request, outside backlog numbering; DONE 2026-11-15)
 - [x] Owner-requested v0.2.0: live catalog, POS, approvals, and supporting workflows (DONE 2026-11-16; see entries below)
-- [x] Camera scan popup: anchor it above the camera button without shifting the scan form (DONE 2026-11-16; see verification log)
+- [x] Camera scan popup: anchor it above the camera button; center the close action and use accessible tap targets (DONE 2026-11-16; see verification log)
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -28,7 +28,7 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm test` | PASS | 15 Vitest tests: money, catalog lookup, sale validation |
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
-| 2026-11-16 | Camera scan popup | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm exec playwright test e2e/pos.spec.ts -g "camera scanner opens"` | PASS | 135 unit tests pass; desktop + mobile E2E confirms button-anchored placement, unchanged scan-form bounds, Escape close, and focus restoration |
+| 2026-11-16 | Camera scan popup | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm exec playwright test e2e/pos.spec.ts -g "camera scanner opens"` | PASS | 135 unit tests pass; desktop + mobile E2E confirms button-anchored placement, centered 44px+ controls, unchanged scan-form bounds, close button/Escape/outside-click behavior, and focus restoration |
 
 ## Sell without scanning + owner approvals — v0.2.0 (2026-11-16, latest)
 Owner request: tags are stuck on shirts, pants and so on; sometimes a tag will not scan, the scanner breaks or the phone's back camera does not work. The salesman must still capture the sale by typing the item's name and the selling price. Owner chose: **full approval queue** (every salesman entry waits for him) and **name + price + optional size**. Plan: `docs/PLAN_V12_HAND_ENTRY_APPROVALS.md`; ADR-022; new open question D-EX-2.

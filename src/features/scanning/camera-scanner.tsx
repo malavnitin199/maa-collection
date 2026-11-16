@@ -326,13 +326,13 @@ export function CameraScanner({ onDecode, onClose, anchor }: Props) {
         }
         className="fixed flex w-[calc(100vw-1.5rem)] max-w-xl flex-col gap-3 overflow-y-auto rounded-2xl border border-zinc-200 bg-surface p-4 text-zinc-900 shadow-2xl dark:border-zinc-700 dark:text-zinc-100"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-center gap-2 text-center">
           <h2 id={titleId} className="font-semibold">{t('scan.cameraTitle')}</h2>
           <button
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-zinc-700 dark:hover:bg-zinc-900"
           >
             {t('scan.close')}
           </button>

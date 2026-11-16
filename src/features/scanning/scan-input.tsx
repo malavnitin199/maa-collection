@@ -28,7 +28,7 @@ const CORNERS = [
 const findButton =
   'inline-flex shrink-0 items-center justify-center rounded-full bg-white px-5 py-2 font-bold text-brand-800 shadow-md transition hover:bg-brand-50 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100';
 const cameraButton =
-  'inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/25 active:scale-[0.97] disabled:opacity-60';
+  'inline-flex min-h-11 items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.97] disabled:opacity-60';
 
 type Props = {
   label: string;
