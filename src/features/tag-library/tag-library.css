@@ -1,0 +1,55 @@
+/*
+ * All tags (plan v13). Grid: a group's tags wrap onto lines.
+ * Rows: each group is one line of tags that scrolls sideways and snaps to a tag.
+ */
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3mm;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tag-cell {
+  flex: none;
+}
+
+.tag-library[data-view='rows'] .tag-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
+  padding: 2px 2px 0.75rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tag-library[data-view='rows'] .tag-cell {
+  scroll-snap-align: start;
+}
+
+/* A tag you can tap: lift on hover, theme ring on keyboard focus. */
+.tag-open {
+  display: block;
+  border-radius: 2mm;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tag-open:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.35);
+}
+
+.tag-open:focus-visible {
+  outline: 3px solid var(--b-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tag-open,
+  .tag-open:hover {
+    transition: none;
+    transform: none;
+  }
+}

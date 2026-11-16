@@ -93,9 +93,14 @@ async function SupplierDetail({ params }: { params: Promise<{ id: string }> }) {
         {items.length === 0 ? (
           <p className={`text-sm ${muted}`}>{t('cat.sup.noneYet')}</p>
         ) : (
-          <Link href={`/admin/products?supplier=${supplier.id}`} className={`text-sm ${link}`}>
-            {t('cat.sup.viewAll', { n: items.length })}
-          </Link>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link href={`/admin/products?supplier=${supplier.id}`} className={`text-sm ${link}`}>
+              {t('cat.sup.viewAll', { n: items.length })}
+            </Link>
+            <Link href={`/admin/labels?supplier=${supplier.id}&group=delivery`} className={`text-sm ${link}`}>
+              {t('stk.lib.companyTags')}
+            </Link>
+          </div>
         )}
       </section>
 

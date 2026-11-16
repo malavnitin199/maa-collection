@@ -466,6 +466,97 @@ test('quick add: one company + category, several products with their own prices 
   await expect(page.getByLabel(/Sale price/)).toHaveValue('2200');
 });
 
+test('all tags: grouped by date, company or delivery; filters; grid or sideways rows; print one group', async ({ page }) => {
+  await loginOwner(page);
+  const company = `Tag Lib Co ${run}`;
+  await page.goto('/admin/suppliers');
+  await page.getByText('+ Add supplier').click();
+  await page.getByLabel('Company name').fill(company);
+  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await expect(page.getByRole('status')).toContainText(`${company} added.`);
+
+  // One delivery from that company: a saree with 2 pieces and one with none left.
+  await page.goto('/admin/stock/quick');
+  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: company });
+  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
+  await page.getByLabel('Bill no.').fill(`B-${run}`);
+  await page.getByLabel('Product 1 name').fill(`Silk TagLib ${run}`);
+  await page.getByLabel('Product 1 MRP').fill('2000');
+  await page.getByLabel('Product 1 pieces').fill('2');
+  await page.getByRole('button', { name: '+ Add product' }).click();
+  await page.getByLabel('Product 2 name').fill(`Net TagLib ${run}`);
+  await page.getByLabel('Product 2 MRP').fill('1500');
+  await page.getByLabel('Product 2 pieces').fill('0');
+  await page.getByRole('button', { name: 'Save 2 products and print labels' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+
+  // The print page leads to All tags; picking the company applies at once.
+  await page.getByRole('link', { name: 'See all tags →' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'All tags' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Company' }).selectOption({ label: company });
+  await expect(page).toHaveURL(/supplier=[0-9a-f-]{36}/);
+  const groups = page.getByTestId('tag-group');
+  const tags = page.getByTestId('tag-library').getByTestId('hang-tag');
+  await expect(groups).toHaveCount(1);
+  await expect(groups.getByRole('heading', { level: 2 })).toHaveText('Today'); // grouped by date by default
+  await expect(tags).toHaveCount(2);
+  await expect(page.getByTestId('tag-summary')).toContainText('Tags: 2 · In stock: 2 pcs · Groups: 1');
+
+  // Group by company, then by delivery (bill, date and who made it).
+  await page.getByRole('navigation', { name: 'Group by' }).getByRole('link', { name: 'Company' }).click();
+  await expect(groups.getByRole('heading', { level: 2 })).toHaveText(company);
+  await page.getByRole('navigation', { name: 'Group by' }).getByRole('link', { name: 'Delivery' }).click();
+  await expect(groups.getByRole('heading', { level: 2 })).toHaveText(`${company} · bill B-${run}`);
+  await expect(groups).toContainText('by Owner');
+  await expect(groups).toContainText('Tags: 2 · In stock: 2 pcs');
+
+  // Filters: only items in stock; a category with none of them; when made.
+  await page.getByLabel('Only items in stock').check();
+  await expect(page).toHaveURL(/stock=in/);
+  await expect(tags).toHaveCount(1);
+  await expect(tags).toContainText(`Silk TagLib ${run}`);
+  await page.getByLabel('Only items in stock').uncheck();
+  await expect(tags).toHaveCount(2);
+  await page.getByRole('navigation', { name: 'When made' }).getByRole('link', { name: 'Today' }).click();
+  await expect(tags).toHaveCount(2);
+  await page.getByRole('combobox', { name: 'Category' }).selectOption({ label: 'Kurta' });
+  await expect(page.getByText('No tags match these filters.')).toBeVisible();
+  await page.getByRole('link', { name: 'Clear filters' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\?group=delivery$/);
+
+  // Views: Rows puts each group on one line that scrolls sideways, and the phone remembers it.
+  await page.goto(`/admin/labels?q=TagLib ${run}`);
+  const library = page.getByTestId('tag-library');
+  const row = library.locator('ul.tag-row').first();
+  await expect(library).toHaveAttribute('data-view', 'grid');
+  await expect(row).toHaveCSS('flex-wrap', 'wrap');
+  await page.getByRole('button', { name: 'Rows' }).click();
+  await expect(library).toHaveAttribute('data-view', 'rows');
+  await expect(row).toHaveCSS('flex-wrap', 'nowrap');
+  await expect(row).toHaveCSS('overflow-x', 'auto');
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Rows' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(library).toHaveAttribute('data-view', 'rows');
+  await page.getByRole('button', { name: 'Grid' }).click();
+  await expect(library).toHaveAttribute('data-view', 'grid');
+
+  // A tag opens its item.
+  await page.getByRole('link', { name: `Open Silk TagLib ${run} · Assorted · Free` }).click();
+  await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
+
+  // Print one group (by company): one tag per piece in stock, or one per item.
+  await page.goto(`/admin/labels?q=TagLib ${run}&group=company`);
+  await page.getByRole('link', { name: 'Print this group' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?.*list=1.*key=/);
+  await expect(page.getByRole('heading', { level: 1, name: company })).toBeVisible();
+  const printed = page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ });
+  await expect(printed).toHaveCount(2);
+  await expect(page.getByTestId('label-sheet')).not.toContainText(`Net TagLib ${run}`); // no pieces left, no tag
+  await page.getByRole('link', { name: 'One per item instead (2)' }).click();
+  await expect(printed).toHaveCount(2);
+  await expect(page.getByTestId('label-sheet')).toContainText(`Net TagLib ${run}`);
+});
+
 test('owner makes a salesman a catalog person; they get catalog screens but not costs, staff or dashboard', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/staff');

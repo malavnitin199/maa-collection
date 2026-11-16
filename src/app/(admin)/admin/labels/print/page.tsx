@@ -14,9 +14,29 @@ import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { getMyLabelsToday, getReceiptForLabels, tagSizesFor, type ReceiptLabelLine } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode, type StoreSettings } from '@/server/services/settings';
+import { listTagLibrary } from '@/server/services/tag-library';
+import { groupNote, groupTitle } from '@/features/tag-library/group-title';
 import { formatDate } from '@/lib/i18n';
+import { groupTags, parseTagParams, tagFilter, tagLibraryHref, TAG_PRINT_MAX } from '@/lib/tag-library';
 
-type Search = { receipt?: string; each?: string; created?: string; mine?: string; format?: string; photos?: string };
+type Search = {
+  receipt?: string;
+  each?: string;
+  created?: string;
+  mine?: string;
+  format?: string;
+  photos?: string;
+  /** From All tags (plan v13): `list=1` plus its filters, and `key` for one group. */
+  list?: string;
+  q?: string;
+  supplier?: string;
+  category?: string;
+  made?: string;
+  when?: string;
+  stock?: string;
+  group?: string;
+  key?: string;
+};
 
 /** Builds a link to this page with some query values changed. */
 function hrefWith(params: Search, change: Partial<Search>) {
@@ -58,6 +78,9 @@ function LabelSheet({ lines, params, data, t }: { lines: ReceiptLabelLine[]; par
           <PrintButton label={t(labels.length === 1 ? 'stk.labels.printN.one' : 'stk.labels.printN.other', { n: labels.length })} />
           <Link href={hrefWith(params, { each: onePerItem ? undefined : 'item' })} className={`text-sm ${link}`}>
             {onePerItem ? t('stk.labels.perPiece', { n: pieces }) : t('stk.labels.perItem', { n: lines.length })}
+          </Link>
+          <Link href="/admin/labels" className={`text-sm ${link}`}>
+            {t('stk.lib.seeAll')}
           </Link>
         </div>
         <div role="group" aria-label={t('stk.labels.formatAria')} className="flex gap-2 text-sm">
@@ -128,11 +151,45 @@ async function MyLabelsToday({ params }: { params: Search }) {
   );
 }
 
+/** What the All tags page shows (its filters), or one group of it: one tag per piece in stock, or one per item. */
+async function LibraryLabels({ params }: { params: Search }) {
+  const [, t] = await Promise.all([requireAnyPermission(['catalog', 'stock']), getT()]);
+  const locale = await getLocale();
+  const filters = parseTagParams(params);
+  const db = await requestDb();
+  const [rows, settings] = await Promise.all([listTagLibrary(db, STORE_ID, tagFilter(filters)), getStoreSettings(db, STORE_ID)]);
+  const group = filters.key ? groupTags(rows, filters.group).find((g) => g.key === filters.key) : undefined;
+  const picked = filters.key ? (group?.items ?? []) : rows;
+  const lines: ReceiptLabelLine[] = picked.slice(0, TAG_PRINT_MAX).map((row) => ({ ...row, quantity: row.stock }));
+  const note = group ? groupNote(group, t, locale) : null;
+  return (
+    <>
+      <div className="mb-3 flex flex-col gap-1 print:hidden">
+        <Link href={tagLibraryHref(filters)} className={`text-sm ${link}`}>
+          {t('stk.lib.backToAll')}
+        </Link>
+        <h1 className="text-2xl font-semibold">{group ? groupTitle(group, t, locale) : t('stk.lib.printTitle')}</h1>
+        <p className={`text-sm ${muted}`}>
+          {note && `${note} · `}
+          {t('stk.lib.printCount', { n: lines.length })}
+        </p>
+        {picked.length > TAG_PRINT_MAX && (
+          <p role="status" className={errorBox}>
+            {t('stk.lib.printCapped', { n: TAG_PRINT_MAX })}
+          </p>
+        )}
+      </div>
+      <LabelSheet lines={lines} params={params} data={await sheetData(lines, settings)} t={t} />
+    </>
+  );
+}
+
 async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }) {
   const [, t] = await Promise.all([requireAnyPermission(['catalog', 'stock']), getT()]);
   const locale = await getLocale();
   const params = await searchParams;
   if (params.mine === 'today') return <MyLabelsToday params={params} />;
+  if (params.list === '1') return <LibraryLabels params={params} />;
   if (!params.receipt || !/^[0-9a-f-]{36}$/i.test(params.receipt)) notFound();
   const db = await requestDb();
   const [receipt, settings] = await Promise.all([getReceiptForLabels(db, STORE_ID, params.receipt), getStoreSettings(db, STORE_ID)]);

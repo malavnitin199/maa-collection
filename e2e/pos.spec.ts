@@ -212,8 +212,9 @@ test('admin dashboard, staff and labels pages load with seeded data', async ({ p
   for (const name of ['Owner', 'Vishal', 'Nitin', 'Pradeep', 'Balram']) {
     await expect(page.getByTestId('staff-list')).toContainText(name);
   }
-  await page.goto('/admin/labels');
-  await expect(page.getByRole('heading', { name: 'Test labels' })).toBeVisible();
+  // All tags (plan v13): search narrows to the seeded tee, whatever else other tests have tagged.
+  await page.goto('/admin/labels?q=MAA-TS-001');
+  await expect(page.getByRole('heading', { name: 'All tags' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Barcode 8901111000014 for MAA-TS-001' })).toBeVisible();
   // Hang tags carry a QR code next to the barcode (ADR-014).
   await expect(page.getByRole('img', { name: 'QR code for MAA-TS-001' })).toBeVisible();

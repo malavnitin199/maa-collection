@@ -303,6 +303,22 @@ export const STORIES: Story[] = [
         scene: {
           kind: 'buttons',
           items: [
+            { en: 'Date', hi: 'तारीख' },
+            { en: 'Company', hi: 'कंपनी' },
+            { en: 'Delivery', hi: 'डिलीवरी' },
+          ],
+          tap: 1,
+        },
+        text: { en: '**All tags**: by date or company', hi: '**सारे टैग**: तारीख या कंपनी से' },
+        say: {
+          en: 'Open All tags. Group them by date, company or delivery, filter them, and print just one group.',
+          hi: 'सारे टैग खोलें। तारीख, कंपनी या डिलीवरी से ग्रुप करें, फ़िल्टर लगाएँ, और सिर्फ़ एक ग्रुप प्रिंट करें।',
+        },
+      },
+      {
+        scene: {
+          kind: 'buttons',
+          items: [
             { en: 'Tags on A4', hi: 'A4 पर टैग' },
             { en: 'Tag printer 40×60', hi: 'टैग प्रिंटर 40×60' },
             { en: 'Sticker 50×25', hi: 'स्टिकर 50×25' },
