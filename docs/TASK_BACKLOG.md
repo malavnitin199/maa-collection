@@ -132,6 +132,7 @@
 - [x] **V2-05** Owner stock workflow: suppliers, categories, sizes × colours entry with generated barcodes, per-piece labels, scan-to-restock, design-wide rates, phone tab bar.
 - [x] **V2-07** Plan v12 (2026-11-16): sell without scanning (item name + price typed, no stock change) and the owner's approval queue — every salesman sale / exchange waits for Approve / Reject; only approved entries count. `docs/PLAN_V12_HAND_ENTRY_APPROVALS.md`, ADR-022.
 - [x] **V2-08** Plan v13 (2026-11-16): **All tags** — every generated tag grouped by date / company / category / delivery, filters, Grid or sideways Rows, print one group; links from print pages and company pages. `docs/PLAN_V13_TAG_LIBRARY.md`, ADR-023.
+- [x] **V2-09** Plan v14 (2026-11-16): **combined view** — one card per design (same name, company, MRP) on Products and All tags with sizes / colours / pieces and a design QR; every item / tag one tap away; print one design. `docs/PLAN_V14_COMBINED_VIEW.md`, ADR-024.
 
 ## Suggested next tasks
 

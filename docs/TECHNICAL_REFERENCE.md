@@ -133,7 +133,7 @@ maa-collection/
 | `/admin/suppliers`, `/admin/suppliers/[id]` | `…/suppliers/**` | catalog | Companies list/detail, deliveries, entry links |
 | `/admin/categories` | `…/categories/page.tsx` | catalog | Categories + SKU codes |
 | `/admin/catalog/check` | `…/catalog/check/page.tsx` | catalog | "Needs attention" QC list |
-| `/admin/labels` | `…/labels/page.tsx` | catalog / stock | **All tags** (plan v13, §23): grouped by date / company / category / delivery, filters in the address, Grid or Rows |
+| `/admin/labels` | `…/labels/page.tsx` | catalog / stock | **All tags** (plan v13, §23): grouped by date / company / category / delivery, filters in the address, Grid or Rows; combined design cards by default, `show=tags` for every tag (§24) |
 | `/admin/labels/print` | `…/labels/print/page.tsx` | catalog / stock | `?receipt=<id>`, `?mine=today` or `?list=1&…All tags filters…[&group=&key=]` (one tag per piece in stock); `&each=item`; `&format=tag` (tag printer 40×60) / `sticker` (50×25); default hang tags on A4 |
 
 Route handlers: see [§10](#10-route-handlers-http-endpoints). Layouts `(pos)/layout.tsx` and `(admin)/layout.tsx` render `RoleHeader` and pad for the bottom tab bar. `manifest.ts`, `apple-icon.tsx` and `layout.tsx` hold the PWA metadata and theme colour.
@@ -631,3 +631,14 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Links | supplier page (*See this company's tags* → `?supplier=<id>&group=delivery`), More hint `cat.menu.labelsHint`, Guide lesson `print` step 1 | |
 | Words | `stk.lib.*` in `src/lib/i18n/modules/stock.ts` (en + hi); `stk.labels.title` is now "All tags" | |
 | Tests | `src/lib/tag-library.test.ts` (6), `src/server/services/tag-library.test.ts` (3), `e2e/admin-setup.spec.ts` "all tags: …" (desktop + phone), `e2e/pos.spec.ts` labels check uses `?q=MAA-TS-001` | |
+
+## 24. Combined view: one card per design (plan v14, ADR-024)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Rule | `src/lib/design-groups.ts` (`design-groups.test.ts`) | `designKey(row)` = `<supplierId or none>~<mrpPaise>~<name, trimmed, single spaces, lower case>`; `parseDesignKey` validates it from an address; `groupDesigns(rows)` keeps first-seen design order, aggregates `sizes` (shop order via `sortSizes`) and `colors` (first seen) with pieces in stock, `pieces`, `min/maxPricePaise`, and sorts each design's `items` by colour then size. |
+| Card | `src/features/catalog/design-card.tsx` | Server component (`data-testid="design-card"`): up to 3 photos overlapped, name → `href`, company · MRP · selling (range), items · pieces, design QR (`QrCode`, label "Design QR for …", value `<origin>/admin/products/<first item>` — on screen only, never printed), size and colour chips (`design-sizes`, `design-colours`; 0 pieces struck through), a footer line with `<details>` *Show N items / tags* (children) and *Print tags*. |
+| Products | `src/app/(admin)/admin/products/page.tsx` | Default combined (`data-testid="design-list"`, children = `ProductRow`s in `design-items`); `?show=items` = the one-row-per-item list (`product-list`, as before). Print link only with *catalog* or *stock*. |
+| All tags | `src/app/(admin)/admin/labels/page.tsx`, `TagParams.show` (`designs` default, `tags`) | Groups render `groupDesigns(g.shown)` as `li.design-cell` cards whose children are the real hang tags (`ul.tag-grid`); `show=tags` renders the v13 view. Summary `stk.lib.summaryDesigns`. Photos via `mainImages` for the shown items. |
+| Print | `LibraryLabels` in the print page | `design=<key>` filters the (group's) rows by `designKey`; heading = the design's name, note = company · MRP. |
+| Tests | unit above + `tag-library.test.ts`; `e2e/admin-setup.spec.ts` "combined view: …"; tests that need one row per item use `&show=items`, tag-visibility checks use `show=tags` | |

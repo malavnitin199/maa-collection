@@ -3,7 +3,7 @@
 Last updated: 2026-11-16
 
 ## Current milestone
-v0.3.0 (plan v13): **All tags** — every generated tag grouped by date / company / category / delivery, with filters, Grid or sideways Rows, and print one group.
+v0.4.0 (plan v14): **combined view** — Products and All tags show one card per design (same name, company, MRP) by default, with the separate items / tags one tap away.
 
 ## Task status
 - [x] P1-01: bootstrap Next.js project + quality baseline (DONE 2026-11-14)
@@ -12,6 +12,7 @@ v0.3.0 (plan v13): **All tags** — every generated tag grouped by date / compan
 - [x] Owner-requested v0.2.0: live catalog, POS, approvals, and supporting workflows (DONE 2026-11-16; see entries below)
 - [x] Camera scan popup: anchor it above the camera button; center the close action and use accessible tap targets (DONE 2026-11-16; see verification log)
 - [x] Plan v13 All tags: grouped, filtered, grid or rows, print a group (DONE 2026-11-16; see below)
+- [x] Plan v14 combined view: one card per design on Products and All tags (DONE 2026-11-16; see below)
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -31,8 +32,24 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 | 2026-11-16 | Camera scan popup | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm exec playwright test e2e/pos.spec.ts -g "camera scanner opens"` | PASS | 135 unit tests pass; desktop + mobile E2E confirms button-anchored placement, centered 44px+ controls, unchanged scan-form bounds, close button/Escape/outside-click behavior, and focus restoration |
 | 2026-11-16 | Plan v13 All tags | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except 2 known timing-dependent tests | 146 unit tests (9 new); build 36 routes; Playwright 71 passed, 1 skipped, 2 failed: `pos.spec.ts:59` camera popup and `guide-voice.spec.ts:46` — both fail the same way on the untouched `f0d5505` under load (see the v13 entry); the new All tags test passes at desktop + phone |
+| 2026-11-16 | Plan v14 combined view | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except known timing-dependent tests | 150 unit tests (5 new + 1 extended); Playwright 72 passed, 1 skipped, 3 failed: `pos.spec.ts:59`, `guide-voice.spec.ts:46` (known) and `pos.spec.ts:378` on phone (sell by hand + approvals: the scanned item card did not appear within 5 s; 3/8 then 0/8 on repeat with the same code; it visits no changed page). The new combined-view test passes at desktop + phone |
 
-## Demo data in the live shop (2026-11-16, latest)
+## Combined view: one card per design — v0.4.0 (2026-11-16, latest)
+Owner request: the admin product view and the tags were still one row / one tag per size and colour; group the same kind of products — same product name, company and MRP, only size or colour different — into one view with a single QR, all the sizes and the images combined; the separate ones only when the owner asks; concise and easy by default. Owner chose (asked before building): a **combined card on screen**; printed tags stay one per piece with its own barcode, Sell unchanged. Plan: `docs/PLAN_V14_COMBINED_VIEW.md`; ADR-024; reference §24.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | `src/lib/design-groups.ts`: `designKey`, `parseDesignKey`, `groupDesigns` (sizes in shop order and colours with pieces, price range, items by colour then size) | Done — 4 unit tests |
+| 2 | `DesignCard`: photos side by side, name, company · MRP · selling, items · pieces, size and colour chips with pieces, on-screen design QR, one footer line *Show N items / tags* + *Print tags* | Done |
+| 3 | **Products**: combined by default; *Show: Combined · Every item* (`?show=items` = the old list) | Done |
+| 4 | **All tags**: combined by default inside every group (Grid or Rows); *Show: Combined · Every tag*; summary with designs; *Print tags* per design (`design=<key>`) | Done |
+| 5 | Hindi + English (`cat.view.*`, `cat.design.*`, `stk.lib.view.tags`, `stk.lib.summaryDesigns`); docs (plan, ADR-024, reference §24, user guide, context, README, backlog V2-09, CLAUDE.md); version **0.4.0** | Done |
+- No database change.
+- Existing tests that need one row per item now open *Every item* (`&show=items`: prices by size, design rates, hang tag / code price / restock checks, edit after tagging) or *Every tag* (`show=tags`: the seeded tag check); the phone tab test checks the combined list. The v13 All tags test opens the design's tags before tapping one.
+- Verified: lint, typecheck, **150 unit tests**, build; new E2E "combined view: one card per design …" passes at desktop + phone (one card for 4 items, "M · 4 L · 4", "Blue · 4 Pink · 4", design QR, Show 4 items / tags, Every item / Every tag, Print tags 8 → 4 per item). Full Playwright: **72 passed, 1 skipped, 3 failed** — `pos.spec.ts:59` and `guide-voice.spec.ts:46` (known), and `pos.spec.ts:378` on phone, which failed 3/8 and then 0/8 on repeat with the same code and visits no changed page (new timing flake; follow-up with the camera test).
+- Phone screenshots (private copy of the demo data): Products as cards (Anarkali Kurta: M · 3, L · 3, XL · 4; Maroon · 3, Navy · 7), a card opened (its items by colour then size), All tags by company (22 tags → 3 cards), Rows (cards swipe sideways), a card's tags opened (2 per line). Found and fixed on the way: the count and *Show N* sat on two lines (now one line with *Print tags*); opened items came out in name order (now by colour, then size).
+
+## Demo data in the live shop (2026-11-16)
 Owner request: put dummy tags in random categories and dummy sales for the reports on the live app, to check All tags and the reports. Owner chose **into the live shop** (over a separate demo site or screenshots only), knowing the demo sales count in Home / Reports / Approvals until removed.
 
 - Backup first (read-only, owner's Mac, not in Git): `backups/maa-backup-2026-11-16-before-demo-data.json` — the live DB then had 0 products, 1 sale, 5 staff, 13 categories, 5 companies.

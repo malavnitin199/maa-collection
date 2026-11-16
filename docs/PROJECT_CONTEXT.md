@@ -30,7 +30,7 @@ The 12-page uploaded *Retail Shop Stock, Sales & Billing System* PRD is the prod
 - At completion, show commands executed, actual results, modified files, gaps and the next task.
 - Update `docs/PROGRESS.md` and check off backlog ONLY when acceptance criteria pass.
 
-## Current status (2026-11-16, live through plan v13 — v0.3.0)
+## Current status (2026-11-16, live through plan v14 — v0.4.0)
 
 Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavnitin199/maa-collection · Deployed with the Vercel CLI (repo not Git-connected).
 
@@ -48,6 +48,7 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 - Companies (suppliers), categories with SKU codes and **size lists** (shirts S–XXL, kurtas M–XXL, Ladies Jeans 26–32, Gents Jeans 28–36; owner-editable).
 - Add stock: **Quick add** (many products, one company + category), **New design** in sizes × colours with **prices by size** (MRP / selling / purchase per size, same for all colours), **Restock** by scanning, **Tag old stock** one piece at a time with photos, with **✎ Edit this item** right after saving (same barcode; prices fixable by the creator until the first sale). Optional photo per colour / per product while creating tags.
 - Tags: **40 × 60 mm QR hang tags** (QR, name, ART. = SKU + secret code price, every size of the category with tick boxes, EAN-13, MRP); A4 (16 per page), tag printer, or 50 × 25 mm sticker.
+- **Combined view** (plan v14, default on Products and All tags): items with the same name, company and MRP are one card (photos, sizes and colours with pieces, design QR); *Show N items / tags* or *Every item / Every tag* for the separate ones. Printed tags stay one per piece.
 - **All tags** (`/admin/labels`, plan v13): every tag grouped by **date made, company, category or delivery**, with filters (search, company, category, made by, when made, in stock), **Grid** or sideways **Rows** (remembered per phone), **Print this group** / **Print these tags**; tap a tag to open its item.
 
 **Owner**
@@ -67,7 +68,7 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 **Stack actually in use**: Next.js 16.4.6 (App Router, Cache Components), React 19, TypeScript strict, Tailwind CSS 4, Drizzle ORM on Neon Postgres (PGlite locally and in tests), Zod, Vitest, Playwright (desktop + phone). Not used (yet): shadcn/ui, Better Auth, TanStack Query, Zustand, Dexie. Never put the Neon URL in `.env.local` (it lives in `.env.neon` for migrations only).
 
 **Where the details are**
-- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V13_TAG_LIBRARY.md`, `docs/PLAN_SIZE_PRICES.md`.
-- Decisions: `docs/DECISION_LOG.md` (ADR-001…023); open questions: `docs/DECISIONS.md`.
+- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V14_COMBINED_VIEW.md`, `docs/PLAN_SIZE_PRICES.md`.
+- Decisions: `docs/DECISION_LOG.md` (ADR-001…024); open questions: `docs/DECISIONS.md`.
 - The original starter pack (2026-11-14), what it planned and what changed: `docs/STARTER_PACK_HISTORY.md`; the untouched originals: `docs/archive/starter-pack-2026-11-14/`.
 - How it works (developers): `docs/TECHNICAL_REFERENCE.md`; how to use it (shop): `docs/USER_GUIDE.md`; what was done and verified: `docs/PROGRESS.md`; agent rules + status: `CLAUDE.md`.

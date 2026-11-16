@@ -52,7 +52,7 @@ It starts as a tool for one shop (Maa Collection). The plan is to grow it into a
 | Products | `/admin/products` | Admin | Cards with search + supplier/category filters; product page: label, the design's sizes/colours, **rates for the whole design**, receive stock, edit, history (supplier + bill) |
 | Staff | `/admin/staff` | Admin | Add people, set PINs, activate / deactivate |
 | Activity | `/admin/activity` | Admin | Every sale and exchange: credited to whom, recorded by whom |
-| All tags | `/admin/labels` | Catalog / Stock | Every tag, **grouped by date, company, category or delivery**; filters (search, company, category, made by, when made, in stock); **Grid** or sideways **Rows**; print one group or everything shown |
+| All tags | `/admin/labels` | Catalog / Stock | **One card per design** by default (same name, company, MRP: sizes, colours, pieces, design QR; *Show N tags* / *Every tag*). Every tag, **grouped by date, company, category or delivery**; filters (search, company, category, made by, when made, in stock); **Grid** or sideways **Rows**; print one group or everything shown |
 
 ### The sale flow
 
