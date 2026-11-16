@@ -1,4 +1,6 @@
-import { card, muted, sectionTitle } from '@/components/ui/styles';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
+import { card, link, muted, sectionTitle } from '@/components/ui/styles';
 import { formatPaise } from '@/lib/money';
 import { formatDate, tEnglish, type Locale, type T } from '@/lib/i18n';
 import type { ActivityEntry } from '@/server/services/reports';
@@ -25,10 +27,18 @@ export function HeroStat({ label, value, sub, testId, subTestId }: { label: stri
   );
 }
 
-export function StatTile({ label, value, sub, testId }: { label: string; value: string; sub?: string; testId?: string }) {
+export function StatTile({ label, value, sub, testId, icon }: { label: string; value: string; sub?: string; testId?: string; icon?: ReactNode }) {
   return (
     <div className={card}>
-      <p className={`text-xs ${muted}`}>{label}</p>
+      <p className={`flex items-center gap-1.5 text-xs ${muted}`}>
+        {/* A small symbol in a soft dyed circle before the label (UI clean-up, v15). */}
+        {icon && (
+          <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-300 [&>svg]:h-3.5 [&>svg]:w-3.5">
+            {icon}
+          </span>
+        )}
+        {label}
+      </p>
       <p data-testid={testId} className="mt-1 text-2xl font-semibold tabular-nums">
         {value}
       </p>
@@ -45,21 +55,33 @@ export function ActivityList({
   testId,
   t = tEnglish,
   locale = 'en',
+  limit,
+  more,
+  icon,
 }: {
   entries: ActivityEntry[];
   title: string;
   testId?: string;
   t?: T;
   locale?: Locale;
+  /** Show only the newest entries (e.g. on Home)… */
+  limit?: number;
+  /** …with a link to all of them. */
+  more?: { href: string; label: string };
+  icon?: ReactNode;
 }) {
+  const shown = limit ? entries.slice(0, limit) : entries;
   return (
     <section className="flex flex-col gap-2">
-      <h2 className={sectionTitle}>{title}</h2>
+      <h2 className={`${sectionTitle} flex items-center gap-1.5 [&>svg]:h-4 [&>svg]:w-4`}>
+        {icon}
+        {title}
+      </h2>
       {entries.length === 0 ? (
         <p className={`text-sm ${muted}`}>{t('activity.none')}</p>
       ) : (
         <ul data-testid={testId} className="flex flex-col gap-1 text-sm">
-          {entries.map((entry) => (
+          {shown.map((entry) => (
             <li
               key={`${entry.kind}-${entry.id}`}
               className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
@@ -95,6 +117,11 @@ export function ActivityList({
             </li>
           ))}
         </ul>
+      )}
+      {more && entries.length > shown.length && (
+        <Link href={more.href} className={`self-start text-sm ${link}`}>
+          {more.label}
+        </Link>
       )}
     </section>
   );

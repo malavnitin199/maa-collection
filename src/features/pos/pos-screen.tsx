@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useState, useTransition } from 'react';
-import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { ScanTagArt } from '@/components/ui/art';
+import { IconPencil, IconRupee } from '@/components/ui/icons';
+import { card, errorBox, input, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { rupeesToPaise, saleTotalPaise, validateSaleDraft } from '@/features/inventory/inventory';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { FirstTimeTip } from '@/components/layout/first-time-tip';
@@ -160,7 +162,11 @@ export function PosScreen({
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t('sell.title')}</h1>
-        <Link href="/pos/my-sales" className={`text-sm ${link}`}>
+        <Link
+          href="/pos/my-sales"
+          className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-800 ring-1 ring-brand-200 transition hover:bg-brand-100 active:scale-95 dark:bg-brand-950 dark:text-brand-200 dark:ring-brand-900"
+        >
+          <IconRupee className="h-4 w-4" />
           {t('sell.myToday')}
         </Link>
       </div>
@@ -168,10 +174,21 @@ export function PosScreen({
       <FirstTimeTip id="sell" text={t('sell.tip')} helpHref="/guide#sell" />
 
       <ScanInput label={t('sell.scanLabel')} onScan={handleScan} busy={busy} captureScanner={pending?.step !== 'sell' && !hand} result={scanResult} />
+      {/* Ready for the next customer: a small picture of what to do, and the way out when a tag won't scan. */}
       {!pending && !hand && (
-        <button type="button" data-testid="by-hand" onClick={startHand} className={`${secondaryButton} w-fit`}>
-          {t('sell.byHand')}
-        </button>
+        <section className="flex items-center gap-4 rounded-3xl border border-dashed border-brand-200 bg-brand-50/60 p-4 dark:border-brand-900 dark:bg-brand-950/40">
+          <ScanTagArt className="art-tap h-20 w-20 shrink-0 text-brand-600 dark:text-brand-300" />
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <div>
+              <p className="font-semibold">{t('sell.ready.title')}</p>
+              <p className={`text-sm ${muted}`}>{t('sell.ready.hint')}</p>
+            </div>
+            <button type="button" data-testid="by-hand" onClick={startHand} className={secondaryButton}>
+              <IconPencil className="h-4 w-4" />
+              {t('sell.byHand')}
+            </button>
+          </div>
+        </section>
       )}
       {done && <DoneOverlay title={t('done.sale')} amount={done.amount} detail={done.detail} onClose={closeDone} />}
 

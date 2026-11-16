@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { IconChart, IconClock, IconSun, IconUsers } from '@/components/ui/icons';
 import { muted, sectionTitle } from '@/components/ui/styles';
 import { requestDb } from '@/server/request-db';
 import { ActivityList, StatTile } from '@/features/reports/widgets';
@@ -23,17 +24,21 @@ async function MySales() {
         <h1 className="text-2xl font-semibold">{t('my.title')}</h1>
         <p className={`text-sm ${muted}`}>{t('my.subtitle', { name: me.name })}</p>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <StatTile label={t('my.today')} value={formatPaise(todayNet)} sub={`${pcs(data.mine.today.units)} · ${count(data.mine.today.count)}`} testId="my-today" />
-        <StatTile label={t('my.month')} value={formatPaise(monthNet)} sub={`${pcs(data.mine.month.units)} · ${count(data.mine.month.count)}`} testId="my-month" />
+      <div className="rise-in grid grid-cols-2 gap-3">
+        <StatTile icon={<IconSun />} label={t('my.today')} value={formatPaise(todayNet)} sub={`${pcs(data.mine.today.units)} · ${count(data.mine.today.count)}`} testId="my-today" />
+        <StatTile icon={<IconChart />} label={t('my.month')} value={formatPaise(monthNet)} sub={`${pcs(data.mine.month.units)} · ${count(data.mine.month.count)}`} testId="my-month" />
       </div>
       {data.waiting.month.count > 0 && (
-        <p data-testid="my-waiting" className="rounded-xl bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-          {t('my.waiting', { n: data.waiting.month.count, amount: formatPaise(data.waiting.month.totalPaise) })}
+        <p data-testid="my-waiting" className="flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          <IconClock className="h-4 w-4 shrink-0" />
+          {t('my.waiting', { sales: count(data.waiting.month.count), amount: formatPaise(data.waiting.month.totalPaise) })}
         </p>
       )}
       <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>{t('my.forOthers')}</h2>
+        <h2 className={`${sectionTitle} flex items-center gap-1.5`}>
+          <IconUsers className="h-4 w-4" />
+          {t('my.forOthers')}
+        </h2>
         <p data-testid="for-others" className="text-sm">
           {t('my.forOthersLine', {
             today: formatPaise(data.forOthers.today.totalPaise),
@@ -43,7 +48,7 @@ async function MySales() {
           })}
         </p>
       </section>
-      <ActivityList entries={data.activity} title={t('my.activity')} testId="my-activity" t={t} locale={locale} />
+      <ActivityList entries={data.activity} title={t('my.activity')} testId="my-activity" t={t} locale={locale} icon={<IconClock />} />
     </main>
   );
 }
