@@ -65,6 +65,15 @@ test('camera scanner opens over the current screen without moving the scan form'
       const { x, y, width, height } = form.getBoundingClientRect();
       return { x: x + window.scrollX, y: y + window.scrollY, width, height };
     });
+  // Let the page settle first: it slides in, and the first-time tip appears after loading.
+  await expect
+    .poll(async () => {
+      const a = await geometry();
+      await page.waitForTimeout(200);
+      const b = await geometry();
+      return Math.abs(a.y - b.y) + Math.abs(a.height - b.height);
+    })
+    .toBeLessThan(0.5);
   const before = await geometry();
   const cameraButton = page.getByRole('button', { name: 'Scan with camera' });
   const buttonBefore = await cameraButton.boundingBox();

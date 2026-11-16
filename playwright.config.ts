@@ -14,6 +14,6 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     // Fresh in-memory database when Playwright starts its own server (e.g. CI).
-    env: { DATABASE_URL: 'pglite:memory' },
+    env: { DATABASE_URL: 'pglite:memory', E2E: '1' },
   },
 });
