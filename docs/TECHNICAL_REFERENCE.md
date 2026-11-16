@@ -133,8 +133,8 @@ maa-collection/
 | `/admin/suppliers`, `/admin/suppliers/[id]` | `…/suppliers/**` | catalog | Companies list/detail, deliveries, entry links |
 | `/admin/categories` | `…/categories/page.tsx` | catalog | Categories + SKU codes |
 | `/admin/catalog/check` | `…/catalog/check/page.tsx` | catalog | "Needs attention" QC list |
-| `/admin/labels` | `…/labels/page.tsx` | catalog / stock | All active product labels |
-| `/admin/labels/print` | `…/labels/print/page.tsx` | catalog / stock | `?receipt=<id>` or `?mine=today`; `&each=item`; `&format=tag` (tag printer 40×60) / `sticker` (50×25); default hang tags on A4 |
+| `/admin/labels` | `…/labels/page.tsx` | catalog / stock | **All tags** (plan v13, §23): grouped by date / company / category / delivery, filters in the address, Grid or Rows |
+| `/admin/labels/print` | `…/labels/print/page.tsx` | catalog / stock | `?receipt=<id>`, `?mine=today` or `?list=1&…All tags filters…[&group=&key=]` (one tag per piece in stock); `&each=item`; `&format=tag` (tag printer 40×60) / `sticker` (50×25); default hang tags on A4 |
 
 Route handlers: see [§10](#10-route-handlers-http-endpoints). Layouts `(pos)/layout.tsx` and `(admin)/layout.tsx` render `RoleHeader` and pad for the bottom tab bar. `manifest.ts`, `apple-icon.tsx` and `layout.tsx` hold the PWA metadata and theme colour.
 
@@ -618,3 +618,16 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 ## 22. Camera scanner overlay
 
 `CameraScanner` is rendered into `document.body` as a fixed, responsive dialog overlay positioned at the camera button, normally above it (below only when there is insufficient room above). Opening it does not add content to the scan form or move the screen; the existing page remains visible behind a dim backdrop. The close button is centered below the title, and the camera/close buttons have at least 44px tap targets with visible keyboard focus. Close with the button, outside click, or Escape. Keyboard focus stays inside the dialog and returns to the camera button on close. Unmounting the scanner stops its camera stream and decoder.
+
+## 23. All tags: grouped, filtered, grid or rows (plan v13, ADR-023)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Query | `listTagLibrary(db, storeId, filter, { now, timezone })` in `src/server/services/tag-library.ts` | Active items, newest first, with `supplierName`, `createdByName` (`products.created_by`) and the stock entry the item was created in (`opening` movement → `stock_receipts`: `receiptId`, `receiptBill`, `receiptAt`; one row per item). Filters in SQL: search (name / SKU / brand / category / colour / exact barcode), company id or `'none'`, category, maker, in stock (`stock > 0`), when made (`today` / `7d` / `30d` from the shop day, like Reports). |
+| Rules | `src/lib/tag-library.ts` (pure, `tag-library.test.ts`) | `parseTagParams` (address → `TagParams`, bad values dropped, `limit` 120…1200), `tagFilter`, `hasTagFilters`, `tagLibraryHref` (defaults left out), `tagPrintHref` (`list=1`, `group`, `key`), `shopDay`, `groupTags` (date: newest day first; company / category: A–Z, `none` last; delivery: newest first, `none` = items added one by one, last), `capGroups` (draws the first N tags, keeps full counts). |
+| Page | `src/app/(admin)/admin/labels/page.tsx` | `requireAnyPermission(['catalog','stock'])`. Filter form (`TagFilterForm`, `next/form` GET, selects / checkbox submit on change, remounted per address), chip rows (Group by, When made), summary + Show more, groups (`section[data-testid=tag-group]`, heading from `groupTitle`, note from `groupNote`, Print this group), each tag a `Link.tag-open` to the product page with the pieces in stock under it. Delivery groups print through `?receipt=`. |
+| Views | `src/features/tag-library/tag-views.tsx`, `tag-library.css` | Client switch Grid / Rows (`aria-pressed`), `localStorage` `maa-tag-view` via `useSyncExternalStore` (server snapshot = grid). `[data-view="rows"] .tag-row` = `flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x mandatory`. Tags are server-rendered children: no product data crosses to the client. |
+| Print | `src/app/(admin)/admin/labels/print/page.tsx` → `LibraryLabels` | `list=1` + the same filters (+ `group`/`key` for one group) → `ReceiptLabelLine` with `quantity = stock`; up to `TAG_PRINT_MAX` (400) items; heading = the group's title; *← All tags* back link. Every print page has *See all tags →*. |
+| Links | supplier page (*See this company's tags* → `?supplier=<id>&group=delivery`), More hint `cat.menu.labelsHint`, Guide lesson `print` step 1 | |
+| Words | `stk.lib.*` in `src/lib/i18n/modules/stock.ts` (en + hi); `stk.labels.title` is now "All tags" | |
+| Tests | `src/lib/tag-library.test.ts` (6), `src/server/services/tag-library.test.ts` (3), `e2e/admin-setup.spec.ts` "all tags: …" (desktop + phone), `e2e/pos.spec.ts` labels check uses `?q=MAA-TS-001` | |

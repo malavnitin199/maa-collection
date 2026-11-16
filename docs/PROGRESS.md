@@ -3,7 +3,7 @@
 Last updated: 2026-11-16
 
 ## Current milestone
-v0.2.0 live app (plan v12); current follow-up is camera-scanning UX polish.
+v0.3.0 (plan v13): **All tags** — every generated tag grouped by date / company / category / delivery, with filters, Grid or sideways Rows, and print one group.
 
 ## Task status
 - [x] P1-01: bootstrap Next.js project + quality baseline (DONE 2026-11-14)
@@ -11,6 +11,7 @@ v0.2.0 live app (plan v12); current follow-up is camera-scanning UX polish.
 - [x] Demo scan-to-sell flow on dummy data (owner request, outside backlog numbering; DONE 2026-11-15)
 - [x] Owner-requested v0.2.0: live catalog, POS, approvals, and supporting workflows (DONE 2026-11-16; see entries below)
 - [x] Camera scan popup: anchor it above the camera button; center the close action and use accessible tap targets (DONE 2026-11-16; see verification log)
+- [x] Plan v13 All tags: grouped, filtered, grid or rows, print a group (DONE 2026-11-16; see below)
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -29,8 +30,24 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
 | 2026-11-16 | Camera scan popup | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm exec playwright test e2e/pos.spec.ts -g "camera scanner opens"` | PASS | 135 unit tests pass; desktop + mobile E2E confirms button-anchored placement, centered 44px+ controls, unchanged scan-form bounds, close button/Escape/outside-click behavior, and focus restoration |
+| 2026-11-16 | Plan v13 All tags | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except 2 known timing-dependent tests | 146 unit tests (9 new); build 36 routes; Playwright 71 passed, 1 skipped, 2 failed: `pos.spec.ts:59` camera popup and `guide-voice.spec.ts:46` — both fail the same way on the untouched `f0d5505` under load (see the v13 entry); the new All tags test passes at desktop + phone |
 
-## Sell without scanning + owner approvals — v0.2.0 (2026-11-16, latest)
+## All tags: grouped, filtered, grid or rows — v0.3.0 (2026-11-16, latest)
+Owner request: the generated QR codes / barcodes were one grid; categorise them by date or company name, add filters for a well-maintained view, offer different views such as horizontal scrollable rows for the same filter, and give tag creation a proper flow; push and make it live. Owner said go ahead (plan posted in chat first). Plan: `docs/PLAN_V13_TAG_LIBRARY.md`; ADR-023; reference §23.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | `listTagLibrary`: active items with company, maker and the delivery they were created in; filters for search, company (or none), category, made by, when made (shop day), in stock | Done — 3 service tests on PGlite |
+| 2 | `src/lib/tag-library.ts`: address ⇄ filters, `groupTags` by date / company / category / delivery (order, "none" last), `capGroups` (newest 120, Show more) | Done — 6 unit tests |
+| 3 | **All tags** page `/admin/labels`: filters that apply at once (search with Show), Group by + When made chips, summary, group headings with counts (delivery: bill, date, person), Print this group, tap a tag to open its item, pieces under each tag | Done |
+| 4 | **Grid / Rows** switch, remembered per phone; Rows = each group one sideways strip with scroll snap | Done |
+| 5 | Print page `list=1` (what the filters show, or one group; one tag per piece in stock or per item; up to 400 items); *See all tags →* on every print page; *See this company's tags* on a company's page; More hint | Done |
+| 6 | Hindi + English (`stk.lib.*`), Guide *Print tags* starts with "All tags: by date or company"; docs (plan, ADR-023, reference §23, user guide, context, README, backlog V2-08, CLAUDE.md); version **0.3.0** | Done |
+- No database change.
+- Verified: lint, typecheck, **146 unit tests** (23 files; 9 new), build (36 routes), new E2E "all tags: grouped by date, company or delivery; filters; grid or sideways rows; print one group" passes at desktop + phone, the labels check in `pos.spec.ts` now searches `?q=MAA-TS-001`. Full Playwright run: **71 passed, 1 skipped, 2 failed**. Both failures are pre-existing timing problems, not this change: `pos.spec.ts:59` (camera popup, from the Copilot commits `d925bea`…`f0d5505`) measures the scan form while the page is still moving (5 px or 56 px); with the Guide test running beside it, it failed **6 of 8 on the untouched `f0d5505`** and passes 4 of 4 alone on both versions. `guide-voice.spec.ts:46` is the known dev-badge flake. Follow-up: make the camera test wait for the page to settle before measuring.
+- Phone screenshots (private demo DB, 2 deliveries): Grid by date (2 tags per line), Rows by company (third tag cut at the edge = swipe), delivery headings "Laxmi Fashion House · bill LF-88 / 16 Nov 2026, 2:14 pm · by Owner", Hindi in Rani night theme.
+
+## Sell without scanning + owner approvals — v0.2.0 (2026-11-16)
 Owner request: tags are stuck on shirts, pants and so on; sometimes a tag will not scan, the scanner breaks or the phone's back camera does not work. The salesman must still capture the sale by typing the item's name and the selling price. Owner chose: **full approval queue** (every salesman entry waits for him) and **name + price + optional size**. Plan: `docs/PLAN_V12_HAND_ENTRY_APPROVALS.md`; ADR-022; new open question D-EX-2.
 
 | # | Task | Result |
