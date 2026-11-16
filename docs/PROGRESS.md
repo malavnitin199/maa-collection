@@ -3,7 +3,7 @@
 Last updated: 2026-11-16
 
 ## Current milestone
-v0.4.0 (plan v14): **combined view** — Products and All tags show one card per design (same name, company, MRP) by default, with the separate items / tags one tap away.
+v0.5.0 (plan v15): **cleaner UI** — header of round symbols only, small pictures and gentle motion, a counter card led by price / size / stock, a shorter Home.
 
 ## Task status
 - [x] P1-01: bootstrap Next.js project + quality baseline (DONE 2026-11-14)
@@ -13,6 +13,7 @@ v0.4.0 (plan v14): **combined view** — Products and All tags show one card per
 - [x] Camera scan popup: anchor it above the camera button; center the close action and use accessible tap targets (DONE 2026-11-16; see verification log)
 - [x] Plan v13 All tags: grouped, filtered, grid or rows, print a group (DONE 2026-11-16; see below)
 - [x] Plan v14 combined view: one card per design on Products and All tags (DONE 2026-11-16; see below)
+- [x] Plan v15 cleaner UI: icon header, pictures, motion, counter card, shorter Home (DONE 2026-11-16; see below)
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -33,8 +34,26 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-16 | Camera scan popup | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm exec playwright test e2e/pos.spec.ts -g "camera scanner opens"` | PASS | 135 unit tests pass; desktop + mobile E2E confirms button-anchored placement, centered 44px+ controls, unchanged scan-form bounds, close button/Escape/outside-click behavior, and focus restoration |
 | 2026-11-16 | Plan v13 All tags | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except 2 known timing-dependent tests | 146 unit tests (9 new); build 36 routes; Playwright 71 passed, 1 skipped, 2 failed: `pos.spec.ts:59` camera popup and `guide-voice.spec.ts:46` — both fail the same way on the untouched `f0d5505` under load (see the v13 entry); the new All tags test passes at desktop + phone |
 | 2026-11-16 | Plan v14 combined view | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except known timing-dependent tests | 150 unit tests (5 new + 1 extended); Playwright 72 passed, 1 skipped, 3 failed: `pos.spec.ts:59`, `guide-voice.spec.ts:46` (known) and `pos.spec.ts:378` on phone (sell by hand + approvals: the scanned item card did not appear within 5 s; 3/8 then 0/8 on repeat with the same code; it visits no changed page). The new combined-view test passes at desktop + phone |
+| 2026-11-16 | Plan v15 cleaner UI | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e --workers=3` | PASS | 150 unit tests; Playwright **75 passed, 1 skipped (phone-only), 0 failed** with 3 workers. At default parallelism on the busy Mac (load 8–12) random tests timed out; the camera and Guide tests that used to flake now pass 16/16 and 24/24 on repeat |
 
-## Combined view: one card per design — v0.4.0 (2026-11-16, latest)
+## Cleaner UI: icon header, pictures, gentle motion — v0.5.0 (2026-11-16, latest)
+Owner request: make the UI very clean, with animations, small pictures, interactive images and symbols; easier for salesmen and the admin; for the day / dark theme mode just an icon at the top; push with proper commits and deploy. Plan posted in chat, then built. Plan: `docs/PLAN_V15_UI_CLEANUP.md`; ADR-025; reference §25.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | Header: one slim row — name + "Name · Role", five round symbols (☀/☾ with a theme dot, speaker, अ/A, book, door) with tooltips and unchanged accessible names; login uses the same symbols | Done — header about half as tall |
+| 2 | Pictures (`art.tsx`): a swinging hang tag with a sweeping scan line (Sell ready card, login band), a popping tick (empty Approvals); theme colours, decorative | Done |
+| 3 | Motion: tiles / cards rise in (Home, My sales, More, Stock, Products), symbols lift and pop; all off with reduced motion; `scroll-padding` keeps scrolled-to things clear of the header and the dock | Done |
+| 4 | Counter card: photo or tag symbol, size / colour chips, selling price big, MRP, stock badge, codes in one grey line; Sell ready card with *Enter by hand* (pencil); *My sales today* pill | Done |
+| 5 | Home: section symbols, tile symbols, first 6 low-stock items + *Show all N*, latest 6 entries + *See all activity*; My sales: tile symbols, "1 sale" | Done — Home about a third shorter |
+| 6 | Guide: *Language and colours* says "Tap अ / A" and "Sun button"; the drawn header shows the new symbols with the finger on them | Done — screenshots checked |
+| 7 | Tests made reliable: camera test waits for a still layout; Guide tests hide the dev-only overlay; dev badge off when Playwright starts the server (`E2E=1`) | Done |
+| 8 | Docs (plan, ADR-025, reference §25, user guide, context, backlog V2-10, CLAUDE.md); version **0.5.0** | Done |
+- No database change; no test lost an assertion. Hindi + English for every new line.
+- Verified: lint, typecheck, **150 unit tests**, build; full Playwright with `--workers=3`: **75 passed, 1 skipped, 0 failed**. Before/after phone screenshots of login, Sell (empty and with an item), My sales, Home, More, Stock, Approvals; the Guide's header steps (finger on अ, speaker, log out).
+- Found on the way: on a phone the floating dock could cover the very thing the browser had just scrolled to (seen when a test tapped *Grid* and hit the dock) → `scroll-padding-bottom` for the dock and `scroll-padding-top` for the sticky header. The other app on port 3100 (running for a day) was left alone.
+
+## Combined view: one card per design — v0.4.0 (2026-11-16)
 Owner request: the admin product view and the tags were still one row / one tag per size and colour; group the same kind of products — same product name, company and MRP, only size or colour different — into one view with a single QR, all the sizes and the images combined; the separate ones only when the owner asks; concise and easy by default. Owner chose (asked before building): a **combined card on screen**; printed tags stay one per piece with its own barcode, Sell unchanged. Plan: `docs/PLAN_V14_COMBINED_VIEW.md`; ADR-024; reference §24.
 
 | # | Task | Result |

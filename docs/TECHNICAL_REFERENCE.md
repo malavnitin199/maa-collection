@@ -642,3 +642,19 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | All tags | `src/app/(admin)/admin/labels/page.tsx`, `TagParams.show` (`designs` default, `tags`) | Groups render `groupDesigns(g.shown)` as `li.design-cell` cards whose children are the real hang tags (`ul.tag-grid`); `show=tags` renders the v13 view. Summary `stk.lib.summaryDesigns`. Photos via `mainImages` for the shown items. |
 | Print | `LibraryLabels` in the print page | `design=<key>` filters the (group's) rows by `designKey`; heading = the design's name, note = company · MRP. |
 | Tests | unit above + `tag-library.test.ts`; `e2e/admin-setup.spec.ts` "combined view: …"; tests that need one row per item use `&show=items`, tag-visibility checks use `show=tags` | |
+
+## 25. Cleaner UI: icon header, pictures, motion (plan v15, ADR-025)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Header | `src/components/layout/role-header.tsx` | One row: brand link + `current-user` line ("Name · Role", 11 px), then `header-buttons`: `AppearanceMenu`, `SoundToggle`, `LanguageSwitch onBand`, Guide link, log-out form. All use `headerIcon` (`styles.ts`: 36 px, 40 px from 390 px; lift on hover, scale on press). Keep `aria-label` + `title` on every symbol; tests and screen readers use the names. `headerChip` / `headerChipOn` are no longer used by the header. |
+| Theme symbol | `appearance-menu.tsx` | Snapshot now `theme|mode|shown` (`shown` = `html[data-mode]`), so the symbol is a sun or a moon for what the screen shows; a dot in `THEME_SWATCH[theme].accent`. |
+| Language symbol | `language-switch.tsx` | On the band: `अ` while English, `A` while Hindi; off the band (unchanged): the target language as text. |
+| Pictures | `src/components/ui/art.tsx` | `ScanTagArt`, `AllDoneArt`: inline SVG, `aria-hidden`, colours from `currentColor` (set `text-brand-600 dark:text-brand-300`, or `text-zari` on the band) and `var(--zari)`. Add `art-tap` for a press nudge. |
+| Motion | `src/app/globals.css` | `.rise-in` (children rise in, 45 ms apart, max 270 ms) on tile / card containers; `.art-swing`, `.art-scan`, `.art-pop`, `.art-twinkle`; all off under `prefers-reduced-motion`. Don't put `.rise-in` around the scan zone (the camera test measures its position). |
+| Scroll padding | `globals.css` | `html { scroll-padding-top: 4.75rem }`, and `scroll-padding-bottom: 7rem` under 640 px (the floating dock). |
+| Counter card | `src/features/pos/product-card.tsx` | `ProductCard`: photo or tag symbol, name, size chip (filled) + colour chip, `ProductDetails`: selling price (28 px), MRP, `StockBadge` (`details-stock` holds only the number), codes line. Never a purchase price. |
+| Sell | `pos-screen.tsx` | Ready card (`ScanTagArt`, `sell.ready.*`, `by-hand` button with a pencil) when nothing is scanned; *My sales today* pill with ₹. |
+| Home | `dashboard/page.tsx` | `Title` (section title with a symbol), `StatTile icon`, `LOW_STOCK_SHOWN = 6` with a `<details>` *Show all N*, `ActivityList limit={6} more={…}`. |
+| Widgets | `src/features/reports/widgets.tsx` | `StatTile` takes `icon`; `ActivityList` takes `limit`, `more` (`href`, `label`) and `icon`. |
+| Test settings | `playwright.config.ts` (`E2E=1`), `next.config.ts` (`devIndicators` off when `E2E=1`), `guide-voice.spec.ts` (hides `nextjs-portal`), `pos.spec.ts` camera test (waits for a still layout) | On a busy Mac run `pnpm test:e2e --workers=3`. |

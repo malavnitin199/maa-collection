@@ -30,7 +30,7 @@ The 12-page uploaded *Retail Shop Stock, Sales & Billing System* PRD is the prod
 - At completion, show commands executed, actual results, modified files, gaps and the next task.
 - Update `docs/PROGRESS.md` and check off backlog ONLY when acceptance criteria pass.
 
-## Current status (2026-11-16, live through plan v14 — v0.4.0)
+## Current status (2026-11-16, live through plan v15 — v0.5.0)
 
 Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavnitin199/maa-collection · Deployed with the Vercel CLI (repo not Git-connected).
 
@@ -60,6 +60,7 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 
 **Language, look, learning**
 - **Hindi + English** on every screen, chosen per person (`staff.language`).
+- **Clean header** (plan v15): one slim row of round symbols — ☀/☾ colours and day/night, sound, अ/A language, Guide, log out. Small pictures (a swinging hang tag on Sell and login, a tick when Approvals is empty), tiles that rise in, a counter card that leads with the price, size/colour and stock; Home shows the first 6 low-stock items and the latest 6 entries.
 - **Five colour themes** (Peacock, Marigold, Rani, Neel, Mehendi) and **Day / Night / Same as phone**, chosen per phone. Shop-made design: zari border, hang-tag action tiles, floating dock with a round Sell button.
 - `/guide`: 16 **short story lessons** by role, in both languages — one step at a time with an animated phone scene, at most 7 words on screen, and the **phone's own voice** saying a fuller line and moving on by itself; a **practice sale** that saves nothing; `/help`: quick reference and problems & fixes; `docs/USER_GUIDE.md`.
 
@@ -68,7 +69,7 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 **Stack actually in use**: Next.js 16.4.6 (App Router, Cache Components), React 19, TypeScript strict, Tailwind CSS 4, Drizzle ORM on Neon Postgres (PGlite locally and in tests), Zod, Vitest, Playwright (desktop + phone). Not used (yet): shadcn/ui, Better Auth, TanStack Query, Zustand, Dexie. Never put the Neon URL in `.env.local` (it lives in `.env.neon` for migrations only).
 
 **Where the details are**
-- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V14_COMBINED_VIEW.md`, `docs/PLAN_SIZE_PRICES.md`.
-- Decisions: `docs/DECISION_LOG.md` (ADR-001…024); open questions: `docs/DECISIONS.md`.
+- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V15_UI_CLEANUP.md`, `docs/PLAN_SIZE_PRICES.md`.
+- Decisions: `docs/DECISION_LOG.md` (ADR-001…025); open questions: `docs/DECISIONS.md`.
 - The original starter pack (2026-11-14), what it planned and what changed: `docs/STARTER_PACK_HISTORY.md`; the untouched originals: `docs/archive/starter-pack-2026-11-14/`.
 - How it works (developers): `docs/TECHNICAL_REFERENCE.md`; how to use it (shop): `docs/USER_GUIDE.md`; what was done and verified: `docs/PROGRESS.md`; agent rules + status: `CLAUDE.md`.
