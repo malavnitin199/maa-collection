@@ -97,13 +97,16 @@ export const STORIES: Story[] = [
     steps: [
       {
         scene: { kind: 'header', tap: 'lang' },
-        text: { en: 'Tap **हिन्दी / English**', hi: '**हिन्दी / English** दबाएँ' },
-        say: { en: 'Tap Hindi or English at the top. Your choice is remembered.', hi: 'ऊपर हिन्दी या English दबाएँ। आपकी पसंद याद रहती है।' },
+        text: { en: 'Tap **अ / A** at the top', hi: 'ऊपर **अ / A** दबाएँ' },
+        say: {
+          en: 'Tap the letter at the top to switch between Hindi and English. Your choice is remembered.',
+          hi: 'ऊपर अ या A वाला बटन दबाकर हिन्दी और अंग्रेज़ी बदलें। आपकी पसंद याद रहती है।',
+        },
       },
       {
         scene: { kind: 'swatches' },
-        text: { en: 'Palette → **pick a colour**', hi: 'पैलेट → **रंग चुनें**' },
-        say: { en: 'Tap the palette button and pick a colour you like.', hi: 'पैलेट वाला बटन दबाएँ और अपनी पसंद का रंग चुनें।' },
+        text: { en: 'Sun button → **pick a colour**', hi: 'सूरज बटन → **रंग चुनें**' },
+        say: { en: 'Tap the sun button at the top and pick a colour you like.', hi: 'ऊपर सूरज वाला बटन दबाएँ और अपनी पसंद का रंग चुनें।' },
       },
       {
         scene: { kind: 'daynight' },

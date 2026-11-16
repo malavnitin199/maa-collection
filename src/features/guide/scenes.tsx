@@ -1,4 +1,4 @@
-import { IconLogout, IconMenu, IconHome, IconPalette, IconPencil, IconRupee, IconScan, IconSound, IconSwap, IconCamera } from '@/components/ui/icons';
+import { IconBook, IconLogout, IconMenu, IconHome, IconPencil, IconRupee, IconScan, IconSound, IconSun, IconSwap, IconCamera } from '@/components/ui/icons';
 import { THEME_SWATCH, THEMES } from '@/features/appearance/appearance';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { inStoreEan13 } from '@/features/scanning/ean13';
@@ -159,7 +159,8 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
       );
 
     case 'header': {
-      const at = { lang: 62, sound: 40, logout: 86 }[scene.tap];
+      // Finger positions (% of the phone) over the header's round symbols: ☀ · sound · अ · Guide · log out (UI clean-up, v15).
+      const at = { lang: 58, sound: 44, logout: 87 }[scene.tap];
       const on = 'st-target bg-white/30';
       return (
         <Phone
@@ -167,13 +168,17 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
             <div className="flex items-center justify-between gap-1">
               <p className="font-display text-[11px]">Maa</p>
               <div className="flex items-center gap-1">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
-                  <IconPalette className="h-3.5 w-3.5" />
+                <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
+                  <IconSun className="h-3.5 w-3.5" />
+                  <span className="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full bg-zari" />
                 </span>
                 <span className={`flex h-6 w-6 items-center justify-center rounded-full ${scene.tap === 'sound' ? on : 'bg-white/10'}`}>
                   <IconSound className="h-3.5 w-3.5" />
                 </span>
-                <span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${scene.tap === 'lang' ? on : 'bg-white/10'}`}>हिन्दी</span>
+                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${scene.tap === 'lang' ? on : 'bg-white/10'}`}>अ</span>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
+                  <IconBook className="h-3.5 w-3.5" />
+                </span>
                 <span className={`flex h-6 w-6 items-center justify-center rounded-full ${scene.tap === 'logout' ? on : 'bg-white/10'}`}>
                   <IconLogout className="h-3.5 w-3.5" />
                 </span>

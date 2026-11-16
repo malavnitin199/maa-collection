@@ -37,6 +37,13 @@ async function fakeVoice(page: Page) {
     };
     Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
     localStorage.setItem('maa-sound', 'off');
+    // The dev-only Next.js overlay (never in production) can pop a notice over the
+    // story's buttons on a phone-size screen; keep it out of the way in these tests.
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = 'nextjs-portal { display: none !important; }';
+      document.head.append(style);
+    });
   });
 }
 
@@ -99,11 +106,11 @@ test('links open a lesson or a part; the voice speaks Hindi for a Hindi reader',
   await page.getByText('अपने नाम पर टैप करें और PIN डालें।').waitFor();
   await page.goto('/guide#look');
   const story = page.getByRole('dialog', { name: 'भाषा और रंग' });
-  await expect(story.getByTestId('story-text')).toHaveText('हिन्दी / English दबाएँ');
+  await expect(story.getByTestId('story-text')).toHaveText('ऊपर अ / A दबाएँ');
   // No tap yet on this page, so start the voice by turning it off and on.
   await story.getByRole('button', { name: 'आवाज़' }).click();
   await story.getByRole('button', { name: 'आवाज़' }).click();
-  await expect.poll(async () => (await spoken(page)).at(-1)).toEqual({ text: 'ऊपर हिन्दी या English दबाएँ। आपकी पसंद याद रहती है।', lang: 'hi-IN' });
+  await expect.poll(async () => (await spoken(page)).at(-1)).toEqual({ text: 'ऊपर अ या A वाला बटन दबाकर हिन्दी और अंग्रेज़ी बदलें। आपकी पसंद याद रहती है।', lang: 'hi-IN' });
 });
 
 test('practice sale at the end of the Sell lesson: above MRP is refused, then "Sale done" — nothing saved', async ({ page }) => {
