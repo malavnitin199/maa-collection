@@ -32,7 +32,16 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-16 | Camera scan popup | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm exec playwright test e2e/pos.spec.ts -g "camera scanner opens"` | PASS | 135 unit tests pass; desktop + mobile E2E confirms button-anchored placement, centered 44px+ controls, unchanged scan-form bounds, close button/Escape/outside-click behavior, and focus restoration |
 | 2026-11-16 | Plan v13 All tags | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except 2 known timing-dependent tests | 146 unit tests (9 new); build 36 routes; Playwright 71 passed, 1 skipped, 2 failed: `pos.spec.ts:59` camera popup and `guide-voice.spec.ts:46` — both fail the same way on the untouched `f0d5505` under load (see the v13 entry); the new All tags test passes at desktop + phone |
 
-## All tags: grouped, filtered, grid or rows — v0.3.0 (2026-11-16, latest)
+## Demo data in the live shop (2026-11-16, latest)
+Owner request: put dummy tags in random categories and dummy sales for the reports on the live app, to check All tags and the reports. Owner chose **into the live shop** (over a separate demo site or screenshots only), knowing the demo sales count in Home / Reports / Approvals until removed.
+
+- Backup first (read-only, owner's Mac, not in Git): `backups/maa-backup-2026-11-16-before-demo-data.json` — the live DB then had 0 products, 1 sale, 5 staff, 13 categories, 5 companies.
+- Added through the app's own services (`createDesign`, `createProductsBatch`, `recordSale`, `approveSale`, `rejectSale`), so SKUs, barcodes, receipts, stock movements and approvals follow the normal rules; only `created_at` was moved back to spread the history over the last 10 days. Dry-run twice on PGlite first (re-run adds nothing).
+- Live result (checked): **62 items / 156 pieces in 12 categories**, 4 companies *Demo Ganga Textiles, Demo Kashi Silk Mills, Demo Rangoli Fashion, Demo Jaipur Prints* + 2 old-stock items with no company; 13 deliveries (bills DEMO-101…112); **40 sales** over 7 days by the salesmen (some on behalf of a colleague): 31 approved, 2 rejected, **7 waiting** (6 today + 1 by hand). The owner's own sale is untouched. SKUs MAA-DR-001 … MAA-TS-008, barcodes 2000000000015 … 2000000000626.
+- Markers for removal: companies `Demo %`, products `Demo %`, `operation_id` `demo-%` on receipts and sales. Scripts + how to remove: `backups/demo-data-2026-11-16/README.md` (outside Git). Removal is a one-off on the owner's request (backup first); afterwards numbering restarts at 001, so printed demo tags must be thrown away.
+- No code change, so no redeploy: the live app reads the database directly.
+
+## All tags: grouped, filtered, grid or rows — v0.3.0 (2026-11-16)
 Owner request: the generated QR codes / barcodes were one grid; categorise them by date or company name, add filters for a well-maintained view, offer different views such as horizontal scrollable rows for the same filter, and give tag creation a proper flow; push and make it live. Owner said go ahead (plan posted in chat first). Plan: `docs/PLAN_V13_TAG_LIBRARY.md`; ADR-023; reference §23.
 
 | # | Task | Result |

@@ -52,6 +52,7 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 
 **Owner**
 - **Fresh start on 2026-11-16**: all test products, stock history and sales were removed from the live database at the owner's request (backup kept on the owner's Mac); staff, categories and companies were kept. Real stock entry starts from an empty shop.
+- **Demo data in the live shop (2026-11-16, owner request)**: 62 demo items in 12 categories from 4 "Demo …" companies and 40 demo sales (7 waiting in Approvals) so All tags and the reports can be tried. They count in Home / Reports until removed; remove them (backup first, one-off script, see `docs/PROGRESS.md`) before real stock entry, and don't print demo tags.
 - **Clear stock** (More / Settings, owner's PIN): sets every item's pieces to 0 and records it in each item's history; nothing is deleted.
 - **Approvals** (`/admin/approvals`, Home tile with the waiting count): every salesman sale / exchange by day; Approve one, a day or everything; Reject with a reason (pieces go back into stock through a new movement; an exchange is undone). Only approved entries count anywhere; hand-entered sales carry a **By hand** mark.
 - Home dashboard (today / month, profit, exchanges, low stock, activity), reports + CSV export, **sales team dashboard** (`/admin/team`: sellers, share, daily sales per seller), activity log, staff and rights, settings (code price).
