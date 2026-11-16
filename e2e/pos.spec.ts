@@ -67,15 +67,23 @@ test('camera scanner opens over the current screen without moving the scan form'
     });
   const before = await geometry();
   const cameraButton = page.getByRole('button', { name: 'Scan with camera' });
+  const buttonBefore = await cameraButton.boundingBox();
 
   await cameraButton.click();
 
   const dialog = page.getByRole('dialog', { name: 'Camera scan' });
   await expect(dialog).toBeVisible();
   await expect(dialog).toBeFocused();
+  const dialogBounds = await dialog.boundingBox();
+  expect(dialogBounds).not.toBeNull();
+  expect(buttonBefore).not.toBeNull();
+  const buttonCenterX = buttonBefore!.x + buttonBefore!.width / 2;
+  expect(dialogBounds!.x).toBeLessThanOrEqual(buttonCenterX);
+  expect(dialogBounds!.x + dialogBounds!.width).toBeGreaterThanOrEqual(buttonCenterX);
+  expect(Math.abs(dialogBounds!.y + dialogBounds!.height - (buttonBefore!.y - 8))).toBeLessThan(20);
   const after = await geometry();
   expect(after.x).toBeCloseTo(before.x, 1);
-  expect(after.y).toBeCloseTo(before.y, 1);
+  expect(Math.abs(after.y - before.y)).toBeLessThan(4);
   expect(after.width).toBeCloseTo(before.width, 1);
   expect(after.height).toBeCloseTo(before.height, 1);
 

@@ -1,16 +1,18 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
 
 type Props = {
   onDecode: (text: string) => void;
   onClose: () => void;
+  anchor: { top: number; left: number; bottom: number };
 };
 
 type Engine = 'native' | 'zxing';
+type DialogPosition = { top: number; left: number; maxHeight: number };
 
 const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: 'environment',
@@ -190,16 +192,18 @@ function drawView(
 }
 
 /** Uses the rear camera to read QR codes and 1D barcodes; closes after one decode. */
-export function CameraScanner({ onDecode, onClose }: Props) {
+export function CameraScanner({ onDecode, onClose, anchor }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const onDecodeRef = useRef(onDecode);
   const onCloseRef = useRef(onClose);
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const hasFocusedDialog = useRef(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const t = useT();
   const titleId = useId();
   const [engine, setEngine] = useState<Engine | null>(null);
+  const [position, setPosition] = useState<DialogPosition | null>(null);
 
   useEffect(() => {
     onDecodeRef.current = onDecode;
@@ -210,7 +214,6 @@ export function CameraScanner({ onDecode, onClose }: Props) {
   });
 
   useEffect(() => {
-    dialogRef.current?.focus({ preventScroll: true });
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onCloseRef.current();
@@ -222,6 +225,39 @@ export function CameraScanner({ onDecode, onClose }: Props) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (position && !hasFocusedDialog.current) {
+      hasFocusedDialog.current = true;
+      dialogRef.current?.focus({ preventScroll: true });
+    }
+  }, [position]);
+
+  useLayoutEffect(() => {
+    const placeDialog = () => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const margin = 12;
+      const gap = 8;
+      const bounds = dialog.getBoundingClientRect();
+      const spaceAbove = Math.max(0, anchor.top - gap - margin);
+      const spaceBelow = Math.max(0, window.innerHeight - anchor.bottom - gap - margin);
+      const placeAbove = spaceAbove >= 180 || spaceAbove >= spaceBelow;
+      const availableSpace = placeAbove ? spaceAbove : spaceBelow;
+      const maxHeight = Math.max(120, Math.min(bounds.height, availableSpace));
+      const top = placeAbove
+        ? Math.max(margin, anchor.top - gap - maxHeight)
+        : Math.min(anchor.bottom + gap, window.innerHeight - margin - maxHeight);
+      const left = Math.max(margin, Math.min(anchor.left, window.innerWidth - margin - bounds.width));
+
+      setPosition({ top, left, maxHeight });
+    };
+
+    placeDialog();
+    window.addEventListener('resize', placeDialog);
+    return () => window.removeEventListener('resize', placeDialog);
+  }, [anchor, engine, error]);
 
   useEffect(() => {
     let cancelled = false;
@@ -272,7 +308,7 @@ export function CameraScanner({ onDecode, onClose }: Props) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 sm:p-6"
+      className="fixed inset-0 z-[100] bg-black/70"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -283,7 +319,12 @@ export function CameraScanner({ onDecode, onClose }: Props) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col gap-3 overflow-y-auto rounded-2xl border border-zinc-200 bg-surface p-4 text-zinc-900 shadow-2xl dark:border-zinc-700 dark:text-zinc-100 sm:max-h-[calc(100dvh-3rem)]"
+        style={
+          position
+            ? { top: position.top, left: position.left, maxHeight: position.maxHeight }
+            : { top: anchor.top, left: anchor.left, visibility: 'hidden' }
+        }
+        className="fixed flex w-[calc(100vw-1.5rem)] max-w-xl flex-col gap-3 overflow-y-auto rounded-2xl border border-zinc-200 bg-surface p-4 text-zinc-900 shadow-2xl dark:border-zinc-700 dark:text-zinc-100"
       >
         <div className="flex items-center justify-between">
           <h2 id={titleId} className="font-semibold">{t('scan.cameraTitle')}</h2>

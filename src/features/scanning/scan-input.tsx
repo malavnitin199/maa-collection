@@ -46,6 +46,7 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
   const id = useId();
   const [value, setValue] = useState('');
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraAnchor, setCameraAnchor] = useState<{ top: number; left: number; bottom: number } | null>(null);
   const ref = useRef<HTMLInputElement>(null);
   const cameraButtonRef = useRef<HTMLButtonElement>(null);
   const cameraWasOpen = useRef(false);
@@ -132,17 +133,32 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
             disabled={!hydrated}
             onClick={() => {
               unlockAudio(); // camera scans aren't a tap: allow the sound now
-              setCameraOpen((open) => !open);
+              if (cameraOpen) {
+                setCameraOpen(false);
+                return;
+              }
+              const button = cameraButtonRef.current;
+              if (!button) return;
+              const { top, left, bottom } = button.getBoundingClientRect();
+              setCameraAnchor({ top, left, bottom });
+              setCameraOpen(true);
             }}
             className={cameraButton}
           >
             <IconCamera className="h-5 w-5" />
-            {cameraOpen ? t('scan.stopCamera') : t('scan.camera')}
+            <span className="grid">
+              <span aria-hidden className="invisible col-start-1 row-start-1">
+                {t('scan.camera')}
+              </span>
+              <span className="col-start-1 row-start-1">{cameraOpen ? t('scan.stopCamera') : t('scan.camera')}</span>
+            </span>
           </button>
           <p className="text-xs text-white/75">{t('scan.hardwareHint')}</p>
         </div>
       </form>
-      {cameraOpen && <CameraScanner onDecode={submit} onClose={() => setCameraOpen(false)} />}
+      {cameraOpen && cameraAnchor && (
+        <CameraScanner anchor={cameraAnchor} onDecode={submit} onClose={() => setCameraOpen(false)} />
+      )}
     </div>
   );
 }
