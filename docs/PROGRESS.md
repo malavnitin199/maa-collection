@@ -50,6 +50,7 @@ Owner request: explore the Bill Book app and give our app one touch of its theme
 | 5 | Docs (plan, ADR-026, reference §26, user guide, context, backlog V2-11, CLAUDE.md); version **0.6.0** | Done |
 - No database change. Revert = `DEFAULT_THEME` back to `peacock`.
 - Verified: lint, typecheck, **150 unit tests**, build; Playwright `--workers=3`: **75 passed, 1 skipped, 0 failed**. Phone screenshots: login, Sell with an item, Products, the picker, Home by night; header at 360 px.
+- **Live (2026-11-17):** pushed `dcf4fab`…`b4ed4c5` + tag `v0.6.0`; no migration; `vercel deploy --prod` → `maa-collection-b018zbd8v`, aliased to https://maa-collection-pi.vercel.app. Live check (logged out, phone size): `<html data-theme="bahi">`, body font Poppins, `--b-600` #4c3cce, login band indigo with the orange line; `/admin/dashboard` and `/pos` redirect to login. A phone that picked a theme before keeps it (☀ → Bahi to see it).
 
 ## Cleaner UI: icon header, pictures, gentle motion — v0.5.0 (2026-11-16)
 Owner request: make the UI very clean, with animations, small pictures, interactive images and symbols; easier for salesmen and the admin; for the day / dark theme mode just an icon at the top; push with proper commits and deploy. Plan posted in chat, then built. Plan: `docs/PLAN_V15_UI_CLEANUP.md`; ADR-025; reference §25.
