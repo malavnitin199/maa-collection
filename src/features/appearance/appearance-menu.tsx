@@ -2,8 +2,8 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { headerChip } from '@/components/ui/styles';
-import { IconMoon, IconPalette, IconPhone, IconSun } from '@/components/ui/icons';
+import { headerIcon } from '@/components/ui/styles';
+import { IconMoon, IconPhone, IconSun } from '@/components/ui/icons';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
 import { applyAppearance, DEFAULT_THEME, readAppearance, THEME_SWATCH, THEMES, type Mode, type Theme } from './appearance';
@@ -20,7 +20,9 @@ const subscribe = (onChange: () => void) => {
 // Snapshot as one string so useSyncExternalStore sees a stable value.
 const snapshot = () => {
   const { theme, mode } = readAppearance();
-  return `${theme}|${mode}`;
+  // What the screen shows now (Same as phone resolves to day or night).
+  const dark = document.documentElement.dataset.mode === 'dark' ? 'dark' : 'light';
+  return `${theme}|${mode}|${dark}`;
 };
 
 const MODE_OPTIONS: { mode: Mode; label: MessageKey; Icon: typeof IconSun }[] = [
@@ -42,7 +44,8 @@ export function AppearanceMenu() {
   const [anchor, setAnchor] = useState({ top: 64, right: 16 });
   const panel = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const [theme, mode] = useSyncExternalStore(subscribe, snapshot, () => `${DEFAULT_THEME}|system`).split('|') as [Theme, Mode];
+  const [theme, mode, shown] = useSyncExternalStore(subscribe, snapshot, () => `${DEFAULT_THEME}|system|light`).split('|') as [Theme, Mode, 'light' | 'dark'];
+  const ModeIcon = shown === 'dark' ? IconMoon : IconSun;
 
   // Close on Escape or a tap outside.
   useEffect(() => {
@@ -78,10 +81,15 @@ export function AppearanceMenu() {
           if (r) setAnchor({ top: r.bottom + 8, right: window.innerWidth - r.right });
           setOpen((o) => !o);
         }}
-        className={headerChip}
+        className={headerIcon}
       >
-        <IconPalette className="h-5 w-5" />
-        <span aria-hidden>{t('look.short')}</span>
+        <ModeIcon className="h-5 w-5" />
+        {/* The theme's colour, as a small dyed dot. */}
+        <span
+          aria-hidden
+          className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full ring-2 ring-brand-800 dark:ring-brand-950"
+          style={{ background: THEME_SWATCH[theme].accent }}
+        />
       </button>
       {/* Rendered on <body>: the header is its own layer under the bottom dock, and the
           sheet must cover the dock on phones. */}

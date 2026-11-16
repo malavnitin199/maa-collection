@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { setLanguageAction } from '@/server/actions/i18n';
-import { headerChip } from '@/components/ui/styles';
+import { headerIcon } from '@/components/ui/styles';
 import { useLocale, useT } from './i18n-provider';
 
 /** One tap switches English ⇄ हिन्दी; the page re-renders in place (no reload). */
@@ -24,19 +24,15 @@ export function LanguageSwitch({ onBand = false }: { onBand?: boolean }) {
           router.refresh();
         })
       }
+      title={t('lang.switchLabel')}
       className={
         onBand
-          ? headerChip
+          ? `${headerIcon} text-[15px] font-bold`
           : 'rounded-full border border-zinc-300 bg-white/70 px-3 py-1 text-sm font-semibold transition hover:border-brand-400 active:scale-95 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900/60'
       }
     >
-      {/* On the band: a small "A / अ" picture above the language you switch to. */}
-      {onBand && (
-        <span aria-hidden className="flex h-5 items-center text-[13px] leading-none font-bold">
-          A<span className="mx-0.5 opacity-60">/</span>अ
-        </span>
-      )}
-      {t('lang.switchTo')}
+      {/* On the band: just the language you switch to, as one symbol (अ or A). */}
+      {onBand ? <span aria-hidden>{locale === 'en' ? 'अ' : 'A'}</span> : t('lang.switchTo')}
     </button>
   );
 }

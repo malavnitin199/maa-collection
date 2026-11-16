@@ -31,6 +31,13 @@ const headerChipShape =
 export const headerChip = `${headerChipShape} bg-white/15 text-white ring-white/35 hover:bg-white/25 active:bg-white/40`;
 /** The same chip switched on (sound on): filled, so the state is obvious. Use instead of `headerChip`, not with it. */
 export const headerChipOn = `${headerChipShape} bg-white text-brand-800 ring-white hover:bg-white/90 dark:text-brand-900`;
+/**
+ * Round icon button on the coloured header band (UI clean-up, v15): one small
+ * symbol, a tooltip (`title`) and an accessible name; 36 px on narrow phones,
+ * 40 px from 390 px wide. Lifts on hover, pops in on press.
+ */
+export const headerIcon =
+  'relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/20 transition duration-150 hover:-translate-y-0.5 hover:bg-white/20 active:translate-y-0 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 min-[390px]:h-10 min-[390px]:w-10';
 /** Round icon button on the coloured header band. */
 export const headerIconButton =
   'inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 active:scale-95';

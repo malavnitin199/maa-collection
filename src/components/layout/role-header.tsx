@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { LanguageSwitch } from '@/features/i18n/language-switch';
 import { SoundToggle } from '@/features/feedback/sound-toggle';
 import { AppearanceMenu } from '@/features/appearance/appearance-menu';
-import { headerChip } from '@/components/ui/styles';
+import { headerIcon } from '@/components/ui/styles';
 import { IconBook, IconChevron, IconLogout } from '@/components/ui/icons';
 import type { MessageKey } from '@/lib/i18n';
 import { logoutAction } from '@/server/actions/auth';
@@ -40,40 +40,37 @@ async function HeaderContent() {
     me?.role === 'admin' ? [...ADMIN_LINKS, ...SALES_LINKS] : catalogAccess ? [...SALES_LINKS, { href: '/admin/more', label: 'nav.catalog' }] : SALES_LINKS;
   return (
     <>
-      {/* On a phone the buttons sit in their own row under the shop name: five equal, labelled buttons. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <Link href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'} className="font-display text-[1.45rem] leading-none whitespace-nowrap text-white">
+      {/* One slim row: the shop's name with who is logged in, then small round symbols (each has a tooltip and a name). */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-col">
+          <Link
+            href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'}
+            className="font-display text-[1.2rem] leading-none whitespace-nowrap text-white min-[390px]:text-[1.35rem]"
+          >
             Maa Collection
           </Link>
           {me && (
-            <span
-              data-testid="current-user"
-              className="truncate rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90 ring-1 ring-white/15"
-            >
+            <span data-testid="current-user" className="mt-1 truncate text-[11px] leading-none font-medium text-white/75">
               {me.name} · {t(me.role === 'admin' ? 'role.admin' : 'role.salesman')}
             </span>
           )}
         </div>
-        <div data-testid="header-buttons" className="grid w-full grid-cols-5 gap-2 whitespace-nowrap sm:ml-auto sm:flex sm:w-auto sm:gap-2.5 [&>*]:w-full [&_button]:w-full sm:[&>*]:w-auto sm:[&_button]:w-auto">
+        <div data-testid="header-buttons" className="flex shrink-0 items-center gap-0.5 min-[390px]:gap-1.5">
           <AppearanceMenu />
           <SoundToggle />
           <LanguageSwitch onBand />
-          <Link href="/guide" className={headerChip}>
+          <Link href="/guide" aria-label={t('nav.guide')} title={t('nav.guide')} className={headerIcon}>
             <IconBook className="h-5 w-5" />
-            {t('nav.guide')}
           </Link>
           {me ? (
             <form action={logoutAction}>
-              <button type="submit" aria-label={t('nav.logout')} title={t('nav.logout')} className={headerChip}>
+              <button type="submit" aria-label={t('nav.logout')} title={t('nav.logout')} className={headerIcon}>
                 <IconLogout className="h-5 w-5" />
-                <span aria-hidden>{t('nav.logoutShort')}</span>
               </button>
             </form>
           ) : (
-            <Link href="/login" className={headerChip}>
+            <Link href="/login" aria-label={t('nav.login')} title={t('nav.login')} className={headerIcon}>
               <IconChevron className="h-5 w-5" />
-              {t('nav.login')}
             </Link>
           )}
         </div>
@@ -103,7 +100,7 @@ export function RoleHeader() {
     <>
     {/* A band in the theme's dye, finished with the zari border (the app's signature). */}
     <header className="sticky top-0 z-10 bg-brand-800 text-white shadow-lg shadow-brand-950/20 print:hidden dark:bg-brand-950">
-      <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 pt-3.5 pb-3">
+      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 pt-2.5 pb-2 min-[390px]:px-4">
         <Suspense fallback={<span className="font-display text-[1.45rem] leading-none text-white">Maa Collection</span>}>
           <HeaderContent />
         </Suspense>

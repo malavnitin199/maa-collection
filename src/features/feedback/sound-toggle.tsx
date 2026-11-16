@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useSyncExternalStore } from 'react';
-import { headerChip, headerChipOn } from '@/components/ui/styles';
+import { headerIcon } from '@/components/ui/styles';
 import { IconMute, IconSound } from '@/components/ui/icons';
 import { useT } from '@/features/i18n/i18n-provider';
 import { setSoundEnabled, soundEnabled, subscribeSound, unlockAudio } from './sounds';
@@ -26,10 +26,9 @@ export function SoundToggle() {
       aria-label={t('sound.label')}
       title={on ? t('sound.on') : t('sound.off')}
       onClick={() => setSoundEnabled(!on)}
-      className={on ? headerChipOn : headerChip}
+      className={`${headerIcon} ${on ? '' : 'opacity-70'}`}
     >
       {on ? <IconSound className="h-5 w-5" /> : <IconMute className="h-5 w-5" />}
-      <span aria-hidden>{on ? t('sound.short') : t('sound.shortOff')}</span>
     </button>
   );
 }
