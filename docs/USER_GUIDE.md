@@ -15,7 +15,7 @@ Live app: https://maa-collection-pi.vercel.app
    - **Exchange**: swap an item from an earlier sale
    - **My sales**: your totals for today and this month
    - **Catalog**: only if the owner gave you catalog or stock work
-4. To scan: **Scan with camera**, allow the camera once, hold the barcode flat in the green box 15–20 cm away. A USB/Bluetooth scanner works without tapping anything.
+4. To scan: tap **Scan with camera**; the camera opens over the current screen without moving it. Allow camera access, then hold the barcode flat in the green box 15–20 cm away. Close the camera window to return. A USB/Bluetooth scanner works without tapping anything.
 5. **Log out** at the end of the day, especially on a shared phone.
 
 ## 1a. Hindi or English, and scan sounds

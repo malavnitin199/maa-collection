@@ -56,6 +56,34 @@ test('logged-out visitors go to login; salesmen cannot open admin pages; wrong P
   await expect(page.getByRole('link', { name: 'Products' })).toHaveCount(0);
 });
 
+test('camera scanner opens over the current screen without moving the scan form', async ({ page }) => {
+  await login(page, 'Nitin');
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  const scanForm = page.locator('form').filter({ has: page.getByLabel('Scan barcode or enter SKU') });
+  const geometry = () =>
+    scanForm.evaluate((form) => {
+      const { x, y, width, height } = form.getBoundingClientRect();
+      return { x: x + window.scrollX, y: y + window.scrollY, width, height };
+    });
+  const before = await geometry();
+  const cameraButton = page.getByRole('button', { name: 'Scan with camera' });
+
+  await cameraButton.click();
+
+  const dialog = page.getByRole('dialog', { name: 'Camera scan' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toBeFocused();
+  const after = await geometry();
+  expect(after.x).toBeCloseTo(before.x, 1);
+  expect(after.y).toBeCloseTo(before.y, 1);
+  expect(after.width).toBeCloseTo(before.width, 1);
+  expect(after.height).toBeCloseTo(before.height, 1);
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(cameraButton).toBeFocused();
+});
+
 test('admin adds a product with a generated barcode, receives stock; salesman sells it on behalf of a colleague', async ({ page }) => {
   await login(page, 'Owner');
   await expect(page).toHaveURL(/\/admin\/dashboard$/);

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
 
@@ -192,13 +193,35 @@ function drawView(
 export function CameraScanner({ onDecode, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const onDecodeRef = useRef(onDecode);
+  const onCloseRef = useRef(onClose);
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [error, setError] = useState<MessageKey | null>(null);
   const t = useT();
+  const titleId = useId();
   const [engine, setEngine] = useState<Engine | null>(null);
 
   useEffect(() => {
     onDecodeRef.current = onDecode;
   });
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  useEffect(() => {
+    dialogRef.current?.focus({ preventScroll: true });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCloseRef.current();
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        closeButtonRef.current?.focus({ preventScroll: true });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,41 +270,57 @@ export function CameraScanner({ onDecode, onClose }: Props) {
     };
   }, []);
 
-  return (
-    <section className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold">{t('scan.cameraTitle')}</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-        >
-          {t('scan.close')}
-        </button>
-      </div>
-      {error ? (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-300">
-          {t(error)}
-        </p>
-      ) : (
-        <>
-          <div className="relative overflow-hidden rounded-lg bg-black">
-            <video ref={videoRef} muted playsInline className="aspect-[4/3] w-full object-cover" />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-[8%] top-1/2 h-[38%] -translate-y-1/2 rounded-lg border-2 border-brand-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
-            />
-          </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            {t('scan.cameraHint')}{' '}
-            {engine && (
-              <span data-testid="scan-engine">
-                ({t(engine === 'native' ? 'scan.engineNative' : 'scan.engineWeb')})
-              </span>
-            )}
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 sm:p-6"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col gap-3 overflow-y-auto rounded-2xl border border-zinc-200 bg-surface p-4 text-zinc-900 shadow-2xl dark:border-zinc-700 dark:text-zinc-100 sm:max-h-[calc(100dvh-3rem)]"
+      >
+        <div className="flex items-center justify-between">
+          <h2 id={titleId} className="font-semibold">{t('scan.cameraTitle')}</h2>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          >
+            {t('scan.close')}
+          </button>
+        </div>
+        {error ? (
+          <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+            {t(error)}
           </p>
-        </>
-      )}
-    </section>
+        ) : (
+          <>
+            <div className="relative overflow-hidden rounded-lg bg-black">
+              <video ref={videoRef} muted playsInline className="aspect-[4/3] w-full object-cover" />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-[8%] top-1/2 h-[38%] -translate-y-1/2 rounded-lg border-2 border-brand-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+              />
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {t('scan.cameraHint')}{' '}
+              {engine && (
+                <span data-testid="scan-engine">
+                  ({t(engine === 'native' ? 'scan.engineNative' : 'scan.engineWeb')})
+                </span>
+              )}
+            </p>
+          </>
+        )}
+      </section>
+    </div>,
+    document.body,
   );
 }

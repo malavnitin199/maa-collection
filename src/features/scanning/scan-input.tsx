@@ -47,12 +47,23 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
   const [value, setValue] = useState('');
   const [cameraOpen, setCameraOpen] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
+  const cameraButtonRef = useRef<HTMLButtonElement>(null);
+  const cameraWasOpen = useRef(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const hydrated = useHydrated();
 
   useEffect(() => {
     if (hydrated) ref.current?.focus();
   }, [hydrated]);
+
+  useEffect(() => {
+    if (cameraOpen) {
+      cameraWasOpen.current = true;
+    } else if (cameraWasOpen.current) {
+      cameraWasOpen.current = false;
+      cameraButtonRef.current?.focus({ preventScroll: true });
+    }
+  }, [cameraOpen]);
 
   function submit(raw: string) {
     const code = raw.trim();
@@ -116,6 +127,7 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
+            ref={cameraButtonRef}
             type="button"
             disabled={!hydrated}
             onClick={() => {

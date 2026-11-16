@@ -3,13 +3,15 @@
 Last updated: 2026-11-16
 
 ## Current milestone
-Phase P1: application foundation, plus an owner-requested dummy scan-to-sell demo.
+v0.2.0 live app (plan v12); current follow-up is camera-scanning UX polish.
 
 ## Task status
 - [x] P1-01: bootstrap Next.js project + quality baseline (DONE 2026-11-14)
 - [x] P1-02: admin, cashier and login route shells (DONE 2026-11-15)
 - [x] Demo scan-to-sell flow on dummy data (owner request, outside backlog numbering; DONE 2026-11-15)
-- [ ] P1-03: shadcn/ui, tokens, shared patterns (NEXT per backlog; P2-01 database may be pulled forward since the demo flow now needs real persistence)
+- [x] Owner-requested v0.2.0: live catalog, POS, approvals, and supporting workflows (DONE 2026-11-16; see entries below)
+- [x] Camera scan overlay: open the camera above the existing screen without shifting its layout (DONE 2026-11-16; see verification log)
+- [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 
@@ -26,6 +28,7 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-15 | P1-02 + demo | `pnpm test` | PASS | 15 Vitest tests: money, catalog lookup, sale validation |
 | 2026-11-15 | P1-02 + demo | `pnpm build` | PASS | `/`, `/login`, `/pos`, `/admin/dashboard` static |
 | 2026-11-15 | P1-02 + demo | `pnpm test:e2e` | PASS | 5 Playwright tests: role picker, scan→deduct→dashboard, above-MRP rejected, unknown/out-of-stock errors |
+| 2026-11-16 | Camera scan overlay | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm exec playwright test e2e/pos.spec.ts -g "camera scanner opens"` | PASS | 135 unit tests pass; desktop + mobile E2E confirms unchanged scan-form bounds, Escape close, and focus restoration |
 
 ## Sell without scanning + owner approvals — v0.2.0 (2026-11-16, latest)
 Owner request: tags are stuck on shirts, pants and so on; sometimes a tag will not scan, the scanner breaks or the phone's back camera does not work. The salesman must still capture the sale by typing the item's name and the selling price. Owner chose: **full approval queue** (every salesman entry waits for him) and **name + price + optional size**. Plan: `docs/PLAN_V12_HAND_ENTRY_APPROVALS.md`; ADR-022; new open question D-EX-2.
@@ -284,4 +287,4 @@ Owner request (chat, while away; photo of a fashion-store hang tag): tags with a
 - Review gaps to add to backlog (see `CLAUDE.md`): day-close/cash reconciliation, EAN-13 mapping, stock-take, price override, GST slabs/HSN, accountant export, D-15 multi-tenant ambition.
 
 ## Next session handoff
-Read `CLAUDE.md`, `docs/PROJECT_CONTEXT.md`, `docs/PROGRESS.md`, `docs/TASK_BACKLOG.md`. Next per backlog is **P1-03**; if the owner wants persistence first, pull **P2-01** (Docker PostgreSQL) forward and replace `dummy-store.ts` with real services. Inspect the actual repo before modifying anything.
+Read `CLAUDE.md`, `docs/PROJECT_CONTEXT.md`, `docs/PROGRESS.md`, and `docs/TASK_BACKLOG.md`. The latest implemented milestone is v0.2.0; choose the next task from the remaining backlog and open owner decisions. Inspect the actual repo before modifying anything.

@@ -1,6 +1,6 @@
 # Maa Collection — technical reference
 
-*Code and project context as of 15 Nov 2026, commit history of 48 commits on `main`.*
+*Code and project context as of 16 Nov 2026.*
 
 Audience: a developer or AI agent picking up the code. For the business brief see `docs/CONTEXT_BRIEF.md`; for how staff use the app see `docs/USER_GUIDE.md`. No credentials appear in this document.
 
@@ -148,7 +148,7 @@ Route handlers: see [§10](#10-route-handlers-http-endpoints). Layouts `(pos)/la
 | `pos/product-card.tsx` | `ProductCard`, `ProductDetails` | Counter view incl. main photo; never cost |
 | `pos/staff-select.tsx` | `StaffSelect` | "Credit sale to" |
 | `pos/load-counter.ts` | `loadCounter` | Current staff + active staff list for counter pages |
-| `scanning/camera-scanner.tsx` | `CameraScanner` | HD stream, continuous focus, `BarcodeDetector` or zxing with full/zoom/sideways views |
+| `scanning/camera-scanner.tsx` | `CameraScanner` | HD stream, continuous focus, `BarcodeDetector` or zxing with full/zoom/sideways views; opens in a fixed dialog overlay so the scan screen does not reflow |
 | `scanning/scan-input.tsx` | `ScanInput`, `useHydrated` | Box + Find + camera; focuses after hydration; registers keystroke capture |
 | `scanning/scanner-keystrokes.ts` | `createScanBuffer`, `useScannerKeystrokes` | Detects fast HID bursts outside text fields |
 | `scanning/ean13.ts` | `isValidEan13`, `ean13CheckDigit`, `inStoreEan13`, `ean13Modules`, `ean13Svg` | Pure; SVG with configurable bar height |
@@ -338,7 +338,7 @@ Idempotent by `operation_id`; a SKU/barcode race retries up to 3 times.
 |---|---|
 | Typed / pasted | `ScanInput` form submit |
 | USB/Bluetooth (HID keyboard) | Focused box, or `useScannerKeystrokes`: keys under 100 ms apart ending in Enter, ≥3 chars, ignored inside text inputs; prevents the Enter from pressing a focused button |
-| Camera | `CameraScanner`: `getUserMedia` (rear, ideal 1920×1080, continuous focus). The **native `BarcodeDetector`** is used when it supports EAN-13 + QR (Chrome Android). Otherwise **zxing** `decodeFromCanvas` on our own frames, cycling *full*, *zoomed guide band ×2* and *rotated 90°*, because @zxing/browser 0.2.1's TRY_HARDER rotation is broken. First read wins; the stream is released |
+| Camera | `CameraScanner`: `getUserMedia` (rear, ideal 1920×1080, continuous focus). The **native `BarcodeDetector`** is used when it supports EAN-13 + QR (Chrome Android). Otherwise **zxing** `decodeFromCanvas` on our own frames, cycling *full*, *zoomed guide band ×2* and *rotated 90°*, because @zxing/browser 0.2.1's TRY_HARDER rotation is broken. First read wins; the stream is released. The scanner opens as a fixed dialog overlay via a portal, so the scan screen stays in place. |
 
 Hard-image benchmark (`docs/PROGRESS.md`): both paths read 5 of 6 deliberately degraded images, against 3 of 6 before.
 
@@ -614,3 +614,7 @@ Removing data for real (as in the 2026-11-16 fresh start) is deliberately **not*
 | Tests | `approvals.test.ts` (13: hand entry, who waits, approve / approve-all idempotency, reject with stock back, cleared guard, exchange ordering, sold-again guard, what counts + export), `services.test.ts` (dashboards approve first), `e2e/pos.spec.ts` (by hand → waiting → owner approves one, rejects one → stock and totals) | |
 
 Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sales_price_le_mrp` now allows a NULL MRP; `exchanges.original_sale_id` is nullable for a future "exchange without a bill" (D-EX-2) — nothing writes it yet. Movement reasons gained `sale_rejected`, `exchange_rejected`.
+
+## 22. Camera scanner overlay
+
+`CameraScanner` is rendered into `document.body` as a fixed, responsive dialog overlay. Opening it does not add content to the scan form or move the screen; the existing page remains visible behind a dim backdrop. Close with the button, outside click, or Escape. Keyboard focus stays inside the dialog and returns to the camera button on close. Unmounting the scanner stops its camera stream and decoder.
