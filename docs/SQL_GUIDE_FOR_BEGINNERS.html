@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Learn SQL with Maa Collection — a beginner's guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root {
+    --ink: #1f2330; --muted: #5d6474; --line: #e0e2e7; --soft: #f5f6f8;
+    --brand: #4c3cce; --brand-dark: #2b2470; --brand-soft: #efedfc; --accent: #db631a;
+    --ok: #157f4a; --ok-soft: #e8f6ee; --warn: #9a4a00; --warn-soft: #fff4e5;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 10.4pt; line-height: 1.55; color: var(--ink); }
+  h1, h2, h3 { color: var(--brand-dark); line-height: 1.2; }
+  h1 { font-size: 22pt; margin: 0 0 6pt; letter-spacing: -0.01em; }
+  h2 { font-size: 13.5pt; margin: 18pt 0 6pt; padding-bottom: 3pt; border-bottom: 1.5pt solid var(--brand-soft); }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; }
+  h2, h3, .kicker { break-after: avoid; page-break-after: avoid; }
+  tr { break-inside: avoid; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin: 2pt 0; }
+  a { color: var(--brand); text-decoration: none; }
+  code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 8.9pt; background: var(--soft); padding: 0.5pt 3pt; border-radius: 3pt; }
+  pre { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 8.6pt; line-height: 1.45; background: var(--soft); border: 1px solid var(--line); border-left: 3.5pt solid var(--brand); border-radius: 5pt; padding: 7pt 9pt; margin: 4pt 0 9pt; white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .lbl { display: block; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 7.5pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 3pt; }
+  .kw { color: #4c3cce; font-weight: 700; }
+  .str { color: #a24400; }
+  .num { color: #0b6e6e; }
+  .cm { color: #7a8294; font-style: italic; }
+  table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; font-size: 9.2pt; }
+  th, td { border-bottom: 1px solid var(--line); padding: 3.5pt 6pt; text-align: left; vertical-align: top; }
+  th { background: var(--brand-soft); color: var(--brand-dark); font-weight: 700; }
+  table.result { width: auto; min-width: 55%; font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 8.5pt; break-inside: avoid; }
+  table.result th { background: #e9ebf0; color: var(--ink); }
+  .result-cap { font-size: 8pt; color: var(--muted); margin: -6pt 0 10pt; }
+  .chapter { break-before: page; }
+  .box { border-radius: 6pt; padding: 7pt 10pt; margin: 6pt 0 10pt; break-inside: avoid; }
+  .tip { background: var(--brand-soft); border: 1px solid #d6d1f7; }
+  .rule { background: var(--warn-soft); border: 1px solid #f3d3a8; }
+  .try { background: var(--ok-soft); border: 1px solid #bfe5cf; }
+  .box b.t { display: block; font-size: 8pt; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2pt; }
+  .tip b.t { color: var(--brand); } .rule b.t { color: var(--warn); } .try b.t { color: var(--ok); }
+  .kicker { font-size: 8.5pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 2pt; }
+  .lead { font-size: 11.2pt; color: #3a4050; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+  .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8pt; margin: 6pt 0 12pt; break-inside: avoid; }
+  .flow .step { background: #fff; border: 1.2pt solid var(--brand); border-radius: 6pt; padding: 6pt 8pt; font-size: 8.8pt; line-height: 1.4; overflow-wrap: anywhere; }
+  .flow .step b { display: block; color: var(--brand-dark); font-size: 9.4pt; margin-bottom: 2pt; }
+  .flow .step b::after { content: "  →"; color: var(--accent); }
+  .flow .step:last-child b::after { content: ""; }
+  .flow .arrow { display: none; }
+  .figure { margin: 6pt 0 12pt; text-align: center; break-inside: avoid; }
+  .figure .cap { font-size: 8.3pt; color: var(--muted); margin-top: 3pt; }
+  .toc { columns: 2; column-gap: 18pt; font-size: 10pt; }
+  .toc div { break-inside: avoid; margin: 0 0 4pt; }
+  .toc b { color: var(--brand-dark); }
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .band { background: var(--brand-dark); color: #fff; border-radius: 10pt; padding: 26pt 24pt 20pt; position: relative; overflow: hidden; }
+  .cover .band::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4pt; background: var(--accent); }
+  .cover h1 { color: #fff; font-size: 30pt; margin: 6pt 0 8pt; }
+  .cover .sub { font-size: 13pt; color: #dcd8ff; max-width: 420pt; }
+  .cover .meta { font-size: 9.5pt; color: var(--muted); }
+  .pill { display: inline-block; border: 1px solid var(--line); border-radius: 20pt; padding: 1pt 7pt; font-size: 8.5pt; margin: 0 3pt 3pt 0; background: #fff; }
+  .small { font-size: 8.8pt; color: var(--muted); }
+  .num-badge { display: inline-block; min-width: 15pt; height: 15pt; border-radius: 8pt; background: var(--brand); color: #fff; text-align: center; font-size: 8pt; font-weight: 700; line-height: 15pt; margin-right: 4pt; }
+  .ex { margin: 0 0 7pt; break-inside: avoid; }
+  .cheat pre { font-size: 7.9pt; margin: 2pt 0 6pt; }
+  .cheat h3 { margin-top: 6pt; }
+  dl.gloss { display: grid; grid-template-columns: 110pt 1fr; gap: 3pt 10pt; font-size: 9.3pt; }
+  dl.gloss dt { font-weight: 700; color: var(--brand-dark); }
+  dl.gloss dd { margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<section class="cover">
+  <div>
+    <div class="band">
+      <div class="kicker" style="color:#ffb27c">A beginner's guide · Maa Collection</div>
+      <h1>Learn SQL with your own shop app</h1>
+      <p class="sub">What SQL is, how the Maa Collection app stores every kurta, sale and tag in PostgreSQL, and how to learn it step by step, using the real tables and queries from this codebase.</p>
+    </div>
+    <div style="margin-top:22pt">
+      <span class="pill">PostgreSQL</span><span class="pill">SQL basics</span><span class="pill">Joins &amp; grouping</span><span class="pill">Tables &amp; rules</span><span class="pill">Transactions</span><span class="pill">Drizzle ORM</span><span class="pill">12 exercises with answers</span><span class="pill">4-week plan</span>
+    </div>
+    <div class="box tip" style="margin-top:18pt">
+      <b class="t">Who this is for</b>
+      A fresher who knows a little programming (or none) and wants to understand the database side of this project. No SQL knowledge is assumed. Every example comes from this app: the queries were run on a practice copy, and the results shown are real.
+    </div>
+  </div>
+  <div class="meta">
+    Made from the codebase at app version 0.6.0 · 17 November 2026<br>
+    Code: <code>maa-collection/</code> · Live app: https://maa-collection-pi.vercel.app
+  </div>
+</section>
+
+<!-- ============================== CONTENTS ============================== -->
+<section class="chapter">
+  <h1>Contents</h1>
+  <div class="toc">
+    <div><b>1. The big picture</b><br>What a database is · where ours lives · one sale's journey</div>
+    <div><b>2. A map of the codebase</b><br>Which files hold SQL and what each does</div>
+    <div><b>3. Our tables</b><br>The 11 tables, a diagram, and the house rules</div>
+    <div><b>4. Lesson 1 — Reading data</b><br>SELECT, WHERE, ORDER BY, LIMIT, search</div>
+    <div><b>5. Lesson 2 — Joining tables</b><br>JOIN and LEFT JOIN with products and companies</div>
+    <div><b>6. Lesson 3 — Counting and grouping</b><br>COUNT, SUM, GROUP BY, HAVING, EXISTS, time zones</div>
+    <div><b>7. Lesson 4 — Changing data</b><br>INSERT, UPDATE, RETURNING, and why we never DELETE</div>
+    <div><b>8. Lesson 5 — Designing tables</b><br>CREATE TABLE, data types, rules (constraints), migrations</div>
+    <div><b>9. Lesson 6 — Keeping money and stock correct</b><br>Transactions, the last piece, locks, retries, the ledger</div>
+    <div><b>10. Lesson 7 — From TypeScript to SQL</b><br>How Drizzle writes the SQL for us</div>
+    <div><b>11. Practise safely</b><br>Your own practice database in 5 commands</div>
+    <div><b>12. Exercises</b><br>12 tasks on our tables</div>
+    <div><b>13. Your 4-week learning plan</b><br>What to study, read and do each week</div>
+    <div><b>14. Answers</b><br>Checked on a real practice database</div>
+    <div><b>15. Cheat sheet</b><br>SQL, psql and Drizzle on one page</div>
+    <div><b>16. Glossary</b><br>Every new word in one place</div>
+  </div>
+
+  <h2>How to use this guide</h2>
+  <ol>
+    <li><b>Read chapters 1–3 first.</b> They explain what we are dealing with. No typing yet.</li>
+    <li><b>Set up your practice database (chapter 11).</b> It takes 10 minutes. From then on, type every example yourself — reading SQL is not the same as writing it.</li>
+    <li><b>Do one lesson at a time</b>, then the matching exercises (chapter 12). Check your answer only after you have tried.</li>
+    <li><b>Follow the 4-week plan (chapter 13).</b> 45–60 minutes a day is enough.</li>
+  </ol>
+  <div class="box rule"><b class="t">The one golden rule</b>
+    Practise only on <b>your own practice database</b>. Never run practice SQL against the live shop. The live database address sits in the file <code>.env.neon</code> — leave that file alone while learning.
+  </div>
+</section>
+
+<!-- ============================== 1. BIG PICTURE ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 1</div>
+  <h1>The big picture</h1>
+  <p class="lead">Before any SQL: what a database is, where ours lives, and what happens inside it when a salesman sells a kurta.</p>
+
+  <h2>A database is a set of very strict registers</h2>
+  <p>Think of the shop's old paper registers: one book for items, one for sales, one for staff. A <b>relational database</b> is the same idea, but strict and fast:</p>
+  <ul>
+    <li>Each register is a <b>table</b> (for example <code>products</code>).</li>
+    <li>Each line in the register is a <b>row</b> (one item: "Anarkali Kurta, M, Blue").</li>
+    <li>Each column heading is a <b>column</b> (<code>name</code>, <code>size</code>, <code>stock</code>…), and every row must fit it: a number column only takes numbers.</li>
+    <li>Rows point to rows in other tables with an <b>id</b> (a sale says <i>which</i> product and <i>which</i> salesman, by their ids). That is the "relational" part.</li>
+  </ul>
+  <p><b>SQL</b> (Structured Query Language, said "S-Q-L" or "sequel") is the language you use to ask the database questions and to change what is in it. It reads almost like English:</p>
+<pre class="sql"><span class="lbl">Our first query</span>SELECT name, size, color, stock
+FROM products
+WHERE stock &lt;= 2;</pre>
+  <p>"Show me name, size, colour and stock from the products table, but only the items with 2 or fewer pieces." That is the <i>low stock</i> list on the owner's Home screen.</p>
+
+  <h2>Which database do we use?</h2>
+  <p>We use <b>PostgreSQL</b> (often called "Postgres"): free, very reliable, used by banks and big shops. It runs in three places:</p>
+  <table>
+    <tr><th>Where</th><th>What it is</th><th>Used for</th></tr>
+    <tr><td><b>Neon</b> (in Singapore)</td><td>Postgres in the cloud, connected to Vercel</td><td>The live shop — real items and sales</td></tr>
+    <tr><td><b>PGlite</b> on your laptop</td><td>A full Postgres engine that runs inside the app, saved in the folder <code>.pglite</code></td><td><code>pnpm dev</code> — trying the app locally with demo data</td></tr>
+    <tr><td><b>PGlite in memory</b></td><td>The same engine, kept only in memory</td><td>Automatic tests — a fresh, empty shop for every test</td></tr>
+  </table>
+  <p>It is the <b>same SQL everywhere</b>. What you learn on your practice database works on the live shop.</p>
+  <p>The switch lives in <code>src/db/client.ts</code>: if the setting <code>DATABASE_URL</code> starts with <code>postgres://</code> the app talks to that server (Neon); otherwise it starts PGlite.</p>
+
+  <h2>One sale's journey</h2>
+  <p>When Vishal taps <b>Record sale</b>, this is what happens — and where SQL comes in:</p>
+  <div class="flow">
+    <div class="step"><b>1. Phone</b>Vishal taps <i>Record sale</i> on the Sell screen</div><div class="arrow">→</div>
+    <div class="step"><b>2. Server action</b><code>src/server/actions/pos.ts</code> checks who is logged in and that the input is valid</div><div class="arrow">→</div>
+    <div class="step"><b>3. Service</b><code>recordSale</code> in <code>services/sales.ts</code> holds the shop's rules</div><div class="arrow">→</div>
+    <div class="step"><b>4. Drizzle</b>turns the TypeScript into SQL</div><div class="arrow">→</div>
+    <div class="step"><b>5. PostgreSQL</b>runs it in one <i>transaction</i>: stock down, sale saved, history written</div><div class="arrow">→</div>
+    <div class="step"><b>6. Answer</b>the phone shows "Sale done ✓"</div>
+  </div>
+  <div class="box tip"><b class="t">Why this matters</b>
+    The rules that protect money and stock (price not above MRP, never sell a piece twice) are checked <b>on the server and inside the database</b>, never only on the phone. You will see exactly how in Lesson 6.
+  </div>
+</section>
+
+<!-- ============================== 2. CODE MAP ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 2</div>
+  <h1>A map of the codebase</h1>
+  <p class="lead">You don't need to read the whole project. For SQL, these are the files that matter.</p>
+  <table>
+    <tr><th style="width:36%">File or folder</th><th>What it holds</th><th style="width:22%">Read it in</th></tr>
+    <tr><td><code>src/db/schema/index.ts</code></td><td>The <b>description of every table</b>: columns, types, rules. Written in TypeScript with Drizzle.</td><td>Chapter 3, Lesson 5</td></tr>
+    <tr><td><code>drizzle/0000_init.sql</code> … <code>0007_….sql</code></td><td>The <b>real SQL</b> that built the database, one file per change ("migrations"). Plain SQL — great to read.</td><td>Lesson 5</td></tr>
+    <tr><td><code>drizzle.config.ts</code></td><td>Tells the migration tool where the schema and the SQL files are.</td><td>Lesson 5</td></tr>
+    <tr><td><code>src/db/client.ts</code></td><td>Opens the connection: Neon or PGlite.</td><td>Chapter 1</td></tr>
+    <tr><td><code>src/db/seed.ts</code></td><td>Fills an empty database with the shop, 5 staff and 8 demo items.</td><td>Chapter 11</td></tr>
+    <tr><td><code>src/server/services/sales.ts</code></td><td>Recording a sale: the transaction and the "only if enough stock" update.</td><td>Lesson 4, 6</td></tr>
+    <tr><td><code>src/server/services/exchanges.ts</code></td><td>Exchanges: locking a row with <code>FOR UPDATE</code>.</td><td>Lesson 6</td></tr>
+    <tr><td><code>src/server/services/approvals.ts</code></td><td>The owner's approvals: <code>EXISTS</code>, <code>ON CONFLICT DO NOTHING</code>.</td><td>Lesson 3, 6</td></tr>
+    <tr><td><code>src/server/services/reports.ts</code></td><td>Home, Reports, Sales team: <code>SUM</code>, <code>COUNT</code>, <code>GROUP BY</code>, time zones.</td><td>Lesson 3</td></tr>
+    <tr><td><code>src/server/services/products.ts</code></td><td>Items, stock arrivals, search with <code>ILIKE</code>.</td><td>Lesson 1, 4</td></tr>
+    <tr><td><code>src/server/services/tag-library.ts</code></td><td>The All tags page: one query joining five tables.</td><td>Lesson 2</td></tr>
+    <tr><td><code>src/server/services/*.test.ts</code></td><td>Tests that run the real SQL on a fresh PGlite database.</td><td>Lesson 6</td></tr>
+  </table>
+
+  <h2>The three layers</h2>
+  <p>The project keeps a strict order, so SQL never ends up scattered in the screens:</p>
+  <ol>
+    <li><b>Screens</b> (<code>src/app</code>, <code>src/features</code>) — what you see. They never talk to the database directly.</li>
+    <li><b>Actions</b> (<code>src/server/actions</code>) — check the person and the input, then call a service.</li>
+    <li><b>Services</b> (<code>src/server/services</code>) — all money and stock rules, and all database work, inside transactions.</li>
+  </ol>
+  <div class="box tip"><b class="t">Reading tip</b>
+    When you want to know "what SQL runs when I tap X", find the screen, follow its action, and open the service function. The SQL is there, written with Drizzle (Lesson 7 shows how to read it).
+  </div>
+
+  <h2>Useful commands</h2>
+  <table>
+    <tr><th style="width:34%">Command</th><th>What it does</th></tr>
+    <tr><td><code>pnpm db:generate</code></td><td>After you change <code>schema/index.ts</code>: writes a new SQL migration file into <code>drizzle/</code>.</td></tr>
+    <tr><td><code>pnpm db:migrate</code></td><td>Applies the migration files to the database in <code>DATABASE_URL</code>.</td></tr>
+    <tr><td><code>pnpm db:seed</code></td><td>Fills an empty database with the demo shop.</td></tr>
+    <tr><td><code>pnpm test</code></td><td>Runs the unit tests, including real SQL on PGlite.</td></tr>
+  </table>
+</section>
+
+<!-- ============================== 3. TABLES ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 3</div>
+  <h1>Our tables</h1>
+  <p class="lead">The shop's whole memory is 11 tables. Here they are, how they connect, and the house rules every table follows.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 740 520" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Helvetica Neue, Arial, sans-serif">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c3cce"/></marker>
+      </defs>
+      <g stroke="#4c3cce" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+        <path d="M370 172 V96"/>
+        <path d="M445 190 L600 96"/>
+        <path d="M172 206 H292"/>
+        <path d="M110 330 L320 244"/>
+        <path d="M370 330 V246"/>
+        <path d="M600 330 L430 246"/>
+        <path d="M562 360 H448"/>
+        <path d="M380 440 V392"/>
+        <path d="M470 452 L620 392"/>
+        <path d="M600 176 L445 72" stroke-dasharray="4 3"/>
+        <path d="M182 352 L560 212" stroke-dasharray="4 3"/>
+      </g>
+      <g font-size="11">
+        <!-- staff -->
+        <rect x="20" y="30" width="160" height="66" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="32" y="50" font-weight="700" fill="#2b2470">staff</text>
+        <text x="32" y="67" fill="#5d6474" font-size="9.5">name, role, pin_hash</text>
+        <text x="32" y="82" fill="#5d6474" font-size="9.5">permissions, language</text>
+        <!-- suppliers -->
+        <rect x="292" y="30" width="160" height="66" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="304" y="50" font-weight="700" fill="#2b2470">suppliers (companies)</text>
+        <text x="304" y="67" fill="#5d6474" font-size="9.5">name, phone, gstin</text>
+        <!-- categories -->
+        <rect x="560" y="30" width="160" height="66" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="572" y="50" font-weight="700" fill="#2b2470">categories</text>
+        <text x="572" y="67" fill="#5d6474" font-size="9.5">name, code (KU, SA…)</text>
+        <text x="572" y="82" fill="#5d6474" font-size="9.5">sizes (a list)</text>
+        <!-- products -->
+        <rect x="292" y="172" width="156" height="74" rx="8" fill="#efedfc" stroke="#4c3cce" stroke-width="1.6"/>
+        <text x="304" y="192" font-weight="700" fill="#2b2470">products (items)</text>
+        <text x="304" y="209" fill="#3a4050" font-size="9.5">sku, barcode, name, size,</text>
+        <text x="304" y="223" fill="#3a4050" font-size="9.5">color, mrp/price/cost_paise,</text>
+        <text x="304" y="237" fill="#3a4050" font-size="9.5">stock, supplier_id, category_id</text>
+        <!-- product_images -->
+        <rect x="20" y="176" width="152" height="60" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="32" y="196" font-weight="700" fill="#2b2470">product_images</text>
+        <text x="32" y="213" fill="#5d6474" font-size="9.5">product_id, data (bytes)</text>
+        <!-- stock_receipts -->
+        <rect x="560" y="176" width="160" height="60" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="572" y="196" font-weight="700" fill="#2b2470">stock_receipts</text>
+        <text x="572" y="213" fill="#5d6474" font-size="9.5">one per delivery: bill no.,</text>
+        <text x="572" y="227" fill="#5d6474" font-size="9.5">supplier_id, staff_id</text>
+        <!-- stock_movements -->
+        <rect x="20" y="330" width="162" height="62" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="32" y="350" font-weight="700" fill="#2b2470">stock_movements</text>
+        <text x="32" y="367" fill="#5d6474" font-size="9.5">product_id, quantity_change,</text>
+        <text x="32" y="381" fill="#5d6474" font-size="9.5">reason, ref_id (the ledger)</text>
+        <!-- sales -->
+        <rect x="292" y="330" width="156" height="62" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="304" y="350" font-weight="700" fill="#2b2470">sales</text>
+        <text x="304" y="367" fill="#5d6474" font-size="9.5">product_id, quantity, price,</text>
+        <text x="304" y="381" fill="#5d6474" font-size="9.5">sold_by, recorded_by → staff</text>
+        <!-- exchanges -->
+        <rect x="562" y="330" width="158" height="62" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="574" y="350" font-weight="700" fill="#2b2470">exchanges</text>
+        <text x="574" y="367" fill="#5d6474" font-size="9.5">original_sale_id, returned</text>
+        <text x="574" y="381" fill="#5d6474" font-size="9.5">and issued product</text>
+        <!-- approval_decisions -->
+        <rect x="290" y="440" width="182" height="60" rx="8" fill="#fff" stroke="#c9c4f2"/>
+        <text x="302" y="460" font-weight="700" fill="#2b2470">approval_decisions</text>
+        <text x="302" y="477" fill="#5d6474" font-size="9.5">sale_id or exchange_id,</text>
+        <text x="302" y="491" fill="#5d6474" font-size="9.5">approved / rejected, reason</text>
+        <!-- stores note -->
+        <rect x="560" y="440" width="160" height="60" rx="8" fill="#fff4e5" stroke="#f3d3a8"/>
+        <text x="572" y="460" font-weight="700" fill="#9a4a00">stores</text>
+        <text x="572" y="477" fill="#7a4a10" font-size="9.5">every table has store_id</text>
+        <text x="572" y="491" fill="#7a4a10" font-size="9.5">→ ready for many shops</text>
+      </g>
+    </svg>
+    <div class="cap">Arrows point from a row to the row it belongs to (for example many sales → one product). Dashed: a delivery belongs to a company, and a stock movement points to the delivery, sale or exchange that caused it (<code>ref_id</code>).</div>
+  </div>
+
+  <h2>What each table remembers</h2>
+  <table>
+    <tr><th style="width:24%">Table</th><th>One row is…</th><th style="width:30%">Example</th></tr>
+    <tr><td><code>stores</code></td><td>a shop (today only one)</td><td>maa-collection, Asia/Kolkata</td></tr>
+    <tr><td><code>staff</code></td><td>a person who logs in</td><td>Vishal, salesman</td></tr>
+    <tr><td><code>suppliers</code></td><td>a company you buy from</td><td>Demo Ganga Textiles</td></tr>
+    <tr><td><code>categories</code></td><td>a kind of item, with its sizes</td><td>Kurta, code KU, sizes M–XXL</td></tr>
+    <tr><td><code>products</code></td><td>one item = one size × one colour, with its own barcode</td><td>Anarkali Kurta, M, Blue, 4 in stock</td></tr>
+    <tr><td><code>product_images</code></td><td>a photo of an item</td><td>the photo bytes</td></tr>
+    <tr><td><code>stock_receipts</code></td><td>one delivery or stock entry</td><td>bill DEMO-101</td></tr>
+    <tr><td><code>stock_movements</code></td><td>one change in pieces, with the reason</td><td>−1, reason "sale"</td></tr>
+    <tr><td><code>sales</code></td><td>one sale (one item, any quantity)</td><td>1 × kurta at ₹1,299</td></tr>
+    <tr><td><code>exchanges</code></td><td>a customer swapping an item</td><td>M back, L out</td></tr>
+    <tr><td><code>approval_decisions</code></td><td>the owner's approve / reject on a sale or exchange</td><td>approved by Owner</td></tr>
+  </table>
+
+  <h2>The house rules (used in every table)</h2>
+  <table>
+    <tr><th style="width:30%">Rule</th><th>Why</th></tr>
+    <tr><td><b>Money is whole paise</b> (<code>integer</code>): ₹1,299.00 is stored as <code>129900</code></td><td>Decimal numbers in computers can round wrongly (0.1 + 0.2 ≠ 0.3). Whole paise never do. Columns end in <code>_paise</code>.</td></tr>
+    <tr><td><b>Every row has an <code>id</code></b> (a <code>uuid</code> like <code>1f96477a-…</code>)</td><td>Names change; ids never do. Other tables point to the id.</td></tr>
+    <tr><td><b>Every row has <code>store_id</code></b></td><td>So the app can later serve many shops without mixing their data.</td></tr>
+    <tr><td><b>Sales and stock history are never edited or deleted</b> ("append-only")</td><td>A mistake is fixed by adding a new correcting row, so the history always adds up (Lesson 6).</td></tr>
+    <tr><td><b>Sales keep a copy</b> of the name, size, MRP and purchase price at that moment ("snapshots")</td><td>If the price changes tomorrow, yesterday's sale and profit stay true.</td></tr>
+    <tr><td><b>Times are stored with a time zone</b> (<code>timestamp with time zone</code>)</td><td>"Today" is counted in India time, not the server's time (Lesson 3).</td></tr>
+  </table>
+</section>
+
+<!-- ============================== 4. LESSON 1 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 4 · Lesson 1</div>
+  <h1>Reading data: SELECT</h1>
+  <p class="lead">Ninety per cent of SQL is asking questions. Every question has the same shape.</p>
+<pre class="sql"><span class="lbl">The shape of every question</span>SELECT  columns you want
+FROM    the table
+WHERE   which rows        -- optional
+ORDER BY how to sort      -- optional
+LIMIT   how many          -- optional</pre>
+
+  <h2>Example: kurtis in stock</h2>
+<pre class="sql"><span class="lbl">Query</span>SELECT sku, name, size, color, stock
+FROM products
+WHERE category = 'Kurti' AND stock > 0
+ORDER BY name
+LIMIT 5;</pre>
+  <table class="result">
+    <tr><th>sku</th><th>name</th><th>size</th><th>color</th><th>stock</th></tr>
+    <tr><td>MAA-KR-002</td><td>Demo Chikan Kurti</td><td>L</td><td>White</td><td>3</td></tr>
+    <tr><td>MAA-KR-001</td><td>Demo Printed Kurti</td><td>M</td><td>Blue</td><td>5</td></tr>
+    <tr><td>MAA-KR-003</td><td>Demo Rayon Kurti</td><td>XL</td><td>Green</td><td>4</td></tr>
+    <tr><td>MAA-KR-004</td><td>Demo Straight Kurti</td><td>M</td><td>Pink</td><td>5</td></tr>
+  </table>
+  <p class="result-cap">Real result from the practice copy with the demo data.</p>
+  <ul>
+    <li><b>Text</b> goes in single quotes: <code>'Kurti'</code>. Numbers don't: <code>0</code>.</li>
+    <li><b>AND</b> means both must be true; <b>OR</b> means either.</li>
+    <li><b>Comparisons:</b> <code>=</code> <code>&lt;&gt;</code> (not equal) <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code>.</li>
+    <li><code>ORDER BY name</code> sorts A–Z; add <code>DESC</code> for Z–A.</li>
+    <li>SQL words can be any case (<code>select</code> = <code>SELECT</code>). We write them in capitals so they stand out.</li>
+    <li>End each statement with <code>;</code>.</li>
+  </ul>
+
+  <h2>Searching: LIKE and ILIKE</h2>
+  <p>The Products search box finds "kurta" inside any name, in any case. In SQL that is <code>ILIKE</code> with <code>%</code> meaning "anything here":</p>
+<pre class="sql"><span class="lbl">Query</span>SELECT sku, name, size
+FROM products
+WHERE name ILIKE '%kurta%';    -- I = ignore case; LIKE would be case-sensitive</pre>
+  <p>In the project this lives in <code>listProducts</code> (<code>products.ts</code>), which searches name, SKU, brand, category and colour at once, joined with <code>OR</code>.</p>
+
+  <h2>Empty values: NULL</h2>
+  <p>Some columns may be empty. In SQL "empty" is <b>NULL</b> ("we don't know"), and it is special: you can't compare it with <code>=</code>.</p>
+<pre class="sql"><span class="lbl">Query</span>SELECT name, size FROM products WHERE cost_paise IS NULL;      -- no purchase price entered
+SELECT name, size FROM products WHERE supplier_id IS NOT NULL;  -- has a company</pre>
+  <p>The owner's <i>Needs attention</i> screen asks exactly these questions: items without a photo, a company, or a purchase price.</p>
+
+  <h2>Doing maths in a query</h2>
+<pre class="sql"><span class="lbl">Query</span>SELECT name, mrp_paise / 100.0 AS mrp_rupees,
+       (mrp_paise - price_paise) / 100.0 AS discount_rupees
+FROM products;</pre>
+  <p><code>AS</code> gives a result column a new name. Dividing by <code>100.0</code> (not <code>100</code>) keeps the paise after the point.</p>
+  <div class="box try"><b class="t">Try it</b> Exercises 1–3 in chapter 12.</div>
+</section>
+
+<!-- ============================== 5. LESSON 2 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 5 · Lesson 2</div>
+  <h1>Joining tables: JOIN</h1>
+  <p class="lead">An item row only stores <code>supplier_id</code> — an id, not the company's name. To show the name, we <i>join</i> the two tables.</p>
+
+<pre class="sql"><span class="lbl">Query</span>SELECT p.name, p.size, p.color, s.name AS company
+FROM products p
+LEFT JOIN suppliers s ON s.id = p.supplier_id
+WHERE p.name LIKE 'Demo Anarkali%'
+ORDER BY p.color, p.size;</pre>
+  <table class="result">
+    <tr><th>name</th><th>size</th><th>color</th><th>company</th></tr>
+    <tr><td>Demo Anarkali Kurta</td><td>L</td><td>Maroon</td><td>Demo Ganga Textiles</td></tr>
+    <tr><td>Demo Anarkali Kurta</td><td>M</td><td>Maroon</td><td>Demo Ganga Textiles</td></tr>
+    <tr><td>Demo Anarkali Kurta</td><td>XL</td><td>Maroon</td><td>Demo Ganga Textiles</td></tr>
+    <tr><td>Demo Anarkali Kurta</td><td>L</td><td>Navy</td><td>Demo Ganga Textiles</td></tr>
+    <tr><td>…</td><td></td><td></td><td></td></tr>
+  </table>
+  <p class="result-cap">Notice sizes sort as text (L, M, XL). The app sorts sizes in shop order (S, M, L, XL) in TypeScript, in <code>src/lib/size-prices.ts</code>.</p>
+  <ul>
+    <li><code>products p</code> gives the table a short nickname (an <b>alias</b>), so we can write <code>p.name</code>.</li>
+    <li><code>ON s.id = p.supplier_id</code> says how the rows match: the company whose id is the item's <code>supplier_id</code>.</li>
+  </ul>
+
+  <h2>JOIN or LEFT JOIN?</h2>
+  <table>
+    <tr><th style="width:24%">Kind</th><th>Keeps…</th><th style="width:38%">Use it when</th></tr>
+    <tr><td><code>JOIN</code> (inner)</td><td>only rows that have a match on both sides</td><td>every row must have a partner (every sale has a seller)</td></tr>
+    <tr><td><code>LEFT JOIN</code></td><td>every row on the left, with empty (NULL) columns when there's no match</td><td>the partner is optional (old stock with <b>no company</b>)</td></tr>
+  </table>
+  <p>Old stock tagged without a company has <code>supplier_id</code> = NULL. With a plain <code>JOIN</code> those items would vanish from the list; with <code>LEFT JOIN</code> they stay, with company = NULL. That is why the All tags page uses LEFT JOIN.</p>
+
+  <h2>A real five-table join: the All tags page</h2>
+  <p><code>listTagLibrary</code> in <code>src/server/services/tag-library.ts</code> needs, for every item: its company, who made the tag, and the delivery it came in. In SQL it is:</p>
+<pre class="sql"><span class="lbl">What the All tags query does (simplified)</span>SELECT p.*, s.name AS supplier_name, st.name AS created_by_name,
+       r.id AS receipt_id, r.bill_number, r.created_at AS receipt_at
+FROM products p
+LEFT JOIN suppliers s        ON s.id = p.supplier_id
+LEFT JOIN staff st           ON st.id = p.created_by
+LEFT JOIN stock_movements m  ON m.product_id = p.id AND m.reason = 'opening'
+LEFT JOIN stock_receipts r   ON r.id = m.ref_id
+WHERE p.store_id = 'maa-collection' AND p.active
+ORDER BY p.created_at DESC, p.name;</pre>
+  <p>Each item's first stock movement (reason <code>'opening'</code>) points to the delivery that created it. Following that chain gives the bill number and date the page groups by.</p>
+  <div class="box try"><b class="t">Try it</b> Exercises 6 and 11.</div>
+</section>
+
+<!-- ============================== 6. LESSON 3 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 6 · Lesson 3</div>
+  <h1>Counting and grouping</h1>
+  <p class="lead">Every number on the owner's Home, Reports and Sales team screens is a group-and-count query.</p>
+
+  <h2>Who sold how much?</h2>
+<pre class="sql"><span class="lbl">Query — sales per salesman, approved sales only</span>SELECT st.name AS seller,
+       COUNT(*)                    AS bills,
+       SUM(sa.quantity)            AS pieces,
+       SUM(sa.total_paise) / 100.0 AS rupees
+FROM sales sa
+JOIN staff st ON st.id = sa.sold_by
+WHERE EXISTS (SELECT 1 FROM approval_decisions d
+              WHERE d.sale_id = sa.id AND d.decision = 'approved')
+GROUP BY st.name
+ORDER BY rupees DESC;</pre>
+  <table class="result">
+    <tr><th>seller</th><th>bills</th><th>pieces</th><th>rupees</th></tr>
+    <tr><td>Balram</td><td>13</td><td>13</td><td>17,300.00</td></tr>
+    <tr><td>Vishal</td><td>8</td><td>8</td><td>14,150.00</td></tr>
+    <tr><td>Pradeep</td><td>7</td><td>7</td><td>10,850.00</td></tr>
+    <tr><td>Nitin</td><td>3</td><td>3</td><td>3,310.00</td></tr>
+  </table>
+  <p class="result-cap">Real result on the demo data — the same numbers the Sales team page shows.</p>
+  <ul>
+    <li><b><code>GROUP BY st.name</code></b> makes one result row per salesman.</li>
+    <li><b><code>COUNT(*)</code></b> counts rows in each group; <b><code>SUM(…)</code></b> adds them up. Others: <code>AVG</code>, <code>MIN</code>, <code>MAX</code>.</li>
+    <li><b><code>EXISTS (…)</code></b> keeps a sale only if a matching "approved" row exists. Since plan v12, <b>only approved sales count</b> anywhere. In the code this is one shared piece, <code>saleApproved</code> in <code>approvals.ts</code>, added to every report.</li>
+  </ul>
+
+  <h2>Per shop day — and the time zone trap</h2>
+  <p>The database stores times as an exact moment. "Which day was it in the shop?" depends on the time zone: 1:00 am in India is still the previous evening in London.</p>
+<pre class="sql"><span class="lbl">Query — sales per shop day</span>SELECT (sa.created_at AT TIME ZONE 'Asia/Kolkata')::date AS shop_day,
+       COUNT(*) AS bills, SUM(sa.total_paise) / 100.0 AS rupees
+FROM sales sa
+GROUP BY shop_day
+ORDER BY shop_day DESC
+LIMIT 7;</pre>
+  <table class="result">
+    <tr><th>shop_day</th><th>bills</th><th>rupees</th></tr>
+    <tr><td>2026-11-16</td><td>7</td><td>8,570.00</td></tr>
+    <tr><td>2026-11-15</td><td>5</td><td>6,360.00</td></tr>
+    <tr><td>2026-11-14</td><td>8</td><td>9,820.00</td></tr>
+    <tr><td>…</td><td></td><td></td></tr>
+  </table>
+  <ul>
+    <li><code>AT TIME ZONE 'Asia/Kolkata'</code> turns the moment into Indian clock time.</li>
+    <li><code>::date</code> keeps only the date (<code>::</code> means "convert to").</li>
+    <li>The services start "today" and "this month" with <code>date_trunc('day', now AT TIME ZONE 'Asia/Kolkata')</code> — see <code>periodStarts</code> in <code>reports.ts</code>. A unit test checks that a sale at 00:30 India time counts as today.</li>
+  </ul>
+
+  <h2>HAVING: filter the groups</h2>
+  <p><code>WHERE</code> filters rows <i>before</i> grouping; <code>HAVING</code> filters groups <i>after</i>. "Categories with more than 10 pieces":</p>
+<pre class="sql"><span class="lbl">Query</span>SELECT category, SUM(stock) AS pieces
+FROM products
+GROUP BY category
+HAVING SUM(stock) > 10;</pre>
+
+  <h2>FILTER: count only some rows</h2>
+  <p>Profit can only be counted for items that have a purchase price. <code>reports.ts</code> uses:</p>
+<pre class="sql"><span class="lbl">From salesReport</span>coalesce(sum(quantity * (unit_price_paise - cost_paise))
+         FILTER (WHERE cost_paise IS NOT NULL), 0)</pre>
+  <p><code>coalesce(x, 0)</code> means "x, or 0 if x is empty" — so a day with no sales shows ₹0, not a blank.</p>
+  <div class="box try"><b class="t">Try it</b> Exercises 4, 5 and 12.</div>
+</section>
+
+<!-- ============================== 7. LESSON 4 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 7 · Lesson 4</div>
+  <h1>Changing data</h1>
+  <p class="lead">Three statements change data: INSERT (add rows), UPDATE (change rows), DELETE (remove rows). Our app uses the first two — on purpose.</p>
+
+  <h2>INSERT: add a row</h2>
+<pre class="sql"><span class="lbl">Adding a company</span>INSERT INTO suppliers (store_id, name, phone)
+VALUES ('maa-collection', 'Shree Ganesh Textiles', '98765 43210');</pre>
+  <p>Columns you leave out get their <b>default</b>: <code>id</code> gets a new uuid, <code>active</code> becomes true, <code>created_at</code> becomes now.</p>
+
+  <h2>UPDATE: change rows</h2>
+<pre class="sql"><span class="lbl">Changing a price</span>UPDATE products
+SET price_paise = 119900
+WHERE sku = 'MAA-KU-001';</pre>
+  <div class="box rule"><b class="t">Never forget WHERE</b>
+    <code>UPDATE products SET price_paise = 119900;</code> without <code>WHERE</code> changes <b>every item in the shop</b>. Write the WHERE first; on your practice database, try it inside <code>BEGIN; … ROLLBACK;</code> (Lesson 6) so you can undo.
+  </div>
+
+  <h2>The most important line in the project</h2>
+  <p>When a sale is recorded, <code>recordSale</code> takes the pieces off like this:</p>
+<pre class="sql"><span class="lbl">The guarded update (what Drizzle sends)</span>UPDATE products
+SET stock = stock - 2
+WHERE id = '…the item…' AND stock >= 2
+RETURNING stock;</pre>
+  <p>Read it as: "take 2 off — <b>but only if there are at least 2</b> — and tell me how many are left". If there aren't enough, <b>no row matches</b>, nothing changes, and the service tells the salesman "Only 1 left in stock". The check and the change happen in <b>one statement</b>, so two phones can never both take the last piece (Lesson 6).</p>
+  <p><code>RETURNING</code> sends back the changed row, so the app knows the new stock without asking again.</p>
+
+  <h2>Why we (almost) never DELETE</h2>
+  <p>Sales, exchanges and stock history are the shop's accounts. If a row could be deleted, the totals could silently change. So:</p>
+  <ul>
+    <li>A <b>rejected sale</b> is not deleted. A new <code>approval_decisions</code> row says "rejected", and a new <code>stock_movements</code> row (reason <code>sale_rejected</code>) puts the pieces back.</li>
+    <li><b>Clear stock</b> does not delete items. It adds one <code>cleared</code> movement per item and sets stock to 0.</li>
+    <li>The one-off "fresh start" on 16 Nov was a careful script with a full backup first, run once on the owner's request. It is not an app feature.</li>
+  </ul>
+  <p>This style is called <b>append-only</b>: you only ever add rows.</p>
+
+  <h2>INSERT … SELECT and UPDATE … FROM</h2>
+  <p>Migration <code>0001</code> had to turn the old free-text categories into real <code>categories</code> rows, then link every item. Two powerful forms:</p>
+<pre class="sql"><span class="lbl">From drizzle/0001_suppliers_categories_receipts.sql</span>-- Make one category row for each different category name the items use
+INSERT INTO "categories" ("store_id", "name", "code")
+SELECT DISTINCT p."store_id", p."category",
+       upper(substr(regexp_replace(p."category", '[^A-Za-z]', '', 'g') || 'XX', 1, 2))
+FROM "products" p
+ON CONFLICT DO NOTHING;
+
+-- Point every item at its new category row
+UPDATE "products" p SET "category_id" = c."id"
+FROM "categories" c
+WHERE c."store_id" = p."store_id" AND c."name" = p."category" AND p."category_id" IS NULL;</pre>
+  <div class="box try"><b class="t">Try it</b> Exercises 8–10.</div>
+</section>
+
+<!-- ============================== 8. LESSON 5 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 8 · Lesson 5</div>
+  <h1>Designing tables</h1>
+  <p class="lead">Tables are created with SQL too. The rules you write here are the database's own guards — they hold even if the app has a bug.</p>
+
+  <h2>Our products table (from <code>drizzle/0000_init.sql</code>)</h2>
+<pre class="sql"><span class="lbl">CREATE TABLE (shortened)</span>CREATE TABLE "products" (
+  "id"          uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  "store_id"    text NOT NULL,
+  "sku"         text NOT NULL,
+  "barcode"     text NOT NULL,
+  "name"        text NOT NULL,
+  "size"        text NOT NULL,
+  "color"       text NOT NULL,
+  "mrp_paise"   integer NOT NULL,
+  "price_paise" integer NOT NULL,
+  "cost_paise"  integer,                       -- may be empty: purchase price not known
+  "stock"       integer DEFAULT 0 NOT NULL,
+  "active"      boolean DEFAULT true NOT NULL,
+  "created_at"  timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT "products_stock_nonnegative" CHECK ("products"."stock" >= 0),
+  CONSTRAINT "products_price_le_mrp"
+    CHECK ("products"."price_paise" > 0
+       AND "products"."price_paise" &lt;= "products"."mrp_paise")
+);
+CREATE UNIQUE INDEX "products_store_sku_uq"     ON "products" ("store_id", "sku");
+CREATE UNIQUE INDEX "products_store_barcode_uq" ON "products" ("store_id", "barcode");</pre>
+
+  <h2>Data types we use</h2>
+  <table>
+    <tr><th style="width:30%">Type</th><th>Holds</th><th style="width:32%">Our columns</th></tr>
+    <tr><td><code>uuid</code></td><td>a unique id, made by <code>gen_random_uuid()</code></td><td>every <code>id</code>, <code>sold_by</code>, <code>product_id</code></td></tr>
+    <tr><td><code>text</code></td><td>words of any length</td><td><code>name</code>, <code>sku</code>, <code>barcode</code>, <code>role</code></td></tr>
+    <tr><td><code>integer</code></td><td>whole numbers</td><td><code>stock</code>, <code>quantity</code>, all <code>…_paise</code></td></tr>
+    <tr><td><code>boolean</code></td><td>true / false</td><td><code>active</code>, <code>manual</code>, <code>auto</code></td></tr>
+    <tr><td><code>timestamp with time zone</code></td><td>an exact moment</td><td>every <code>created_at</code></td></tr>
+    <tr><td><code>text[]</code></td><td>a list of texts</td><td><code>categories.sizes</code>, <code>staff.permissions</code></td></tr>
+    <tr><td><code>bytea</code></td><td>raw bytes</td><td><code>product_images.data</code> (photos)</td></tr>
+  </table>
+
+  <h2>Constraints: the database's own guards</h2>
+  <table>
+    <tr><th style="width:26%">Constraint</th><th>Means</th><th style="width:36%">Our example</th></tr>
+    <tr><td><code>PRIMARY KEY</code></td><td>each row is unique by this column</td><td><code>id</code></td></tr>
+    <tr><td><code>NOT NULL</code></td><td>must have a value</td><td>an item must have a name</td></tr>
+    <tr><td><code>DEFAULT</code></td><td>value used when none is given</td><td><code>stock</code> starts at 0</td></tr>
+    <tr><td><code>CHECK</code></td><td>a condition every row must meet</td><td>selling price ≤ MRP; stock never below 0</td></tr>
+    <tr><td><code>UNIQUE</code></td><td>no two rows may share it</td><td>one barcode per item; one decision per sale</td></tr>
+    <tr><td><code>FOREIGN KEY … REFERENCES</code></td><td>must point to a row that exists</td><td><code>sales.product_id</code> → <code>products.id</code></td></tr>
+  </table>
+  <p>Try to break one and the database refuses with a clear message (Exercise 9):</p>
+<pre><span class="lbl">Real error from the practice database</span>ERROR:  new row for relation "products" violates check constraint "products_price_le_mrp"</pre>
+
+  <h2>Indexes: the book's index</h2>
+  <p>An <b>index</b> lets Postgres find rows without reading the whole table — like the index at the back of a book. We add them where we search often: <code>(store_id, barcode)</code> for every scan, <code>stock_movements (product_id, created_at)</code> for an item's history. A <b>UNIQUE index</b> is also a guard (no duplicates).</p>
+
+  <h2>Migrations: changing tables safely</h2>
+  <p>Real shops can't throw away their data to change a table. So every change is a small numbered SQL file, applied once, in order:</p>
+  <table>
+    <tr><th style="width:12%">File</th><th>What changed</th></tr>
+    <tr><td>0000</td><td>First tables: stores, staff, products, stock_movements, sales, exchanges</td></tr>
+    <tr><td>0001</td><td>Companies, categories, deliveries; items linked to them; old categories copied in</td></tr>
+    <tr><td>0002</td><td>Code price settings on <code>stores</code></td></tr>
+    <tr><td>0003</td><td>Staff rights (<code>permissions</code> list)</td></tr>
+    <tr><td>0004</td><td>Product photos table</td></tr>
+    <tr><td>0005</td><td>Size lists per category; Ladies / Gents Jeans</td></tr>
+    <tr><td>0006</td><td>Each person's language</td></tr>
+    <tr><td>0007</td><td>Owner approvals table; sales entered by hand (<code>ALTER TABLE … DROP NOT NULL</code>, new CHECKs)</td></tr>
+  </table>
+  <p><b>How a change is made:</b> edit <code>src/db/schema/index.ts</code> → <code>pnpm db:generate</code> writes the next SQL file → read it! → commit → <code>pnpm db:migrate</code> on the live database <b>before</b> deploying the code that needs it. Drizzle keeps a list of applied files, so each one runs exactly once.</p>
+
+  <h2>Normalisation (the PRD's section 10), and when we break it</h2>
+  <p>"Don't store the same fact twice": the company's name lives in <code>suppliers</code>, items store only <code>supplier_id</code>. If the company is renamed, every item shows the new name at once.</p>
+  <p>We break this on purpose for <b>history</b>: a sale stores its own copy of the item's name, size, MRP and purchase price. A sale is a record of what happened, and it must not change when today's price does.</p>
+  <div class="box try"><b class="t">Try it</b> Read <code>drizzle/0007_woozy_anthem.sql</code> from top to bottom and explain each line in your own words.</div>
+</section>
+
+<!-- ============================== 9. LESSON 6 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 9 · Lesson 6</div>
+  <h1>Keeping money and stock correct</h1>
+  <p class="lead">This is the part that turns "a database" into "a shop you can trust". Five ideas, all used in this project.</p>
+
+  <h2>1. Transactions: all or nothing</h2>
+  <p>Recording a sale is three changes: stock down, a sale row, a stock-movement row. If the server crashed after the first, stock would be wrong forever. A <b>transaction</b> wraps them: either all happen, or none.</p>
+<pre class="sql"><span class="lbl">What recordSale does, in plain SQL</span>BEGIN;
+  UPDATE products SET stock = stock - 1
+   WHERE id = :item AND stock >= 1 RETURNING stock;       -- 1. take the piece
+  INSERT INTO sales (…) VALUES (…) RETURNING id;          -- 2. the sale, with snapshots
+  INSERT INTO stock_movements (product_id, quantity_change, reason, ref_id)
+  VALUES (:item, -1, 'sale', :sale_id);                     -- 3. the history line
+COMMIT;      -- or ROLLBACK if anything failed: as if nothing happened</pre>
+  <p>In the code: <code>db.transaction(async (tx) =&gt; { … })</code> in <code>sales.ts</code>. Every query inside uses <code>tx</code>.</p>
+
+  <h2>2. The last piece: two phones at once</h2>
+  <table>
+    <tr><th>Time</th><th>Phone A (Vishal)</th><th>Phone B (Nitin)</th><th>Stock</th></tr>
+    <tr><td>10:00:00</td><td>scans the last kurta (1 in stock)</td><td>scans the same kurta</td><td>1</td></tr>
+    <tr><td>10:00:05</td><td><code>UPDATE … WHERE stock &gt;= 1</code> → 1 row, stock 0</td><td></td><td>0</td></tr>
+    <tr><td>10:00:05</td><td></td><td>same UPDATE waits for A, then finds stock 0 → <b>0 rows</b></td><td>0</td></tr>
+    <tr><td>result</td><td>"Sale done ✓"</td><td>"Out of stock"</td><td>never −1</td></tr>
+  </table>
+  <p>Postgres makes the second update wait until the first finishes, then re-checks <code>stock &gt;= 1</code>. Exercise 7 shows the second update changing <b>0 rows</b>. The <code>CHECK (stock &gt;= 0)</code> rule is a second safety net.</p>
+
+  <h2>3. Locking a row: SELECT … FOR UPDATE</h2>
+  <p>An exchange first reads the original sale ("how many can still be returned?"), then writes. Between the read and the write, someone else could exchange the same sale. So <code>exchanges.ts</code> and <code>approvals.ts</code> read with a lock:</p>
+<pre class="sql"><span class="lbl">Lock the sale until this transaction ends</span>SELECT * FROM sales WHERE id = :sale FOR UPDATE;</pre>
+  <p>Anyone else who wants that row waits until we <code>COMMIT</code>.</p>
+
+  <h2>4. Retries must not double-sell: idempotency</h2>
+  <p>On a weak mobile network, the phone may send "Record sale" twice. Every sale carries a random <code>operation_id</code> made on the phone, and the table has a rule:</p>
+<pre class="sql"><span class="lbl">From the schema</span>CREATE UNIQUE INDEX "sales_store_operation_uq" ON "sales" ("store_id", "operation_id");</pre>
+  <p>The second copy breaks the UNIQUE rule, so it can't be saved. The service sees that and returns the <b>first</b> sale instead. The salesman sees one sale; the stock went down once.</p>
+  <p>Owner approvals use a short form of the same idea. One decision per sale is a UNIQUE index on <code>approval_decisions.sale_id</code>, and the insert says:</p>
+<pre class="sql"><span class="lbl">What Drizzle sends for an approval</span>INSERT INTO approval_decisions (store_id, sale_id, decision, decided_by)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT DO NOTHING;      -- a second tap (or a second phone) changes nothing</pre>
+
+  <h2>5. The ledger always adds up</h2>
+  <p>Every change in pieces is a row in <code>stock_movements</code>. So for every item: <b>stock = sum of its movements</b>. We can check it with SQL:</p>
+<pre class="sql"><span class="lbl">Find items whose stock does not match their history</span>SELECT p.sku, p.stock, SUM(m.quantity_change) AS ledger
+FROM products p
+JOIN stock_movements m ON m.product_id = p.id
+GROUP BY p.id, p.sku, p.stock
+HAVING p.stock &lt;&gt; SUM(m.quantity_change);</pre>
+  <p class="result-cap" style="margin-top:0">Real result on the demo data: <b>0 rows</b> — all 62 demo items match their history.</p>
+  <table class="result">
+    <tr><th>reason</th><th>rows</th><th>pieces</th></tr>
+    <tr><td>opening</td><td>69</td><td>222</td></tr>
+    <tr><td>sale</td><td>38</td><td>−40</td></tr>
+    <tr><td>sale_rejected</td><td>2</td><td>3</td></tr>
+  </table>
+  <p class="result-cap">The ledger by reason (practice copy): pieces in at opening, out by sales, back by the owner's two rejected sales.</p>
+  <div class="box tip"><b class="t">How we test this</b>
+    The service tests (<code>src/server/services/*.test.ts</code>) start a fresh in-memory Postgres (PGlite) for every test. Then they try to oversell, retry, reject twice, and so on, and check the real rows. Run them with <code>pnpm test</code>.
+  </div>
+</section>
+
+<!-- ============================== 10. LESSON 7 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 10 · Lesson 7</div>
+  <h1>From TypeScript to SQL: Drizzle</h1>
+  <p class="lead">In the services you will rarely see raw SQL. You will see <b>Drizzle</b>, a library that lets us write SQL as TypeScript. Once you know SQL, Drizzle is easy to read — it uses the same words.</p>
+
+  <h2>Side by side (the SQL is exactly what Drizzle produced)</h2>
+<pre class="ts"><span class="lbl">TypeScript (Drizzle)</span>db.select({ sku: products.sku, name: products.name, stock: products.stock })
+  .from(products)
+  .where(and(eq(products.category, 'Kurti'), gt(products.stock, 0)))
+  .orderBy(asc(products.name))
+  .limit(5);</pre>
+<pre class="sql"><span class="lbl">SQL sent to Postgres</span>select "sku", "name", "stock" from "products"
+where ("products"."category" = $1 and "products"."stock" > $2)
+order by "products"."name" asc limit $3          -- $1 = 'Kurti', $2 = 0, $3 = 5</pre>
+
+<pre class="ts"><span class="lbl">TypeScript — the guarded update in sales.ts</span>tx.update(products)
+  .set({ stock: sql`${products.stock} - ${input.quantity}` })
+  .where(and(eq(products.id, product.id), gte(products.stock, input.quantity)))
+  .returning({ stock: products.stock });</pre>
+<pre class="sql"><span class="lbl">SQL sent to Postgres</span>update "products" set "stock" = "products"."stock" - $1
+where ("products"."id" = $2 and "products"."stock" >= $3) returning "stock"</pre>
+
+  <h2>Reading Drizzle: a small dictionary</h2>
+  <table>
+    <tr><th style="width:44%">Drizzle</th><th>SQL</th></tr>
+    <tr><td><code>db.select({...}).from(t)</code></td><td><code>SELECT … FROM t</code></td></tr>
+    <tr><td><code>.where(and(a, b))</code>, <code>or(…)</code></td><td><code>WHERE a AND b</code>, <code>OR</code></td></tr>
+    <tr><td><code>eq</code>, <code>gt</code>, <code>gte</code>, <code>lte</code>, <code>ilike</code>, <code>isNull</code>, <code>inArray</code></td><td><code>=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>ILIKE</code>, <code>IS NULL</code>, <code>IN (…)</code></td></tr>
+    <tr><td><code>.leftJoin(t, eq(…))</code>, <code>.innerJoin(…)</code></td><td><code>LEFT JOIN t ON …</code>, <code>JOIN … ON …</code></td></tr>
+    <tr><td><code>.groupBy(…)</code>, <code>.orderBy(desc(…))</code>, <code>.limit(n)</code></td><td><code>GROUP BY</code>, <code>ORDER BY … DESC</code>, <code>LIMIT</code></td></tr>
+    <tr><td><code>db.insert(t).values({...}).returning()</code></td><td><code>INSERT INTO t … RETURNING *</code></td></tr>
+    <tr><td><code>.onConflictDoNothing()</code></td><td><code>ON CONFLICT DO NOTHING</code></td></tr>
+    <tr><td><code>db.update(t).set({...}).where(…)</code></td><td><code>UPDATE t SET … WHERE …</code></td></tr>
+    <tr><td><code>.for('update')</code></td><td><code>FOR UPDATE</code></td></tr>
+    <tr><td><code>db.transaction(async (tx) =&gt; …)</code></td><td><code>BEGIN … COMMIT</code> (or <code>ROLLBACK</code> on error)</td></tr>
+    <tr><td><code>sql`…`</code></td><td>a piece of raw SQL, when Drizzle has no word for it (<code>date_trunc</code>, <code>EXISTS</code>, <code>FILTER</code>)</td></tr>
+  </table>
+
+  <h2>Why <code>$1</code>, <code>$2</code>? (Safety)</h2>
+  <p>Drizzle never pastes your values into the SQL text. It sends them separately as <b>parameters</b>. So if someone types <code>'; DROP TABLE sales; --</code> into the search box, it is searched as plain text, not run as SQL. This attack is called <b>SQL injection</b>. Always use Drizzle's helpers or the <code>sql`…`</code> template with <code>${value}</code>. Never glue strings together into SQL.</p>
+
+  <h2>The schema in TypeScript</h2>
+<pre class="ts"><span class="lbl">src/db/schema/index.ts (shortened)</span>export const products = pgTable('products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sku: text('sku').notNull(),
+  mrpPaise: integer('mrp_paise').notNull(),
+  stock: integer('stock').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('products_store_sku_uq').on(t.storeId, t.sku),
+  check('products_stock_nonnegative', sql`${t.stock} >= 0`),
+]);</pre>
+  <p>Compare it with the <code>CREATE TABLE</code> in Lesson 5. It's the same table: <code>pnpm db:generate</code> turns this file into that SQL. TypeScript names (<code>mrpPaise</code>) map to database names (<code>mrp_paise</code>).</p>
+</section>
+
+<!-- ============================== 11. PRACTISE ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 11</div>
+  <h1>Practise safely: your own database</h1>
+  <p class="lead">Five steps give you a private PostgreSQL with exactly our tables and the 8 demo items. These steps were tested on this Mac.</p>
+
+  <h2>Option A — PostgreSQL on your Mac (recommended)</h2>
+  <p>PostgreSQL 15 and <code>psql</code> are already installed here through Homebrew.</p>
+<pre><span class="lbl">Terminal</span># 1. Start PostgreSQL (once per restart of the Mac)
+brew services start postgresql@15
+
+# 2. Make an empty practice database
+createdb maa_practice
+
+# 3. Go to the project and build our 11 tables in it (runs drizzle/0000 … 0007)
+cd maa-collection
+export DATABASE_URL="postgres://localhost:5432/maa_practice"
+pnpm db:migrate
+
+# 4. Add the demo shop: 5 staff, 6 categories, 8 items
+#    It prints a PIN for each person once: note them, you need them to log in later
+pnpm db:seed
+
+# 5. Open the SQL prompt
+psql maa_practice</pre>
+  <p>You now see <code>maa_practice=#</code>. Type SQL, end it with <code>;</code>, press Enter. Useful commands inside <code>psql</code>:</p>
+  <table>
+    <tr><th style="width:24%">Command</th><th>Does</th></tr>
+    <tr><td><code>\dt</code></td><td>list all tables</td></tr>
+    <tr><td><code>\d products</code></td><td>show a table's columns, rules and indexes</td></tr>
+    <tr><td><code>\x</code></td><td>switch to one-column-per-line view (nice for wide rows)</td></tr>
+    <tr><td><code>\i file.sql</code></td><td>run the SQL in a file</td></tr>
+    <tr><td><code>\q</code></td><td>quit</td></tr>
+  </table>
+  <p>Messed it up? Start over: <code>dropdb maa_practice</code>, then steps 2–4 again.</p>
+
+  <h2>Option B — a window instead of a terminal</h2>
+  <p>Free apps such as <b>TablePlus</b>, <b>DBeaver</b> or <b>pgAdmin</b> connect to <code>localhost:5432</code>, database <code>maa_practice</code>. They show tables like a spreadsheet and have a box for SQL. Use them <i>after</i> you're comfortable with <code>psql</code>, which teaches you more.</p>
+
+  <h2>Option C — in the browser, no install</h2>
+  <p>Sites like <b>db-fiddle.com</b> (choose PostgreSQL) run SQL online. Paste the <code>CREATE TABLE "products"</code> from <code>drizzle/0000_init.sql</code>, insert a few rows yourself, and practise.</p>
+
+  <div class="box rule"><b class="t">Stay away from the live shop</b>
+    Never set <code>DATABASE_URL</code> to the Neon address, and never run practice commands with <code>.env.neon</code> loaded. The live database holds the shop's real stock and sales. Only the owner decides when it changes, and only with a backup.
+  </div>
+
+  <h2>Practise with the app's own data too</h2>
+  <p>Want sales to group and count? With your practice database running, start the app against it:</p>
+<pre><span class="lbl">Terminal</span>DATABASE_URL="postgres://localhost:5432/maa_practice" pnpm dev</pre>
+  <p>Open the address it prints (usually <code>http://localhost:3000</code>) and log in with the PINs from step 4. Sell a few items as a salesman, approve some as Owner, then come back to <code>psql</code> and query the <code>sales</code>, <code>stock_movements</code> and <code>approval_decisions</code> rows you just made. Seeing your own taps appear as rows is the fastest way to understand the app.</p>
+</section>
+
+<!-- ============================== 12. EXERCISES ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 12</div>
+  <h1>Exercises</h1>
+  <p class="lead">All 12 run on your practice database (Option A, after the seed). Try each one before you look at chapter 14.</p>
+
+  <h2>Reading (Lesson 1)</h2>
+  <p class="ex"><span class="num-badge">1</span>List every person's name and role, owners first, then A–Z.</p>
+  <p class="ex"><span class="num-badge">2</span>Show the low-stock items: SKU, name, size, colour and stock, for items with 2 pieces or fewer. Fewest first.</p>
+  <p class="ex"><span class="num-badge">3</span>Find every item whose name contains "kurta", in any case.</p>
+
+  <h2>Counting (Lesson 3)</h2>
+  <p class="ex"><span class="num-badge">4</span>For each category: how many items and how many pieces? Biggest first.</p>
+  <p class="ex"><span class="num-badge">5</span>What is the whole stock worth at MRP, in rupees with 2 decimals? (Hint: <code>stock * mrp_paise</code>, <code>SUM</code>, <code>ROUND</code>.)</p>
+
+  <h2>Joining (Lesson 2)</h2>
+  <p class="ex"><span class="num-badge">6</span>Show 4 items with their category's code and size list (join <code>products</code> with <code>categories</code>).</p>
+  <p class="ex"><span class="num-badge">7</span>List the Kurta category's sizes, one size per row. (Hint: <code>unnest(sizes)</code>.)</p>
+
+  <h2>Changing data, safely (Lessons 4 and 6)</h2>
+  <p class="ex"><span class="num-badge">8</span>Inside <code>BEGIN; … ROLLBACK;</code>, run the guarded update twice: take 2 pieces of <code>MAA-KU-002</code> (it has 2). What does each one return? Why?</p>
+  <p class="ex"><span class="num-badge">9</span>Try to set <code>MAA-KU-001</code>'s selling price to ₹1 above its MRP. Read the error and find the rule in <code>drizzle/0000_init.sql</code>.</p>
+  <p class="ex"><span class="num-badge">10</span>Add the company "Practice Traders" twice. What happens the second time? Then add it a third time with <code>ON CONFLICT DO NOTHING</code>.</p>
+
+  <h2>Thinking like the app (Lessons 3 and 6)</h2>
+  <p class="ex"><span class="num-badge">11</span>Write the ledger check: items whose <code>stock</code> is not equal to the sum of their <code>stock_movements</code>. (Use <code>LEFT JOIN</code> and <code>COALESCE</code> so items with no movements count as 0.) How many rows do you expect?</p>
+  <p class="ex"><span class="num-badge">12</span>A sale happened at <code>2026-11-16 20:00</code> UTC. Which shop day is that in India? Use <code>date_trunc</code> and <code>AT TIME ZONE 'Asia/Kolkata'</code>.</p>
+
+  <h2>Bonus: read the real code</h2>
+  <ul>
+    <li>Open <code>reports.ts</code> and find <code>salesReport</code>. Write the "by category" query in plain SQL.</li>
+    <li>Open <code>approvals.ts</code> and find <code>rejectSale</code>. List every SQL statement it runs, in order, and explain why each one is inside the transaction.</li>
+    <li>Open <code>tag-library.ts</code> and explain why it uses <code>LEFT JOIN</code> four times and never a plain <code>JOIN</code>.</li>
+  </ul>
+</section>
+
+<!-- ============================== 13. PLAN ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 13</div>
+  <h1>Your 4-week learning plan</h1>
+  <p class="lead">About 45–60 minutes a day, 5 days a week. Each week: learn → practise on our tables → read our code.</p>
+
+  <table>
+    <tr><th style="width:12%">Week</th><th style="width:30%">Learn</th><th style="width:28%">Practise</th><th>Read in our code</th></tr>
+    <tr><td><b>1</b><br>Reading</td><td>SELECT, WHERE, ORDER BY, LIMIT, LIKE, NULL, maths. <i>SQLBolt</i> lessons 1–6; <i>Select Star SQL</i> chapters 1–2.</td><td>Set up your practice DB (ch. 11). Exercises 1–3. Write 10 questions of your own about the 8 demo items.</td><td>Chapters 1–3 of this guide; <code>drizzle/0000_init.sql</code>; <code>listProducts</code> in <code>products.ts</code>.</td></tr>
+    <tr><td><b>2</b><br>Grouping &amp; joins</td><td>COUNT, SUM, GROUP BY, HAVING; JOIN, LEFT JOIN; dates and time zones. <i>SQLBolt</i> 6–12; <i>pgexercises</i> "Joins" and "Aggregation".</td><td>Exercises 4–7, 11, 12. Run the app on your practice DB, make sales, then group them by person and by day.</td><td><code>salesReport</code> and <code>periodStarts</code> in <code>reports.ts</code>; <code>tag-library.ts</code>.</td></tr>
+    <tr><td><b>3</b><br>Changing &amp; designing</td><td>INSERT, UPDATE, RETURNING; data types; constraints; indexes; normalisation. <i>PostgreSQL Tutorial</i>: data types, constraints. PRD section 10 (1NF–3NF).</td><td>Exercises 8–10. On paper, design a table for "customer phone numbers", then write its <code>CREATE TABLE</code> with sensible rules.</td><td>All of <code>drizzle/</code> (0000 → 0007) in order; <code>src/db/schema/index.ts</code>.</td></tr>
+    <tr><td><b>4</b><br>Correctness</td><td>Transactions, locking (<code>FOR UPDATE</code>), unique keys for retries, <code>ON CONFLICT</code>. <i>PostgreSQL docs</i>: "Transactions" tutorial. <i>Drizzle docs</i>: select, insert, update, transactions.</td><td>Open two <code>psql</code> windows. Run <code>BEGIN; SELECT … FOR UPDATE;</code> in one and an <code>UPDATE</code> of the same row in the other. Watch it wait.</td><td><code>recordSale</code> (<code>sales.ts</code>), <code>recordExchange</code> (<code>exchanges.ts</code>), <code>rejectSale</code> (<code>approvals.ts</code>), and their <code>.test.ts</code> files.</td></tr>
+  </table>
+
+  <h2>Good places to learn (all free)</h2>
+  <table>
+    <tr><th style="width:30%">Resource</th><th>Why</th></tr>
+    <tr><td><b>SQLBolt</b> — sqlbolt.com</td><td>Short interactive lessons with exercises in the browser. Best first step.</td></tr>
+    <tr><td><b>Select Star SQL</b> — selectstarsql.com</td><td>A friendly free book that teaches with one real dataset, like this guide does.</td></tr>
+    <tr><td><b>PostgreSQL Tutorial</b> — postgresqltutorial.com</td><td>Every Postgres feature with examples: data types, joins, constraints, dates.</td></tr>
+    <tr><td><b>PostgreSQL Exercises</b> — pgexercises.com</td><td>Graded practice problems with answers, on a club-booking database.</td></tr>
+    <tr><td><b>Official PostgreSQL docs</b> — postgresql.org/docs/current/tutorial.html</td><td>The source of truth. The short tutorial (chapters 1–3) is very readable.</td></tr>
+    <tr><td><b>Drizzle ORM docs</b> — orm.drizzle.team</td><td>For reading and writing our TypeScript queries.</td></tr>
+    <tr><td><b>Use The Index, Luke</b> — use-the-index-luke.com</td><td>When you're ready: how indexes really work and how to make queries fast.</td></tr>
+    <tr><td><b>From our PRD</b> (<code>docs/SOURCE_PRD.pdf</code>, section 10)</td><td>FreeCodeCamp "Relational Database Design", DataCamp "Normalization 1NF–3NF", PlanSmith "POS Database Design".</td></tr>
+  </table>
+  <div class="box tip"><b class="t">How to know you've got it</b>
+    By the end of week 4 you should be able to explain to someone else, without notes: why a sale can never take the last piece twice, why we store money in paise, and why the Home screen only counts approved sales. Explaining is the best test.
+  </div>
+</section>
+
+<!-- ============================== 14. ANSWERS ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 14</div>
+  <h1>Answers</h1>
+  <p class="lead">Each answer was run on a fresh practice database (migrations + seed). Your ids and dates will differ.</p>
+
+<pre class="sql"><span class="lbl">1 · Staff</span>SELECT name, role FROM staff ORDER BY role, name;
+-- Owner admin · Balram, Nitin, Pradeep, Vishal salesman   ('admin' sorts before 'salesman')</pre>
+<pre class="sql"><span class="lbl">2 · Low stock</span>SELECT sku, name, size, color, stock FROM products WHERE stock &lt;= 2 ORDER BY stock, sku;
+-- MAA-SA-001  Banarasi Saree  Free  Green     0
+-- MAA-SH-001  Oxford Shirt    40    Sky Blue  1
+-- MAA-KU-002  Anarkali Kurta  L     Red       2</pre>
+<pre class="sql"><span class="lbl">3 · Search</span>SELECT sku, name, size FROM products WHERE name ILIKE '%kurta%' ORDER BY sku;
+-- MAA-KU-001 Anarkali Kurta M · MAA-KU-002 Anarkali Kurta L</pre>
+<pre class="sql"><span class="lbl">4 · Per category</span>SELECT category, COUNT(*) AS items, SUM(stock) AS pieces
+FROM products GROUP BY category ORDER BY pieces DESC;
+-- Dress 1/8 · T-Shirt 2/8 · Jeans 1/6 · Kurta 2/6 · Shirt 1/1 · Saree 1/0</pre>
+<pre class="sql"><span class="lbl">5 · Stock value</span>SELECT ROUND(SUM(stock * mrp_paise) / 100.0, 2) AS value_at_mrp_rupees FROM products;
+-- 36371.00</pre>
+<pre class="sql"><span class="lbl">6 · Join categories</span>SELECT p.sku, p.name, c.code, c.sizes
+FROM products p JOIN categories c ON c.id = p.category_id ORDER BY p.sku LIMIT 4;
+-- MAA-DR-001  A-Line Dress    DR  {S,M,L,XL,XXL}
+-- MAA-JE-001  Slim Fit Jeans  JE  {26,28,…,36}
+-- MAA-KU-001  Anarkali Kurta  KU  {M,L,XL,XXL}   …</pre>
+<pre class="sql"><span class="lbl">7 · Sizes one per row</span>SELECT name, unnest(sizes) AS size FROM categories WHERE code = 'KU';
+-- Kurta M · Kurta L · Kurta XL · Kurta XXL</pre>
+<pre class="sql"><span class="lbl">8 · The guarded update, twice</span>BEGIN;
+UPDATE products SET stock = stock - 2
+ WHERE sku = 'MAA-KU-002' AND stock >= 2 RETURNING sku, stock;
+-- MAA-KU-002 | 0     UPDATE 1   (there were 2: taken)
+UPDATE products SET stock = stock - 2
+ WHERE sku = 'MAA-KU-002' AND stock >= 2 RETURNING sku, stock;
+-- (0 rows)           UPDATE 0   (none left: the WHERE no longer matches)
+ROLLBACK;             -- undo both: stock is 2 again</pre>
+<pre class="sql"><span class="lbl">9 · Break the price rule</span>UPDATE products SET price_paise = mrp_paise + 100 WHERE sku = 'MAA-KU-001';
+-- ERROR: new row for relation "products" violates check constraint "products_price_le_mrp"
+-- The rule: CHECK (price_paise > 0 AND price_paise &lt;= mrp_paise) in drizzle/0000_init.sql</pre>
+<pre class="sql"><span class="lbl">10 · Duplicate company</span>INSERT INTO suppliers (store_id, name) VALUES ('maa-collection', 'Practice Traders');   -- INSERT 0 1
+INSERT INTO suppliers (store_id, name) VALUES ('maa-collection', 'Practice Traders');
+-- ERROR: duplicate key value violates unique constraint "suppliers_store_name_uq"
+INSERT INTO suppliers (store_id, name) VALUES ('maa-collection', 'Practice Traders') ON CONFLICT DO NOTHING;
+-- INSERT 0 0   (skipped quietly — how the app records one decision per sale)</pre>
+<pre class="sql"><span class="lbl">11 · Ledger check</span>SELECT p.sku, p.stock, COALESCE(SUM(m.quantity_change), 0) AS ledger
+FROM products p LEFT JOIN stock_movements m ON m.product_id = p.id
+GROUP BY p.id, p.sku, p.stock
+HAVING p.stock &lt;&gt; COALESCE(SUM(m.quantity_change), 0);
+-- (0 rows) — expected: every piece the seed added was written as an 'opening' movement</pre>
+<pre class="sql"><span class="lbl">12 · Time zone</span>SELECT date_trunc('day', TIMESTAMPTZ '2026-11-16 20:00:00+00' AT TIME ZONE 'Asia/Kolkata');
+-- 2026-11-17 00:00:00 — 8 pm in London is 1:30 am on the 17th in India, so it's the 17th's sale</pre>
+</section>
+
+<!-- ============================== 15. CHEAT SHEET ============================== -->
+<section class="chapter cheat">
+  <div class="kicker">Chapter 15</div>
+  <h1>Cheat sheet</h1>
+  <div class="two">
+    <div>
+      <h3>Read</h3>
+<pre class="sql">SELECT a, b AS nick, x * 2
+FROM t
+WHERE a = 'x' AND (b > 1 OR c IS NULL)
+  AND name ILIKE '%kurta%'
+ORDER BY a DESC
+LIMIT 10;</pre>
+      <h3>Group</h3>
+<pre class="sql">SELECT category, COUNT(*), SUM(stock)
+FROM products
+WHERE active
+GROUP BY category
+HAVING SUM(stock) > 10;</pre>
+      <h3>Join</h3>
+<pre class="sql">SELECT p.name, s.name
+FROM products p
+LEFT JOIN suppliers s ON s.id = p.supplier_id;
+-- JOIN = both sides must match
+-- LEFT JOIN = keep every left row</pre>
+      <h3>Change</h3>
+<pre class="sql">INSERT INTO t (a, b) VALUES (1, 'x')
+  RETURNING id;
+UPDATE t SET a = a - 1
+  WHERE id = 7 AND a >= 1;
+INSERT … ON CONFLICT DO NOTHING;
+-- DELETE FROM t WHERE …;  (not for sales!)</pre>
+    </div>
+    <div>
+      <h3>Safe changes</h3>
+<pre class="sql">BEGIN;
+  SELECT * FROM sales WHERE id = 7 FOR UPDATE;
+  UPDATE …;  INSERT …;
+COMMIT;     -- or ROLLBACK;</pre>
+      <h3>Design</h3>
+<pre class="sql">CREATE TABLE t (
+  id uuid PRIMARY KEY
+     DEFAULT gen_random_uuid(),
+  price_paise integer NOT NULL
+     CHECK (price_paise > 0),
+  supplier_id uuid REFERENCES suppliers(id),
+  created_at timestamptz NOT NULL
+     DEFAULT now()
+);
+CREATE UNIQUE INDEX t_uq
+  ON t (store_id, sku);
+ALTER TABLE t ADD COLUMN note text;</pre>
+      <h3>Dates (India)</h3>
+<pre class="sql">now() AT TIME ZONE 'Asia/Kolkata'
+date_trunc('day',
+  now() AT TIME ZONE 'Asia/Kolkata')
+(created_at AT TIME ZONE 'Asia/Kolkata')
+  ::date</pre>
+      <h3>psql</h3>
+<pre>\dt          list tables
+\d products  one table's columns
+\x           tall view on / off
+\i file.sql  run a file
+\q           quit</pre>
+      <h3>Drizzle</h3>
+<pre class="ts">db.select().from(t)
+  .where(and(eq(t.a, 1), gte(t.b, 2)))
+db.insert(t).values({...})
+  .onConflictDoNothing()
+db.update(t).set({...})
+  .where(eq(t.id, id))
+db.transaction(async (tx) => { … })
+sql`date_trunc('day', ${t.createdAt})`</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 16. GLOSSARY ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 16</div>
+  <h1>Glossary</h1>
+  <dl class="gloss">
+    <dt>Append-only</dt><dd>Only ever add rows; fix mistakes with a new correcting row. Our sales and stock history work this way.</dd>
+    <dt>Column</dt><dd>One kind of value in a table (<code>name</code>, <code>stock</code>), with a fixed type.</dd>
+    <dt>Constraint</dt><dd>A rule the database enforces itself: NOT NULL, CHECK, UNIQUE, FOREIGN KEY, PRIMARY KEY.</dd>
+    <dt>Drizzle (ORM)</dt><dd>The library that lets our TypeScript describe tables and build SQL queries.</dd>
+    <dt>Foreign key</dt><dd>A column that must point to an existing row in another table (<code>sales.product_id → products.id</code>).</dd>
+    <dt>GROUP BY</dt><dd>Turns many rows into one row per group, so you can COUNT or SUM each group.</dd>
+    <dt>Idempotent</dt><dd>Doing it twice has the same effect as once. Our sales are, thanks to <code>operation_id</code>.</dd>
+    <dt>Index</dt><dd>A lookup structure that finds rows fast without reading the whole table.</dd>
+    <dt>JOIN</dt><dd>Combining rows from two tables that match on a condition.</dd>
+    <dt>Ledger</dt><dd>The full history of changes (<code>stock_movements</code>). Stock always equals its sum.</dd>
+    <dt>Migration</dt><dd>A numbered SQL file that changes the tables, applied once, in order (<code>drizzle/0000…0007</code>).</dd>
+    <dt>Neon</dt><dd>The cloud company running the live shop's PostgreSQL.</dd>
+    <dt>NULL</dt><dd>"No value / unknown". Compare with <code>IS NULL</code>, never <code>= NULL</code>.</dd>
+    <dt>Paise</dt><dd>1/100 of a rupee. We store money as whole paise so it never rounds wrongly.</dd>
+    <dt>Parameter ($1)</dt><dd>A value sent separately from the SQL text — protects against SQL injection.</dd>
+    <dt>PGlite</dt><dd>PostgreSQL that runs inside the app (local development and tests).</dd>
+    <dt>PostgreSQL</dt><dd>The database system we use. "Postgres" for short.</dd>
+    <dt>Primary key</dt><dd>The column that uniquely names each row; ours is always <code>id</code> (a uuid).</dd>
+    <dt>psql</dt><dd>PostgreSQL's command-line program for typing SQL.</dd>
+    <dt>Query</dt><dd>A question to the database (usually a SELECT).</dd>
+    <dt>Row</dt><dd>One record in a table: one item, one sale.</dd>
+    <dt>Schema</dt><dd>The design of all tables. Ours: <code>src/db/schema/index.ts</code>.</dd>
+    <dt>Seed</dt><dd>Starter data put into an empty database (<code>pnpm db:seed</code>).</dd>
+    <dt>Snapshot</dt><dd>A copy of a value at a moment (a sale keeps the MRP of that day).</dd>
+    <dt>SQL injection</dt><dd>An attack where typed text is run as SQL. Prevented by parameters.</dd>
+    <dt>Table</dt><dd>A set of rows with the same columns — one "register".</dd>
+    <dt>Transaction</dt><dd>A group of changes that all happen or none do (BEGIN … COMMIT / ROLLBACK).</dd>
+    <dt>uuid</dt><dd>A long random id that is unique everywhere.</dd>
+  </dl>
+  <p class="small" style="margin-top:16pt">Facts in this guide match the codebase at app version 0.6.0 (17 Nov 2026). For later changes, see <code>docs/TECHNICAL_REFERENCE.md</code> and the migration files in <code>drizzle/</code>.</p>
+</section>
+
+<script>
+  // Light syntax colouring for SQL and TypeScript blocks before printing.
+  const SQL = /(?<!&)\b(SELECT|FROM|WHERE|AND|OR|NOT|ORDER|BY|GROUP|HAVING|LIMIT|AS|JOIN|LEFT|INNER|ON|INSERT|INTO|VALUES|UPDATE|SET|DELETE|RETURNING|CREATE|TABLE|UNIQUE|INDEX|PRIMARY|KEY|DEFAULT|CHECK|CONSTRAINT|REFERENCES|ALTER|ADD|COLUMN|DROP|NULL|IS|IN|EXISTS|DISTINCT|COUNT|SUM|COALESCE|FILTER|BEGIN|COMMIT|ROLLBACK|FOR|CONFLICT|DO|NOTHING|DESC|ASC|ILIKE|LIKE|AT|TIME|ZONE|TIMESTAMPTZ|ROUND|select|from|where|and|order|by|asc|limit|update|set|returning|insert|into|values|on|conflict|do|nothing|default|uuid|text|integer|boolean|timestamp|with|time|zone|true|false|date_trunc|unnest|now)\b/g;
+  // (?<!&) keeps HTML entities such as &gt; and &lt; intact.
+  const TS = /(?<!&)\b(const|export|async|await|return|db|tx|sql|and|or|eq|gt|gte|desc|asc|true|false)\b/g;
+  function colour(el, re) {
+    const parts = el.innerHTML.split(/(<span class="lbl">[\s\S]*?<\/span>)/);
+    el.innerHTML = parts.map((part) => {
+      if (part.startsWith('<span class="lbl">')) return part;
+      return part
+        .replace(/(--[^\n]*)/g, '\u0001$1\u0002')
+        .split(/(\u0001[^\u0002]*\u0002)/)
+        .map((seg) => seg.startsWith('\u0001')
+          ? '<span class="cm">' + seg.slice(1, -1) + '</span>'
+          : seg.replace(/('[^'\n]*')/g, '<span class="str">$1</span>').replace(re, '<span class="kw">$1</span>'))
+        .join('');
+    }).join('');
+  }
+  document.querySelectorAll('pre.sql').forEach((el) => colour(el, SQL));
+  document.querySelectorAll('pre.ts').forEach((el) => colour(el, TS));
+</script>
+</body>
+</html>

@@ -1,0 +1,1313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>React and Next.js in Maa Collection — a guide for new front-end joiners</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root {
+    --ink: #1f2330; --muted: #5d6474; --line: #e0e2e7; --soft: #f5f6f8;
+    --brand: #4c3cce; --brand-dark: #2b2470; --brand-soft: #efedfc; --accent: #db631a; --accent-soft: #fdf0e7;
+    --ok: #157f4a; --ok-soft: #e8f6ee; --warn: #9a4a00; --warn-soft: #fff4e5; --bad: #b42318; --bad-soft: #fdecea;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 10pt; line-height: 1.48; color: var(--ink); }
+  h1, h2, h3 { color: var(--brand-dark); line-height: 1.2; }
+  h1 { font-size: 22pt; margin: 0 0 6pt; letter-spacing: -0.01em; }
+  h2 { font-size: 13.5pt; margin: 14pt 0 5pt; padding-bottom: 3pt; border-bottom: 1.5pt solid var(--brand-soft); }
+  h3 { font-size: 11pt; margin: 10pt 0 3pt; }
+  h2, h3, .kicker { break-after: avoid; page-break-after: avoid; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin: 2pt 0; }
+  code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 8.8pt; background: var(--soft); padding: 0.5pt 3pt; border-radius: 3pt; }
+  pre { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 8.2pt; line-height: 1.4; background: var(--soft); border: 1px solid var(--line); border-left: 3.5pt solid var(--brand); border-radius: 5pt; padding: 7pt 9pt; margin: 4pt 0 9pt; white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
+  pre.bad { border-left-color: var(--bad); background: #fff8f7; }
+  pre.good { border-left-color: var(--ok); }
+  pre.hypo { border-left-color: #9aa1b0; border-style: dashed; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .lbl { display: block; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 7.5pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 3pt; }
+  pre.bad .lbl { color: var(--bad); } pre.good .lbl { color: var(--ok); }
+  .kw { color: #4c3cce; font-weight: 700; }
+  .str { color: #a24400; }
+  .cm { color: #7a8294; font-style: italic; }
+  table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; font-size: 9.1pt; }
+  tr { break-inside: avoid; }
+  th, td { border-bottom: 1px solid var(--line); padding: 3.5pt 6pt; text-align: left; vertical-align: top; }
+  th { background: var(--brand-soft); color: var(--brand-dark); font-weight: 700; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .chapter { break-before: page; }
+  .box { border-radius: 6pt; padding: 7pt 10pt; margin: 6pt 0 10pt; break-inside: avoid; }
+  .tip { background: var(--brand-soft); border: 1px solid #d6d1f7; }
+  .rule { background: var(--warn-soft); border: 1px solid #f3d3a8; }
+  .try { background: var(--ok-soft); border: 1px solid #bfe5cf; }
+  .why { background: var(--accent-soft); border: 1px solid #f5cdb2; }
+  .box b.t { display: block; font-size: 8pt; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2pt; }
+  .tip b.t { color: var(--brand); } .rule b.t { color: var(--warn); } .try b.t { color: var(--ok); } .why b.t { color: var(--accent); }
+  .kicker { font-size: 8.5pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 2pt; }
+  .lead { font-size: 11.2pt; color: #3a4050; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+  .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8pt; margin: 6pt 0 12pt; break-inside: avoid; }
+  .flow .step { background: #fff; border: 1.2pt solid var(--brand); border-radius: 6pt; padding: 6pt 8pt; font-size: 8.8pt; line-height: 1.4; overflow-wrap: anywhere; }
+  .flow .step b { display: block; color: var(--brand-dark); font-size: 9.4pt; margin-bottom: 2pt; }
+  .flow .step b::after { content: "  →"; color: var(--accent); }
+  .flow .step:last-child b::after { content: ""; }
+  .toc { columns: 2; column-gap: 18pt; font-size: 9.8pt; }
+  .toc div { break-inside: avoid; margin: 0 0 4pt; }
+  .toc b { color: var(--brand-dark); }
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .band { background: var(--brand-dark); color: #fff; border-radius: 10pt; padding: 26pt 24pt 20pt; position: relative; overflow: hidden; }
+  .cover .band::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4pt; background: var(--accent); }
+  .cover h1 { color: #fff; font-size: 29pt; margin: 6pt 0 8pt; }
+  .cover .sub { font-size: 13pt; color: #dcd8ff; max-width: 430pt; }
+  .cover .meta { font-size: 9.5pt; color: var(--muted); }
+  .pill { display: inline-block; border: 1px solid var(--line); border-radius: 20pt; padding: 1pt 7pt; font-size: 8.5pt; margin: 0 3pt 3pt 0; background: #fff; }
+  .small { font-size: 8.8pt; color: var(--muted); }
+  .num-badge { display: inline-block; min-width: 15pt; height: 15pt; border-radius: 8pt; background: var(--brand); color: #fff; text-align: center; font-size: 8pt; font-weight: 700; line-height: 15pt; margin-right: 4pt; }
+  .ex { margin: 0 0 7pt; break-inside: avoid; }
+  .tree { font-size: 8.9pt; margin: 6pt 0 10pt; break-inside: avoid; }
+  .tree .node { display: inline-block; border-radius: 5pt; padding: 2pt 7pt; margin: 2pt 0; }
+  .tree .node small { color: var(--muted); font-size: 7.8pt; }
+  .tree .s { border: 1.2pt solid var(--brand); background: #fff; }
+  .tree .c { border: 1.2pt solid var(--accent); background: var(--accent-soft); }
+  .tree .kids { margin-left: 16pt; padding-left: 8pt; border-left: 1.2pt dotted #b8bdc9; }
+  .legend span { display: inline-block; margin-right: 10pt; font-size: 8.5pt; }
+  .legend i { display: inline-block; width: 10pt; height: 10pt; border-radius: 3pt; vertical-align: -1pt; margin-right: 3pt; }
+  .cheat pre { font-size: 7.6pt; margin: 2pt 0 6pt; }
+  .cheat h3 { margin-top: 6pt; }
+  dl.gloss { display: grid; grid-template-columns: 118pt 1fr; gap: 3pt 10pt; font-size: 9.2pt; }
+  dl.gloss dt { font-weight: 700; color: var(--brand-dark); }
+  dl.gloss dd { margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<section class="cover">
+  <div>
+    <div class="band">
+      <div class="kicker" style="color:#ffb27c">Onboarding guide · Maa Collection</div>
+      <h1>React &amp; Next.js, the way this codebase uses them</h1>
+      <p class="sub">For a front-end developer who already knows React basics. How Next.js 16 renders our pages, where the server ends and the browser begins, how hooks and closures keep the Sell screen correct, and why there is no Redux. Every example is real code from this project.</p>
+    </div>
+    <div style="margin-top:22pt">
+      <span class="pill">Next.js 16 App Router</span><span class="pill">Server &amp; Client Components</span><span class="pill">Partial prerendering</span><span class="pill">Server Actions</span><span class="pill">React 19 hooks</span><span class="pill">Closures</span><span class="pill">State without Redux</span><span class="pill">Hydration</span><span class="pill">Testing</span><span class="pill">10 exercises</span>
+    </div>
+    <div class="box tip" style="margin-top:18pt">
+      <b class="t">Who this is for</b>
+      A new joiner with about 1.5 years of front-end work: comfortable with components, props, <code>useState</code>, <code>useEffect</code> and a client-side React app, but new to the Next.js App Router, React Server Components, and this codebase. By the end you should be able to open any screen, find its code, explain how its data gets there, and change it safely.
+    </div>
+  </div>
+  <div class="meta">
+    Made from the codebase at app version 0.6.0 · 17 November 2026 · Next.js 16.4.6 · React 19.3<br>
+    Code: <code>maa-collection/</code> · Live app: https://maa-collection-pi.vercel.app · Companion: <code>docs/SQL_GUIDE_FOR_BEGINNERS.pdf</code>
+  </div>
+</section>
+
+<!-- ============================== CONTENTS ============================== -->
+<section class="chapter">
+  <h1>Contents</h1>
+  <div class="toc">
+    <div><b>1. The project in five minutes</b><br>What it does, the stack, what we deliberately don't use</div>
+    <div><b>2. A map of the codebase</b><br>Folders, routes, and how to find a screen's code</div>
+    <div><b>3. How pages are rendered</b><br>CSR, SSR, streaming and Next 16's partial prerendering</div>
+    <div><b>4. Server and Client Components</b><br>The boundary, what may cross it, and why it matters for money</div>
+    <div><b>5. Next.js 16 features we use</b><br>proxy.ts, async params, typed routes, cache(), route handlers…</div>
+    <div><b>6. Server Actions: our API layer</b><br>Calling the server like a function; forms; refreshing data</div>
+    <div><b>7. React hooks in this project</b><br>Every hook we use, where, and why</div>
+    <div><b>8. Closures at work</b><br>Eight real closures, including the stale-closure trap</div>
+    <div><b>9. State without Redux</b><br>Where each kind of state lives, and when we'd add a store</div>
+    <div><b>10. Styling, theme and motion</b><br>Tailwind 4, theme variables, no flash on load</div>
+    <div><b>11. Hydration and browser-only APIs</b><br>Avoiding mismatches; camera, sound, storage</div>
+    <div><b>12. Security for front-end developers</b><br>Sessions, three layers of checks, props are public</div>
+    <div><b>13. Hindi and English</b><br>Dictionaries, server and client translation</div>
+    <div><b>14. Testing</b><br>Vitest, Playwright, the quality gate</div>
+    <div><b>15. Walkthrough: scan to "Sale done"</b><br>One sale across every layer</div>
+    <div><b>16. Exercises</b> · <b>17. Answers</b><br>Ten tasks on the real code</div>
+    <div><b>18. Your 4-week plan</b><br>What to read and do each week</div>
+    <div><b>19. Cheat sheet</b> · <b>20. Glossary</b></div>
+  </div>
+
+  <h2>How to use this guide</h2>
+  <ol>
+    <li><b>Keep the code open next to it.</b> Every file path is real; open it and read the full version. The excerpts here are shortened.</li>
+    <li><b>Run the app locally</b>: <code>pnpm install</code>, then <code>pnpm dev</code>, and log in at <code>http://localhost:3000</code>. With no <code>DATABASE_URL</code> set, the app makes a local demo shop in the <code>.pglite</code> folder, where every person's PIN is <code>1234</code>. Never point your local app at the live database: its address stays in <code>.env.neon</code>, never in <code>.env.local</code>.</li>
+    <li><b>Chapters 3, 4, 6 and 9 are the core.</b> If you only have one day, read those.</li>
+    <li><b>Do the exercises</b> (chapter 16) before reading the answers.</li>
+  </ol>
+  <div class="box rule"><b class="t">Two rules before you touch anything</b>
+    <ul style="margin:0">
+      <li>Read <code>CLAUDE.md</code> and <code>docs/PROJECT_CONTEXT.md</code> first. They hold the shop's rules (money in paise, salesmen never see purchase prices, every text in Hindi and English).</li>
+      <li>Next.js 16 differs from older versions you may know from tutorials. When in doubt, read the docs that ship with the project in <code>node_modules/next/dist/docs/</code>. They match our exact version.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================== 1 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 1</div>
+  <h1>The project in five minutes</h1>
+  <p class="lead">Maa Collection is a phone-first web app for an Indian clothing shop. A salesman scans a tag, types the price the customer agreed to, and records the sale. The owner adds stock, prints tags, approves sales and reads reports.</p>
+
+  <h2>Who uses it</h2>
+  <table>
+    <tr><th style="width:22%">Person</th><th>Main screens</th><th style="width:30%">Code</th></tr>
+    <tr><td><b>Salesman</b></td><td>Sell (scan → price → record), Exchange, My sales, Guide</td><td><code>src/app/(pos)/…</code>, <code>src/features/pos</code></td></tr>
+    <tr><td><b>Owner (admin)</b></td><td>Home, Approvals, Products, Stock in, All tags, Reports, Sales team, Staff, Settings</td><td><code>src/app/(admin)/admin/…</code></td></tr>
+    <tr><td>Salesman with rights</td><td>The owner can grant <i>catalog, prices, stock, costs</i>, which opens some admin screens</td><td><code>src/lib/permissions.ts</code></td></tr>
+  </table>
+
+  <h2>The stack</h2>
+  <table>
+    <tr><th style="width:28%">Part</th><th>What we use</th></tr>
+    <tr><td>Framework</td><td><b>Next.js 16.4.6</b>, App Router, with <code>cacheComponents</code> and <code>partialPrefetching</code> on (chapter 3)</td></tr>
+    <tr><td>UI</td><td><b>React 19.3</b>, TypeScript (strict), <b>Tailwind CSS 4</b></td></tr>
+    <tr><td>Data</td><td>PostgreSQL through Drizzle ORM: Neon in production, PGlite on your laptop and in tests</td></tr>
+    <tr><td>Validation</td><td><b>Zod 4</b> on every server action's input</td></tr>
+    <tr><td>Browser extras</td><td><code>@zxing/browser</code> (camera barcode reading), <code>qrcode</code> (tag QR codes), Web Audio, Web Speech</td></tr>
+    <tr><td>Tests</td><td><b>Vitest</b> + jsdom (unit), <b>Playwright</b> (end-to-end, desktop and phone)</td></tr>
+    <tr><td>Tooling and hosting</td><td>pnpm only, Node 26, deployed to Vercel</td></tr>
+  </table>
+  <p>That is the whole runtime list: the app ships with only eight runtime packages (<code>package.json</code>).</p>
+
+  <h2>What we deliberately don't use — and what does the job instead</h2>
+  <table>
+    <tr><th style="width:30%">Common choice</th><th>Instead, in this project</th></tr>
+    <tr><td>Redux, Zustand, MobX</td><td>The database is the shared state; Server Components read it per request. Small client state stays in components (chapter 9).</td></tr>
+    <tr><td>React Query, SWR, <code>useEffect</code> + <code>fetch</code></td><td>Server Components fetch on the server; after a change we refresh with <code>revalidatePath</code> / <code>router.refresh()</code>.</td></tr>
+    <tr><td>A REST API + axios</td><td>Server Actions: typed async functions the client calls directly (chapter 6).</td></tr>
+    <tr><td>A component library (MUI, shadcn)</td><td>A small set of Tailwind class constants in <code>src/components/ui/styles.ts</code> and our own icons.</td></tr>
+    <tr><td>i18next / next-intl</td><td>Our own typed dictionaries and a helper file under 50 lines (chapter 13).</td></tr>
+  </table>
+  <div class="box why"><b class="t">Why so little?</b>
+    Every package is code we must understand, update and ship to cheap phones on shop Wi-Fi. The rule in <code>CLAUDE.md</code> is: <i>no new dependency until a task needs it</i>. Some are planned for later phases, for example IndexedDB (Dexie) for offline selling.
+  </div>
+
+  <h2>The house rules a front-end developer must know</h2>
+  <ul>
+    <li><b>Money is whole paise</b> (<code>129900</code> = ₹1,299.00). Convert only for display with <code>formatPaise</code>, and read input with <code>rupeesToPaise</code>.</li>
+    <li><b>The server is the authority.</b> The browser may check things for speed, but the server checks them again.</li>
+    <li><b>Salesmen never receive purchase prices</b>. Not even hidden in a prop (chapter 4).</li>
+    <li><b>Every visible text exists in English and Hindi</b> (chapter 13).</li>
+    <li><b>Use <code>brand-*</code> colours, never fixed hues.</b> The owner can switch among six themes (chapter 10).</li>
+  </ul>
+</section>
+
+<!-- ============================== 2 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 2</div>
+  <h1>A map of the codebase</h1>
+  <p class="lead">One idea runs through the folders: screens show things, actions guard the door, services hold the rules.</p>
+
+  <table>
+    <tr><th style="width:30%">Folder</th><th>What lives there</th></tr>
+    <tr><td><code>src/app/</code></td><td>Routes only: <code>page.tsx</code>, <code>layout.tsx</code>, <code>template.tsx</code>, <code>route.ts</code>. A folder is a URL segment.</td></tr>
+    <tr><td><code>src/features/&lt;area&gt;/</code></td><td>The UI of each area and its browser hooks: <code>pos</code>, <code>catalog</code>, <code>scanning</code>, <code>approvals</code>, <code>tag-library</code>, <code>appearance</code>, <code>i18n</code>, <code>feedback</code>, <code>guide</code>…</td></tr>
+    <tr><td><code>src/components/</code></td><td>Shared pieces: <code>ui/</code> (styles, icons, small pictures), <code>layout/</code> (header, bottom tabs, first-time tips)</td></tr>
+    <tr><td><code>src/server/actions/</code></td><td><code>'use server'</code> files — the only server functions the browser can call</td></tr>
+    <tr><td><code>src/server/services/</code></td><td>All money and stock rules and all database work, with tests</td></tr>
+    <tr><td><code>src/server/</code> (other)</td><td><code>auth.ts</code> (who is logged in), <code>i18n.ts</code>, <code>request-db.ts</code>, <code>security/</code> (signed session cookie)</td></tr>
+    <tr><td><code>src/lib/</code></td><td>Plain shared code that runs anywhere: money, permissions, size lists, dictionaries, design grouping</td></tr>
+    <tr><td><code>src/db/</code></td><td>Database schema and connection (see the SQL guide)</td></tr>
+    <tr><td><code>src/proxy.ts</code></td><td>Sends logged-out visitors of <code>/pos</code> and <code>/admin</code> to <code>/login</code></td></tr>
+    <tr><td><code>e2e/</code>, <code>*.test.ts</code></td><td>Playwright tests; Vitest tests sit next to the code they test</td></tr>
+  </table>
+
+  <h2>The routes</h2>
+  <table>
+    <tr><th style="width:30%">URL</th><th style="width:40%">File</th><th>Notes</th></tr>
+    <tr><td><code>/login</code></td><td><code>app/(auth)/login/page.tsx</code></td><td>Name circles + PIN keypad</td></tr>
+    <tr><td><code>/pos</code></td><td><code>app/(pos)/pos/page.tsx</code></td><td>Sell — the most used screen</td></tr>
+    <tr><td><code>/pos/exchange</code>, <code>/pos/my-sales</code></td><td><code>app/(pos)/pos/…/page.tsx</code></td><td></td></tr>
+    <tr><td><code>/guide</code>, <code>/help</code></td><td><code>app/(pos)/guide</code>, <code>/help</code></td><td>Story lessons with voice</td></tr>
+    <tr><td><code>/admin/…</code> (22 pages)</td><td><code>app/(admin)/admin/…/page.tsx</code></td><td>Owner, or a salesman with rights</td></tr>
+    <tr><td><code>/admin/products/[id]</code></td><td><code>…/products/[id]/page.tsx</code></td><td>Dynamic segment</td></tr>
+    <tr><td><code>/i/[code]</code></td><td><code>app/i/[code]/route.ts</code></td><td>Route handler: a tag's QR code lands here and is redirected</td></tr>
+    <tr><td><code>/api/product-images/[id]</code></td><td><code>app/api/…/route.ts</code></td><td>Serves photos to logged-in staff</td></tr>
+    <tr><td><code>/admin/export/sales</code></td><td><code>…/export/sales/route.ts</code></td><td>CSV download</td></tr>
+    <tr><td>(install)</td><td><code>app/manifest.ts</code>, <code>app/apple-icon.tsx</code></td><td>Makes it installable as an app (PWA)</td></tr>
+  </table>
+  <p><b>Route groups.</b> A folder in brackets — <code>(pos)</code>, <code>(admin)</code>, <code>(auth)</code> — is <i>not</i> part of the URL. It only groups pages so that each group can have its own <code>layout.tsx</code> and <code>template.tsx</code>. <code>/pos</code> lives in <code>app/(pos)/pos/page.tsx</code>.</p>
+
+  <h2>How to find the code for any screen</h2>
+  <ol>
+    <li>Take the URL, for example <code>/pos</code>, and open <code>src/app/(…)/pos/page.tsx</code>.</li>
+    <li>The page is a small <b>Server Component</b>: it checks who you are, loads data, and renders a component from <code>src/features/…</code>.</li>
+    <li>That feature component, often a <b>Client Component</b>, handles taps and calls a <b>Server Action</b> from <code>src/server/actions/…</code>.</li>
+    <li>The action checks the person and the input and calls a <b>service</b> in <code>src/server/services/…</code>, where the rules and SQL are.</li>
+  </ol>
+  <div class="flow">
+    <div class="step"><b>page.tsx</b>server: who are you, what data</div>
+    <div class="step"><b>features/…/*.tsx</b>client: taps, typing, sounds</div>
+    <div class="step"><b>server/actions</b>check person + input (Zod)</div>
+    <div class="step"><b>server/services</b>rules + transaction</div>
+    <div class="step"><b>PostgreSQL</b>the shop's memory</div>
+    <div class="step"><b>back to the screen</b>result or refreshed page</div>
+  </div>
+</section>
+
+<!-- ============================== 3 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 3</div>
+  <h1>How pages are rendered</h1>
+  <p class="lead">If you have built a Vite or Create React App project, the browser built every page. Here the server does most of the work, and Next.js 16 goes one step further: it prepares a ready-made "shell" for each page ahead of time.</p>
+
+  <h2>Five ways to render, side by side</h2>
+  <table>
+    <tr><th style="width:22%">Model</th><th>Where the HTML comes from</th><th style="width:28%">In our app?</th></tr>
+    <tr><td><b>CSR</b> (client-side)</td><td>An empty HTML page; JavaScript fetches data and builds the UI in the browser</td><td>No. Only small interactive parts run in the browser.</td></tr>
+    <tr><td><b>SSR</b> (server-side)</td><td>The server builds full HTML for every request, then React "hydrates" it</td><td>Yes, for everything that needs the logged-in person or live data</td></tr>
+    <tr><td><b>SSG</b> (static)</td><td>HTML is built once at build time</td><td>For the document frame (head, fonts, theme script)</td></tr>
+    <tr><td><b>Streaming</b></td><td>The server sends HTML in pieces; slow parts arrive later inside <code>&lt;Suspense&gt;</code></td><td>Yes, on every page</td></tr>
+    <tr><td><b>Partial prerendering</b> (Cache Components)</td><td>A static shell built ahead of time; request-specific parts stream into its <code>&lt;Suspense&gt;</code> holes</td><td><b>Yes: <code>cacheComponents: true</code></b> in <code>next.config.ts</code></td></tr>
+  </table>
+
+  <h2>The rule Cache Components gives us</h2>
+  <p>With <code>cacheComponents: true</code>, Next.js prerenders each route's <b>static shell</b>: everything that does not depend on the request. Anything that reads the request — <code>cookies()</code>, <code>searchParams</code>, <code>params</code>, or <code>connection()</code> — must sit <b>inside a <code>&lt;Suspense&gt;</code> boundary</b>. Its <code>fallback</code> goes into the shell, and the real content streams in at request time. If you forget, the dev overlay shows a "blocking route" warning.</p>
+  <h2>Our two levels of boundaries</h2>
+<pre class="ts"><span class="lbl">src/app/layout.tsx (shortened)</span>&lt;body className="min-h-full flex flex-col">
+  &lt;AppearanceSync />
+  {/* The person's language (needs the request), so pages render inside this boundary. */}
+  &lt;Suspense fallback={null}>
+    &lt;LocaleRoot>{children}&lt;/LocaleRoot>
+  &lt;/Suspense>
+&lt;/body></pre>
+  <ol>
+    <li><b>The root boundary.</b> Every screen is shown in the person's language, which needs the request: who is logged in, read through a cookie and the database. So <code>LocaleRoot</code> and everything inside it — header, layouts, pages — are rendered per request. Our static shell is therefore small: <code>&lt;html&gt;</code>, the <code>&lt;head&gt;</code> with fonts and the theme script, and <code>&lt;body&gt;</code>. That is right for an app where almost everything depends on the logged-in person.</li>
+    <li><b>Page boundaries.</b> Inside that, each page puts its slow, data-heavy part in its own <code>&lt;Suspense&gt;</code>. React can then send the header and the page's frame (with "Loading…") as soon as the language is known, and stream the data in when it's ready, instead of holding the whole screen for the slowest query.</li>
+  </ol>
+  <p>That is why almost every page in the project has the same shape:</p>
+<pre class="ts"><span class="lbl">src/app/(pos)/pos/page.tsx — complete file (long lines wrapped)</span>import { Suspense } from 'react';
+import { loadCounter } from '@/features/pos/load-counter';
+import { PosScreen } from '@/features/pos/pos-screen';
+import { lookupProductAction } from '@/server/actions/pos';
+
+async function Counter({ searchParams }: {
+  searchParams: Promise&lt;{ code?: string | string[] }>;
+}) {
+  const [{ me, staff }, { code }] = await Promise.all([loadCounter(), searchParams]);
+  // Opened from a tag's QR code (/i/&lt;code>): show that item straight away.
+  const scanned = typeof code === 'string' ? code.trim().slice(0, 64) : '';
+  const found = scanned ? await lookupProductAction(scanned) : null;
+  const initial = scanned
+    ? { code: scanned, product: found?.ok ? found.data : null }
+    : undefined;
+  return &lt;PosScreen me={me} staff={staff} initial={initial} />;
+}
+
+export default function PosPage(props: PageProps&lt;'/pos'>) {
+  return (
+    &lt;Suspense fallback={&lt;p className="text-sm text-zinc-500">Loading…&lt;/p>}>
+      &lt;Counter
+        searchParams={props.searchParams as Promise&lt;{ code?: string | string[] }>}
+      />
+    &lt;/Suspense>
+  );
+}</pre>
+  <ul>
+    <li>The <b>default export is not async</b> and awaits nothing. It only places the boundary, so the page frame and "Loading…" go out without waiting for data.</li>
+    <li>The <b>inner async component</b> (<code>Counter</code>) does the request work: who is logged in, the staff list, the <code>?code=</code> in the URL.</li>
+    <li><code>searchParams</code> is a <b>Promise</b> (since Next 15). We pass it down unawaited, and the inner component awaits it inside the boundary.</li>
+    <li><code>Promise.all</code> runs the two awaits in parallel instead of one after the other.</li>
+  </ul>
+
+  <h2><code>connection()</code>: "this needs a real request"</h2>
+<pre class="ts"><span class="lbl">src/server/request-db.ts</span>import { connection } from 'next/server';
+import { getDb, type Db } from '@/db/client';
+
+/** Database access for pages and layouts. `connection()` marks the render as
+ *  request-time first, so Next.js never tries to prerender live shop data. */
+export async function requestDb(): Promise&lt;Db> {
+  await connection();
+  return getDb();
+}</pre>
+  <p>A database query doesn't touch cookies or headers, so Next.js could otherwise try to run it at build time and freeze yesterday's stock into the page. <code>await connection()</code> stops prerendering at that point. <b>Pages and layouts always get the database through <code>requestDb()</code></b>, never <code>getDb()</code> directly.</p>
+
+  <h2>Partial prefetching</h2>
+  <p><code>partialPrefetching: true</code> makes a <code>&lt;Link&gt;</code> prefetch only the target route's <b>app shell</b> (its static and cached part), once per route, instead of the whole page for every link. In our app most of each screen depends on the logged-in person, so the shell is small and the rest streams in after the tap. That keeps prefetching cheap on phone data. A link can ask for more with <code>prefetch={true}</code>; we don't need that today.</p>
+
+  <h2>One request, start to finish</h2>
+  <div class="flow">
+    <div class="step"><b>1. proxy.ts</b>no valid session cookie? → redirect to <code>/login</code></div>
+    <div class="step"><b>2. static shell</b><code>&lt;html&gt;</code>, head (fonts, theme script), body: sent at once</div>
+    <div class="step"><b>3. streamed parts</b>language known → header and page frame; then each page's data part in its own Suspense</div>
+    <div class="step"><b>4. hydration</b>React in the browser attaches to the Client Components only</div>
+    <div class="step"><b>5. interaction</b>taps change local state; saving calls a Server Action</div>
+    <div class="step"><b>6. refresh</b>the action's result updates the screen, or the server re-renders the page</div>
+  </div>
+</section>
+
+<!-- ============================== 4 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 4</div>
+  <h1>Server and Client Components</h1>
+  <p class="lead">This is the biggest mental shift from a classic React app. Components run in one of two places, and the line between them is a security line too.</p>
+
+  <table>
+    <tr><th style="width:18%"></th><th>Server Component (the default)</th><th>Client Component (<code>'use client'</code> at the top of the file)</th></tr>
+    <tr><td><b>Runs</b></td><td>Only on the server. Its code never reaches the phone.</td><td>On the server for the first HTML, then in the browser (hydrated)</td></tr>
+    <tr><td><b>Can</b></td><td>be <code>async</code>; read the database, cookies, secrets; import server-only code</td><td>use state and effects, handle events, use browser APIs (camera, storage, audio)</td></tr>
+    <tr><td><b>Cannot</b></td><td>use hooks such as <code>useState</code> or <code>useEffect</code>, or <code>onClick</code></td><td>be async; read the database; import <code>server/services</code></td></tr>
+    <tr><td><b>Here</b></td><td>Every <code>page.tsx</code>, every layout, <code>RoleHeader</code>, <code>LocaleRoot</code></td><td>35 files, all in <code>src/features</code> and <code>src/components</code></td></tr>
+  </table>
+
+  <h2>The /pos tree</h2>
+  <div class="legend"><span><i style="border:1.2pt solid #4c3cce;background:#fff"></i>Server Component</span><span><i style="border:1.2pt solid #db631a;background:#fdf0e7"></i>Client Component</span></div>
+  <div class="tree">
+    <div class="node s">RootLayout <small>app/layout.tsx — fonts, theme script</small></div>
+    <div class="kids">
+      <div class="node c">AppearanceSync <small>follows the phone's day/night</small></div><br>
+      <div class="node s">&lt;Suspense&gt; → LocaleRoot <small>async: reads the person's language</small></div>
+      <div class="kids">
+        <div class="node c">I18nProvider <small>React Context with t()</small></div>
+        <div class="kids">
+          <div class="node s">PosLayout → RoleHeader <small>async header: name, buttons</small></div>
+          <div class="kids">
+            <div class="node s">PosPage → &lt;Suspense&gt; → Counter <small>async: requireStaff, DB, ?code=</small></div>
+            <div class="kids">
+              <div class="node c">PosScreen <small>features/pos/pos-screen.tsx — state, taps, Server Action calls</small></div>
+              <div class="kids">
+                <div class="node c">ScanInput → CameraScanner <small>camera in a portal</small></div><br>
+                <div class="node c">ProductCard</div> <div class="node c">StaffSelect</div> <div class="node c">DoneOverlay</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p>Notice that <b>Server Components sit inside <code>I18nProvider</code>, a Client Component</b>. This is allowed because they are passed in as <code>children</code>: the server renders them first and hands the result to the client component to place. A client component cannot <i>import</i> a server component, but it can <i>receive</i> one as children.</p>
+
+  <h2>What may cross the line</h2>
+  <ul>
+    <li><b>Props from server to client must be serialisable:</b> strings, numbers, booleans, plain objects and arrays, Dates, Promises, and JSX (already rendered by the server).</li>
+    <li><b>Functions cannot cross</b>, with one exception: <b>Server Actions</b>. A client component may import <code>recordSaleAction</code> and call it, and the call becomes a network request (chapter 6).</li>
+  </ul>
+
+  <div class="box rule"><b class="t">Props are public</b>
+    Everything a Server Component passes to a Client Component is sent to the browser, even a field you never render. Anyone can read it in DevTools. That is why the counter receives a <code>CounterProduct</code>, a copy of the item made on the server <b>without</b> the purchase price:
+  </div>
+<pre class="ts"><span class="lbl">src/server/services/products.ts (shortened)</span>export function toCounterProduct(p: Product): CounterProduct {
+  return {
+    id: p.id, sku: p.sku, barcode: p.barcode, name: p.name, brand: p.brand,
+    category: p.category, size: p.size, color: p.color,
+    mrpPaise: p.mrpPaise, pricePaise: p.pricePaise, stock: p.stock,
+    // no costPaise, no supplier: a salesman's phone never receives them
+  };
+}</pre>
+
+  <h2>Composition: keeping data on the server</h2>
+  <p>The All tags page lets the owner switch between <i>Grid</i> and <i>Rows</i>. That switch needs state and <code>localStorage</code>, so it must be a Client Component. But the tags carry prices (including a secret price code), and we don't want them in the browser as data. The solution is to let the client component own <i>only the switch</i>, and give it the tags as <b>server-rendered children</b>:</p>
+<pre class="ts"><span class="lbl">src/app/(admin)/admin/labels/page.tsx (server, shortened)</span>&lt;TagViews labels={{ view: t('stk.lib.view'), grid: t('stk.lib.view.grid'), … }} summary={…}>
+  {grouped.map((g) => (
+    &lt;section key={g.key}> … &lt;ul className="tag-row">{g.shown.map(tagCell)}&lt;/ul> &lt;/section>
+  ))}
+&lt;/TagViews></pre>
+<pre class="ts"><span class="lbl">src/features/tag-library/tag-views.tsx (client, shortened)</span>'use client';
+export function TagViews({ labels, summary, children }: { …; children: ReactNode }) {
+  const view = useSyncExternalStore(subscribe, readView, () => 'grid' as const);
+  return &lt;div data-view={view}> {/* buttons to switch */} {children} &lt;/div>;
+}</pre>
+  <p>The browser receives finished HTML for the tags and a tiny component for the switch. The comment in <code>tag-views.tsx</code> says it directly: <i>"The tags themselves are drawn on the server and passed in as children, so nothing about them is sent to the phone as data."</i></p>
+
+  <div class="box tip"><b class="t">Rule of thumb for new code</b>
+    Start every component as a Server Component. Add <code>'use client'</code> only to the smallest piece that needs state, effects, event handlers or browser APIs, and push it as far down the tree as you can.
+  </div>
+</section>
+
+<!-- ============================== 5 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 5</div>
+  <h1>Next.js 16 features we use</h1>
+  <p class="lead">A reference of the framework pieces you will meet, with where each one is in our code.</p>
+
+  <table>
+    <tr><th style="width:30%">Feature</th><th>What it does</th><th style="width:30%">Our example</th></tr>
+    <tr><td><code>layout.tsx</code></td><td>Wraps pages; stays mounted while you move between its pages</td><td><code>app/layout.tsx</code>, <code>(pos)/layout.tsx</code></td></tr>
+    <tr><td><code>template.tsx</code></td><td>Like a layout but <b>re-mounts on every navigation</b></td><td><code>(pos)/template.tsx</code>: the <code>page-in</code> slide-in animation</td></tr>
+    <tr><td><code>route.ts</code></td><td>A plain HTTP handler (GET, POST…) instead of a page</td><td><code>/i/[code]</code>, photos, CSV export</td></tr>
+    <tr><td><code>proxy.ts</code></td><td>Runs before matching routes. <b>This is Next 16's new name for <code>middleware.ts</code>.</b></td><td>Login gate for <code>/pos</code>, <code>/admin</code></td></tr>
+    <tr><td><code>manifest.ts</code>, <code>apple-icon.tsx</code></td><td>Generate the PWA manifest and icons</td><td>Install to home screen</td></tr>
+    <tr><td><code>export const metadata</code></td><td>Page title and description</td><td><code>labels/page.tsx</code>: "All tags · Maa Collection"</td></tr>
+    <tr><td><code>next/font/google</code></td><td>Self-hosts fonts at build time; no layout jump</td><td>Poppins, Mukta, Rozha One (Latin + Devanagari)</td></tr>
+    <tr><td><code>next/form</code></td><td>A GET form that navigates on the client</td><td>All tags filters</td></tr>
+    <tr><td><code>cookies()</code>, <code>redirect()</code>, <code>notFound()</code></td><td>Read cookies; leave the page; show 404</td><td><code>server/auth.ts</code>, pages</td></tr>
+    <tr><td><code>revalidatePath()</code>, <code>router.refresh()</code></td><td>Refresh server-rendered data after a change</td><td>admin and approvals actions</td></tr>
+    <tr><td><code>PageProps</code>, <code>LayoutProps</code>, <code>RouteContext</code></td><td>Global types generated from your routes</td><td><code>PageProps&lt;'/pos'&gt;</code></td></tr>
+  </table>
+
+  <h2>proxy.ts: an optimistic gate</h2>
+<pre class="ts"><span class="lbl">src/proxy.ts</span>export function proxy(request: NextRequest) {
+  const session = verifySession(request.cookies.get(SESSION_COOKIE)?.value, sessionSecret());
+  if (!session) return NextResponse.redirect(new URL('/login', request.url));
+  // Salesmen may hold catalog/stock/price rights, so /admin pages check permissions themselves.
+  return NextResponse.next();
+}
+export const config = { matcher: ['/pos/:path*', '/admin/:path*'] };</pre>
+  <p>The proxy only checks that the cookie's signature is valid. It does not hit the database, so it stays fast. The <b>real checks</b> — is this person still active, are they the owner, do they have the right — happen in every page and every action (chapter 12).</p>
+
+  <h2>Async <code>params</code> and typed routes</h2>
+<pre class="ts"><span class="lbl">src/app/i/[code]/route.ts — a tag's QR code opens this</span>export async function GET(request: NextRequest, context: RouteContext&lt;'/i/[code]'>) {
+  const { code } = await context.params;            // params is a Promise in Next 15+
+  const me = await getCurrentStaff();
+  if (!me) return NextResponse.redirect(new URL('/login', request.url));
+  const product = await findProductByCode(await requestDb(), STORE_ID, decodeURIComponent(code).slice(0, 64));
+  const target = product && canAny(me, ['catalog', 'prices', 'stock'])
+    ? `/admin/products/${product.id}`
+    : `/pos?code=${encodeURIComponent(product?.barcode ?? code)}`;
+  return NextResponse.redirect(new URL(target, request.url));
+}</pre>
+  <p><code>RouteContext&lt;'/i/[code]'&gt;</code> and <code>PageProps&lt;'/pos'&gt;</code> are generated from the real folder names, so a typo in a route string is a type error. The same QR code takes the owner to the product page and a salesman to the Sell screen with the item loaded.</p>
+
+  <h2>React <code>cache()</code>: one query per request</h2>
+<pre class="ts"><span class="lbl">src/server/auth.ts (shortened)</span>import { cache } from 'react';
+
+export const getCurrentStaff = cache(async function getCurrentStaff() {
+  const db = await requestDb();
+  const session = verifySession((await cookies()).get(SESSION_COOKIE)?.value, sessionSecret());
+  if (!session) return null;
+  const [person] = await db.select({ … }).from(staff).where(…).limit(1);
+  return person ?? null;
+});</pre>
+  <p>The header, the page, <code>getLocale()</code> and several checks all call <code>getCurrentStaff()</code> during one request. <code>cache()</code> remembers the result <b>for that request only</b>, so the database is asked once. The next request starts fresh. It's like <code>useMemo</code> for the server, scoped to one page render.</p>
+
+  <h2><code>next/form</code> and the <code>key</code> trick</h2>
+<pre class="ts"><span class="lbl">src/features/tag-library/filter-form.tsx (shortened)</span>export function TagFilterForm({ label, children }: { label: string; children: ReactNode }) {
+  const onChange = (event: FormEvent&lt;HTMLFormElement>) => {
+    const target = event.target as HTMLInputElement | HTMLSelectElement;
+    if (target instanceof HTMLSelectElement || (target instanceof HTMLInputElement && target.type === 'checkbox')) {
+      event.currentTarget.requestSubmit();          // picking a filter applies it at once
+    }
+  };
+  return &lt;Form action="/admin/labels" scroll={false} role="search" aria-label={label} onChange={onChange}>{children}&lt;/Form>;
+}</pre>
+  <p>A GET form puts the filters in the URL (<code>/admin/labels?supplier=…&amp;stock=1</code>), and the server renders the filtered page. The page renders it as <code>&lt;TagFilterForm key={tagLibraryHref(p)}&gt;</code>. When the URL changes, the <code>key</code> changes and React re-creates the form, so its uncontrolled inputs show the new values instead of stale ones.</p>
+</section>
+
+<!-- ============================== 6 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 6</div>
+  <h1>Server Actions: our API layer</h1>
+  <p class="lead">There is no <code>/api/sales</code> endpoint and no fetch wrapper. The Sell screen imports <code>recordSaleAction</code> and calls it like a function. Next.js turns the call into a POST request.</p>
+
+  <h2>Our action files</h2>
+  <table>
+    <tr><th style="width:36%">File (<code>'use server'</code>)</th><th>Actions</th></tr>
+    <tr><td><code>src/server/actions/pos.ts</code></td><td>Look up a scanned code, record a sale, find returnable sales, record an exchange</td></tr>
+    <tr><td><code>src/server/actions/admin.ts</code></td><td>Products, stock, companies, categories, staff, settings, photos</td></tr>
+    <tr><td><code>src/server/actions/approvals.ts</code></td><td>Approve / reject sales and exchanges, approve all</td></tr>
+    <tr><td><code>src/server/actions/auth.ts</code></td><td>Log in, log out</td></tr>
+    <tr><td><code>src/server/actions/i18n.ts</code></td><td>Switch language</td></tr>
+  </table>
+
+  <h2>Anatomy of an action</h2>
+<pre class="ts"><span class="lbl">src/server/actions/pos.ts (shortened)</span>'use server';
+
+export type ActionResult&lt;T> = { ok: true; data: T } | { ok: false; error: string };
+
+const saleSchema = z.object({
+  operationId: z.string().min(8).max(100),
+  productId: z.uuid().optional(),
+  quantity: z.number().int(),
+  unitPricePaise: z.number().int(),
+  soldBy: z.uuid(),
+});
+
+export async function recordSaleAction(input: z.input&lt;typeof saleSchema>) {
+  const current = await requireStaff();              // 1. who is calling? (again!)
+  return run(async () => {
+    const data = saleSchema.parse(input);            // 2. never trust the input
+    const db = await getDb();
+    const result = await recordSale(db, STORE_ID, { ...data, recordedBy: current.id }); // 3. rules
+    return { stockLeft: result.stockLeft, totalPaise: result.sale.totalPaise, … };      // 4. plain data
+  });
+}</pre>
+  <ol>
+    <li><b>Check the person in every action.</b> An action is a public HTTP endpoint: anyone can POST to it, whatever the UI shows.</li>
+    <li><b>Validate with Zod.</b> TypeScript types disappear at runtime, and a modified request can send anything.</li>
+    <li><b>Call a service.</b> The rules (price ≤ MRP, enough stock, one sale per <code>operationId</code>) live there, inside a database transaction.</li>
+    <li><b>Return a result object, don't throw.</b> <code>ActionResult</code> is a union the screen can switch on; error text arrives already translated (chapter 13).</li>
+  </ol>
+
+  <h2>Two ways to call an action</h2>
+  <div class="two">
+<pre class="ts"><span class="lbl">A · form (login-form.tsx)</span>const [state, formAction, pending] =
+  useActionState&lt;LoginState, FormData>(
+    loginAction, {});
+
+return (
+  &lt;form action={formAction}>
+    &lt;input type="radio" name="staffId" />
+    &lt;input name="pin" type="password" />
+    {state.error && &lt;p>{state.error}&lt;/p>}
+    &lt;button disabled={pending}>
+      Log in
+    &lt;/button>
+  &lt;/form>
+);</pre>
+<pre class="ts"><span class="lbl">B · transition (pos-screen.tsx)</span>const [busy, startTransition] =
+  useTransition();
+
+function handleRecordSale() {
+  // … read and check the typed values …
+  startTransition(async () => {
+    const result =
+      await recordSaleAction({
+        operationId, productId: product.id,
+        quantity, unitPricePaise,
+        soldBy: creditTo,
+      });
+    if (!result.ok) {
+      return setMessage({ kind: 'error',
+        text: result.error });
+    }
+    setDone({ … });
+    setPending(null);
+  });
+}</pre>
+  </div>
+  <table>
+    <tr><th style="width:18%">Style</th><th>Use it when</th><th style="width:34%">Where</th></tr>
+    <tr><td><b>A · form</b></td><td>The input is a real form; the action takes <code>(prevState, formData)</code>; works before JavaScript loads</td><td>Login, product forms, settings, categories (6 files)</td></tr>
+    <tr><td><b>B · transition</b></td><td>The input is an object built from state (scanned item, typed price, chosen seller), or the call follows a scan</td><td>Sell, exchange, approvals, stock entry, photos (9 files)</td></tr>
+  </table>
+  <p>In both cases React gives you a pending flag (<code>pending</code> / <code>busy</code>) for free. There is no <code>setLoading(true)</code> … <code>finally setLoading(false)</code>.</p>
+
+  <h2>After a change: getting fresh data on screen</h2>
+  <ul>
+    <li><b><code>revalidatePath()</code> in the action</b> tells Next.js that server-rendered data under a path is stale. Approvals call <code>revalidatePath('/', 'layout')</code> because a decision changes totals on Home, Reports, Sales team and My sales.</li>
+    <li><b><code>router.refresh()</code> on the client</b> asks the server to re-render the <i>current</i> page and merges the result in place. Scroll position and client state are kept; there is no full reload. The approvals screen and the language switch do this.</li>
+    <li><b>Return the new values</b> when only this screen needs them. The Sell screen just shows <code>stockLeft</code> from the result.</li>
+  </ul>
+
+  <div class="box why"><b class="t">Why <code>operationId</code> is made on the phone</b>
+    When an item is scanned, the Sell screen stores <code>crypto.randomUUID()</code> with it. If the network drops after the server saved the sale and the salesman taps <i>Record sale</i> again, the same id goes up. The database's unique key spots the repeat and the service returns the first sale. If the id were made inside the action, every retry would get a new id and the item would be sold twice. (The database side is in Lesson 6 of the SQL guide.)
+  </div>
+</section>
+
+<!-- ============================== 7 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 7</div>
+  <h1>React hooks in this project</h1>
+  <p class="lead">You know <code>useState</code> and <code>useEffect</code>. Here is every hook the project uses, how often, and the job it does.</p>
+
+  <table>
+    <tr><th style="width:24%">Hook</th><th style="width:8%">Files</th><th>What it does for us</th><th style="width:28%">Look at</th></tr>
+    <tr><td><code>useState</code></td><td class="n">21</td><td>Screen state: scanned item, typed price, dialogs</td><td><code>pos/pos-screen.tsx</code></td></tr>
+    <tr><td><code>useRef</code></td><td class="n">13</td><td>DOM nodes (video, dialog) and "latest callback" refs</td><td><code>scanning/camera-scanner.tsx</code></td></tr>
+    <tr><td><code>useEffect</code></td><td class="n">10</td><td>Subscribe to the outside world, with cleanup</td><td><code>feedback/effects.tsx</code></td></tr>
+    <tr><td><code>useTransition</code></td><td class="n">9</td><td>Call Server Actions with a pending flag</td><td><code>pos/pos-screen.tsx</code></td></tr>
+    <tr><td><code>useSyncExternalStore</code></td><td class="n">7</td><td>Per-phone settings from <code>localStorage</code>; "hydrated yet?"</td><td><code>tag-library/tag-views.tsx</code></td></tr>
+    <tr><td><code>useActionState</code></td><td class="n">6</td><td>Forms that post to a Server Action</td><td><code>auth/login-form.tsx</code></td></tr>
+    <tr><td><code>useCallback</code></td><td class="n">3</td><td>A stable function where an effect depends on it</td><td><code>pos-screen.tsx</code> → <code>closeDone</code></td></tr>
+    <tr><td><code>useId</code></td><td class="n">3</td><td>Unique ids for <code>aria-labelledby</code></td><td><code>camera-scanner.tsx</code></td></tr>
+    <tr><td><code>createPortal</code></td><td class="n">3</td><td>Dialogs rendered into <code>document.body</code></td><td>camera, theme menu, story player</td></tr>
+    <tr><td><code>useLayoutEffect</code></td><td class="n">1</td><td>Measure and place the camera dialog before paint</td><td><code>camera-scanner.tsx</code></td></tr>
+    <tr><td><code>useMemo</code>, <code>createContext</code>, <code>useContext</code></td><td class="n">1</td><td>The language context</td><td><code>i18n/i18n-provider.tsx</code></td></tr>
+    <tr><td><code>useRouter</code>, <code>usePathname</code></td><td class="n">6, 1</td><td><code>router.refresh()</code>; highlight the current tab</td><td><code>layout/bottom-nav.tsx</code></td></tr>
+  </table>
+  <p><b>Not used:</b> <code>useReducer</code>, <code>useOptimistic</code>, <code>useFormStatus</code>, <code>use()</code>, <code>memo</code>. Each would be fine; nothing has needed them yet.</p>
+
+  <h3>useState: lazy start, functional updates</h3>
+<pre class="ts"><span class="lbl">pos-screen.tsx</span>// Lazy initializer: the function runs once, on the first render only.
+const [pending, setPending] = useState&lt;Pending | null>(() =>
+  initial?.product ? { product: initial.product, step: 'details', operationId: crypto.randomUUID() } : null,
+);
+
+// Functional update: build the next value from the previous one.
+// A new id every time replays the tick/shake animation, even for two good scans in a row.
+setScanResult((last) => ({ kind, id: (last?.id ?? 0) + 1 }));</pre>
+
+  <h3>useTransition with async work (React 19)</h3>
+  <p>In React 19, <code>startTransition</code> accepts an <b>async</b> function. <code>busy</code> is true from the moment you start until the awaited action finishes and its state updates are applied. The Sell screen disables <i>Record sale</i> and shows "Saving…" from that one flag.</p>
+
+  <h3>useEffect with cleanup — and why <code>closeDone</code> uses useCallback</h3>
+<pre class="ts"><span class="lbl">feedback/effects.tsx — the "Sale done" card closes itself</span>export function DoneOverlay({ title, amount, detail, onClose }: { …; onClose: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onClose, 1600);
+    const onKey = () => onClose();
+    window.addEventListener('keydown', onKey);
+    return () => { window.clearTimeout(timer); window.removeEventListener('keydown', onKey); };
+  }, [onClose]);
+  …
+}</pre>
+<pre class="ts"><span class="lbl">pos-screen.tsx</span>const closeDone = useCallback(() => setDone(null), []);
+…
+{done && &lt;DoneOverlay … onClose={closeDone} />}</pre>
+  <p>The effect depends on <code>onClose</code>. Without <code>useCallback</code>, every re-render of <code>PosScreen</code> would create a new arrow function. The effect would then clean up and start again, <b>restarting the 1.6-second timer each time</b>. A re-render while the card is open (a scan result, a message) would keep the card on screen longer than planned. <code>useCallback(…, [])</code> keeps one function for the component's life. This is the right reason for <code>useCallback</code>: a dependency that must stay stable, not "performance everywhere".</p>
+
+  <h3>useRef: DOM handles and "latest value" boxes</h3>
+  <p>The camera scanner keeps <code>videoRef</code> and <code>dialogRef</code> for DOM nodes. It also keeps <code>onDecodeRef</code> and <code>onCloseRef</code>, which always hold the newest callbacks. That pattern is explained in chapter 8.6.</p>
+
+  <h3>useLayoutEffect: measure, then paint</h3>
+  <p>The camera dialog opens next to the button you tapped, above or below depending on the space. <code>useLayoutEffect</code> runs after React updates the DOM but <b>before the browser paints</b>. So the dialog is measured (<code>getBoundingClientRect</code>) and positioned without first flashing in the wrong place. Use it only for this kind of measuring; everything else belongs in <code>useEffect</code>.</p>
+
+  <h3>useSyncExternalStore: settings that live outside React</h3>
+<pre class="ts"><span class="lbl">tag-library/tag-views.tsx (shortened)</span>const KEY = 'maa-tag-view';
+const CHANGE = 'maa-tag-view-change';
+
+function readView(): TagView {                       // getSnapshot
+  try { return localStorage.getItem(KEY) === 'rows' ? 'rows' : 'grid'; } catch { return 'grid'; }
+}
+function saveView(view: TagView) {
+  try { localStorage.setItem(KEY, view); } catch {}
+  window.dispatchEvent(new Event(CHANGE));           // tell every subscriber on this page
+}
+function subscribe(onChange: () => void) {
+  window.addEventListener(CHANGE, onChange);
+  window.addEventListener('storage', onChange);      // …and other tabs
+  return () => { window.removeEventListener(CHANGE, onChange); window.removeEventListener('storage', onChange); };
+}
+
+const view = useSyncExternalStore(subscribe, readView, () => 'grid' as const);  // 3rd: server value</pre>
+  <p>The same pattern holds the theme and day/night mode, sound on/off, dismissed tips, Guide progress, and the Grid/Rows choice. Why not <code>useState(readView())</code>?</p>
+  <ul>
+    <li>On the server there is no <code>localStorage</code>. The third argument gives the value used <b>for server HTML and during hydration</b>, so the first client render matches the server exactly. React then switches to the real value.</li>
+    <li>Every component reading the store updates together when <code>saveView</code> fires the event. No context, no prop drilling.</li>
+  </ul>
+
+  <h3>Context, the React 19 way</h3>
+<pre class="ts"><span class="lbl">i18n/i18n-provider.tsx</span>const I18nContext = createContext&lt;{ locale: Locale; t: T }>({ locale: DEFAULT_LOCALE, t: tEnglish });
+
+export function I18nProvider({ locale, messages, children }: { …; children: React.ReactNode }) {
+  const value = useMemo(() => ({ locale, t: makeT(messages) }), [locale, messages]);
+  return &lt;I18nContext value={value}>{children}&lt;/I18nContext>;   // React 19: no .Provider
+}
+export function useT(): T { return useContext(I18nContext).t; }</pre>
+  <p><code>useMemo</code> keeps the same <code>value</code> object until the language changes. A new object on every render would re-render every <code>useT()</code> consumer for nothing.</p>
+
+  <h3>Custom hooks you will reuse</h3>
+  <p><code>useT()</code> and <code>useLocale()</code> (language), <code>useScannerKeystrokes(onScan, enabled)</code> (hardware barcode scanners), and <code>useHydrated()</code> in <code>scanning/scan-input.tsx</code> (true once React runs in the browser; chapter 11).</p>
+</section>
+
+<!-- ============================== 8 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 8</div>
+  <h1>Closures at work</h1>
+  <p class="lead">A closure is a function together with the variables that were in scope where it was created. The function keeps those variables alive for as long as the function itself lives. In React this matters all the time, because each render is a function call with its own props and state.</p>
+
+  <h2>8.1 Private state: the hardware scanner buffer</h2>
+  <p>USB and Bluetooth barcode scanners act like keyboards: they "type" the code very fast and press Enter. We must tell such a burst apart from a person typing slowly.</p>
+<pre class="ts good"><span class="lbl">src/features/scanning/scanner-keystrokes.ts</span>export function createScanBuffer(maxGapMs = 100, minLength = 3) {
+  let buffer = '';                                  // private: only push() can see these two
+  let lastAt = Number.NEGATIVE_INFINITY;
+  return {
+    push(key: string, at: number): string | null {
+      const continues = at - lastAt &lt;= maxGapMs;   // keys close together = one scanner burst
+      lastAt = at;
+      if (key === 'Enter') {
+        const code = continues ? buffer : '';
+        buffer = '';
+        return code.length >= minLength ? code : null;
+      }
+      if (key.length === 1) buffer = continues ? buffer + key : key;
+      return null;                                  // Shift, Tab, etc.
+    },
+  };
+}</pre>
+  <p><code>buffer</code>, <code>lastAt</code>, <code>maxGapMs</code> and <code>minLength</code> live on inside the closure between key presses, and nothing outside can change them. No class, no global, no React state (which would re-render on every key). Each call to <code>createScanBuffer()</code> gets its own fresh pair. The test file creates a new one per test, so tests never share state.</p>
+
+  <h2>8.2 A function that remembers its settings: <code>makeT</code></h2>
+<pre class="ts"><span class="lbl">src/lib/i18n/index.ts</span>export function makeT(messages: Messages): T {
+  return (key, vars) => fill(messages[key] ?? en[key] ?? key, vars);
+}</pre>
+  <p><code>makeT(hindiMessages)</code> returns a <code>t</code> that remembers the Hindi dictionary. Callers just write <code>t('sell.title')</code>, never passing the language around. The server (<code>getT()</code>) and the client (<code>useT()</code>) both use it.</p>
+
+  <h2>8.3 Wrapping work: the <code>run()</code> helper in actions</h2>
+<pre class="ts"><span class="lbl">src/server/actions/pos.ts</span>async function run&lt;T>(work: () => Promise&lt;T>): Promise&lt;ActionResult&lt;T>> {
+  try {
+    return { ok: true, data: await work() };
+  } catch (error) {
+    const t = await getT();
+    if (error instanceof DomainError) return { ok: false, error: errorText(error, t) };
+    if (error instanceof z.ZodError) return { ok: false, error: t('error.invalid') };
+    console.error(error);
+    return { ok: false, error: t('error.generic') };
+  }
+}
+// The caller passes a closure that has captured `input` and `current`:
+return run(async () => recordSale(db, STORE_ID, { ...saleSchema.parse(input), recordedBy: current.id }));</pre>
+  <p><code>run</code> doesn't need to know what the work is. The closure brings its own data along, so error handling is written once for every action.</p>
+
+  <h2>8.4 A snapshot at the moment of the tap</h2>
+<pre class="ts"><span class="lbl">pos-screen.tsx (shortened)</span>function handleRecordSale() {
+  if (!pending) return;
+  const { product, operationId } = pending;           // captured now
+  const quantity = Number(qtyText.trim());
+  const unitPricePaise = rupeesToPaise(priceText);    // captured now
+  …
+  startTransition(async () => {
+    const result = await recordSaleAction({ operationId, productId: product.id, quantity, unitPricePaise, soldBy: creditTo });
+    …
+  });
+}</pre>
+  <p>The async function inside <code>startTransition</code> is a closure over <i>this render's</i> values. While it waits for the server, the salesman might edit the price box, but the request already carries the exact item, price and <code>operationId</code> that were on screen when they tapped. That is what a sales record should be. Here "each render sees its own values" is a feature.</p>
+
+  <h2>8.5 Flags that outlive an async effect</h2>
+<pre class="ts"><span class="lbl">camera-scanner.tsx (shortened)</span>useEffect(() => {
+  let cancelled = false;                 // shared by the async work and the cleanup below
+  let decoded = false;
+  let stream: MediaStream | undefined;
+  const release = () => { stopDecoding?.(); stream?.getTracks().forEach((t) => t.stop()); };
+
+  const handleText = (text: string) => {
+    if (decoded || cancelled) return;    // act on the first read only
+    decoded = true;
+    release();
+    onDecodeRef.current(text);
+  };
+
+  (async () => {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: VIDEO_CONSTRAINTS, audio: false });
+    if (cancelled) return release();     // dialog closed while the camera was starting
+    …
+    const started = await startDecoding(video, handleText);
+    …
+  })();
+
+  return () => { cancelled = true; release(); };
+}, []);</pre>
+  <p>Opening the camera takes time. If the salesman closes the dialog first, the cleanup sets <code>cancelled = true</code>. Every closure that shares that variable sees it after each <code>await</code> and stops, turning the camera light off. This is the standard way to cancel async work in an effect. <code>startDecoding</code> does the same with its own <code>stopped</code> flag and returns a <code>stop()</code> closure to the caller.</p>
+
+  <h2>8.6 The stale-closure trap, and the "latest ref" fix</h2>
+  <p>A key listener attached once with <code>[]</code> dependencies closes over the <b>first</b> render's values forever. Here is how the hardware scanner hook would look if written naively:</p>
+<pre class="ts bad"><span class="lbl">✗ Buggy version (not in our code)</span>export function useScannerKeystrokes(onScan: (code: string) => void, enabled = true) {
+  useEffect(() => {
+    if (!enabled) return;
+    const buffer = createScanBuffer();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const code = buffer.push(e.key, e.timeStamp);
+      if (code !== null) onScan(code);       // ← the onScan of the render that ran this effect
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [enabled]);                    // onScan left out, so the buffer isn't reset
+}</pre>
+  <p><b>What goes wrong:</b> <code>onScan</code> is the Sell screen's <code>handleScan</code>, which uses <code>t</code> for its messages. Switch the language to Hindi and the screen re-renders, but the listener still calls the <i>old</i> <code>handleScan</code>, so "not found" appears in English. Adding <code>onScan</code> to the dependencies "fixes" that but re-attaches the listener and throws away the half-typed buffer on every render.</p>
+<pre class="ts good"><span class="lbl">✓ What the project does — src/features/scanning/scanner-keystrokes.ts</span>export function useScannerKeystrokes(onScan: (code: string) => void, enabled = true) {
+  const onScanRef = useRef(onScan);
+  useEffect(() => { onScanRef.current = onScan; });   // after every render: keep the newest
+
+  useEffect(() => {
+    if (!enabled) return;
+    const buffer = createScanBuffer();
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isTextEntry(event.target)) return;
+      const code = buffer.push(event.key, event.timeStamp);
+      if (code !== null) {
+        event.preventDefault();
+        onScanRef.current(code);           // read at call time: always the newest
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [enabled]);
+}</pre>
+  <p>The listener is attached once (the buffer survives), but it reads <code>onScanRef.current</code> <b>when a scan happens</b>, which is always the newest function. The camera scanner uses the same trick for <code>onDecode</code> and <code>onClose</code>. React 19.2+ also offers <code>useEffectEvent</code> for exactly this job. The ref pattern does the same and is what you'll find in our code.</p>
+
+  <h2>8.7 Module scope: one AudioContext for the whole app</h2>
+<pre class="ts"><span class="lbl">src/features/feedback/sounds.ts (shortened)</span>let context: AudioContext | null = null;          // module scope: shared by every caller
+
+function audio(): AudioContext | null {
+  if (typeof window === 'undefined') return null;   // on the server: no sound
+  const Ctor = window.AudioContext ?? (window as …).webkitAudioContext;
+  if (!Ctor) return null;
+  context ??= new Ctor();                           // created once, on first use
+  if (context.state === 'suspended') void context.resume();
+  return context;
+}</pre>
+  <p>Browsers limit audio contexts and phones allow sound only after a tap, so the module-level <code>context</code> is a lazy singleton that <code>play()</code>, <code>feedback()</code> and <code>unlockAudio()</code> all close over.</p>
+
+  <h2>8.8 When a closure is needed — and when it isn't</h2>
+<pre class="ts"><span class="lbl">components/layout/first-time-tip.tsx</span>const dismissed = useSyncExternalStore(
+  (listener) => { listeners.add(listener); return () => listeners.delete(listener); },  // new function each render
+  () => isDismissed(id),        // needs `id` from props, so it must be a closure
+  () => true,
+);</pre>
+  <p>The snapshot needs <code>id</code>, but <code>subscribe</code> doesn't, so being inline only makes React re-subscribe on every render. Moving it to module scope, as <code>tag-views.tsx</code> does, is cleaner (Exercise 9).</p>
+</section>
+
+<!-- ============================== 9 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 9</div>
+  <h1>State without Redux</h1>
+  <p class="lead">There is no Redux, Zustand or React Query in this project, and that is a design decision, not something missing. This chapter shows where each kind of state lives instead, how Redux ideas map onto it, and when we would add a client store.</p>
+
+  <h2>Where every kind of state lives</h2>
+  <table>
+    <tr><th style="width:24%">Kind of state</th><th style="width:30%">Example</th><th style="width:20%">Lives in</th><th>Read / changed with</th></tr>
+    <tr><td><b>Shop data</b></td><td>items, stock, sales, totals, approvals</td><td>PostgreSQL</td><td>Server Components read it; Server Actions change it; <code>revalidatePath</code> / <code>router.refresh()</code></td></tr>
+    <tr><td><b>Who is logged in</b></td><td>Vishal, salesman, rights</td><td>Signed <code>httpOnly</code> cookie + DB</td><td><code>getCurrentStaff()</code> (per-request <code>cache()</code>)</td></tr>
+    <tr><td><b>Language</b></td><td>Hindi</td><td><code>staff.language</code> + cookie</td><td><code>LocaleRoot</code> → Context → <code>useT()</code></td></tr>
+    <tr><td><b>What the page shows</b></td><td>All tags filters, <code>?show=items</code>, <code>?code=</code></td><td>The URL</td><td><code>next/form</code>, <code>&lt;Link&gt;</code>, <code>searchParams</code></td></tr>
+    <tr><td><b>Screen state</b></td><td>scanned item, typed price, dialog open</td><td>Component</td><td><code>useState</code></td></tr>
+    <tr><td><b>Per-phone settings</b></td><td>theme, sound, Grid/Rows, tips</td><td><code>localStorage</code></td><td><code>useSyncExternalStore</code></td></tr>
+  </table>
+
+  <h2>Redux ideas, mapped to our code</h2>
+  <table>
+    <tr><th style="width:28%">Redux concept</th><th>Our equivalent</th></tr>
+    <tr><td>The store (one global state tree)</td><td>The database, plus the URL. Every page reads fresh data on the server per request.</td></tr>
+    <tr><td>Reducers / slices (rules for changes)</td><td>Service functions in <code>src/server/services</code>, which run inside a database transaction and are unit-tested</td></tr>
+    <tr><td><code>dispatch(action)</code></td><td>Calling a Server Action, inside <code>startTransition</code> or through <code>&lt;form action&gt;</code></td></tr>
+    <tr><td>Thunks / sagas (async)</td><td>The Server Action itself is async; <code>useTransition</code> / <code>useActionState</code> give the pending flag</td></tr>
+    <tr><td>Selectors</td><td>Service queries (<code>shopDashboard</code>, <code>salesReport</code>) and values computed during render</td></tr>
+    <tr><td>Middleware (auth, logging)</td><td><code>proxy.ts</code>, <code>require…()</code> checks, the <code>run()</code> wrapper</td></tr>
+    <tr><td>DevTools time-travel</td><td>The append-only ledger: every stock change and decision is a row you can replay</td></tr>
+    <tr><td>redux-persist</td><td><code>localStorage</code> + <code>useSyncExternalStore</code>; cookies</td></tr>
+  </table>
+
+  <h2>Example: the All tags filters, two ways</h2>
+<pre class="ts hypo"><span class="lbl">If we used Redux (hypothetical — not in our code)</span>const filtersSlice = createSlice({ name: 'tagFilters', initialState: { supplier: '', stock: false }, reducers: { … } });
+
+function AllTags() {
+  const filters = useSelector((s) => s.tagFilters);
+  const [tags, setTags] = useState([]); const [loading, setLoading] = useState(false);
+  useEffect(() => { setLoading(true); fetch(`/api/tags?…`).then(…).finally(() => setLoading(false)); }, [filters]);
+  …                                      // + an API route, + loading/error UI, + cache invalidation
+}</pre>
+<pre class="ts good"><span class="lbl">What we do — the URL is the state</span>// page.tsx (server)
+const p = parseTagParams(await searchParams);       // ?supplier=…&stock=1
+const groups = groupTags(await listTagLibrary(db, STORE_ID, tagFilter(p)), p.group);
+return &lt;TagFilterForm key={tagLibraryHref(p)} …>{/* selects, checkbox */}&lt;/TagFilterForm>;</pre>
+  <ul>
+    <li><b>Shareable and bookmarkable:</b> the owner can send a link to "Ganga Textiles, in stock".</li>
+    <li><b>Back button works</b>, because every filter change is a navigation.</li>
+    <li><b>No loading state to manage</b> and no client fetching code; the tag data never ships as JSON.</li>
+    <li><b>No stale cache:</b> two salesmen selling at once always see the same truth, because it comes from the database.</li>
+  </ul>
+
+  <h2>When would we add a client store?</h2>
+  <p>When state is <b>(a) owned by the phone</b>, <b>(b) needed by distant components</b>, and <b>(c) changing often</b>. The planned case is <b>offline selling</b> (backlog phase 6): sales recorded with no network must be queued on the phone (IndexedDB via Dexie), shown as "waiting to sync", and sent when the network returns. That queue is real client-owned state. <code>CLAUDE.md</code> lists Zustand, TanStack Query and Dexie as <i>planned, not yet installed</i>, to be added only in the phase that needs them. If you join that work, a small store (or <code>useSyncExternalStore</code> around the queue) is the right tool; Redux's extra structure would be heavier than we need.</p>
+  <div class="box tip"><b class="t">Question to ask before adding global state</b>
+    "Could this live in the database, the URL, or one component?" In this project the answer has been yes every time so far.
+  </div>
+</section>
+
+<!-- ============================== 10 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 10</div>
+  <h1>Styling, theme and motion</h1>
+
+  <h2>Tailwind 4 and class constants</h2>
+  <p>Tailwind 4 runs through Turbopack (<code>@tailwindcss/turbopack</code> in <code>next.config.ts</code>); its configuration lives in CSS (<code>src/app/globals.css</code>). There is no component library: repeated looks are plain strings in <code>src/components/ui/styles.ts</code> (<code>card</code>, <code>primaryButton</code>, <code>secondaryButton</code>, <code>input</code>, <code>headerIcon</code>…), used as <code>className={primaryButton}</code>.</p>
+
+  <h2>Six themes from one set of classes</h2>
+<pre class="css"><span class="lbl">src/app/globals.css (shortened)</span>@custom-variant dark (&amp;:where([data-mode="dark"], [data-mode="dark"] *));
+
+@theme inline {
+  --color-brand-600: var(--b-600);      /* bg-brand-600 → whatever the theme says */
+  …
+}
+[data-theme="bahi"] { --b-600: #4c3cce; --zari: #db631a; … }
+[data-theme="peacock"] { --b-600: #0f766e; … }</pre>
+  <ul>
+    <li><code>bg-brand-600</code> reads a CSS variable, and each theme sets the variables on <code>&lt;html data-theme="…"&gt;</code>. One class serves all six themes. <b>Never write a fixed colour such as <code>bg-indigo-600</code></b> for brand surfaces.</li>
+    <li><code>dark:</code> is redefined to follow <code>data-mode="dark"</code> instead of the system setting, because each phone chooses Day, Night or Same as phone.</li>
+  </ul>
+
+  <h2>No flash of the wrong theme</h2>
+  <p>The theme is stored in <code>localStorage</code>, which the server cannot read. If React applied it after hydration, the page would flash in the default colours first. Instead, the root layout puts a tiny script in <code>&lt;head&gt;</code> that runs <b>before the first paint</b>:</p>
+<pre class="ts"><span class="lbl">src/app/layout.tsx (shortened)</span>&lt;html lang="en" data-theme="bahi" data-mode="light" suppressHydrationWarning className={…fonts}>
+  &lt;head>
+    &lt;script dangerouslySetInnerHTML={{ __html: APPEARANCE_SCRIPT }} />
+  &lt;/head></pre>
+  <p><code>APPEARANCE_SCRIPT</code> (in <code>features/appearance/appearance.ts</code>) reads the two keys, checks them against the allowed list, and sets <code>data-theme</code> / <code>data-mode</code>. It is plain ES5 inside <code>try</code>, so it can never break the page. Because it changes attributes React rendered on the server, <code>&lt;html&gt;</code> carries <code>suppressHydrationWarning</code>. That silences the warning for this one element only, not its children.</p>
+
+  <h2>Motion that respects the user</h2>
+  <p>Animations are CSS classes in <code>globals.css</code>: <code>page-in</code> (applied by <code>template.tsx</code> on every navigation), <code>rise-in</code>, the <code>art-*</code> picture animations, and the <code>fb-*</code> "Sale done" effects. One <code>@media (prefers-reduced-motion: reduce)</code> block turns them off for people who ask their phone for less motion. Keep new animations in CSS and add them to that block. (Fonts come from <code>next/font/google</code>, self-hosted, with the <code>devanagari</code> subset so Hindi matches.)</p>
+</section>
+
+<!-- ============================== 11 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 11</div>
+  <h1>Hydration and browser-only APIs</h1>
+  <p class="lead">Client Components render on the server into HTML, then again in the browser to "hydrate" it. That first browser render must match the HTML exactly.</p>
+
+  <h2>Common mismatch causes, and our fix for each</h2>
+  <table>
+    <tr><th style="width:30%">Cause</th><th>How the project avoids it</th></tr>
+    <tr><td><code>localStorage</code> values</td><td><code>useSyncExternalStore</code> with a server snapshot (chapter 7)</td></tr>
+    <tr><td>Theme set by a script</td><td><code>suppressHydrationWarning</code> on <code>&lt;html&gt;</code> only</td></tr>
+    <tr><td>Dates and times</td><td>Formatted with a fixed time zone (<code>Asia/Kolkata</code>) via <code>formatDate</code>, so server and phone agree</td></tr>
+    <tr><td>Random ids in markup</td><td><code>useId()</code> for ids that appear in HTML</td></tr>
+    <tr><td>"Only once we're in the browser" UI</td><td><code>useHydrated()</code> (below)</td></tr>
+  </table>
+<pre class="ts"><span class="lbl">src/features/scanning/scan-input.tsx</span>const emptySubscribe = () => () => {};
+/** False during SSR/hydration, true once React is interactive. */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
+…
+useScannerKeystrokes(submit, hydrated && captureScanner);   // listen for scanners only once interactive</pre>
+  <p>React uses the server value (<code>false</code>) for hydration, then re-renders with <code>true</code>: a mismatch-free "after hydration". <code>ScanInput</code> also keeps its box <code>disabled={!hydrated}</code>, so a scan can't land in a box React doesn't control yet (Playwright waits for it to be enabled).</p>
+
+  <h2>Browser APIs, used carefully</h2>
+  <table>
+    <tr><th style="width:24%">API</th><th>Used for</th><th style="width:36%">Guard</th></tr>
+    <tr><td>Camera (<code>getUserMedia</code>)</td><td>Reading tags</td><td>Only inside an effect; stopped in cleanup; errors become a friendly message</td></tr>
+    <tr><td><code>BarcodeDetector</code></td><td>Fast native decoding</td><td>Feature-detected; falls back to ZXing</td></tr>
+    <tr><td>Web Audio</td><td>"ting", chime, buzz</td><td><code>typeof window</code> check, lazy context, unlocked on first tap</td></tr>
+    <tr><td><code>navigator.vibrate</code></td><td>Small buzz on keypad and scans</td><td>Optional chaining: <code>navigator.vibrate?.(8)</code></td></tr>
+  </table>
+  <div class="box rule"><b class="t">Rule</b>
+    Never touch <code>window</code>, <code>document</code> or <code>localStorage</code> at module top level or in render. Use an effect, an event handler, a store snapshot or a <code>typeof window</code> check, and wrap <code>localStorage</code> in <code>try</code>.
+  </div>
+</section>
+
+<!-- ============================== 12 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 12</div>
+  <h1>Security for front-end developers</h1>
+
+  <h2>The session</h2>
+  <p>Login is a name and a PIN. <code>loginAction</code> checks the PIN (scrypt hash) and calls <code>startSession</code>, which sets a cookie signed with HMAC (<code>SESSION_SECRET</code>):</p>
+<pre class="ts"><span class="lbl">src/server/auth.ts (shortened)</span>(await cookies()).set(SESSION_COOKIE, token, {
+  httpOnly: true,                                   // JavaScript in the page cannot read it
+  sameSite: 'lax',                                  // not sent on cross-site POSTs
+  secure: process.env.NODE_ENV === 'production',    // HTTPS only on the live site
+  maxAge: SESSION_TTL_SECONDS,
+});</pre>
+
+  <h2>Three layers of checks</h2>
+  <table>
+    <tr><th style="width:20%">Layer</th><th>Checks</th><th style="width:34%">Why it isn't enough alone</th></tr>
+    <tr><td><code>proxy.ts</code></td><td>The cookie's signature is valid</td><td>Doesn't know if the person was deactivated, or what rights they have</td></tr>
+    <tr><td>Every page</td><td><code>requireAdmin()</code>, <code>requirePermission('stock')</code>, <code>requireAnyPermission([…])</code></td><td>Protects what is <i>shown</i>, but actions can be called directly</td></tr>
+    <tr><td>Every action</td><td><code>requireStaff()</code> / permission + Zod validation</td><td>This is the real gate for every change</td></tr>
+  </table>
+
+  <h2>Habits to keep</h2>
+  <ul>
+    <li><b>Hiding a button is not security.</b> If a salesman must not change prices, the action checks <code>prices</code> on the server.</li>
+    <li><b>Props are public</b> (chapter 4). Shape data on the server for the person who will see it: <code>toCounterProduct</code>, and purchase prices only with the <code>costs</code> right.</li>
+    <li><b>Don't put secrets in client code.</b> Only variables prefixed <code>NEXT_PUBLIC_</code> reach the browser, and we have none. Keep it that way.</li>
+    <li><b>Photos</b> go through <code>/api/product-images/[id]</code>, which checks the login, instead of public URLs.</li>
+  </ul>
+</section>
+
+<!-- ============================== 13 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 13</div>
+  <h1>Hindi and English</h1>
+  <p class="lead">The whole app follows the person's language. Adding a screen means adding its words in both languages.</p>
+  <ul>
+    <li><b>Dictionaries:</b> <code>src/lib/i18n/en.ts</code>, <code>hi.ts</code>, and one module per area in <code>src/lib/i18n/modules/</code>. Keys are typed (<code>MessageKey</code>), so <code>t('sell.titel')</code> is a compile error. A test checks that Hindi has every key with the same <code>{placeholders}</code>.</li>
+    <li><b>Server:</b> <code>const t = await getT()</code> in pages and actions. Action errors are translated before they reach the phone.</li>
+    <li><b>Client:</b> <code>const t = useT()</code>, from the Context filled by <code>LocaleRoot</code> in the root layout.</li>
+    <li><b>Plurals:</b> keys ending in <code>.one</code> and <code>.other</code>, through the <code>plural()</code> helper.</li>
+  </ul>
+
+  <h2>Switching language without a reload</h2>
+<pre class="ts"><span class="lbl">src/features/i18n/language-switch.tsx (shortened)</span>const [pending, startTransition] = useTransition();
+&lt;button disabled={pending} onClick={() =>
+  startTransition(async () => {
+    await setLanguageAction(locale === 'en' ? 'hi' : 'en');   // saves on the person + a cookie
+    router.refresh();                                          // re-render this page on the server
+  })
+}></pre>
+  <p>The server re-renders the current page in Hindi. <code>LocaleRoot</code> passes the Hindi dictionary to <code>I18nProvider</code>, whose <code>useMemo</code> builds a new <code>t</code>, and every <code>useT()</code> component re-renders. The URL, scroll position and client state all stay. Remember 8.6: this is exactly the moment a stale closure would show the old language.</p>
+</section>
+
+<!-- ============================== 14 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 14</div>
+  <h1>Testing</h1>
+
+  <h2>Unit tests: Vitest</h2>
+  <p>24 test files sit next to the code they test (<code>*.test.ts</code>) and run in jsdom. Pure helpers get small, fast tests, and the service tests run real SQL against an in-memory PGlite database.</p>
+<pre class="ts"><span class="lbl">src/features/scanning/scanner-keystrokes.test.ts (shortened)</span>function feed(buffer: ReturnType&lt;typeof createScanBuffer>, text: string, start: number, gap: number) {
+  let at = start; let result: string | null = null;
+  for (const key of [...text.split(''), 'Enter']) { result = buffer.push(key, at); at += gap; }
+  return result;
+}
+
+it('returns the code for a fast burst ending in Enter', () => {
+  expect(feed(createScanBuffer(), 'MAA-TS-001', 0, 10)).toBe('MAA-TS-001');
+});
+it('ignores slow human typing', () => {
+  expect(feed(createScanBuffer(), 'MAA-TS-001', 0, 300)).toBeNull();
+});</pre>
+  <p>Because the scanner logic is a plain closure (8.1), it is tested with fake timestamps: no DOM, no timers, no React.</p>
+
+  <h2>End-to-end: Playwright</h2>
+  <p><code>e2e/*.spec.ts</code> run the real app against a fresh in-memory database, on a desktop browser and a Pixel 7 phone size.</p>
+<pre class="ts"><span class="lbl">e2e/pos.spec.ts (shortened)</span>async function login(page: Page, name: string, pin = '1234') {
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.getByText(name, { exact: true }).click();
+  await page.getByLabel('PIN').fill(pin);
+  await page.getByRole('button', { name: 'Log in' }).click();
+}
+
+/** Hardware scanners type fast and press Enter. */
+async function scan(page: Page, code: string) {
+  await page.keyboard.type(code, { delay: 5 });   // a 5 ms gap: the burst createScanBuffer expects
+  …
+}</pre>
+  <p>Tests find elements by <b>role and label</b>, as a person would (<code>getByRole('button', { name: 'Log in' })</code>). That only works if our markup is accessible, which is a nice side effect.</p>
+
+<pre><span class="lbl">The quality gate — run before every push</span>pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e
+# on a busy laptop:  pnpm test:e2e --workers=3
+# money/stock logic ships WITH its tests; a new string missing from hi.ts fails the i18n test</pre>
+</section>
+
+<!-- ============================== 15 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 15</div>
+  <h1>Walkthrough: scan to "Sale done"</h1>
+  <p class="lead">One sale, followed through every file. Open each file as you read.</p>
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:30%">Where</th><th>What happens</th></tr>
+    <tr><td>1</td><td><code>proxy.ts</code> → <code>(pos)/pos/page.tsx</code></td><td>Vishal opens <code>/pos</code>. Theme and fonts arrive first; the header and Sell frame stream in once his language is known; then <code>Counter</code> with the staff list (<code>loadCounter</code>).</td></tr>
+    <tr><td>2</td><td><code>scanning/scan-input.tsx</code></td><td>Once hydrated, it listens for a hardware scanner (<code>useScannerKeystrokes</code>), the text box, or the camera button.</td></tr>
+    <tr><td>3</td><td><code>scanning/camera-scanner.tsx</code></td><td>Camera opens in a portal; <code>BarcodeDetector</code> or ZXing reads the tag; the first read wins (8.5).</td></tr>
+    <tr><td>4</td><td><code>pos-screen.tsx</code> <code>handleScan</code></td><td><code>startTransition(() =&gt; lookupProductAction(code))</code>; <code>busy</code> shows progress.</td></tr>
+    <tr><td>5</td><td><code>actions/pos.ts</code></td><td><code>requireStaff</code> → <code>findProductByCode</code> → <code>toCounterProduct</code> (no cost) + photo URL.</td></tr>
+    <tr><td>6</td><td><code>pos-screen.tsx</code></td><td><code>signal('ok')</code>: "ting" + tick; <code>setPending({ product, step: 'details', operationId: crypto.randomUUID() })</code>.</td></tr>
+    <tr><td>7</td><td><code>pos/product-card.tsx</code></td><td>Price, MRP, stock badge. Vishal taps <i>Sell this item</i>; the price box is pre-filled.</td></tr>
+    <tr><td>8</td><td><code>features/inventory/inventory.ts</code></td><td><code>validateSaleDraft</code> checks quantity, stock and price ≤ MRP in the browser, for instant feedback only.</td></tr>
+    <tr><td>9</td><td><code>actions/pos.ts</code> <code>recordSaleAction</code></td><td><code>requireStaff</code>, Zod, then the <code>recordSale</code> service.</td></tr>
+    <tr><td>10</td><td><code>services/sales.ts</code></td><td>One transaction: stock down only if enough, sale row with snapshots, stock movement; waits for the owner's approval.</td></tr>
+    <tr><td>11</td><td><code>pos-screen.tsx</code></td><td><code>ActionResult</code> ok → message, <code>feedback('done')</code> chime, <code>DoneOverlay</code>, <code>setPending(null)</code>.</td></tr>
+    <tr><td>12</td><td><code>feedback/effects.tsx</code></td><td>The card closes after 1.6 s (stable <code>closeDone</code>, chapter 7).</td></tr>
+    <tr><td>13</td><td><code>(admin)/admin/approvals</code></td><td>The owner approves; <code>revalidatePath('/', 'layout')</code> updates every total.</td></tr>
+  </table>
+  <div class="box tip"><b class="t">The QR path</b>
+    A customer's phone camera can't sell, but a salesman's can: scanning a tag's QR with the phone's own camera opens <code>/i/&lt;barcode&gt;</code>. The route handler redirects to <code>/pos?code=…</code>, and <code>Counter</code> looks the item up on the server and passes it as <code>initial</code>. <code>PosScreen</code>'s lazy <code>useState</code> starts with the item already showing (steps 4–6 skipped).
+  </div>
+</section>
+
+<!-- ============================== 16 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 16</div>
+  <h1>Exercises</h1>
+  <p class="lead">Do these with the code open and the app running locally. Answers are in chapter 17. Don't commit practice changes.</p>
+
+  <h2>Reading the code</h2>
+  <p class="ex"><span class="num-badge">1</span>On the Sell screen, the "Credit sale to" list shows every active person. Find exactly where that list is loaded and how it reaches <code>StaffSelect</code>. Is any of it fetched from the browser?</p>
+  <p class="ex"><span class="num-badge">2</span><code>PosPage</code> is a Server Component and <code>PosScreen</code> is a Client Component. Give two concrete reasons each must be what it is.</p>
+  <p class="ex"><span class="num-badge">3</span>An <code>/admin</code> page calls <code>requirePermission</code> even though <code>proxy.ts</code> already runs. Describe a real situation where removing the page check would be a bug.</p>
+  <p class="ex"><span class="num-badge">4</span>Why is the sale's <code>operationId</code> created when the item is scanned (in state) and not inside <code>recordSaleAction</code>?</p>
+
+  <h2>Predict, then try</h2>
+  <p class="ex"><span class="num-badge">5</span>Replace <code>useCallback(() =&gt; setDone(null), [])</code> with a plain arrow function. What changes in the "Sale done" card's behaviour, and why?</p>
+  <p class="ex"><span class="num-badge">6</span>In <code>useScannerKeystrokes</code>, call <code>onScan</code> directly instead of <code>onScanRef.current</code>. Switch to Hindi, then scan a code that doesn't exist with a hardware scanner (or type it fast into the page and press Enter). What do you see?</p>
+  <p class="ex"><span class="num-badge">7</span>In <code>tag-views.tsx</code>, someone writes <code>const [view, setView] = useState(readView())</code>. What happens on the server, and what happens on a phone where <i>Rows</i> was chosen?</p>
+  <p class="ex"><span class="num-badge">8</span>Imagine deleting the <code>&lt;Suspense&gt;</code> around <code>Counter</code> in <code>pos/page.tsx</code>, so the page returns <code>&lt;Counter … /&gt;</code> directly. Which boundary does <code>Counter</code> now suspend to, and what does Vishal see while the staff list loads? (Hint: chapter 3, "two levels".)</p>
+
+  <h2>Small changes</h2>
+  <p class="ex"><span class="num-badge">9</span>Clean up <code>FirstTimeTip</code> (8.8) so its <code>subscribe</code> function is created once. Keep the behaviour the same.</p>
+  <p class="ex"><span class="num-badge">10</span>Add a per-phone "Big text" switch on the Settings screen that makes the Sell screen's price larger. Decide where its state lives, and list the files you would touch, including both dictionaries. (Plan only; no need to finish it.)</p>
+</section>
+
+<!-- ============================== 17 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 17</div>
+  <h1>Answers</h1>
+
+  <h3>1 · The staff list</h3>
+  <p><code>(pos)/pos/page.tsx</code> → <code>Counter</code> awaits <code>loadCounter()</code> (<code>features/pos/load-counter.ts</code>), which calls <code>requireStaff()</code> and <code>listStaff(await requestDb(), STORE_ID, { activeOnly: true })</code>. It keeps only <code>{ id, name }</code> and passes <code>staff</code> as a prop to <code>PosScreen</code>, which hands it to <code>StaffSelect</code>. Nothing is fetched from the browser; the list arrives inside the streamed page. Only id and name cross the boundary, not roles, PIN hashes or rights.</p>
+
+  <h3>2 · Server vs client</h3>
+  <p><b><code>PosPage</code> must be server:</b> it reads the session cookie and the database (impossible in the browser, and the DB credentials must never ship), and it uses <code>searchParams</code> to pre-load a QR-scanned item before any JavaScript runs. <b><code>PosScreen</code> must be client:</b> it holds state that changes with every tap (<code>useState</code>, <code>useTransition</code>), and it uses browser APIs through its children: the camera, Web Audio sounds, vibration, keyboard listeners.</p>
+
+  <h3>3 · Why pages check again</h3>
+  <p>The proxy checks only that the cookie is validly signed. Example: the owner removes Pradeep's <i>stock</i> right, or deactivates him, while his phone is still logged in. His cookie is still valid, so the proxy lets <code>/admin/stock/receive</code> through. Only <code>requirePermission('stock')</code>, which re-reads him from the database through <code>getCurrentStaff()</code>, sends him back to <code>/pos</code>. (The action behind that page checks again for the same reason.)</p>
+
+  <h3>4 · Where <code>operationId</code> comes from</h3>
+  <p>It identifies <i>one intended sale</i>. Made when the item is shown, it stays the same for every retry of that sale, so the database's unique key turns a double tap or a retry after a timeout into "return the first sale". If the action made it, every retry would carry a fresh id, and a sale whose first response was lost would be recorded twice and take stock twice. A new scan gets a new id, so the next customer's sale is never confused with this one.</p>
+
+  <h3>5 · Without useCallback</h3>
+  <p><code>onClose</code> would be a new function on each <code>PosScreen</code> render. <code>DoneOverlay</code>'s effect depends on it, so after each re-render React would clear the old timer and listener and start a fresh 1.6-second timer. Anything that re-renders <code>PosScreen</code> while the card is open pushes the auto-close back. It still closes eventually (or on a tap), but timing becomes unpredictable and the key listener is re-added each time.</p>
+
+  <h3>6 · Stale closure</h3>
+  <p>With <code>[enabled]</code> as the dependency, the listener keeps the <code>onScan</code> from the render that attached it. That is <code>ScanInput</code>'s <code>submit</code>, which calls the <code>handleScan</code> of that time, holding the English <code>t</code>. After switching to Hindi, the "not found" message still appears <b>in English</b>, until something toggles <code>enabled</code> (for example opening the sell form) and the effect re-runs. Adding <code>onScan</code> to the dependencies "fixes" the language but re-attaches the listener and drops the buffer on every render. That is why the ref exists.</p>
+
+  <h3>7 · useState(readView())</h3>
+  <p><b>Server:</b> <code>readView</code>'s <code>try/catch</code> saves it — <code>localStorage</code> is undefined, the access throws, and it returns <code>'grid'</code>. Without that <code>try</code>, the server render would crash. <b>Phone with Rows saved:</b> the server HTML says grid but the first client render says rows, so React reports a <b>hydration mismatch</b> and patches the UI, with a visible jump. Other components on the page wouldn't update when the view changes either, because nothing subscribes to the store. <code>useSyncExternalStore</code> with a server snapshot solves all three.</p>
+
+  <h3>8 · Removing the page's Suspense</h3>
+  <p>A component that is still waiting hands control to the <b>nearest</b> <code>&lt;Suspense&gt;</code> above it. Without the page's own boundary, that is the root layout's <code>&lt;Suspense fallback={null}&gt;</code> around <code>LocaleRoot</code>. Everything inside it — the header, the bottom tabs, the whole Sell frame — waits for <code>Counter</code>'s data, and until then Vishal sees a <b>blank page</b> (the fallback is <code>null</code>). With the page boundary, the header and "Loading…" appear as soon as the language is known and only the counter area waits. Nothing breaks, but the screen feels slower. That is why every page keeps its data part in its own boundary.</p>
+
+  <h3>9 · FirstTimeTip</h3>
+<pre class="ts"><span class="lbl">One clean version</span>const listeners = new Set&lt;() => void>();
+function subscribe(listener: () => void) {          // module scope: created once
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+export function FirstTimeTip({ id, text, helpHref }: { … }) {
+  const dismissed = useSyncExternalStore(subscribe, () => isDismissed(id), () => true);
+  …
+}</pre>
+  <p>The snapshot still closes over <code>id</code>. Run <code>pnpm test</code> and the tip-related e2e tests afterwards.</p>
+
+  <h3>10 · "Big text" plan</h3>
+  <p><b>Where:</b> it's a per-phone preference (one phone may have weaker eyesight behind it), so <code>localStorage</code> + <code>useSyncExternalStore</code>, like sound. It isn't shop data (no database), nor page state (no URL). <b>Files:</b> a small store module (read/save/subscribe) in <code>src/features/appearance/</code> or <code>feedback/</code>; a switch on the Settings screen (a client component inside <code>(admin)/admin/settings/page.tsx</code>, or the header menu if salesmen need it); <code>pos/product-card.tsx</code> reads it and picks a bigger class. Strings go in <code>src/lib/i18n/modules/…</code> in both English and Hindi. Add a unit test for the store, and update the Guide story if the screen changes (<code>features/guide/stories.ts</code>). Better still, a <code>data-text="big"</code> attribute on <code>&lt;html&gt;</code> set by the head script, plus a CSS rule, gives no flash at all, like the theme.</p>
+</section>
+
+<!-- ============================== 18 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 18</div>
+  <h1>Your 4-week plan</h1>
+  <p class="lead">About an hour a day alongside normal work. Each week: read the docs → trace it in our code → change something small. You're ready when you can explain, without notes, why the Sell page has a <code>&lt;Suspense&gt;</code>, why a salesman's phone never receives purchase prices, why a retry can't sell an item twice, and why the scanner hook uses a ref.</p>
+  <table>
+    <tr><th style="width:11%">Week</th><th style="width:31%">Learn</th><th style="width:29%">Trace in our code</th><th>Do</th></tr>
+    <tr><td><b>1</b><br>App Router</td><td>Layouts and pages, linking, Server and Client Components. Next docs <code>01-getting-started/03</code>–<code>05</code>.</td><td><code>app/layout.tsx</code>, <code>(pos)/layout.tsx</code>, <code>pos/page.tsx</code>, <code>proxy.ts</code>, the /pos tree (ch. 4)</td><td>Exercises 1–3. Draw the tree for <code>/pos/my-sales</code> yourself.</td></tr>
+    <tr><td><b>2</b><br>Data &amp; actions</td><td>Fetching, mutating, caching, revalidating: Next docs <code>06</code>–<code>09</code>. react.dev: <code>useTransition</code>, <code>useActionState</code>. Zod basics.</td><td><code>actions/pos.ts</code>, <code>actions/approvals.ts</code>, <code>login-form.tsx</code>, <code>request-db.ts</code></td><td>Exercises 4, 8. Follow chapter 15 with the debugger and network tab open.</td></tr>
+    <tr><td><b>3</b><br>React depth</td><td>react.dev "Escape Hatches": refs, effects, "You Might Not Need an Effect", "Separating Events from Effects", custom hooks. Closures: javascript.info, <i>You Don't Know JS Yet: Scope &amp; Closures</i>.</td><td><code>camera-scanner.tsx</code>, <code>scanner-keystrokes.ts</code>, <code>effects.tsx</code>, <code>tag-views.tsx</code>, <code>sounds.ts</code></td><td>Exercises 5–7, 9. Write a unit test for <code>createScanBuffer</code> with a case of your own.</td></tr>
+    <tr><td><b>4</b><br>Shipping</td><td>CSS and fonts (docs <code>11</code>, <code>13</code>), Tailwind 4 theme variables, hydration errors, Playwright locators.</td><td><code>globals.css</code>, <code>appearance.ts</code>, <code>i18n/</code>, <code>e2e/pos.spec.ts</code></td><td>Exercise 10 as a real task with your lead: plan → small commit → quality gate.</td></tr>
+  </table>
+
+  <h2>Where to learn (all free)</h2>
+  <table>
+    <tr><th style="width:36%">Resource</th><th>Why</th></tr>
+    <tr><td><b>Next.js docs, our exact version</b><br><code>node_modules/next/dist/docs/</code></td><td>Matches 16.4.6 precisely, including Cache Components, <code>proxy.ts</code>, typed routes. Prefer it to blog posts written for Next 13–14.</td></tr>
+    <tr><td><b>react.dev</b> — Learn + Reference</td><td>The official docs. "Escape Hatches" is the best chapter on effects and refs ever written.</td></tr>
+    <tr><td><b>javascript.info</b> ("Variable scope, closure") and <b>You Don't Know JS Yet: Scope &amp; Closures</b> (free on GitHub)</td><td>Closures from first principles with tasks, then the deep version.</td></tr>
+    <tr><td><b>tailwindcss.com</b> (v4), <b>zod.dev</b>, <b>playwright.dev</b>, <b>vitest.dev</b></td><td>Theme variables and custom variants; validation; the two test runners.</td></tr>
+    <tr><td><b>Our own docs</b></td><td><code>CLAUDE.md</code>, <code>docs/PROJECT_CONTEXT.md</code>, <code>docs/TECHNICAL_REFERENCE.md</code> (one section per feature), <code>docs/DECISION_LOG.md</code> (why things are the way they are), and the SQL guide.</td></tr>
+  </table>
+</section>
+
+<!-- ============================== 19 ============================== -->
+<section class="chapter cheat">
+  <div class="kicker">Chapter 19</div>
+  <h1>Cheat sheet</h1>
+  <div class="two">
+    <div>
+      <h3>A new page</h3>
+<pre class="ts">export default function XPage(
+  props: PageProps&lt;'/x'>,
+) {
+  return (
+    &lt;Suspense fallback={&lt;p>Loading…&lt;/p>}>
+      &lt;X searchParams={props.searchParams} />
+    &lt;/Suspense>
+  );
+}
+async function X({ searchParams }: { … }) {
+  // or requirePermission(…) / requireAdmin()
+  const me = await requireStaff();
+  const t = await getT();
+  const db = await requestDb(); // not getDb()
+  …
+}</pre>
+      <h3>A new action</h3>
+<pre class="ts">'use server';
+const schema = z.object({ … });
+
+export async function doThingAction(
+  input: z.input&lt;typeof schema>,
+) {
+  const me = await requireStaff();
+  return run(async () => {
+    const data = schema.parse(input);
+    const db = await getDb();
+    return someService(db, STORE_ID, data);
+  });
+}</pre>
+      <h3>Call it from a client</h3>
+<pre class="ts">const [busy, startTransition] =
+  useTransition();
+startTransition(async () => {
+  const r = await doThingAction({ … });
+  if (!r.ok) return setError(r.error);
+  router.refresh(); // if the page shows it
+});</pre>
+    </div>
+    <div>
+      <h3>A per-phone setting</h3>
+<pre class="ts">function read() {
+  try {
+    return localStorage.getItem(K) ?? 'a';
+  } catch { return 'a'; }
+}
+function save(v: string) {
+  try { localStorage.setItem(K, v); } catch {}
+  window.dispatchEvent(new Event(EV));
+}
+function subscribe(cb: () => void) {
+  window.addEventListener(EV, cb);
+  window.addEventListener('storage', cb);
+  return () => {
+    window.removeEventListener(EV, cb);
+    window.removeEventListener('storage', cb);
+  };
+}
+const v = useSyncExternalStore(
+  subscribe, read, () => 'a');</pre>
+      <h3>Latest-callback ref</h3>
+<pre class="ts">const cbRef = useRef(cb);
+useEffect(() => { cbRef.current = cb; });
+useEffect(() => {
+  const on = () => cbRef.current();
+  window.addEventListener('x', on);
+  return () =>
+    window.removeEventListener('x', on);
+}, []);</pre>
+      <h3>Checklist before a PR</h3>
+<pre>□ 'use client' only where needed, low in the tree
+□ no cost/secret data in client props
+□ action: require…() + Zod + run()
+□ strings in en.ts AND hi.ts (modules/)
+□ brand-* colours; motion in reduced-motion block
+□ tests; lint, typecheck, test, build, e2e</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 20 ============================== -->
+<section class="chapter">
+  <div class="kicker">Chapter 20</div>
+  <h1>Glossary</h1>
+  <dl class="gloss">
+    <dt>App Router</dt><dd>Next.js routing by folders in <code>src/app</code>, with layouts and React Server Components.</dd>
+    <dt>App shell / static shell</dt><dd>The part of a page that is the same for every request; prerendered and prefetched.</dd>
+    <dt>Cache Components</dt><dd>Next 16 mode (<code>cacheComponents: true</code>): static shell plus streamed request-time parts inside Suspense.</dd>
+    <dt>Client Component</dt><dd>A component in a <code>'use client'</code> file; rendered to HTML on the server, then hydrated and interactive in the browser.</dd>
+    <dt>Closure</dt><dd>A function plus the variables in scope where it was created, kept alive with it.</dd>
+    <dt><code>connection()</code></dt><dd>Tells Next.js the rest of the render needs a real request; used in <code>requestDb()</code>.</dd>
+    <dt>DTO</dt><dd>"Data transfer object": a copy of data shaped for its receiver, e.g. <code>CounterProduct</code> without cost.</dd>
+    <dt>Hydration</dt><dd>React in the browser attaching event handlers and state to server-rendered HTML.</dd>
+    <dt>Hydration mismatch</dt><dd>The first browser render differs from the server HTML; React warns and patches.</dd>
+    <dt>Idempotent</dt><dd>Doing it twice has the same effect as once; our sales are, thanks to <code>operationId</code>.</dd>
+    <dt>Partial prefetching</dt><dd><code>&lt;Link&gt;</code> prefetches the target's app shell so navigation paints instantly.</dd>
+    <dt>Portal</dt><dd>Rendering a component's output into another DOM node (here <code>document.body</code>) while keeping it in the React tree.</dd>
+    <dt>Proxy (<code>proxy.ts</code>)</dt><dd>Code that runs before matching routes; Next 16's new name for middleware.</dd>
+    <dt>PWA</dt><dd>Progressive Web App: a website installable to the home screen; ours via <code>manifest.ts</code>.</dd>
+    <dt>RSC payload</dt><dd>The serialised result of Server Components (and the props to Client Components) sent to the browser.</dd>
+    <dt>Route group</dt><dd>A folder in brackets, such as <code>(pos)</code>; groups routes without changing the URL.</dd>
+    <dt>Route handler</dt><dd>A <code>route.ts</code> exporting <code>GET</code>/<code>POST</code> functions: plain HTTP, no page.</dd>
+    <dt>Server Action</dt><dd>An async function in a <code>'use server'</code> file that the client can call; a public endpoint underneath.</dd>
+    <dt>Server Component</dt><dd>The default component type in the App Router; runs only on the server and can be async.</dd>
+    <dt>Stale closure</dt><dd>A long-lived callback still holding values from an old render.</dd>
+    <dt>Streaming</dt><dd>Sending HTML in pieces; Suspense fallbacks are replaced as their content is ready.</dd>
+    <dt>Suspense</dt><dd>A boundary with a fallback shown while the content inside is still loading.</dd>
+    <dt>Transition</dt><dd>A state update React treats as non-urgent; with async functions it gives a pending flag for Server Action calls.</dd>
+    <dt><code>useSyncExternalStore</code></dt><dd>A hook to read a store outside React (here <code>localStorage</code>) safely, with a separate server value.</dd>
+  </dl>
+  <p class="small" style="margin-top:16pt">Facts in this guide match the codebase at app version 0.6.0 (17 Nov 2026): Next.js 16.4.6, React 19.3.0. File counts were taken from <code>src/</code> on that date. For later changes see <code>docs/TECHNICAL_REFERENCE.md</code>.</p>
+</section>
+
+<script>
+  // Light syntax colouring in one pass: comments, then strings, then keywords.
+  const RULES = {
+    ts: /(\/\*[\s\S]*?\*\/|(?:^|(?<=\s))\/\/[^\n]*|\{\/\*[\s\S]*?\*\/\})|('(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`)|(?<![&\w.$-])\b(import|from|export|default|function|const|let|var|return|async|await|if|else|new|type|try|catch|typeof|instanceof|true|false|null|undefined)\b/gm,
+    css: /(\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*")|(?<![&\w-])(@custom-variant|@theme|@media|inline)\b/gm,
+  };
+  function colour(el, re) {
+    const parts = el.innerHTML.split(/(<span class="lbl">[\s\S]*?<\/span>)/);
+    el.innerHTML = parts.map((part) => part.startsWith('<span class="lbl">') ? part :
+      part.replace(re, (m, cm, str, kw) =>
+        cm ? '<span class="cm">' + cm + '</span>' : str ? '<span class="str">' + str + '</span>' : '<span class="kw">' + kw + '</span>')
+    ).join('');
+  }
+  document.querySelectorAll('pre.ts').forEach((el) => colour(el, RULES.ts));
+  document.querySelectorAll('pre.css').forEach((el) => colour(el, RULES.css));
+</script>
+</body>
+</html>
