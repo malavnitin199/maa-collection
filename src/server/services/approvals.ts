@@ -285,6 +285,8 @@ export type PendingEntry = {
   /** Scanned sale: the item's MRP and usual selling price, so the owner can see a cut price. */
   mrpPaise: number | null;
   listPricePaise: number | null;
+  /** Sale only (plan v17): purchase price per piece saved with the sale — owner's screen only, for profit / loss. */
+  costPaise: number | null;
   note: string | null;
   soldBy: string;
   recordedBy: string;
@@ -298,7 +300,8 @@ const tz = sql.raw(`'${STORE_TIMEZONE.replace(/'/g, "''")}'`);
 
 /**
  * Everything waiting for the owner, newest first, grouped by shop day so he can
- * approve a whole day (or week) at once. Never includes purchase prices.
+ * approve a whole day (or week) at once. Owner only: sales carry their purchase
+ * price snapshot (plan v17) so the screen can mark profit or loss.
  */
 export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: { limit?: number } = {}): Promise<ApprovalDay[]> {
   const credited = alias(staff, 'credited');
@@ -321,6 +324,7 @@ export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: 
         totalPaise: sales.totalPaise,
         mrpPaise: sales.mrpPaise,
         listPricePaise: item.pricePaise,
+        costPaise: sales.costPaise,
         soldBy: credited.name,
         recordedBy: recorder.name,
         day: sql<string>`to_char(${sales.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')`,
@@ -373,6 +377,7 @@ export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: 
       amountPaise: r.totalPaise,
       mrpPaise: r.mrpPaise,
       listPricePaise: r.listPricePaise ?? null,
+      costPaise: r.costPaise ?? null,
       note: r.manualNote,
       soldBy: r.soldBy,
       recordedBy: r.recordedBy,
@@ -389,6 +394,7 @@ export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: 
       amountPaise: r.differencePaise,
       mrpPaise: r.issuedMrpPaise,
       listPricePaise: null,
+      costPaise: null,
       note: null,
       soldBy: r.soldBy,
       recordedBy: r.recordedBy,
@@ -411,9 +417,17 @@ export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: 
 }
 
 /** How many entries are waiting (for the badge on the owner's Home). */
-export async function pendingCount(db: Db, storeId: string): Promise<{ sales: number; exchanges: number; total: number; oldestDay: string | null }> {
+export async function pendingCount(
+  db: Db,
+  storeId: string,
+): Promise<{ sales: number; exchanges: number; total: number; oldestDay: string | null; losses: number }> {
   const [saleRow] = await db
-    .select({ n: sql<number>`count(*)`.mapWith(Number), oldest: sql<string | null>`to_char(min(${sales.createdAt}) AT TIME ZONE ${tz}, 'YYYY-MM-DD')` })
+    .select({
+      n: sql<number>`count(*)`.mapWith(Number),
+      oldest: sql<string | null>`to_char(min(${sales.createdAt}) AT TIME ZONE ${tz}, 'YYYY-MM-DD')`,
+      // Plan v17: waiting sales sold below their purchase price (owner's Home tile).
+      losses: sql<number>`count(*) filter (where ${sales.costPaise} is not null and ${sales.unitPricePaise} < ${sales.costPaise})`.mapWith(Number),
+    })
     .from(sales)
     .where(and(eq(sales.storeId, storeId), saleWaiting));
   const [exchangeRow] = await db
@@ -421,7 +435,7 @@ export async function pendingCount(db: Db, storeId: string): Promise<{ sales: nu
     .from(exchanges)
     .where(and(eq(exchanges.storeId, storeId), exchangeWaiting));
   const oldest = [saleRow.oldest, exchangeRow.oldest].filter(Boolean).sort()[0] ?? null;
-  return { sales: saleRow.n, exchanges: exchangeRow.n, total: saleRow.n + exchangeRow.n, oldestDay: oldest };
+  return { sales: saleRow.n, exchanges: exchangeRow.n, total: saleRow.n + exchangeRow.n, oldestDay: oldest, losses: saleRow.losses };
 }
 
 export type ApproveManyRange = { from?: Date; to?: Date; day?: string };

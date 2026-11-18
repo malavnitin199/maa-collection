@@ -38,6 +38,12 @@ async function Dashboard() {
             hint={
               <span data-testid="approvals-waiting" className={pending.total > 0 ? 'font-semibold text-red-700 dark:text-red-300' : undefined}>
                 {pending.total > 0 ? t('appr.home.tile', { n: pending.total }) : t('appr.home.tileNone')}
+                {/* Plan v17: sales sold below their purchase price stand out. */}
+                {pending.losses > 0 && (
+                  <span data-testid="approvals-losses" className="mt-1 block w-fit rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
+                    {t('appr.home.losses', { n: pending.losses })}
+                  </span>
+                )}
               </span>
             }
           />

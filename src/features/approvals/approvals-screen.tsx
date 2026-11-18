@@ -6,6 +6,7 @@ import { AllDoneArt } from '@/components/ui/art';
 import { card, errorBox, input, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
 import { formatDate, type MessageKey } from '@/lib/i18n';
+import { saleDeal, type Deal } from '@/lib/deal';
 import { formatPaise } from '@/lib/money';
 import { approveAllAction, approveExchangeAction, approveSaleAction, rejectExchangeAction, rejectSaleAction } from '@/server/actions/approvals';
 import { REJECT_REASONS, type ApprovalDay, type PendingEntry, type RejectReason } from '@/server/services/approvals';
@@ -23,6 +24,21 @@ const REASON_KEY: Record<RejectReason, MessageKey> = {
 };
 
 type Message = { kind: 'ok' | 'error'; text: string };
+
+/** Plan v17: profit or loss of a waiting sale (owner only; exchanges and unknown cost stay plain). */
+const dealOf = (entry: PendingEntry): Deal => (entry.kind === 'sale' ? saleDeal(entry.amountPaise, entry.costPaise, entry.quantity) : { kind: 'unknown' });
+const DEAL_CARD: Record<Deal['kind'], string> = {
+  profit: 'border-l-4 border-l-emerald-500',
+  loss: 'border-l-4 border-l-red-500 bg-red-50/80 dark:bg-red-950/30',
+  even: 'border-l-4 border-l-zinc-300 dark:border-l-zinc-600',
+  unknown: '',
+};
+const DEAL_TAG: Record<Deal['kind'], string> = {
+  profit: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  loss: 'bg-red-600 text-white',
+  even: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200',
+  unknown: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
+};
 
 /**
  * The owner's queue (plan v12): everything the counter recorded that he has not
@@ -87,19 +103,36 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
           </p>
         </div>
       ) : (
-        total > 1 && (
-          <button type="button" data-testid="approve-all" disabled={busy} onClick={() => approveMany()} className={`${secondaryButton} w-fit`}>
-            {t('appr.approveAll', { n: total })}
-          </button>
-        )
+        <div className="flex flex-col gap-2">
+          {total > 1 && (
+            <button type="button" data-testid="approve-all" disabled={busy} onClick={() => approveMany()} className={`${secondaryButton} w-fit`}>
+              {t('appr.approveAll', { n: total })}
+            </button>
+          )}
+          <p className={`flex items-center gap-2 text-xs ${muted}`}>
+            <span aria-hidden className="h-3 w-1.5 rounded-full bg-emerald-500" />
+            <span aria-hidden className="h-3 w-1.5 rounded-full bg-red-500" />
+            {t('appr.legend')}
+          </p>
+        </div>
       )}
 
-      {days.map((day) => (
+      {days.map((day) => {
+        // The day's profit (or loss) over the sales whose purchase price is known.
+        const deals = day.entries.map(dealOf);
+        const net = deals.reduce((sum, d) => (d.kind === 'profit' ? sum + d.amountPaise : d.kind === 'loss' ? sum - d.amountPaise : sum), 0);
+        const known = deals.some((d) => d.kind !== 'unknown');
+        return (
         <section key={day.day} data-testid="approval-day" className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display text-lg">
               {formatDate(locale, `${day.day}T00:00:00Z`, 'date')}{' '}
               <span className={`text-sm font-normal ${muted}`}>{t('appr.day.total', { n: day.entries.length, amount: formatPaise(day.totalPaise) })}</span>
+              {known && (
+                <span data-testid="day-net" className={`ml-1 text-sm font-semibold ${net < 0 ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                  · {net < 0 ? t('appr.day.loss', { amount: formatPaise(-net) }) : t('appr.day.profit', { amount: formatPaise(net) })}
+                </span>
+              )}
             </h2>
             {day.entries.length > 1 && (
               <button type="button" disabled={busy} onClick={() => approveMany(day.day)} className={`${secondaryButton} text-sm`}>
@@ -112,8 +145,9 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
               const unit = entry.quantity > 0 ? Math.round(entry.amountPaise / entry.quantity) : entry.amountPaise;
               const cut = entry.kind === 'sale' && entry.mrpPaise && unit < entry.mrpPaise ? Math.round((1 - unit / entry.mrpPaise) * 100) : 0;
               const open = rejecting?.kind === entry.kind && rejecting.id === entry.id;
+              const deal = dealOf(entry);
               return (
-                <li key={`${entry.kind}-${entry.id}`} data-testid="approval-entry" className={`${card} flex flex-col gap-2`}>
+                <li key={`${entry.kind}-${entry.id}`} data-testid="approval-entry" data-deal={deal.kind} className={`${card} flex flex-col gap-2 ${DEAL_CARD[deal.kind]}`}>
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                     <div className="min-w-0">
                       {entry.kind === 'exchange' && <span className={`${chip} bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200`}>{t('appr.exchange')}</span>}
@@ -132,6 +166,7 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
                         {entry.kind === 'sale' && ' · '}
                         {entry.kind === 'sale' && (entry.mrpPaise ? (entry.listPricePaise ? t('appr.mrp', { mrp: formatPaise(entry.mrpPaise), price: formatPaise(entry.listPricePaise) }) : t('appr.mrpOnly', { mrp: formatPaise(entry.mrpPaise) })) : t('appr.noMrp'))}
                         {cut > 0 && <span className="ml-1 font-medium text-amber-700 dark:text-amber-300">{t('appr.cutPrice', { pct: cut })}</span>}
+                        {entry.kind === 'sale' && entry.costPaise !== null && <span> · {t('appr.cost', { price: formatPaise(entry.costPaise) })}</span>}
                       </span>
                       {entry.note && <span className="block text-sm italic">{entry.note}</span>}
                       <span className={`block text-xs ${muted}`}>
@@ -139,7 +174,17 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
                         {entry.recordedBy !== entry.soldBy && ` · ${t('appr.recordedBy', { name: entry.recordedBy })}`}
                       </span>
                     </div>
-                    <span className="font-display text-xl tabular-nums">{formatPaise(entry.amountPaise)}</span>
+                    <span className="flex flex-col items-end gap-1">
+                      <span className="font-display text-xl tabular-nums">{formatPaise(entry.amountPaise)}</span>
+                      {entry.kind === 'sale' && (
+                        <span data-testid="deal-tag" className={`rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap ${DEAL_TAG[deal.kind]}`}>
+                          {deal.kind === 'profit' && t('appr.deal.profit', { amount: formatPaise(deal.amountPaise) })}
+                          {deal.kind === 'loss' && t('appr.deal.loss', { amount: formatPaise(deal.amountPaise) })}
+                          {deal.kind === 'even' && t('appr.deal.even')}
+                          {deal.kind === 'unknown' && t('appr.deal.unknown')}
+                        </span>
+                      )}
+                    </span>
                   </div>
 
                   {open ? (
@@ -187,7 +232,8 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
             })}
           </ul>
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }

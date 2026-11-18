@@ -90,6 +90,23 @@ describe('sale entered by hand', () => {
   });
 });
 
+describe('profit or loss on the owner\'s queue (plan v17)', () => {
+  it('each waiting sale carries the purchase price saved with it; the waiting count says how many were sold at a loss', async () => {
+    const tee = await product('MAA-TS-001'); // purchase price ₹299
+    expect(tee.costPaise).toBe(29900);
+    await sell('MAA-TS-001', people.Vishal, 45000); // profit ₹151
+    await sell('MAA-TS-001', people.Nitin, 25000, 2); // ₹250 each: a loss
+    await byHand('red dupatta', 30000, people.Vishal); // no purchase price known
+    const [day] = await pendingForOwner(db, STORE_ID);
+    const byPrice = Object.fromEntries(day.entries.map((e) => [e.amountPaise, e.costPaise]));
+    expect(byPrice).toEqual({ 45000: 29900, 50000: 29900, 30000: null });
+    expect(await pendingCount(db, STORE_ID)).toMatchObject({ total: 3, losses: 1 });
+    // Approved sales leave the count.
+    await approveAll(db, STORE_ID, { decidedBy: people.Owner, batchId: nextOp() });
+    expect(await pendingCount(db, STORE_ID)).toMatchObject({ total: 0, losses: 0 });
+  });
+});
+
 describe('who waits and who does not', () => {
   it("the owner's own entries are approved as recorded; a salesman's wait; auto rows stay out of the decisions list", async () => {
     const mine = await sell('MAA-KU-001', people.Owner, 120000);
