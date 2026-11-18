@@ -198,7 +198,6 @@ const base = {
   'my.status.rejected': 'नामंज़ूर',
   'my.byHand': 'हाथ से',
   'activity.none': 'अभी कुछ नहीं।',
-  'activity.seeAll': 'सारी गतिविधि देखें',
   'activity.exchange': 'एक्सचेंज',
   'activity.creditedTo': '{name} के नाम',
   'activity.recordedBy': '{name} ने दर्ज किया',

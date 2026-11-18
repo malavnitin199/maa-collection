@@ -208,7 +208,6 @@ const base = {
   'my.status.rejected': 'Rejected',
   'my.byHand': 'By hand',
   'activity.none': 'Nothing yet.',
-  'activity.seeAll': 'See all activity',
   'activity.exchange': 'Exchange',
   'activity.creditedTo': 'credited to {name}',
   'activity.recordedBy': 'recorded by {name}',
