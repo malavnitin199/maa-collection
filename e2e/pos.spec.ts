@@ -375,14 +375,21 @@ test('scan feedback: green tick, buzz and shake on a failed scan, "Sale done" ca
   const barcode = await addProduct(page, { name: `Ting Kurta ${run}`, size: 'L', mrp: '800', price: '750', stock: '3' });
 
   await login(page, 'Balram');
-  const sound = () => page.getByRole('button', { name: 'Sound and vibration for scans' });
+  // Plan v17: Sound lives in the header's ⋯ menu.
+  const menu = () => page.getByRole('button', { name: 'Menu', exact: true }).click();
+  const sound = () => page.getByRole('dialog', { name: 'Menu' }).getByRole('button', { name: 'Sound and vibration for scans' });
+  await menu();
   await expect(sound()).toHaveAttribute('aria-pressed', 'true'); // on by default
   await sound().click();
   await expect(sound()).toHaveAttribute('aria-pressed', 'false');
   await page.reload();
+  await menu();
   await expect(sound()).toHaveAttribute('aria-pressed', 'false'); // remembered on this phone
   await sound().click();
   await expect(sound()).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeHidden();
+  await page.getByLabel('Scan barcode or enter SKU').focus();
 
   await scan(page, 'NOPE-999');
   await expect(page.locator('[data-last-scan="error"]')).toBeVisible();
@@ -399,6 +406,41 @@ test('scan feedback: green tick, buzz and shake on a failed scan, "Sale done" ca
   await expect(done).toContainText('₹700.00');
   await expect(done).toBeHidden({ timeout: 5000 }); // closes by itself
   await expect(page.getByRole('status')).toContainText('by Balram');
+});
+
+test('Approvals → Select: approve two chosen sales at once, reject a third with one reason', async ({ page }) => {
+  await login(page, 'Owner');
+  const barcode = await addProduct(page, { name: `Pick Kurta ${run}`, size: 'M', mrp: '999', price: '999', stock: '5' });
+  await login(page, 'Pradeep');
+  for (const price of ['900', '850', '800']) {
+    await page.goto('/pos');
+    await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+    await scan(page, barcode);
+    await page.getByRole('button', { name: 'Sell this item' }).click();
+    await page.getByLabel(/Sale price/).fill(price);
+    await page.getByRole('button', { name: 'Record sale' }).click();
+    await expect(page.getByRole('status')).toContainText('Sent to the owner to check.');
+  }
+
+  await login(page, 'Owner');
+  await page.goto('/admin/approvals');
+  const mine = page.getByTestId('approval-entry').filter({ hasText: `Pick Kurta ${run}` });
+  await expect(mine).toHaveCount(3);
+  await page.getByTestId('select-approvals').click();
+  const boxes = page.getByRole('checkbox', { name: `Select Pick Kurta ${run}` });
+  await boxes.nth(0).check();
+  await mine.nth(1).click(); // a tap on the card ticks it too
+  await expect(page.getByTestId('selected-count')).toHaveText('2 selected');
+  await page.getByRole('button', { name: '✓ Approve selected (2)' }).click();
+  await expect(page.getByTestId('selected-result')).toHaveText('2 approved.');
+  await expect(mine).toHaveCount(1);
+
+  await page.getByRole('checkbox', { name: `Select Pick Kurta ${run}` }).check();
+  await page.getByRole('button', { name: 'Reject selected' }).click();
+  await page.getByTestId('selection-bar').getByRole('radio', { name: 'Wrong price' }).click();
+  await page.getByRole('button', { name: 'Reject 1' }).click();
+  await expect(page.getByTestId('selected-result')).toHaveText('1 rejected, 1 pcs back in stock.');
+  await expect(mine).toHaveCount(0);
 });
 
 test('a sale below the purchase price stands out for the owner: red card, Loss tag, and a count on Home', async ({ page }) => {

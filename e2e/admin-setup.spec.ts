@@ -461,6 +461,137 @@ test('staff: owner adds a salesman, removes them (gone from the login screen), a
   await expect(page.getByText(name, { exact: true })).toBeVisible();
 });
 
+test('header: the full shop name, अ / A and a ⋯ menu with colours, sound, Guide and Log out', async ({ page }) => {
+  await loginOwner(page);
+  const header = page.getByRole('banner'); // the visible header (Next may keep the last screen's hidden)
+  await expect(header.getByText('Maa Collection', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('current-user')).toHaveText('Owner · Admin');
+  const buttons = page.getByTestId('header-buttons').getByRole('button');
+  await expect(buttons).toHaveCount(2);
+  await expect(buttons.first()).toHaveAccessibleName('Language: English. Switch to Hindi');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  const menu = page.getByRole('dialog', { name: 'Menu' });
+  await menu.getByRole('radio', { name: 'Neel' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'neel');
+  await menu.getByRole('radio', { name: 'Bahi' }).click();
+  await expect(menu.getByRole('button', { name: 'Sound and vibration for scans' })).toBeVisible();
+  await menu.getByRole('link', { name: 'Guide' }).click();
+  await expect(page).toHaveURL(/\/guide$/);
+  await expect(menu).toBeHidden(); // a new screen closes the menu
+  await page.goto('/admin/dashboard');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Menu' }).getByRole('button', { name: 'Log out' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+test('Products → Select: rename, For / Age, prices, print, hide and bring back several items at once', async ({ page }) => {
+  await loginOwner(page);
+  const name = `Bulk Tee ${run}`;
+  await page.goto('/admin/stock/new');
+  await companyBox(page).selectOption({ label: 'Royal Garments' });
+  await page.getByLabel('Category').selectOption({ label: 'T-Shirt (TS)' });
+  await page.getByLabel('Product name').fill(name);
+  await salePrice(page).fill('600');
+  await purchasePrice(page).fill('300');
+  await showVariants(page);
+  for (const size of ['M', 'L', 'XL']) await page.getByRole('button', { name: `Size ${size}`, exact: true }).click();
+  await page.getByLabel('Colour', { exact: true }).fill('Black');
+  await page.getByRole('button', { name: 'Save 3 items' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
+  const rows = page.getByTestId('product-list').getByRole('listitem');
+  await expect(rows).toHaveCount(3);
+  await page.getByTestId('select-products').click();
+  const bar = page.getByTestId('selection-bar');
+  await bar.getByRole('button', { name: 'Select all (3)' }).click();
+  await expect(page.getByTestId('selected-count')).toHaveText('3 selected');
+
+  // Rename all three.
+  await bar.getByRole('button', { name: 'Rename' }).click();
+  await bar.getByLabel('New name for all').fill(`${name} Pro`);
+  await bar.getByRole('button', { name: 'Apply' }).click();
+  await expect(bar.getByRole('status')).toHaveText('Done for 3 items.');
+  await expect(rows.filter({ hasText: `${name} Pro` })).toHaveCount(3);
+
+  // For / Age and a new MRP for two of them (tick boxes).
+  await page.getByRole('checkbox', { name: `Select ${name} Pro Black M` }).check();
+  await page.getByRole('checkbox', { name: `Select ${name} Pro Black L` }).check();
+  await expect(page.getByTestId('selected-count')).toHaveText('2 selected');
+  await bar.getByRole('button', { name: 'For / Age' }).click();
+  await bar.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Boys' }).click();
+  await bar.getByRole('button', { name: 'Apply' }).click();
+  await expect(bar.getByRole('status')).toHaveText('Done for 2 items.');
+  await page.getByRole('checkbox', { name: `Select ${name} Pro Black XL` }).check();
+  await bar.getByRole('button', { name: 'Prices' }).click();
+  await bar.getByLabel('New MRP ₹').fill('200');
+  await bar.getByRole('button', { name: 'Apply' }).click();
+  await expect(bar.getByRole('alert')).toContainText('Selling price would be above MRP');
+  await bar.getByLabel('New MRP ₹').fill('650');
+  await bar.getByRole('button', { name: 'Apply' }).click();
+  await expect(bar.getByRole('status')).toHaveText('Done for 1 item.');
+  await expect(rows.filter({ hasText: 'MRP ₹650.00' })).toHaveCount(1);
+
+  // Print just two tags.
+  await page.getByRole('checkbox', { name: `Select ${name} Pro Black M` }).check();
+  await page.getByRole('checkbox', { name: `Select ${name} Pro Black L` }).check();
+  await bar.getByRole('button', { name: 'Print tags' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?items=/);
+  await expect(page.getByRole('heading', { name: 'Selected tags' })).toBeVisible();
+  await page.getByRole('link', { name: 'One per item instead (2)' }).click();
+  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(2);
+
+  // Hide all three: gone from Products; Hidden items brings them back.
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
+  await page.getByTestId('select-products').click();
+  await page.getByTestId('selection-bar').getByRole('button', { name: 'Select all (3)' }).click();
+  await page.getByTestId('selection-bar').getByRole('button', { name: 'Hide' }).click();
+  await page.getByTestId('selection-bar').getByRole('button', { name: 'Yes, hide 3' }).click();
+  await expect(rows).toHaveCount(0);
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=hidden`);
+  await expect(rows).toHaveCount(3);
+  await page.getByTestId('select-products').click();
+  await page.getByTestId('selection-bar').getByRole('button', { name: 'Select all (3)' }).click();
+  await page.getByTestId('selection-bar').getByRole('button', { name: 'Bring back' }).click();
+  await expect(rows).toHaveCount(0);
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
+  await expect(rows).toHaveCount(3);
+  await expect(rows.filter({ hasText: 'MRP ₹650.00' })).toHaveCount(1);
+});
+
+test('Companies and All tags → Select: hide companies at once; print chosen tags', async ({ page }) => {
+  await loginOwner(page);
+  const a = `Sel Co A ${run}`;
+  const b = `Sel Co B ${run}`;
+  for (const company of [a, b]) {
+    await page.goto('/admin/suppliers');
+    await page.getByText('+ Add supplier').click();
+    await page.getByLabel('Company name').fill(company);
+    await page.getByRole('button', { name: 'Add supplier' }).click();
+    await expect(page.getByRole('status')).toContainText(`${company} added.`);
+  }
+  await page.goto('/admin/suppliers');
+  await page.getByTestId('select-companies').click();
+  await page.getByRole('checkbox', { name: `Select ${a}` }).check();
+  await page.getByRole('checkbox', { name: `Select ${b}` }).check();
+  await page.getByTestId('selection-bar').getByRole('button', { name: 'Hide' }).click();
+  await expect(page.getByTestId('selection-bar').getByRole('status')).toHaveText('Done for 2 items.');
+  await expect(page.getByTestId('supplier-list').getByRole('listitem').filter({ hasText: a })).toContainText('(inactive)');
+  await page.goto('/admin/stock/new');
+  await expect(companyBox(page).locator('optgroup[label="Previous companies"] option', { hasText: a })).toHaveCount(1);
+
+  // All tags: tick two tags and print only those.
+  await page.goto('/admin/labels?q=MAA-TS-00&show=tags');
+  await page.getByTestId('select-tags').click();
+  const ticks = page.getByRole('checkbox', { name: /^Select Classic Crew Tee/ });
+  await ticks.nth(0).check();
+  await ticks.nth(1).check();
+  await page.getByTestId('selection-bar').getByRole('button', { name: 'Print 2 selected' }).click();
+  await expect(page.getByRole('heading', { name: 'Selected tags' })).toBeVisible();
+  await page.getByRole('link', { name: 'One per item instead (2)' }).click();
+  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode/ })).toHaveCount(2);
+});
+
 test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock/receive');
