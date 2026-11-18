@@ -239,32 +239,32 @@ export const STORIES: Story[] = [
   {
     id: 'new-design',
     audience: 'stock',
-    title: { en: 'New design', hi: 'नया डिज़ाइन' },
-    goal: { en: 'One entry — every size and colour.', hi: 'एक बार में — हर साइज़ और रंग।' },
+    title: { en: 'New item', hi: 'नया आइटम' },
+    goal: { en: 'Photo, name, price — and its barcode.', hi: 'फ़ोटो, नाम, दाम — और उसका बारकोड।' },
     steps: [
       {
+        scene: { kind: 'photo' },
+        text: { en: '**Name**, category, photo on the right', hi: '**नाम**, कैटेगरी, दाईं ओर फ़ोटो' },
+        say: { en: 'Open Stock, New item. Type the product name, pick the category and who it is for, and tap the square on the right for a photo.', hi: 'स्टॉक में नया आइटम खोलें। प्रोडक्ट का नाम लिखें, कैटेगरी और किसके लिए है चुनें, और फ़ोटो के लिए दाईं ओर का चौकोर दबाएँ।' },
+      },
+      {
+        scene: { kind: 'field', label: { en: 'MRP (₹)', hi: 'MRP (₹)' }, value: '1,499' },
+        text: { en: 'Company, **sale price**, purchase price', hi: 'कंपनी, **बिक्री दाम**, खरीद दाम' },
+        say: { en: 'Choose the company, then type the sale price, which is the MRP, and the purchase price. Pieces are in the Details tab.', hi: 'कंपनी चुनें, फिर बिक्री दाम यानी MRP और खरीद दाम लिखें। पीस जानकारी टैब में हैं।' },
+      },
+      {
         scene: { kind: 'chips', label: { en: 'Sizes', hi: 'साइज़' }, chips: ['M', 'L', 'XL', 'XXL'] },
-        text: { en: 'Tap the **sizes**', hi: '**साइज़** चुनें' },
-        say: { en: 'Open Stock, One design in sizes and colours. Pick the company and category, then tap the sizes.', hi: 'स्टॉक में साइज़ और रंग वाला डिज़ाइन खोलें। कंपनी और कैटेगरी चुनें, फिर साइज़ चुनें।' },
-      },
-      {
-        scene: { kind: 'chips', label: { en: 'Colours', hi: 'रंग' }, chips: ['#1d4ed8', '#be185d', '#f5f5f4'], swatches: true },
-        text: { en: 'Add the **colours**', hi: '**रंग** जोड़ें' },
-        say: { en: 'Add each colour. A photo for each colour is optional.', hi: 'हर रंग जोड़ें। हर रंग की फ़ोटो चाहें तो डालें।' },
-      },
-      {
-        scene: { kind: 'table' },
-        text: { en: 'Prices — one, or **by size**', hi: 'दाम — एक, या **साइज़ से**' },
-        say: { en: 'Type MRP and prices once. Bigger sizes cost more? Give that size its own price.', hi: 'MRP और दाम एक बार लिखें। बड़े साइज़ महँगे हैं? उस साइज़ का अपना दाम डालें।' },
+        text: { en: 'Many sizes? The **Colours** tab', hi: 'कई साइज़? **रंग** टैब' },
+        say: { en: 'Comes in many sizes or colours? Open the Colours tab and tap them. Every pair gets its own barcode.', hi: 'कई साइज़ या रंग में आया है? रंग टैब खोलकर उन्हें चुनें। हर जोड़ी को अपना बारकोड मिलता है।' },
       },
       {
         scene: { kind: 'print' },
         text: { en: '**Save** → print tags', hi: '**सेव** → टैग प्रिंट' },
-        say: { en: 'Save. Every size and colour gets its own barcode and tag.', hi: 'सेव करें। हर साइज़ और रंग को अपना बारकोड और टैग मिलता है।' },
+        say: { en: 'Save and print the tags. Then tap Add next item: the company and category stay.', hi: 'सेव करें और टैग प्रिंट करें। फिर अगला आइटम जोड़ें दबाएँ: कंपनी और कैटेगरी वही रहती हैं।' },
       },
     ],
-    tip: { en: 'Many different products? Use “Many different products”.', hi: 'बहुत सारे अलग प्रोडक्ट? “कई अलग-अलग प्रोडक्ट” चुनें।' },
-    open: { href: '/admin/stock/new', label: { en: 'New design', hi: 'नया डिज़ाइन' } },
+    tip: { en: 'Bigger sizes cost more? Colours → Price by size.', hi: 'बड़े साइज़ महँगे? रंग → साइज़ के हिसाब से दाम।' },
+    open: { href: '/admin/stock/new', label: { en: 'New item', hi: 'नया आइटम' } },
   },
   {
     id: 'old-stock',
@@ -353,7 +353,7 @@ export const STORIES: Story[] = [
       {
         scene: { kind: 'scan' },
         text: { en: '**Scan** each piece', hi: 'हर पीस **स्कैन** करें' },
-        say: { en: 'Open More of existing items and scan each new piece. The same tag again adds one more.', hi: 'मौजूदा आइटम के और पीस खोलें और हर नया पीस स्कैन करें। वही टैग दोबारा स्कैन करें तो एक और जुड़ता है।' },
+        say: { en: 'Open Stock, More pieces of an existing item, and scan each new piece. The same tag again adds one more.', hi: 'मौजूदा आइटम के और पीस खोलें और हर नया पीस स्कैन करें। वही टैग दोबारा स्कैन करें तो एक और जुड़ता है।' },
       },
       {
         scene: { kind: 'count' },
@@ -389,7 +389,7 @@ export const STORIES: Story[] = [
       {
         scene: { kind: 'list' },
         text: { en: 'Weekly: **Needs attention**', hi: 'हर हफ़्ते: **ध्यान दें**' },
-        say: { en: 'Once a week, open Needs attention and fix items missing a photo, company or price. Low stock shows on Home.', hi: 'हफ़्ते में एक बार ध्यान दें खोलें और बिना फ़ोटो, कंपनी या दाम वाले आइटम ठीक करें। कम स्टॉक होम पर दिखता है।' },
+        say: { en: 'Once a week, open Needs attention and fix items missing a photo, company or price. Items out of stock show there too.', hi: 'हफ़्ते में एक बार ध्यान दें खोलें और बिना फ़ोटो, कंपनी या दाम वाले आइटम ठीक करें। खत्म हुए आइटम भी वहीं दिखते हैं।' },
       },
     ],
     open: { href: '/admin/catalog/check', label: { en: 'Needs attention', hi: 'ध्यान दें' } },

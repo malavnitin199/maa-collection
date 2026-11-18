@@ -72,7 +72,7 @@ const HI = {
     <>आखिर में: <strong>आज के लेबल प्रिंट करें</strong> → हर पीस का एक लेबल → हर पीस पर एक चिपकाएँ। स्टिकर प्रिंटर है? प्रिंट से पहले <strong>स्टिकर प्रिंटर 50×25 mm</strong> चुनें।</>,
   ],
   more: [
-    <><strong>एक कंपनी के कई अलग-अलग प्रोडक्ट</strong> → स्टॉक जोड़ें → कई अलग-अलग प्रोडक्ट।</>,
+    <><strong>कंपनी से आया नया माल</strong> → स्टॉक जोड़ें → <strong>नया आइटम</strong>: ऊपर नाम, कैटेगरी, किसके लिए (लड़कियाँ / लड़के, बड़े / बच्चे) और दाईं ओर फ़ोटो; फिर कंपनी, बिक्री दाम (MRP) और खरीद दाम। टैब: <strong>जानकारी</strong> (पीस, बिल), <strong>रंग</strong> (साइज़ × रंग), <strong>और जानकारी</strong> (ब्रांड)। सेव के बाद <strong>+ अगला आइटम जोड़ें</strong>।</>,
     <><strong>जो आइटम पहले से हैं, उनके और पीस</strong> → स्टॉक जोड़ें → पहले से मौजूद आइटम के और पीस (<em>स्टॉक</em> अधिकार चाहिए)। वही टैग फिर स्कैन करने पर एक पीस और जुड़ता है।</>,
     <><strong>प्रोडक्ट या उसकी फ़ोटो बदलें</strong> → प्रोडक्ट → आइटम पर टैप करें।</>,
     <><strong>क्या ठीक करना बाकी है?</strong> → कैटलॉग → <strong>ध्यान दें</strong>: बिना फ़ोटो, कंपनी या स्टॉक वाले आइटम।</>,
@@ -82,7 +82,7 @@ const HI = {
     <><strong>स्टाफ़ और अधिकार</strong>: हर व्यक्ति को PIN के साथ जोड़ें। हर सेल्समैन के लिए और अधिकार टिक करें: <em>कैटलॉग</em> (प्रोडक्ट, फ़ोटो, लेबल), <em>दाम</em> (MRP/बिक्री दाम बदलना), <em>स्टॉक</em> (स्टॉक प्राप्त करना), <em>खरीद दाम</em> (कोड दाम देखना — सिर्फ़ भरोसेमंद स्टाफ़)।</>,
     <><strong>कोड दाम</strong>: सेटिंग → 10 अक्षरों का एक शब्द चुनें; फिर लेबल पर खरीद दाम ऐसे अक्षरों में दिखेगा जो सिर्फ़ आपका स्टाफ़ पढ़ सके।</>,
     <><strong>रेट</strong>: कोई भी प्रोडक्ट खोलें → पूरे डिज़ाइन के रेट। बड़े साइज़ का अपना MRP, बिक्री और खरीद दाम <em>साइज़ के हिसाब से दाम</em> में रख सकते हैं — उस साइज़ के हर रंग को वही मिलता है। पुरानी बिक्री के दाम नहीं बदलते।</>,
-    <><strong>नज़र रखें</strong>: होम पर आज और इस महीने की बिक्री, हर सेल्समैन की बिक्री और कम स्टॉक दिखता है; गतिविधि में हर बिक्री और एक्सचेंज की सूची है।</>,
+    <><strong>नज़र रखें</strong>: होम पर आज की बिक्री और आपकी मंज़ूरी के लिए बाकी एंट्री दिखती हैं; रिपोर्ट में महीना, मुनाफ़ा और हर सेल्समैन; गतिविधि में हर बिक्री और एक्सचेंज की सूची है।</>,
     <><strong>रिपोर्ट</strong>: सबसे ज़्यादा बिकने वाले, जो नहीं बिक रहा, किसी भी समय की कैटेगरी / कंपनी / सेल्समैन के हिसाब से बिक्री, और अकाउंटेंट के लिए <strong>CSV डाउनलोड</strong> (बिक्री, स्टॉक)।</>,
   ],
   plan: [
@@ -220,8 +220,8 @@ export default async function HelpPage() {
             HI.more.map((item, i) => <li key={i}>{item}</li>)
           ) : (
             <>
-              <li><strong>Many different products from one company</strong> → Add stock → Many different products.</li>
-              <li><strong>More pieces of items you already have</strong> → Add stock → More of existing items (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece.</li>
+              <li><strong>New stock from a company</strong> → Add stock → <strong>New item</strong>: name, category, who it is for (Girls / Boys, Adult / Child) and the photo on the right; then company, sale price (MRP) and purchase price. Tabs: <strong>Details</strong> (pieces, bill), <strong>Colours</strong> (sizes × colours), <strong>Other details</strong> (brand). After saving, tap <strong>+ Add next item</strong>.</li>
+              <li><strong>More pieces of items you already have</strong> → Add stock → More pieces of an existing item (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece.</li>
               <li><strong>Edit a product or its photos</strong> → Products → tap the item.</li>
               <li><strong>What&apos;s left to fix?</strong> → Catalog → <strong>Needs attention</strong>: items without photo, company or stock.</li>
             </>
@@ -239,7 +239,7 @@ export default async function HelpPage() {
                   <><strong>Staff & permissions</strong>: add each person with a PIN. Tick extra rights per salesman: <em>Catalog</em> (products, photos, labels), <em>Prices</em> (change MRP/selling price), <em>Stock</em> (receive stock), <em>Purchase price</em> (see the code price — trusted staff only).</>,
                   <><strong>Code price</strong>: Settings → choose a 10-letter word; labels then show the purchase price in letters only your staff can read.</>,
                   <><strong>Rates</strong>: open any product → Rates for the whole design. A bigger size can have its own MRP, selling and purchase price under <em>Price by size</em> — every colour of that size gets it. Past sales keep their prices.</>,
-                  <><strong>Track</strong>: Home shows today and this month, sales per salesperson, low stock; Activity lists every sale and exchange.</>,
+                  <><strong>Track</strong>: Home shows today&apos;s sales and what is waiting for you; Reports has the month, profit and each salesperson; Activity lists every sale and exchange.</>,
                   <><strong>Reports</strong>: best sellers, what is not selling, sales by category / company / salesperson for any period, and <strong>CSV downloads</strong> (sales, stock) for your accountant.</>,
                 ]
           }

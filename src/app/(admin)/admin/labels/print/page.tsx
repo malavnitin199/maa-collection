@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { errorBox, link, muted, okBox } from '@/components/ui/styles';
+import { errorBox, link, muted, okBox, secondaryButton } from '@/components/ui/styles';
 import { StickerLabel } from '@/features/catalog/barcode-label';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { PrintButton } from '@/features/catalog/print-button';
@@ -48,6 +48,15 @@ function hrefWith(params: Search, change: Partial<Search>) {
     if (value && key !== 'created' && key !== 'photos') next.set(key, value);
   }
   return `/admin/labels/print?${next.toString()}`;
+}
+
+/** "Add next item" (plan v17): the New item screen with this delivery's company and category chosen. */
+function nextItemHref(supplierId?: string | null, categoryId?: string | null) {
+  const next = new URLSearchParams();
+  if (supplierId) next.set('supplier', supplierId);
+  if (categoryId) next.set('category', categoryId);
+  const query = next.toString();
+  return query ? `/admin/stock/new?${query}` : '/admin/stock/new';
 }
 
 type SheetData = { settings: StoreSettings; origin: string; sizes: Map<string, string[]> };
@@ -214,9 +223,15 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
           </p>
         )}
         {params.created && (
-          <p role="status" className={okBox}>
-            {t(params.created === '1' ? 'stk.labels.created.one' : 'stk.labels.created.other', { n: params.created })}
-          </p>
+          <div className="flex flex-col gap-2">
+            <p role="status" className={okBox}>
+              {t(params.created === '1' ? 'stk.labels.created.one' : 'stk.labels.created.other', { n: params.created })}
+            </p>
+            {/* Plan v17: straight on to the next item, same company and category. */}
+            <Link href={nextItemHref(receipt.supplierId, receipt.lines[0]?.categoryId)} className={`${secondaryButton} w-fit`}>
+              {t('stk.labels.addNext')}
+            </Link>
+          </div>
         )}
         <div>
           <h1 className="text-2xl font-semibold">{t('stk.labels.heading')}</h1>

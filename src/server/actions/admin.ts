@@ -24,6 +24,7 @@ import {
   createProduct,
   listProducts,
   receiveStock,
+  setDesignTags,
   stockIn,
   updateDesignRates,
   updateProduct,
@@ -293,6 +294,9 @@ export type DesignActionInput = {
   sizeRates?: SizeRatesText[];
   quantityEach: string;
   billNumber: string;
+  /** Plan v17 tags: '' = not set. */
+  forGender?: string;
+  ageGroup?: string;
 };
 
 /** `items`: the saved items (in entry order) so photos can be attached right after. */
@@ -327,6 +331,8 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
       sizeRates: sizeRatesInput(input.sizeRates, admin),
       quantityEach: Number(qty),
       billNumber: input.billNumber,
+      forGender: String(input.forGender ?? ''),
+      ageGroup: String(input.ageGroup ?? ''),
       staffId: admin.id,
     });
     revalidatePath('/admin', 'layout');
@@ -385,6 +391,18 @@ export async function receiveStockAction(input: {
   }
 }
 
+/** Plan v17: "For" and "Age" tags on every size and colour of this product's design (catalog right). */
+export async function updateDesignTagsAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requirePermission('catalog');
+  try {
+    const count = await setDesignTags(await getDb(), STORE_ID, productId, { forGender: text(formData, 'forGender'), ageGroup: text(formData, 'ageGroup') });
+    revalidatePath('/admin', 'layout');
+    return { message: (await getT())(count === 1 ? 'act.tagsUpdated.one' : 'act.tagsUpdated.other', { n: count }) };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
 export async function updateDesignRatesAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const me = await requirePermission('prices');
   try {
@@ -440,52 +458,6 @@ export async function clearStockAction(_prev: FormState, formData: FormData): Pr
     return { message: items === 0 ? t('own.clear.nothing') : t('own.clear.done', { items, pieces }) };
   } catch (error) {
     return failure(error);
-  }
-}
-
-// ------------------------------------------------- quick add many products
-
-export type QuickActionInput = {
-  operationId: string;
-  supplierId: string;
-  categoryId: string;
-  brand: string;
-  billNumber: string;
-  rows: { name: string; size: string; color: string; mrp: string; price: string; cost: string; quantity: string }[];
-};
-
-export async function createQuickAction(input: QuickActionInput): Promise<DesignActionResult> {
-  const admin = await requirePermission('catalog');
-  try {
-    const rows = (Array.isArray(input.rows) ? input.rows : [])
-      .filter((row) => String(row.name ?? '').trim())
-      .map((row, i) => {
-        const label = `Row ${i + 1} (${String(row.name).trim()})`;
-        const vars = { row: i + 1, name: String(row.name).trim() };
-        const mrpPaise = rupeesToPaise(String(row.mrp ?? ''));
-        if (mrpPaise === null) throw new DomainError(`${label}: enter a valid MRP.`, { key: 'act.err.row.mrp', vars });
-        const pricePaise = String(row.price ?? '').trim() ? rupeesToPaise(String(row.price)) : mrpPaise;
-        if (pricePaise === null) throw new DomainError(`${label}: enter a valid selling price.`, { key: 'act.err.row.price', vars });
-        const costRaw = String(row.cost ?? '').trim();
-        const costPaise = costRaw && can(admin, 'costs') ? rupeesToPaise(costRaw) : null;
-        if (costRaw && costPaise === null) throw new DomainError(`${label}: enter a valid purchase price.`, { key: 'act.err.row.purchase', vars });
-        const qty = String(row.quantity ?? '').trim() || '0';
-        if (!/^\d+$/.test(qty)) throw new DomainError(`${label}: pieces must be a whole number.`, { key: 'act.err.row.pieces', vars });
-        return { name: String(row.name), size: String(row.size ?? ''), color: String(row.color ?? ''), mrpPaise, pricePaise, costPaise, quantity: Number(qty) };
-      });
-    const result = await createProductsBatch(await getDb(), STORE_ID, {
-      operationId: String(input.operationId).slice(0, 100),
-      supplierId: String(input.supplierId),
-      categoryId: String(input.categoryId),
-      brand: String(input.brand ?? ''),
-      billNumber: String(input.billNumber ?? ''),
-      rows,
-      staffId: admin.id,
-    });
-    revalidatePath('/admin', 'layout');
-    return { ok: true, receiptId: result.receipt.id, created: result.products.length, items: result.products.map((p) => ({ id: p.id, color: p.color })) };
-  } catch (error) {
-    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
 }
 

@@ -18,20 +18,18 @@ export function photoForm(photo: PickedPhoto): FormData {
 }
 
 /**
- * Optional photo while creating tags: 📷 camera or 🖼 gallery, a small preview
- * and ✕ to remove. The photo is resized on the phone before it is kept.
+ * Picking one photo from the camera or the gallery, resized on the phone. Shared
+ * by the small `PhotoSlot` and the big photo box of a new item (plan v17).
+ * Render `inputs` once; `openCamera` / `openGallery` start a pick.
  */
-export function PhotoSlot({
+export function usePhotoPicker({
   label,
   photo,
   onChange,
-  disabled,
 }: {
-  /** What the photo is of, e.g. "Blue" or "Product 2" (used in the button names). */
   label: string;
   photo: PickedPhoto | null;
   onChange: (photo: PickedPhoto | null) => void;
-  disabled?: boolean;
 }) {
   const t = useT();
   const camera = useRef<HTMLInputElement>(null);
@@ -56,38 +54,62 @@ export function PhotoSlot({
     }
   }
 
+  const remove = () => {
+    if (photo) URL.revokeObjectURL(photo.url);
+    onChange(null);
+  };
+
+  const inputs = (
+    <>
+      <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label={t('stk.photo.cameraInput', { label })} onChange={(e) => pick(e.currentTarget)} />
+      <input ref={gallery} type="file" accept="image/*" hidden aria-label={t('stk.photo.galleryInput', { label })} onChange={(e) => pick(e.currentTarget)} />
+    </>
+  );
+
+  return { busy, error, inputs, remove, openCamera: () => camera.current?.click(), openGallery: () => gallery.current?.click() };
+}
+
+/**
+ * Optional photo while creating tags: 📷 camera or 🖼 gallery, a small preview
+ * and ✕ to remove. The photo is resized on the phone before it is kept.
+ */
+export function PhotoSlot({
+  label,
+  photo,
+  onChange,
+  disabled,
+}: {
+  /** What the photo is of, e.g. "Blue" or "Product 2" (used in the button names). */
+  label: string;
+  photo: PickedPhoto | null;
+  onChange: (photo: PickedPhoto | null) => void;
+  disabled?: boolean;
+}) {
+  const t = useT();
+  const { busy, error, inputs, remove, openCamera, openGallery } = usePhotoPicker({ label, photo, onChange });
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       {photo ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- local preview of a resized photo */}
           <img src={photo.url} alt={t('stk.photo.alt', { label })} className="h-12 w-12 rounded-lg border border-zinc-200 object-cover dark:border-zinc-800" />
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              URL.revokeObjectURL(photo.url);
-              onChange(null);
-            }}
-            className={`${secondaryButton} py-1.5`}
-            aria-label={t('stk.photo.removeAria', { label })}
-          >
+          <button type="button" disabled={disabled} onClick={remove} className={`${secondaryButton} py-1.5`} aria-label={t('stk.photo.removeAria', { label })}>
             {t('stk.photo.remove')}
           </button>
         </>
       ) : (
         <>
-          <button type="button" disabled={disabled || busy} onClick={() => camera.current?.click()} className={`${secondaryButton} py-1.5`} aria-label={t('stk.photo.takeAria', { label })}>
+          <button type="button" disabled={disabled || busy} onClick={openCamera} className={`${secondaryButton} py-1.5`} aria-label={t('stk.photo.takeAria', { label })}>
             {t('stk.photo.take')}
           </button>
-          <button type="button" disabled={disabled || busy} onClick={() => gallery.current?.click()} className={`${secondaryButton} py-1.5`} aria-label={t('stk.photo.galleryAria', { label })}>
+          <button type="button" disabled={disabled || busy} onClick={openGallery} className={`${secondaryButton} py-1.5`} aria-label={t('stk.photo.galleryAria', { label })}>
             {t('stk.photo.gallery')}
           </button>
           {busy && <span className="text-xs text-zinc-500">{t('stk.photo.preparing')}</span>}
         </>
       )}
-      <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label={t('stk.photo.cameraInput', { label })} onChange={(e) => pick(e.currentTarget)} />
-      <input ref={gallery} type="file" accept="image/*" hidden aria-label={t('stk.photo.galleryInput', { label })} onChange={(e) => pick(e.currentTarget)} />
+      {inputs}
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
   );

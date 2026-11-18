@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "4mb" },
   },
   partialPrefetching: true,
+  // Plan v17: "Quick add" became the New item screen; old links and bookmarks
+  // (query such as ?supplier= is kept) land there.
+  async redirects() {
+    return [{ source: "/admin/stock/quick", destination: "/admin/stock/new", permanent: false }];
+  },
   turbopack: {
     rules: {
       "*.css": {

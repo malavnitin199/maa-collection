@@ -36,6 +36,32 @@ export function ScanTagArt({ className }: ArtProps) {
   );
 }
 
+/** A kurta on a hanger, swaying a little: the photo box of a new item before a photo is chosen. */
+export function GarmentArt({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 96 96" aria-hidden="true" focusable="false" className={className} fill="none">
+      <g className="art-swing">
+        <path d="M43 12a5 5 0 1 1 5 5c-1.8 0-3 1.2-3 3v3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M48 23 21 37h54z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+        <path
+          d="M31 37 18 47l6 8 8-5v38h32V50l8 5 6-8-13-10c-4 3.5-9 5-17 5s-13-1.5-17-5z"
+          fill="white"
+          fillOpacity="0.85"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+        />
+        <path d="M48 42v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="48" cy="60" r="1.6" fill="var(--zari)" />
+        <circle cx="48" cy="66" r="1.6" fill="var(--zari)" />
+        <path d="M32 80h32" stroke="var(--zari)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="1 4" />
+      </g>
+      <Sparkle x={16} y={30} />
+      <Sparkle x={82} y={26} size={3} />
+    </svg>
+  );
+}
+
 /** A tick in a ring that pops in, with a little twinkle: nothing left to do. */
 export function AllDoneArt({ className }: ArtProps) {
   return (

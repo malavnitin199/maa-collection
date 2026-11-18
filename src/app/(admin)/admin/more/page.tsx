@@ -15,8 +15,7 @@ const GROUPS: { title: MessageKey; links: Item[] }[] = [
     links: [
       { href: '/admin/stock/old', Icon: IconTag, label: 'cat.menu.oldStock', hint: 'cat.menu.oldStockHint', needs: ['catalog'] },
       { href: '/admin/catalog/check', Icon: IconCheckList, label: 'cat.check.title', hint: 'cat.menu.checkHint', needs: ['catalog'] },
-      { href: '/admin/stock/quick', Icon: IconStockAdd, label: 'cat.menu.quick', hint: 'cat.menu.quickHint', needs: ['catalog'] },
-      { href: '/admin/stock/new', Icon: IconGrid, label: 'cat.menu.newDesign', hint: 'cat.menu.newDesignHint', needs: ['catalog'] },
+      { href: '/admin/stock/new', Icon: IconStockAdd, label: 'cat.menu.newItem', hint: 'cat.menu.newItemHint', needs: ['catalog'] },
       { href: '/admin/stock/receive', Icon: IconScan, label: 'cat.menu.receive', hint: 'cat.menu.receiveHint', needs: ['stock'] },
       { href: '/admin/products', Icon: IconBoxes, label: 'nav.products', hint: 'cat.menu.productsHint', needs: ['catalog', 'prices', 'stock'] },
       { href: '/admin/products/new', Icon: IconTag, label: 'cat.menu.single', hint: 'cat.menu.singleHint', needs: ['catalog'] },
