@@ -566,6 +566,8 @@ export async function tagOldStockAction(formData: FormData): Promise<OldStockRes
       brand: text(formData, 'brand'),
       note: 'Old stock tagged',
       rows: [{ barcode: text(formData, 'barcode') || null, name, size: text(formData, 'size'), color: text(formData, 'color'), mrpPaise, pricePaise, costPaise, quantity: Number(qty) }],
+      forGender: text(formData, 'forGender'),
+      ageGroup: text(formData, 'ageGroup'),
       staffId: me.id,
     });
     const product = result.products[0];
@@ -616,6 +618,8 @@ export async function editTaggedItemAction(productId: string, formData: FormData
       mrpPaise,
       pricePaise,
       costPaise: canCosts ? money(formData, 'cost', 'purchase price', { optional: true }) : null,
+      forGender: text(formData, 'forGender'),
+      ageGroup: text(formData, 'ageGroup'),
     });
     revalidatePath('/admin', 'layout');
     const { id, sku, barcode, size, color } = product;

@@ -496,6 +496,25 @@ describe('fixing an item right after tagging it (Tag old stock → Edit)', () =>
     expect([owners.pricesKept, owners.product.mrpPaise, owners.product.pricePaise, owners.product.costPaise, owners.product.stock]).toEqual([false, 120000, 110000, 55000, 2]);
     await expect(correctTaggedItem(db, STORE_ID, { productId: product.id, staffId: owner, categoryId: kurta.id, ...fix({ pricePaise: 999999, canPrices: true }) })).rejects.toThrow(/above MRP/);
   });
+
+  it('For / Age tags (plan v17): saved when tagging, changed by Edit, kept when Edit leaves them out; a bad value changes nothing', async () => {
+    const { correctTaggedItem, createProductsBatch } = await import('./products');
+    const kurta = (await listCategories(db, STORE_ID)).find((c) => c.code === 'KU')!;
+    const { products: [item] } = await createProductsBatch(db, STORE_ID, {
+      operationId: 'old-tags', supplierId: null, categoryId: kurta.id, brand: '', note: 'Old stock tagged', staffId: owner, forGender: 'boys', ageGroup: 'child',
+      rows: [{ barcode: null, name: 'Boys Kurta', size: 'M', color: 'Blue', mrpPaise: 59900, pricePaise: 59900, costPaise: null, quantity: 2 }],
+    });
+    expect([item.forGender, item.ageGroup]).toEqual(['boys', 'child']);
+    const edited = await correctTaggedItem(db, STORE_ID, { productId: item.id, staffId: owner, categoryId: kurta.id, ...fix({ name: 'Boys Kurta', forGender: 'both', ageGroup: '' }) });
+    expect([edited.product.forGender, edited.product.ageGroup, edited.product.size, edited.product.stock]).toEqual(['both', null, 'L', 2]);
+    const kept = await correctTaggedItem(db, STORE_ID, { productId: item.id, staffId: owner, categoryId: kurta.id, ...fix({ name: 'Boys Kurta Plain' }) });
+    expect([kept.product.forGender, kept.product.name]).toEqual(['both', 'Boys Kurta Plain']);
+    await expect(correctTaggedItem(db, STORE_ID, { productId: item.id, staffId: owner, categoryId: kurta.id, ...fix({ name: 'Renamed', ageGroup: 'teen' }) })).rejects.toThrow(/who the item is for/);
+    expect((await db.select().from(products).where(eq(products.id, item.id)))[0].name).toBe('Boys Kurta Plain');
+    await expect(
+      createProductsBatch(db, STORE_ID, { operationId: 'old-bad', supplierId: null, categoryId: kurta.id, staffId: owner, forGender: 'men', rows: [{ name: 'X', mrpPaise: 100, pricePaise: 100, costPaise: null, quantity: 1 }] }),
+    ).rejects.toThrow(/who the item is for/);
+  });
 });
 
 describe('clear stock (owner): every count to 0, nothing erased', () => {

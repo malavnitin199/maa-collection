@@ -65,7 +65,7 @@ const HI = {
   tagOne: [
     <>आइटम पर पहले से <strong>कंपनी का बारकोड</strong> है? पहले <strong>टैग का बारकोड स्कैन करें</strong> दबाएँ — ऐप वही इस्तेमाल करेगा (नया स्टिकर नहीं) या बता देगा कि आइटम पहले से ऐप में है।</>,
     <>आइटम की <strong>📷 फ़ोटो खींचें</strong> (1–4 फ़ोटो)। अच्छी रोशनी, सादा बैकग्राउंड, पूरा आइटम दिखे।</>,
-    <><strong>कैटेगरी</strong> चुनें, <strong>नाम</strong> लिखें (जैसे &ldquo;Phulkari Dupatta&rdquo;), <strong>साइज़</strong> पर टैप करें, <strong>रंग</strong> डालें।</>,
+    <><strong>कैटेगरी</strong> चुनें, <strong>नाम</strong> लिखें (जैसे &ldquo;Phulkari Dupatta&rdquo;), चाहें तो <strong>किसके लिए</strong> (लड़कियाँ / लड़के / दोनों) और <strong>उम्र</strong> (बड़े / बच्चे) चुनें, <strong>साइज़</strong> पर टैप करें, <strong>रंग</strong> डालें।</>,
     <><strong>MRP</strong>, <strong>बिक्री दाम</strong> (खाली छोड़ें = MRP) और <strong>गिने हुए पीस</strong> डालें।</>,
     <><strong>सेव करें और बारकोड पाएँ</strong> दबाएँ। लेबल दिख जाएगा।</>,
     <><strong>अगला आइटम →</strong> दबाएँ। अगले आइटम के लिए कैटेगरी, कंपनी और साइज़ भरे रहते हैं।</>,
@@ -199,7 +199,7 @@ export default async function HelpPage() {
               : [
                   <>Item already has a <strong>barcode from the company</strong>? Tap <strong>Scan the tag&apos;s barcode</strong> first — the app uses it (no new sticker) or tells you if the item is already in the app.</>,
                   <><strong>📷 Take photo</strong> of the item (1–4 photos). Good light, plain background, whole item visible.</>,
-                  <>Choose the <strong>category</strong>, type the <strong>name</strong> (e.g. &ldquo;Phulkari Dupatta&rdquo;), tap a <strong>size</strong>, add the <strong>colour</strong>.</>,
+                  <>Choose the <strong>category</strong>, type the <strong>name</strong> (e.g. &ldquo;Phulkari Dupatta&rdquo;), tap who it is for if you like (<strong>For</strong>: Girls / Boys / Both, <strong>Age</strong>: Adult / Child), tap a <strong>size</strong>, add the <strong>colour</strong>.</>,
                   <>Enter <strong>MRP</strong>, the <strong>selling price</strong> (leave empty = MRP) and <strong>pieces counted</strong>.</>,
                   <>Tap <strong>Save and get barcode</strong>. The label appears.</>,
                   <>Tap <strong>Next item →</strong>. Category, company and size stay filled in for the next one.</>,

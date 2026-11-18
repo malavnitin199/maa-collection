@@ -566,6 +566,9 @@ export async function createProductsBatch(
     billNumber?: string | null;
     note?: string;
     rows: QuickRowInput[];
+    /** Who it is for (plan v17), the same on every row; empty = not set. */
+    forGender?: string | null;
+    ageGroup?: string | null;
     staffId: string;
   },
 ): Promise<DesignResult> {
@@ -576,6 +579,7 @@ export async function createProductsBatch(
   const category = await resolveCategory(db, storeId, input.categoryId);
   const supplier = input.supplierId ? await resolveSupplier(db, storeId, input.supplierId) : null;
   const brand = input.brand?.trim() || supplier?.name || 'Unbranded';
+  const tags = resolveTags(input);
   const rows = input.rows.filter((r) => r.name.trim());
   if (rows.length === 0) throw new DomainError('Add at least one product with a name.', { key: 'stk.err.addNamedProduct' });
   if (rows.length > 50) throw new DomainError('Up to 50 products at once. Split the entry.', { key: 'stk.err.tooManyProducts' });
@@ -606,6 +610,7 @@ export async function createProductsBatch(
       pricePaise: row.pricePaise,
       costPaise: row.costPaise,
       quantity: row.quantity,
+      ...tags,
     };
   });
   const ownBarcodes = cleaned.flatMap((r) => (r.barcode ? [r.barcode] : []));
@@ -679,6 +684,9 @@ export async function correctTaggedItem(
     mrpPaise: number;
     pricePaise: number;
     costPaise: number | null;
+    /** Plan v17 tags for this item; undefined = keep, '' = clear. */
+    forGender?: string | null;
+    ageGroup?: string | null;
   },
 ): Promise<{ product: Product; pricesKept: boolean }> {
   const current = await getProduct(db, storeId, input.productId);
@@ -692,6 +700,8 @@ export async function correctTaggedItem(
       .limit(1);
     pricesAllowed = !sold;
   }
+  // Check the tags before changing anything, so a bad value changes nothing.
+  const tags = input.forGender === undefined && input.ageGroup === undefined ? null : resolveTags(input);
   const mrpPaise = pricesAllowed ? input.mrpPaise : current.mrpPaise;
   const pricePaise = pricesAllowed ? input.pricePaise : current.pricePaise;
   const costPaise = input.canCosts ? input.costPaise : current.costPaise;
@@ -709,7 +719,9 @@ export async function correctTaggedItem(
     active: current.active,
   });
   const pricesKept = mrpPaise !== input.mrpPaise || pricePaise !== input.pricePaise;
-  return { product, pricesKept };
+  if (!tags) return { product, pricesKept };
+  const [tagged] = await db.update(products).set(tags).where(and(eq(products.storeId, storeId), eq(products.id, product.id))).returning();
+  return { product: tagged, pricesKept };
 }
 
 export async function updateProduct(
