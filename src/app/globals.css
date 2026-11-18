@@ -194,7 +194,7 @@
    stays clear of both. */
 html { scroll-padding-top: 4.75rem; }
 @media (max-width: 39.99rem) {
-  html { scroll-padding-bottom: 7rem; }
+  html { scroll-padding-bottom: calc(7rem + var(--selection-bar, 0px)); }
 }
 
 /* UI clean-up (v15): cards and tiles rise in one after another. */
@@ -234,6 +234,18 @@ html { scroll-padding-top: 4.75rem; }
 .art-twinkle { transform-box: fill-box; transform-origin: center; animation: art-twinkle 2.4s ease-in-out infinite; }
 .art-twinkle:nth-of-type(2) { animation-delay: 0.8s; }
 .art-twinkle:nth-of-type(3) { animation-delay: 1.6s; }
+/* Header (plan v17): a soft gradient in the theme's dye with a faint glow at the top right. */
+.header-band {
+  background:
+    radial-gradient(120% 160% at 100% 0%, color-mix(in oklab, var(--b-400) 45%, transparent) 0%, transparent 55%),
+    linear-gradient(115deg, var(--b-900) 0%, var(--b-700) 58%, var(--b-600) 100%);
+}
+[data-mode="dark"] .header-band {
+  background:
+    radial-gradient(120% 160% at 100% 0%, color-mix(in oklab, var(--b-600) 35%, transparent) 0%, transparent 55%),
+    linear-gradient(115deg, #0b0b12 0%, var(--b-950) 55%, var(--b-900) 100%);
+}
+
 /*
  * New item (plan v17): the photo box before a photo is chosen — a piece of dyed
  * cloth with bandhani dots in the theme's colours (two offset dot grids over a

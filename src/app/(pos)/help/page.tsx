@@ -43,7 +43,7 @@ const HI = {
     <>इसे होम स्क्रीन पर लगाएँ: Chrome में ⋮ → <em>Add to Home screen</em> दबाएँ; iPhone में Share → <em>Add to Home Screen</em> दबाएँ। फिर यह ऐप की तरह खुलेगा।</>,
     <>नीचे के टैब: <strong>बेचें</strong> (स्कैन करके बेचें), <strong>एक्सचेंज</strong>, <strong>मेरी बिक्री</strong>। मालिक ने कैटलॉग का काम दिया हो तो <strong>कैटलॉग</strong> भी दिखेगा।</>,
     <>स्कैन के लिए <strong>कैमरा से स्कैन करें</strong> दबाएँ और एक बार कैमरा की अनुमति दें। बारकोड को हरे बॉक्स के अंदर सीधा रखें, 15–20 सेमी दूर।</>,
-    <>दिन का काम खत्म? ऊपर <strong>लॉग आउट</strong> दबाएँ, खासकर साझा फ़ोन पर।</>,
+    <>दिन का काम खत्म? ऊपर दाईं ओर <strong>⋯</strong> दबाएँ, फिर <strong>लॉग आउट</strong>, खासकर साझा फ़ोन पर।</>,
   ],
   sell: [
     <><strong>बेचें</strong> टैब → टैग स्कैन करें (कैमरा या USB/ब्लूटूथ स्कैनर) या बारकोड के नीचे का कोड डालें।</>,
@@ -144,7 +144,7 @@ export default async function HelpPage() {
                   <>Add it to your home screen: in Chrome tap ⋮ → <em>Add to Home screen</em>; on iPhone tap Share → <em>Add to Home Screen</em>. It then opens like an app.</>,
                   <>Use the tabs at the bottom: <strong>Sell</strong> (scan and sell), <strong>Exchange</strong>, <strong>My sales</strong>. If the owner gave you catalog work you also see <strong>Catalog</strong>.</>,
                   <>To scan, tap <strong>Scan with camera</strong> and allow the camera once. Hold the barcode flat inside the green box, 15–20 cm away.</>,
-                  <>Done for the day? Tap <strong>Log out</strong> at the top, especially on a shared phone.</>,
+                  <>Done for the day? Tap <strong>⋯</strong> at the top right, then <strong>Log out</strong>, especially on a shared phone.</>,
                 ]
           }
         />

@@ -46,6 +46,8 @@ export const IconStop = ({ className }: IconProps) => base(<rect x="6.5" y="6.5"
 export const IconPrev = ({ className }: IconProps) => base(<><path d="M17.5 6v12L9 12l8.5-6Z" fill="currentColor" /><path d="M6.5 6v12" /></>, className);
 export const IconNext = ({ className }: IconProps) => base(<><path d="M6.5 6v12L15 12 6.5 6Z" fill="currentColor" /><path d="M17.5 6v12" /></>, className);
 export const IconChevron = ({ className }: IconProps) => base(<path d="m9.5 6 6 6-6 6" />, className);
+/** ⋯ The header's menu (plan v17). */
+export const IconDots = ({ className }: IconProps) => base(<><circle cx="5.5" cy="12" r="1.6" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /><circle cx="18.5" cy="12" r="1.6" fill="currentColor" /></>, className);
 /** Back arrow for a screen's title bar (plan v17). */
 export const IconBack = ({ className }: IconProps) => base(<><path d="M19.5 12h-15" /><path d="m10.5 6-6 6 6 6" /></>, className);
 /** Rows of tags that scroll sideways (All tags, plan v13). */

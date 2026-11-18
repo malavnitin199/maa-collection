@@ -20,6 +20,16 @@ const base = {
 
   'nav.main': 'मुख्य मेनू',
   'nav.guide': 'गाइड',
+  // Selecting many (plan v17)
+  'sel.select': 'चुनें',
+  'sel.done': 'हो गया',
+  'sel.item': '{name} चुनें',
+  'sel.bar': 'चुने हुए',
+  'sel.count.one': '{n} चुना',
+  'sel.count.other': '{n} चुने',
+  'sel.all': 'सब चुनें ({n})',
+  'sel.clear': 'साफ़ करें',
+  'menu.open': 'मेनू',
   'nav.logout': 'लॉग आउट',
   'nav.login': 'लॉग इन',
   'nav.dashboard': 'डैशबोर्ड',

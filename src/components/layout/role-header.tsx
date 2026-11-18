@@ -2,9 +2,8 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { LanguageSwitch } from '@/features/i18n/language-switch';
 import { SoundToggle } from '@/features/feedback/sound-toggle';
-import { AppearanceMenu } from '@/features/appearance/appearance-menu';
-import { headerIcon } from '@/components/ui/styles';
 import { IconBook, IconChevron, IconLogout } from '@/components/ui/icons';
+import { HeaderMenu, menuRow } from './header-menu';
 import type { MessageKey } from '@/lib/i18n';
 import { logoutAction } from '@/server/actions/auth';
 import { canAny } from '@/lib/permissions';
@@ -40,39 +39,46 @@ async function HeaderContent() {
     me?.role === 'admin' ? [...ADMIN_LINKS, ...SALES_LINKS] : catalogAccess ? [...SALES_LINKS, { href: '/admin/more', label: 'nav.catalog' }] : SALES_LINKS;
   return (
     <>
-      {/* One slim row: the shop's name with who is logged in, then small round symbols (each has a tooltip and a name). */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-col">
-          <Link
-            href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'}
-            className="header-brand truncate font-display text-[1.2rem] leading-tight whitespace-nowrap text-white min-[390px]:text-[1.35rem]"
+      {/* Plan v17: the shop's name in full with who is logged in, then just अ / A and the ⋯ menu. */}
+      <div className="flex items-center justify-between gap-3">
+        <Link href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'} className="flex min-w-0 items-center gap-2.5">
+          <span
+            aria-hidden
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 font-display text-[0.95rem] font-bold tracking-wide text-white shadow-inner ring-1 ring-white/30"
           >
-            Maa Collection
-          </Link>
-          {me && (
-            <span data-testid="current-user" className="mt-1 truncate text-[11px] leading-none font-medium text-white/75">
-              {me.name} · {t(me.role === 'admin' ? 'role.admin' : 'role.salesman')}
-            </span>
-          )}
-        </div>
-        <div data-testid="header-buttons" className="flex shrink-0 items-center gap-0.5 min-[390px]:gap-1.5">
-          <AppearanceMenu />
-          <SoundToggle />
+            MC
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="header-brand truncate font-display text-[1.15rem] leading-tight whitespace-nowrap text-white min-[390px]:text-[1.25rem]">Maa Collection</span>
+            {me && (
+              <span data-testid="current-user" className="mt-0.5 truncate text-xs leading-none font-medium text-white/80">
+                {me.name} · {t(me.role === 'admin' ? 'role.admin' : 'role.salesman')}
+              </span>
+            )}
+          </span>
+        </Link>
+        <div data-testid="header-buttons" className="flex shrink-0 items-center gap-2">
           <LanguageSwitch onBand />
-          <Link href="/guide" aria-label={t('nav.guide')} title={t('nav.guide')} className={headerIcon}>
-            <IconBook className="h-5 w-5" />
-          </Link>
-          {me ? (
-            <form action={logoutAction}>
-              <button type="submit" aria-label={t('nav.logout')} title={t('nav.logout')} className={headerIcon}>
-                <IconLogout className="h-5 w-5" />
-              </button>
-            </form>
-          ) : (
-            <Link href="/login" aria-label={t('nav.login')} title={t('nav.login')} className={headerIcon}>
-              <IconChevron className="h-5 w-5" />
+          <HeaderMenu>
+            <SoundToggle row={menuRow} />
+            <Link href="/guide" className={menuRow}>
+              <IconBook className="h-5 w-5 text-brand-600 dark:text-brand-300" />
+              {t('nav.guide')}
             </Link>
-          )}
+            {me ? (
+              <form action={logoutAction}>
+                <button type="submit" className={`${menuRow} text-red-700 dark:text-red-300`}>
+                  <IconLogout className="h-5 w-5" />
+                  {t('nav.logout')}
+                </button>
+              </form>
+            ) : (
+              <Link href="/login" className={menuRow}>
+                <IconChevron className="h-5 w-5" />
+                {t('nav.login')}
+              </Link>
+            )}
+          </HeaderMenu>
         </div>
       </div>
       <nav className="hidden flex-wrap gap-x-1 gap-y-1 text-sm sm:flex">
@@ -98,9 +104,9 @@ async function BottomNavForUser() {
 export function RoleHeader() {
   return (
     <>
-    {/* A band in the theme's dye, finished with the zari border (the app's signature). */}
-    <header className="sticky top-0 z-10 bg-brand-800 text-white shadow-lg shadow-brand-950/20 print:hidden dark:bg-brand-950">
-      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 pt-2.5 pb-2 min-[390px]:px-4">
+    {/* Plan v17: a soft gradient in the theme's dye with a faint glow, finished with the zari border. */}
+    <header className="header-band sticky top-0 z-10 text-white shadow-lg shadow-brand-950/25 print:hidden">
+      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 pt-3 pb-2.5">
         <Suspense fallback={<span className="font-display text-[1.45rem] leading-none text-white">Maa Collection</span>}>
           <HeaderContent />
         </Suspense>

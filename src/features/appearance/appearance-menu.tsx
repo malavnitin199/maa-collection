@@ -44,7 +44,7 @@ export function AppearanceMenu() {
   const [anchor, setAnchor] = useState({ top: 64, right: 16 });
   const panel = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const [theme, mode, shown] = useSyncExternalStore(subscribe, snapshot, () => `${DEFAULT_THEME}|system|light`).split('|') as [Theme, Mode, 'light' | 'dark'];
+  const [theme, , shown] = useSyncExternalStore(subscribe, snapshot, () => `${DEFAULT_THEME}|system|light`).split('|') as [Theme, Mode, 'light' | 'dark'];
   const ModeIcon = shown === 'dark' ? IconMoon : IconSun;
 
   // Close on Escape or a tap outside.
@@ -105,62 +105,7 @@ export function AppearanceMenu() {
               style={{ '--look-top': `${anchor.top}px`, '--look-right': `${anchor.right}px` } as React.CSSProperties}
               className="look-panel fixed inset-x-3 bottom-3 z-50 rounded-3xl pb-[calc(1rem+env(safe-area-inset-bottom))] sm:inset-x-auto sm:top-[var(--look-top)] sm:right-[var(--look-right)] sm:bottom-auto sm:w-72 sm:pb-4 border border-zinc-200 bg-surface p-4 text-zinc-900 shadow-2xl dark:border-zinc-700 dark:text-zinc-100"
             >
-              <p className="text-xs font-bold tracking-[0.12em] text-zinc-500 uppercase dark:text-zinc-400">{t('look.theme')}</p>
-              <div role="radiogroup" aria-label={t('look.theme')} className="mt-2 grid grid-cols-3 gap-x-2 gap-y-3">
-                {THEMES.map((name) => {
-                  const swatch = THEME_SWATCH[name];
-                  const selected = name === theme;
-                  return (
-                    <button
-                      key={name}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      aria-label={t(`theme.${name}` as MessageKey)}
-                      onClick={() => applyAppearance({ theme: name, mode })}
-                      className="group flex flex-col items-center gap-1"
-                    >
-                      <span
-                        className={`relative block h-11 w-11 overflow-hidden rounded-full transition group-active:scale-90 ${
-                          selected ? 'ring-[3px] ring-zinc-900 ring-offset-2 ring-offset-white dark:ring-zinc-100 dark:ring-offset-zinc-900' : 'ring-1 ring-black/10'
-                        }`}
-                        style={{ background: swatch.main }}
-                      >
-                        {/* The zari edge of the cloth. */}
-                        <span className="absolute inset-x-0 bottom-0 h-2.5" style={{ background: swatch.accent }} />
-                        {selected && (
-                          <svg viewBox="0 0 24 24" className="absolute inset-0 m-auto h-5 w-5" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                            <path d="M6 12.5l4 4L18 8" />
-                          </svg>
-                        )}
-                      </span>
-                      <span className="text-[11px] leading-tight font-medium">{t(`theme.${name}` as MessageKey)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="mt-4 text-xs font-bold tracking-[0.12em] text-zinc-500 uppercase dark:text-zinc-400">{t('look.mode')}</p>
-              <div role="radiogroup" aria-label={t('look.mode')} className="mt-2 grid grid-cols-3 gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-800">
-                {MODE_OPTIONS.map(({ mode: option, label, Icon }) => {
-                  const selected = option === mode;
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => applyAppearance({ theme, mode: option })}
-                      className={`flex items-center justify-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold transition ${
-                        selected ? 'bg-brand-600 text-white shadow' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {t(label)}
-                    </button>
-                  );
-                })}
-              </div>
+              <AppearanceOptions />
               <button type="button" onClick={() => setOpen(false)} className="mt-4 w-full rounded-full py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-zinc-800">
                 {t('look.close')}
               </button>
@@ -169,5 +114,71 @@ export function AppearanceMenu() {
           document.body,
         )}
     </div>
+  );
+}
+
+/** The theme swatches and Day / Night / Same as phone, shared by this pop-over and the header's ⋯ menu (plan v17). */
+export function AppearanceOptions() {
+  const t = useT();
+  const [theme, mode] = useSyncExternalStore(subscribe, snapshot, () => `${DEFAULT_THEME}|system|light`).split('|') as [Theme, Mode, 'light' | 'dark'];
+  return (
+    <>
+    <p className="text-xs font-bold tracking-[0.12em] text-zinc-500 uppercase dark:text-zinc-400">{t('look.theme')}</p>
+    <div role="radiogroup" aria-label={t('look.theme')} className="mt-2 grid grid-cols-3 gap-x-2 gap-y-3">
+      {THEMES.map((name) => {
+        const swatch = THEME_SWATCH[name];
+        const selected = name === theme;
+        return (
+          <button
+            key={name}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-label={t(`theme.${name}` as MessageKey)}
+            onClick={() => applyAppearance({ theme: name, mode })}
+            className="group flex flex-col items-center gap-1"
+          >
+            <span
+              className={`relative block h-11 w-11 overflow-hidden rounded-full transition group-active:scale-90 ${
+                selected ? 'ring-[3px] ring-zinc-900 ring-offset-2 ring-offset-white dark:ring-zinc-100 dark:ring-offset-zinc-900' : 'ring-1 ring-black/10'
+              }`}
+              style={{ background: swatch.main }}
+            >
+              {/* The zari edge of the cloth. */}
+              <span className="absolute inset-x-0 bottom-0 h-2.5" style={{ background: swatch.accent }} />
+              {selected && (
+                <svg viewBox="0 0 24 24" className="absolute inset-0 m-auto h-5 w-5" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M6 12.5l4 4L18 8" />
+                </svg>
+              )}
+            </span>
+            <span className="text-[11px] leading-tight font-medium">{t(`theme.${name}` as MessageKey)}</span>
+          </button>
+        );
+      })}
+    </div>
+
+    <p className="mt-4 text-xs font-bold tracking-[0.12em] text-zinc-500 uppercase dark:text-zinc-400">{t('look.mode')}</p>
+    <div role="radiogroup" aria-label={t('look.mode')} className="mt-2 grid grid-cols-3 gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-800">
+      {MODE_OPTIONS.map(({ mode: option, label, Icon }) => {
+        const selected = option === mode;
+        return (
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => applyAppearance({ theme, mode: option })}
+            className={`flex items-center justify-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold transition ${
+              selected ? 'bg-brand-600 text-white shadow' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {t(label)}
+          </button>
+        );
+      })}
+    </div>
+    </>
   );
 }

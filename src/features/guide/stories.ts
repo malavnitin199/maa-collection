@@ -17,7 +17,7 @@ export type Scene =
   | { kind: 'names' }
   | { kind: 'keypad' }
   | { kind: 'dock' }
-  | { kind: 'header'; tap: 'lang' | 'sound' | 'logout' }
+  | { kind: 'header'; tap: 'lang' | 'menu' }
   | { kind: 'swatches' }
   | { kind: 'daynight' }
   | { kind: 'tag'; part: TagPart }
@@ -81,9 +81,9 @@ export const STORIES: Story[] = [
         say: { en: 'The big round button at the bottom opens the counter from anywhere.', hi: 'नीचे का बड़ा गोल बटन कहीं से भी काउंटर खोलता है।' },
       },
       {
-        scene: { kind: 'header', tap: 'logout' },
-        text: { en: 'Finished? **Log out**', hi: 'काम खत्म? **लॉग आउट**' },
-        say: { en: 'On a shared phone, tap the arrow at the top right to log out.', hi: 'साझा फ़ोन पर ऊपर दाईं ओर तीर दबाकर लॉग आउट करें।' },
+        scene: { kind: 'header', tap: 'menu' },
+        text: { en: 'Finished? **⋯** → Log out', hi: 'काम खत्म? **⋯** → लॉग आउट' },
+        say: { en: 'On a shared phone, tap the three dots at the top right, then Log out.', hi: 'साझा फ़ोन पर ऊपर दाईं ओर तीन बिंदु दबाएँ, फिर लॉग आउट।' },
       },
     ],
     tip: { en: 'Chrome ⋮ → Add to Home screen: it opens like an app.', hi: 'Chrome ⋮ → Add to Home screen: यह ऐप की तरह खुलेगा।' },
@@ -105,8 +105,8 @@ export const STORIES: Story[] = [
       },
       {
         scene: { kind: 'swatches' },
-        text: { en: 'Sun button → **pick a colour**', hi: 'सूरज बटन → **रंग चुनें**' },
-        say: { en: 'Tap the sun button at the top and pick a colour you like.', hi: 'ऊपर सूरज वाला बटन दबाएँ और अपनी पसंद का रंग चुनें।' },
+        text: { en: '**⋯** → pick a colour', hi: '**⋯** → रंग चुनें' },
+        say: { en: 'Tap the three dots at the top and pick a colour you like.', hi: 'ऊपर तीन बिंदु वाला बटन दबाएँ और अपनी पसंद का रंग चुनें।' },
       },
       {
         scene: { kind: 'daynight' },
@@ -114,9 +114,9 @@ export const STORIES: Story[] = [
         say: { en: 'Choose Night for a dark screen in the evening, or Day.', hi: 'शाम को गहरी स्क्रीन के लिए रात चुनें, दिन में दिन।' },
       },
       {
-        scene: { kind: 'header', tap: 'sound' },
-        text: { en: '**Sound** on or off', hi: '**आवाज़** चालू या बंद' },
-        say: { en: 'The speaker button turns the scan sounds on or off.', hi: 'स्पीकर वाला बटन स्कैन की आवाज़ चालू या बंद करता है।' },
+        scene: { kind: 'header', tap: 'menu' },
+        text: { en: '**⋯** → Sound on or off', hi: '**⋯** → आवाज़ चालू या बंद' },
+        say: { en: 'In the three-dot menu, Sound turns the scan sounds on or off.', hi: 'तीन बिंदु वाले मेनू में आवाज़ से स्कैन की आवाज़ चालू या बंद होती है।' },
       },
     ],
   },

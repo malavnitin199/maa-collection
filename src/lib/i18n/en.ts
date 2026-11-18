@@ -21,6 +21,16 @@ const base = {
   // Header, menus, tabs
   'nav.main': 'Main',
   'nav.guide': 'Guide',
+  // Selecting many (plan v17)
+  'sel.select': 'Select',
+  'sel.done': 'Done',
+  'sel.item': 'Select {name}',
+  'sel.bar': 'Selected items',
+  'sel.count.one': '{n} selected',
+  'sel.count.other': '{n} selected',
+  'sel.all': 'Select all ({n})',
+  'sel.clear': 'Clear',
+  'menu.open': 'Menu',
   'nav.logout': 'Log out',
   'nav.login': 'Log in',
   'nav.dashboard': 'Dashboard',

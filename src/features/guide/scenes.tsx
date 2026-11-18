@@ -1,4 +1,4 @@
-import { IconBook, IconLogout, IconMenu, IconHome, IconPencil, IconRupee, IconScan, IconSound, IconSun, IconSwap, IconCamera } from '@/components/ui/icons';
+import { IconDots, IconMenu, IconHome, IconPencil, IconRupee, IconScan, IconSwap, IconCamera } from '@/components/ui/icons';
 import { THEME_SWATCH, THEMES } from '@/features/appearance/appearance';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { inStoreEan13 } from '@/features/scanning/ean13';
@@ -159,28 +159,21 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
       );
 
     case 'header': {
-      // Finger positions (% of the phone) over the header's round symbols: ☀ · sound · अ · Guide · log out (UI clean-up, v15).
-      const at = { lang: 58, sound: 44, logout: 87 }[scene.tap];
+      // Finger positions (% of the phone) over the header's two buttons: अ · ⋯ (plan v17).
+      const at = { lang: 72, menu: 87 }[scene.tap];
       const on = 'st-target bg-white/30';
       return (
         <Phone
           band={
             <div className="flex items-center justify-between gap-1">
-              <p className="font-display text-[11px]">Maa</p>
               <div className="flex items-center gap-1">
-                <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
-                  <IconSun className="h-3.5 w-3.5" />
-                  <span className="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full bg-zari" />
-                </span>
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full ${scene.tap === 'sound' ? on : 'bg-white/10'}`}>
-                  <IconSound className="h-3.5 w-3.5" />
-                </span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/15 text-[7px] font-bold ring-1 ring-white/30">MC</span>
+                <p className="font-display text-[10px]">Maa Collection</p>
+              </div>
+              <div className="flex items-center gap-1">
                 <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${scene.tap === 'lang' ? on : 'bg-white/10'}`}>अ</span>
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
-                  <IconBook className="h-3.5 w-3.5" />
-                </span>
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full ${scene.tap === 'logout' ? on : 'bg-white/10'}`}>
-                  <IconLogout className="h-3.5 w-3.5" />
+                <span className={`flex h-6 w-6 items-center justify-center rounded-full ${scene.tap === 'menu' ? on : 'bg-white/10'}`}>
+                  <IconDots className="h-3.5 w-3.5" />
                 </span>
               </div>
             </div>
