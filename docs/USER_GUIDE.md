@@ -87,6 +87,9 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 
 1. **Top card**: type the **Product name**, choose the **Category**, and tap who it is for — **For**: Girls · Boys · Both, **Age**: Adult · Child (optional; tap again to clear). On the right is the **photo**: tap it to choose from the gallery, or 📷 for the camera; ✕ removes it.
 2. **Must-haves**: the **Company** (where you buy it), the **Sale price (MRP) ₹** and the **Purchase price ₹** (only if you have the *Purchase price* right).
+   - New company? Choose **+ New company…**, type the name, tap **Add**. Typing a name that already exists uses that company (never a double).
+   - An earlier company is under **Previous companies** at the bottom of the list: choose it to use it again. (The same company box is on Tag old stock and Add a single product.)
+   - To hide a company: Suppliers → the company → *Edit supplier details* → untick **Active**.
 3. **Tabs** below:
    - **Details**: **Pieces** (how many came), **Counter price, if lower** (empty = the MRP), **Supplier bill no.**
    - **Colours**: comes in many sizes or colours? Tap the sizes (the category's sizes come first; *Pick all* takes them all) and add the colours. A grid shows every colour × size with its pieces; each pair becomes its own item with its own barcode, and *Pieces* becomes **Pieces each**. Nothing picked = one item, size *Free*, colour *Assorted*.

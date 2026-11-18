@@ -36,6 +36,18 @@ Where the removed Home parts are now: month, profit, exchanges, sellers → **Re
 - The server and the database refuse any other value.
 - Migration `drizzle/0008_product_tags.sql`: two nullable columns + two checks. It only adds; the app already live keeps working before and after it.
 
+## Companies: a fresh list, added on the spot (owner follow-up, 2026-11-19)
+
+Owner: "remove all the companies that were here, and give the owner the option to add companies manually, or choose between the previous companies." Asked how to remove them, the owner chose **hide** (not delete) and to **keep the demo data** for now.
+
+- **Live shop:** all 9 companies (5 sample + 4 "Demo …") are hidden (`suppliers.active = false`). Nothing is deleted: their 67 items and 17 deliveries keep their company name, and the Suppliers page still lists them as "(inactive)". A backup of the list was saved first.
+- **Company box** on New item, Tag old stock and Add a single product (`CompanyPicker`):
+  - the companies in use;
+  - **Previous companies** (the hidden ones): choosing one brings it back at once, with its phone, GSTIN and notes;
+  - **+ New company…**: type a name → **Add**. The same name in any letter case is reused (and brought back if hidden), never doubled.
+- Suppliers → a company → *Edit supplier details* → untick **Active** hides it again ("Previous companies").
+- Receive stock, filters and reports are unchanged (they list companies as before).
+
 ## Two fixes found on the way
 
 Next 16 (Cache Components) keeps a page alive after you leave it, with what was typed (React `<Activity>`):
