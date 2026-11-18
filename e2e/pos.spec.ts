@@ -401,6 +401,29 @@ test('scan feedback: green tick, buzz and shake on a failed scan, "Sale done" ca
   await expect(page.getByRole('status')).toContainText('by Balram');
 });
 
+test('a sale below the purchase price stands out for the owner: red card, Loss tag, and a count on Home', async ({ page }) => {
+  await login(page, 'Owner');
+  const barcode = await addProduct(page, { name: `Cheap Kurta ${run}`, size: 'M', mrp: '999', price: '999', stock: '1' }); // purchase ₹500
+  await login(page, 'Balram');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await scan(page, barcode);
+  await page.getByRole('button', { name: 'Sell this item' }).click();
+  await page.getByLabel(/Sale price/).fill('400');
+  await page.getByRole('button', { name: 'Record sale' }).click();
+  await expect(page.getByRole('status')).toContainText('Sent to the owner to check.');
+  // The salesman's screen is unchanged: no loss shown to him.
+  await expect(page.getByRole('main')).not.toContainText(/loss/i); // the visible screen only
+
+  await login(page, 'Owner');
+  await expect(page.getByTestId('approvals-losses')).toContainText('at a loss');
+  await page.goto('/admin/approvals');
+  const entry = page.getByTestId('approval-entry').filter({ hasText: `Cheap Kurta ${run}` });
+  await expect(entry).toHaveAttribute('data-deal', 'loss');
+  await expect(entry.getByTestId('deal-tag')).toHaveText('▼ Loss ₹100.00');
+  await entry.getByRole('button', { name: 'Approve' }).click();
+  await expect(page.getByRole('status')).toHaveText('Approved.');
+});
+
 test('sell without scanning, then the owner approves one entry and rejects another with a reason; totals and stock follow', async ({ page }) => {
   await login(page, 'Owner');
   const barcode = await addProduct(page, { name: `Plain Shirt ${run}`, size: 'L', mrp: '1499', price: '1299', stock: '2' });
@@ -430,6 +453,8 @@ test('sell without scanning, then the owner approves one entry and rejects anoth
   await expect(mine(`Blue kurti ${run}`).getByTestId('status-waiting')).toBeVisible();
   await expect(mine(`Blue kurti ${run}`)).toContainText('By hand');
   await expect(mine(`Plain Shirt ${run}`).getByTestId('status-waiting')).toBeVisible();
+  // Salesmen never see purchase prices or profit (plan v17: owner only).
+  await expect(page.getByTestId('my-activity')).not.toContainText(/profit|loss|purchase/i);
   await page.goto('/admin/approvals');
   await expect(page).not.toHaveURL(/\/admin\/approvals/); // salesmen have no Approvals
 
@@ -442,6 +467,13 @@ test('sell without scanning, then the owner approves one entry and rejects anoth
   await expect(byHand).toHaveCount(1);
   await expect(byHand).toContainText('By hand');
   await expect(byHand).toContainText('No MRP (entered by hand)');
+  // Plan v17: each sale says profit or loss against its purchase price (hand-entered: none known).
+  await expect(byHand).toHaveAttribute('data-deal', 'unknown');
+  await expect(byHand.getByTestId('deal-tag')).toHaveText('No purchase price');
+  const shirt = page.getByTestId('approval-entry').filter({ hasText: `Plain Shirt ${run}` });
+  await expect(shirt).toHaveAttribute('data-deal', 'profit'); // sold ₹1,100, bought ₹500
+  await expect(shirt.getByTestId('deal-tag')).toHaveText('▲ Profit ₹600.00');
+  await expect(shirt).toContainText('purchase ₹500.00 each');
   await byHand.getByRole('button', { name: 'Approve' }).click();
   await expect(page.getByRole('status')).toHaveText('Approved.');
   await expect(byHand).toHaveCount(0);

@@ -428,6 +428,39 @@ test('company box: add a company on the spot, the same name is reused, a hidden 
   await expect(single.locator('optgroup option', { hasText: fresh })).toHaveCount(0);
 });
 
+test('staff: owner adds a salesman, removes them (gone from the login screen), and brings them back', async ({ page }) => {
+  await loginOwner(page);
+  const name = `Temp ${run}`;
+  await page.goto('/admin/staff');
+  await page.getByLabel('Name', { exact: true }).fill(name);
+  await page.getByLabel('PIN (4–6 digits)').fill('4321');
+  await page.getByRole('button', { name: 'Add staff' }).click();
+  await expect(page.getByRole('status')).toContainText(`${name} added`);
+  const row = page.getByTestId('staff-list').getByRole('listitem').filter({ hasText: name });
+  await expect(row).toContainText('Salesman');
+
+  // Remove asks once; then the person moves to "Removed staff".
+  await row.getByRole('button', { name: 'Remove' }).click();
+  await expect(row).toContainText(`Remove ${name}? They can no longer log in. Their past sales stay.`);
+  await row.getByRole('button', { name: 'Yes, remove' }).click();
+  const removed = page.getByTestId('removed-staff').getByRole('listitem').filter({ hasText: name });
+  await expect(removed).toBeVisible();
+  await expect(page.getByTestId('staff-list').getByRole('listitem').filter({ hasText: name })).toHaveCount(0);
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await expect(page.getByText('Owner', { exact: true })).toBeVisible();
+  await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+
+  // Bring back: on the login screen again.
+  await loginOwner(page);
+  await page.goto('/admin/staff');
+  await page.getByTestId('removed-staff').getByRole('listitem').filter({ hasText: name }).getByRole('button', { name: 'Bring back' }).click();
+  await expect(page.getByTestId('staff-list').getByRole('listitem').filter({ hasText: name })).toBeVisible();
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
+});
+
 test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock/receive');
