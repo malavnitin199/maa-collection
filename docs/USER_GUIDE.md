@@ -103,6 +103,7 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 - **Details** tab: the hang tag, **Rates for the whole design** (change the default or one size → **Apply**; past sales keep their prices), receive more pieces, and the stock history.
 - **Colours** tab: every colour × size of the design with its pieces (tap one to open it) and the total; the photos.
 - **Other details** tab: change **For / Age** for the whole design (**Save tags**), and **Edit this item**.
+- Every way of adding an item (**New item**, **Tag old stock**, **More → Add a single product**) lets you tap **For** and **Age** while adding; change them later here.
 
 ### Other ways to add stock
 

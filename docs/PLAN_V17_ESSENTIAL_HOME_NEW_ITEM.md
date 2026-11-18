@@ -32,6 +32,7 @@ Where the removed Home parts are now: month, profit, exchanges, sellers → **Re
 - Optional; tap again to clear. Older items have no tag until it is set.
 - The same for every size and colour of a design: New item puts them on every item it makes; the product page's *Other details → Save tags* changes the whole design (same name, brand and category). Prices, stock and history are not touched.
 - **Tag old stock** (owner follow-up, 2026-11-19): the same For / Age rows under the product name; saved on the item, changed by *✎ Edit this item*, and kept for the next item like category and size.
+- **Add a single product** (owner follow-up, 2026-11-19): the same rows after the company. Every add screen now offers the tags; to change them later use the product page's *Other details*.
 - The server and the database refuse any other value.
 - Migration `drizzle/0008_product_tags.sql`: two nullable columns + two checks. It only adds; the app already live keeps working before and after it.
 
