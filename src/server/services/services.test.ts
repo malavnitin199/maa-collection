@@ -9,7 +9,7 @@ import { STORE_ID } from '@/lib/app-config';
 import { approveAll } from './approvals';
 import { recordExchange, findReturnableSales } from './exchanges';
 import { createProduct, findProductByCode, stockIn, toCounterProduct } from './products';
-import { shopDashboard, staffDashboard } from './reports';
+import { shopDashboard, shopToday, staffDashboard } from './reports';
 import { recordSale } from './sales';
 import { createStaff, listStaff, setStaffActive, setStaffPermissions, verifyLogin } from './staff';
 
@@ -202,6 +202,8 @@ describe('dashboards', () => {
     expect(shop.salespeople.find((p) => p.name === 'Vishal')?.today.netPaise).toBe(130000);
     expect(shop.estimatedProfit.month).toBe(420000 - 3 * (dress.costPaise ?? 0));
     expect(shop.lowStock.map((p) => p.sku)).toContain('MAA-SA-001');
+    // Home (plan v17) shows just today's part, and it matches.
+    expect(await shopToday(db, STORE_ID, now)).toEqual({ sales: shop.sales.today, netRevenuePaise: 280000 });
   });
 });
 

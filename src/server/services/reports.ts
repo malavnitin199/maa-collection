@@ -187,7 +187,17 @@ export type SalespersonRow = {
   month: { units: number; netPaise: number };
 };
 
-/** Admin dashboard: whole shop, today and this month. Includes profit (admin only). */
+/**
+ * Owner's Home (plan v17): only today's approved sales — money in (sales plus
+ * exchange differences), pieces and number of sales. Two queries instead of the
+ * whole `shopDashboard`.
+ */
+export async function shopToday(db: Db, storeId: string, now = new Date()) {
+  const [totals, exchangeSums] = await Promise.all([saleTotals(db, storeId, now), exchangeTotals(db, storeId, now)]);
+  return { sales: totals.today, netRevenuePaise: totals.today.totalPaise + exchangeSums.today.differencePaise };
+}
+
+/** Whole shop, today and this month, with profit, people and stock (admin only; Home uses `shopToday`). */
 export async function shopDashboard(db: Db, storeId: string, now = new Date()) {
   const p = periodStarts(now, STORE_TIMEZONE);
   const [totals, exchangeSums, profitRow, people, salesByPerson, exchangesByPerson, lowStock, stockRow, activity] =
