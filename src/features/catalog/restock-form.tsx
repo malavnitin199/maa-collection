@@ -74,6 +74,12 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
         lines: lines.filter((l) => l.quantity > 0).map((l) => ({ productId: l.id, quantity: l.quantity })),
       });
       if (!result.ok) return setMessage(result.error);
+      // Next 16 keeps this page alive (React Activity): clear the received lines now,
+      // or coming back and scanning one more piece would receive them all again.
+      operationId.current = null;
+      setLines([]);
+      setChoices(null);
+      setBillNumber('');
       router.push(`/admin/labels/print?receipt=${result.receiptId}`);
     });
   }
