@@ -127,6 +127,8 @@ export async function createProductAction(_prev: FormState, formData: FormData):
       ...withoutCost(productInput(formData), admin),
       manufacturerBarcode: formData.get('barcodeMode') === 'manufacturer' ? text(formData, 'barcode') : null,
       openingStock: Number(openingRaw),
+      forGender: text(formData, 'forGender'),
+      ageGroup: text(formData, 'ageGroup'),
       createdBy: admin.id,
     });
     createdId = created.id;

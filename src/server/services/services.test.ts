@@ -84,6 +84,16 @@ describe('products and barcodes', () => {
     await expect(createProduct(db, STORE_ID, { ...base, pricePaise: 100000 })).rejects.toThrow(/above MRP/);
   });
 
+  it('a single product can carry For / Age tags (plan v17); none by default; unknown values refused', async () => {
+    const base = { brand: 'X', category: 'Kurta', size: 'S', color: 'Red', mrpPaise: 49900, pricePaise: 49900, costPaise: null, openingStock: 1, createdBy: people.Owner };
+    const kids = await createProduct(db, STORE_ID, { ...base, name: 'Kids Kurta', forGender: 'girls', ageGroup: 'child' });
+    expect([kids.forGender, kids.ageGroup]).toEqual(['girls', 'child']);
+    const plain = await createProduct(db, STORE_ID, { ...base, name: 'Plain Kurta' });
+    expect([plain.forGender, plain.ageGroup]).toEqual([null, null]);
+    await expect(createProduct(db, STORE_ID, { ...base, name: 'Odd Kurta', ageGroup: 'teen' })).rejects.toThrow(/who the item is for/);
+    expect(await db.select().from(products).where(eq(products.name, 'Odd Kurta'))).toHaveLength(0);
+  });
+
   it('stock-in adds stock once, even if the save is retried', async () => {
     const saree = await product('MAA-SA-001');
     expect((await stockIn(db, STORE_ID, { operationId: 'in-1', productId: saree.id, quantity: 4, staffId: people.Owner })).stock).toBe(4);

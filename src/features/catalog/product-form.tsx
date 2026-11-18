@@ -3,7 +3,9 @@
 import { useActionState, useState } from 'react';
 import { errorBox, input, muted, okBox, primaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
+import type { ProductTags } from '@/lib/product-tags';
 import type { FormState } from '@/server/actions/admin';
+import { TagChooser } from './item-parts';
 
 export type ProductFormValues = {
   name: string;
@@ -57,6 +59,8 @@ export function ProductForm({ action, mode, initial, categories, suppliers, show
   const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
   const [barcodeMode, setBarcodeMode] = useState<'generate' | 'manufacturer'>('generate');
+  // Who it is for (plan v17), only when adding: on the product page the design-wide tags sit above this form.
+  const [tags, setTags] = useState<ProductTags>({ forGender: null, ageGroup: null });
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -85,6 +89,13 @@ export function ProductForm({ action, mode, initial, categories, suppliers, show
             ))}
           </select>
         </label>
+        {mode === 'new' && (
+          <div className="sm:col-span-2">
+            <TagChooser value={tags} onChange={setTags} />
+            <input type="hidden" name="forGender" value={tags.forGender ?? ''} />
+            <input type="hidden" name="ageGroup" value={tags.ageGroup ?? ''} />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <Field label={t('cat.form.size')} name="size" defaultValue={initial?.size} />
           <Field label={t('cat.form.colour')} name="color" defaultValue={initial?.color} />

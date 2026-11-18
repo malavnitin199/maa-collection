@@ -241,6 +241,9 @@ export async function createProduct(
     createdBy: string;
     categoryId?: string | null;
     supplierId?: string | null;
+    /** Who it is for (plan v17); empty = not set. */
+    forGender?: string | null;
+    ageGroup?: string | null;
   },
 ): Promise<Product> {
   let category = input.category;
@@ -252,6 +255,7 @@ export async function createProduct(
   }
   if (input.supplierId) await resolveSupplier(db, storeId, input.supplierId);
   validateProductInput({ ...input, category });
+  const tags = resolveTags(input);
   if (!Number.isInteger(input.openingStock) || input.openingStock < 0) {
     throw new DomainError('Opening stock must be 0 or more.', { key: 'stk.err.openingStock' });
   }
@@ -283,6 +287,7 @@ export async function createProduct(
             pricePaise: input.pricePaise,
             costPaise: input.costPaise,
             stock: input.openingStock,
+            ...tags,
             createdBy: input.createdBy,
           })
           .returning();
