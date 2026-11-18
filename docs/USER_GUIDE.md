@@ -72,10 +72,10 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 1. **Catalog → Tag old stock**.
 2. Optional: **Scan the tag's barcode** if the item already has one from the company. The app uses it (no new sticker), or tells you the item is already in the app.
 3. **📷 Take photo**: 1–4 photos, good light, plain background, the whole item.
-4. **Category**, **name** (e.g. "Phulkari Dupatta"), tap a **size**, type the **colour**. Company is optional.
+4. **Category**, **name** (e.g. "Phulkari Dupatta"), optionally who it is for (**For**: Girls / Boys / Both, **Age**: Adult / Child), tap a **size**, type the **colour**. Company is optional.
 5. **MRP**, **selling price** (empty = MRP), **pieces counted**.
 6. **Save and get barcode**. The label appears.
-7. **Next item →**. Category, company and size stay filled in.
+7. **Next item →**. Category, company, size and For / Age stay filled in.
    Typed something wrong? Tap **✎ Edit this item** before *Next item*: the form comes back filled in; fix it and tap **Save changes**. Same item and barcode, so a printed tag stays valid (reprint it if the name, size, colour or MRP changed). Pieces can't be lowered here; more pieces can be added from **Open item**.
 8. At the end: **Print today's labels**. You get one label per piece; stick one on each piece. Choose **A4 sheet** or **Sticker printer 50×25 mm**; stickers print one per label and scan reliably at 203 dpi.
 
@@ -168,7 +168,7 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 
 | When | Required | Optional |
 |---|---|---|
-| Tag old stock | Category, name, MRP, pieces | Photo (recommended), size (= Free), colour, company, selling price (= MRP), purchase price |
+| Tag old stock | Category, name, MRP, pieces | Photo (recommended), For / Age, size (= Free), colour, company, selling price (= MRP), purchase price |
 | New item | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), colours (= Assorted), brand (= company) |
 | Sale | Scan, quantity, price | Credit to a colleague |
 | Company | Name | Contact, phone, GSTIN, notes |
