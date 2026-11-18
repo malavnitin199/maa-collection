@@ -215,8 +215,16 @@ test('exchange: return part of a sale for another size; stock and money stay cor
 
 test('admin dashboard, staff and labels pages load with seeded data', async ({ page }) => {
   await login(page, 'Owner');
-  await expect(page.getByTestId('sales-by-person')).toContainText('Vishal');
-  await expect(page.getByTestId('sales-by-person')).toContainText('Balram');
+  // Home (plan v17): four actions and today's sales only; the month, sellers and stock live on other screens.
+  await expect(page.getByTestId('quick-actions').getByRole('link')).toHaveCount(4);
+  await expect(page.getByTestId('quick-actions').getByRole('link', { name: 'Restock' })).toHaveCount(0);
+  await expect(page.getByTestId('today-revenue')).toHaveText(/^₹/);
+  for (const gone of ['This month', 'Sales by salesperson', 'Low stock', 'Est. profit', 'Latest activity']) {
+    await expect(page.locator('main').getByText(gone, { exact: false })).toHaveCount(0);
+  }
+  await page.goto('/admin/team');
+  await expect(page.locator('main')).toContainText('Vishal');
+  await expect(page.locator('main')).toContainText('Balram');
   await page.goto('/admin/staff');
   for (const name of ['Owner', 'Vishal', 'Nitin', 'Pradeep', 'Balram']) {
     await expect(page.getByTestId('staff-list')).toContainText(name);
@@ -252,8 +260,9 @@ test('sales team dashboard: number of sellers, each one’s share and daily sale
   const waiting = page.getByTestId('approval-entry').filter({ hasText: `Team Kurta ${run}` });
   await waiting.getByRole('button', { name: 'Approve' }).click();
   await expect(waiting).toHaveCount(0);
-  await page.goto('/admin/dashboard');
-  await page.getByRole('link', { name: 'Sales team graphs →' }).click();
+  // Home no longer links to it (plan v17): Team is in the More menu.
+  await page.goto('/admin/more');
+  await page.getByRole('link', { name: /^Sales team/ }).click();
   await expect(page).toHaveURL(/\/admin\/team$/);
   await expect(page.getByRole('heading', { name: 'Sales team', level: 1 })).toBeVisible();
   await expect(page.getByTestId('team-salesmen')).toHaveText(/^\d+$/);
@@ -339,11 +348,10 @@ test('owner and catalog screens in Hindi: Home dashboard, products, stock entry,
   await page.getByLabel('PIN').fill('5678');
   await page.getByRole('button', { name: 'लॉग इन करें' }).click();
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
-  // Home: the owner's own words (Today / This month / net sales / exchanges) are Hindi; no English labels left.
+  // Home: the owner's own words (Today / net sales / the four actions) are Hindi; no English labels left.
   const main = page.locator('main');
   await expect(main.getByRole('heading', { name: 'आज', exact: true })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'इस महीने', exact: true })).toBeVisible();
-  for (const english of ['Net revenue', 'Net sales', 'This month', 'Exchanges', 'Sales by salesperson', 'Low stock', 'Est. profit']) {
+  for (const english of ['Net revenue', 'Net sales', 'New stock', 'Suppliers', 'Reports', 'Approvals', 'Units sold']) {
     await expect(main.getByText(english, { exact: false })).toHaveCount(0);
   }
   // Products, stock entry and reports pages open in Hindi.

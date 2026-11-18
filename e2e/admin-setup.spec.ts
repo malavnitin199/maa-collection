@@ -12,6 +12,16 @@ async function loginOwner(page: Page) {
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
 }
 
+/**
+ * New item and the product page (plan v17): top tabs Details (open first) · Colours · Other details.
+ * New item's must-haves: company, sale price (MRP) and purchase price.
+ */
+const tab = (page: Page, name: 'Details' | 'Colours' | 'Other details') => page.getByRole('tab', { name, exact: true }).click();
+const showVariants = (page: Page) => tab(page, 'Colours');
+const companyBox = (page: Page) => page.getByRole('combobox', { name: /^Company/ });
+const salePrice = (page: Page) => page.getByLabel('Sale price (MRP) ₹');
+const purchasePrice = (page: Page) => page.getByLabel('Purchase price ₹', { exact: true });
+
 test('owner adds a supplier and a category; both show up with details', async ({ page }) => {
   await loginOwner(page);
 
@@ -54,7 +64,7 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
   await expect(tabs).toBeVisible();
   await tabs.getByRole('link', { name: '+ Stock' }).click();
   await expect(page).toHaveURL(/\/admin\/stock$/);
-  await expect(page.getByRole('link', { name: /Many different products/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /New item/ })).toBeVisible();
   await tabs.getByRole('link', { name: 'More' }).click();
   await page.getByRole('link', { name: /^Companies/ }).click();
   await expect(page).toHaveURL(/\/admin\/suppliers$/);
@@ -75,30 +85,40 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await page.getByRole('button', { name: 'Add supplier' }).click();
   await expect(page.getByRole('status')).toContainText('added');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(`Design Co ${run}`) }).click();
-  await page.getByRole('link', { name: '+ New design in sizes × colours' }).click();
+  await page.getByRole('link', { name: `+ New item from Design Co ${run}` }).click();
   await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=/);
 
-  // Supplier preselected, brand defaults to the supplier name.
+  // Company preselected; brand (Other details) defaults to the company name. Details is the tab open first.
+  await expect(page.getByRole('tab', { name: 'Details', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await tab(page, 'Other details');
   await expect(page.getByLabel('Brand')).toHaveValue(`Design Co ${run}`);
+  // Header: name, category and "for whom" tags; then the must-haves.
+  await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
-  await page.getByLabel('Design / product name').fill(`Chikan Kurta ${run}`);
+  await page.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Girls' }).click();
+  await page.getByRole('group', { name: 'Age' }).getByRole('button', { name: 'Adult' }).click();
+  await expect(page.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Girls' })).toHaveAttribute('aria-pressed', 'true');
+  await salePrice(page).fill('1499');
+  await purchasePrice(page).fill('800');
+  await showVariants(page);
   await page.getByRole('button', { name: 'Size M' }).click();
   await page.getByRole('button', { name: 'Size L' }).click();
-  await page.getByLabel('Colour').fill('Blue, Pink');
+  await page.getByLabel('Colour', { exact: true }).fill('Blue, Pink');
   await page.getByRole('button', { name: 'Add colour' }).click();
-  await page.getByLabel('MRP (₹)').fill('1499');
-  await page.getByLabel('Selling price (₹)').fill('1399');
-  await page.getByLabel('Purchase price (₹)').fill('800');
+  await expect(page.getByTestId('item-size-pills')).toHaveText('ML');
+  await expect(page.getByTestId('combo-grid').getByRole('row')).toHaveCount(3); // sizes + Blue + Pink
+  await tab(page, 'Details');
   await page.getByLabel('Pieces each').fill('2');
+  await page.getByLabel('Counter price, if lower (₹)').fill('1399');
   await page.getByLabel('Supplier bill no. (optional)').fill('INV-42');
-  await expect(page.getByTestId('design-preview')).toContainText('4 new items (2 colours × 2 sizes)');
-  await expect(page.getByTestId('design-preview')).toContainText('8 pieces in total');
-  await page.getByRole('button', { name: 'Save 4 items and print labels' }).click();
+  await expect(page.getByTestId('design-preview')).toHaveText('4 items · 8 pcs · purchase ₹6,400.00');
+  await page.getByRole('button', { name: 'Save 4 items' }).click();
 
   // Labels: one per piece by default (8), or one per item (4).
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   await expect(page.getByText('Saved 4 new items with barcodes.')).toBeVisible();
   await expect(page.getByTestId('receipt-lines')).toContainText(`Chikan Kurta ${run} · Pink · L`);
+  await expect(page.getByRole('link', { name: '+ Add next item' })).toHaveAttribute('href', /^\/admin\/stock\/new\?supplier=[0-9a-f-]{36}&category=[0-9a-f-]{36}$/);
   const labels = page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ });
   await expect(labels).toHaveCount(8);
   await page.getByRole('link', { name: 'One per item instead (4)' }).click();
@@ -106,9 +126,20 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   const barcode = (await labels.first().getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
   expect(barcode).toMatch(/^200\d{10}$/);
 
-  // Rates for the whole design from any one of its products.
+  // Product page: header tags; Colours shows every colour × size with its pieces.
   await page.getByTestId('receipt-lines').getByRole('link').first().click();
+  await expect(page.getByTestId('item-pills')).toContainText('Girls');
+  await expect(page.getByTestId('item-pills')).toContainText('Adult');
+  await tab(page, 'Colours');
   await expect(page.getByTestId('design-variants').getByRole('link')).toHaveCount(4);
+  await expect(page.getByTestId('design-variants').getByRole('link', { name: `Pink L: 2 in stock` })).toBeVisible();
+  // Other details: change "for whom" for the whole design.
+  await tab(page, 'Other details');
+  await page.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Both' }).click();
+  await page.getByRole('button', { name: 'Save tags' }).click();
+  await expect(page.getByText('Tags saved for 4 items.')).toBeVisible();
+  // Rates for the whole design (Details).
+  await tab(page, 'Details');
   const rates = page.locator('section', { has: page.getByRole('heading', { name: 'Rates for the whole design' }) });
   await rates.getByLabel('MRP (₹)').fill('1599');
   await rates.getByLabel('Price (₹)').fill('1499');
@@ -119,12 +150,14 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
 
   // Same entry again is refused (sizes/colours already exist).
   await page.goto('/admin/stock/new');
-  await page.getByRole('combobox', { name: /^Supplier/ }).selectOption({ label: `Design Co ${run}` });
+  await companyBox(page).selectOption({ label: `Design Co ${run}` });
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
-  await page.getByLabel('Design / product name').fill(`Chikan Kurta ${run}`);
+  await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
+  await salePrice(page).fill('1499');
+  await purchasePrice(page).fill('800');
+  await showVariants(page);
   await page.getByRole('button', { name: 'Size M' }).click();
-  await page.getByLabel('Colour').fill('Blue');
-  await page.getByLabel('MRP (₹)').fill('1499');
+  await page.getByLabel('Colour', { exact: true }).fill('Blue');
   await page.getByRole('button', { name: /^Save 1 item/ }).click();
   await expect(page.getByText(/Already in the catalogue: Blue M/)).toBeVisible();
 
@@ -146,15 +179,16 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await loginOwner(page);
   const name = `Linen Shirt ${run}`;
   await page.goto('/admin/stock/new');
-  await page.getByRole('combobox', { name: /^Supplier/ }).selectOption({ label: 'Royal Garments' });
+  await companyBox(page).selectOption({ label: 'Royal Garments' });
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
-  await page.getByLabel('Design / product name').fill(name);
+  await page.getByLabel('Product name').fill(name);
+  await salePrice(page).fill('700');
+  await purchasePrice(page).fill('300');
+  await page.getByLabel('Counter price, if lower (₹)').fill('500');
+  await showVariants(page);
   for (const size of ['XL', 'M', 'L']) await page.getByRole('button', { name: `Size ${size}`, exact: true }).click();
-  await page.getByLabel('Colour').fill('Black, White');
+  await page.getByLabel('Colour', { exact: true }).fill('Black, White');
   await page.getByRole('button', { name: 'Add colour' }).click();
-  await page.getByLabel('MRP (₹)').fill('700');
-  await page.getByLabel('Selling price (₹)').fill('500');
-  await page.getByLabel('Purchase price (₹)').fill('300');
 
   // Sizes listed in shop order; empty boxes show the default.
   await page.getByText('Price by size (optional)').click();
@@ -173,15 +207,15 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await expect(preview).toContainText('L: ₹550.00 · MRP ₹700.00 · purchase ₹330.00 (own price)');
   await expect(preview).toContainText('XL: ₹600.00 · MRP ₹750.00 · purchase ₹360.00 (own price)');
   // (300 + 330 + 360) × 2 colours × 1 piece
-  await expect(page.getByTestId('design-preview')).toContainText('purchase value ₹1,980.00');
+  await expect(page.getByTestId('design-preview')).toContainText('purchase ₹1,980.00');
 
   // Above MRP for one size is flagged in the preview and refused by the server.
   await editor.getByLabel('Size XL selling price').fill('800');
-  await expect(page.getByTestId('design-preview')).toContainText('Selling price is above MRP for size XL.');
-  await page.getByRole('button', { name: 'Save 6 items and print labels' }).click();
+  await expect(page.getByText('Selling price is above MRP for size XL.')).toBeVisible();
+  await page.getByRole('button', { name: 'Save 6 items' }).click();
   await expect(page.getByText('Size XL: Selling price cannot be above MRP.')).toBeVisible();
   await editor.getByLabel('Size XL selling price').fill('600');
-  await page.getByRole('button', { name: 'Save 6 items and print labels' }).click();
+  await page.getByRole('button', { name: 'Save 6 items' }).click();
 
   // Labels print each size's own MRP, on both colours.
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
@@ -273,6 +307,7 @@ test('each category has its sizes: owner sets them with a preset; new stock offe
 
   // New stock: choose the category first → its sizes come first; "Pick all" takes them all.
   await page.goto('/admin/stock/new');
+  await showVariants(page);
   await expect(page.getByText('Choose the category above to see its sizes first.')).toBeVisible();
   const option = page.getByLabel('Category').locator('option', { hasText: `Gents Trousers ${run}` });
   await page.getByLabel('Category').selectOption((await option.getAttribute('value'))!);
@@ -282,7 +317,7 @@ test('each category has its sizes: owner sets them with a preset; new stock offe
   await expect(chips.getByRole('button', { name: /^Size /, pressed: true })).toHaveCount(5);
 });
 
-test('photos while creating tags: one per colour in a new design (every size gets it), one per product in quick add', async ({ page }) => {
+test('photos while creating tags: one per colour (every size gets it), or the main photo at the top of a new item', async ({ page }) => {
   await loginOwner(page);
   const jpeg = Buffer.from(
     await page.evaluate(() => {
@@ -298,22 +333,24 @@ test('photos while creating tags: one per colour in a new design (every size get
   );
   const file = { name: 'item.jpg', mimeType: 'image/jpeg', buffer: jpeg };
 
-  // New design: Blue gets a photo, Red does not.
+  // Sizes × colours: Blue gets its own photo, Red none (and there is no main photo).
   await page.goto('/admin/stock/new');
-  await page.getByRole('combobox', { name: /^Supplier/ }).selectOption({ label: 'Royal Garments' });
+  await companyBox(page).selectOption({ label: 'Royal Garments' });
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
-  await page.getByLabel('Design / product name').fill(`Photo Kurta ${run}`);
+  await page.getByLabel('Product name').fill(`Photo Kurta ${run}`);
+  await salePrice(page).fill('999');
+  await purchasePrice(page).fill('500');
+  await showVariants(page);
   await page.getByRole('button', { name: 'Size M', exact: true }).click();
   await page.getByRole('button', { name: 'Size L', exact: true }).click();
-  await page.getByLabel('Colour').fill('Blue, Red');
+  await page.getByLabel('Colour', { exact: true }).fill('Blue, Red');
   await page.getByRole('button', { name: 'Add colour' }).click();
-  await page.getByLabel('MRP (₹)').fill('999');
   const photos = page.getByTestId('colour-photos');
   await photos.getByLabel('Gallery for Blue').setInputFiles(file);
   await expect(photos.getByRole('img', { name: 'Photo for Blue' })).toBeVisible();
   await expect(photos.getByRole('button', { name: 'Remove photo for Blue' })).toBeVisible();
   await expect(photos.getByRole('button', { name: 'Choose photo for Red from gallery' })).toBeVisible();
-  await page.getByRole('button', { name: 'Save 4 items and print labels' }).click();
+  await page.getByRole('button', { name: 'Save 4 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   await expect(page.getByText('Saved 4 new items with barcodes.')).toBeVisible();
   await expect(page.getByRole('alert').filter({ hasText: 'photo could not be saved' })).toHaveCount(0);
@@ -321,27 +358,34 @@ test('photos while creating tags: one per colour in a new design (every size get
   // Blue L (not the first Blue item) shows the photo; Red M has none.
   const lines = page.getByTestId('receipt-lines');
   await lines.getByRole('link', { name: `Photo Kurta ${run} · Blue · L` }).click();
+  await tab(page, 'Colours'); // photos sit with the colours on the product page
   const photo = page.getByRole('img', { name: 'Product photo 1' });
   await expect(photo).toBeVisible();
   await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   await page.goBack();
   await page.getByTestId('receipt-lines').getByRole('link', { name: `Photo Kurta ${run} · Red · M` }).click();
+  await tab(page, 'Colours');
   await expect(page.getByText('No photos yet.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'No photo' })).toBeVisible(); // the header's empty photo square
 
-  // Quick add: a photo on product 1 only.
+  // One plain item: the main photo fills the box at the top. The old quick-add address lands here.
   await page.goto('/admin/stock/quick');
-  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
-  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
-  await page.getByLabel('Product 1 name').fill(`Photo Saree ${run}`);
-  await page.getByLabel('Product 1 MRP').fill('1500');
-  await page.getByLabel('Gallery for product 1').setInputFiles(file);
-  await expect(page.getByRole('img', { name: 'Photo for product 1' })).toBeVisible();
-  await page.getByRole('button', { name: '+ Add product' }).click();
-  await page.getByLabel('Product 2 name').fill(`Plain Saree ${run}`);
-  await page.getByLabel('Product 2 MRP').fill('900');
-  await page.getByRole('button', { name: 'Save 2 products and print labels' }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
+  const box = page.getByTestId('item-photo');
+  await companyBox(page).selectOption({ label: 'Shree Ganesh Textiles' });
+  await page.getByLabel('Category').selectOption({ label: 'Saree (SA)' });
+  await page.getByLabel('Product name').fill(`Photo Saree ${run}`);
+  await salePrice(page).fill('1500');
+  await purchasePrice(page).fill('900');
+  await box.getByLabel('Gallery for this item').setInputFiles(file);
+  await expect(box.getByRole('img', { name: 'Photo for this item' })).toBeVisible();
+  await expect(box.getByRole('button', { name: 'Remove photo for this item' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save 1 item' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+  await expect(page.getByRole('alert').filter({ hasText: 'photo could not be saved' })).toHaveCount(0);
   await page.getByTestId('receipt-lines').getByRole('link', { name: new RegExp(`^Photo Saree ${run}`) }).click();
+  await expect(page.getByRole('img', { name: `Photo Saree ${run}` })).toBeVisible(); // header photo
+  await tab(page, 'Colours');
   await expect(page.getByRole('img', { name: 'Product photo 1' })).toBeVisible();
 });
 
@@ -371,6 +415,11 @@ test('owner restocks existing items by scanning each piece and by name search', 
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode/ })).toHaveCount(5);
   await expect(page.getByText(/bill RS-1/)).toBeVisible();
+  // Back on Receive stock, the received lines are gone: scanning one more piece must not receive them again.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/stock\/receive$/);
+  await expect(page.getByTestId('restock-lines').getByRole('listitem')).toHaveCount(0);
+  await expect(page.getByLabel('Supplier bill no. (optional)')).toHaveValue('');
 
   // Stock went up by exactly 3.
   await page.goto('/admin/products?q=MAA-SH-001&show=items');
@@ -414,39 +463,46 @@ test('owner sets a code word; labels print the purchase price in code and the de
   await expect(page.getByTestId('price-code')).toHaveText('LSS');
 });
 
-test('quick add: one company + category, several products with their own prices → labels → seller scans', async ({ page }) => {
+test('new item: one plain item with MRP, purchase and pieces on top → labels → "Add next item" keeps company and category → seller scans', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock');
-  await page.getByRole('link', { name: /Many different products/ }).click();
-  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
-  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
-
-  await page.getByLabel('Product 1 name').fill(`Georgette Saree ${run}`);
-  await page.getByLabel('Product 1 MRP').fill('2500');
-  await page.getByLabel('Product 1 selling price').fill('2200');
-  await page.getByLabel('Product 1 purchase price').fill('1400');
-  await page.getByLabel('Product 1 pieces').fill('3');
-
-  await page.getByRole('button', { name: '+ Add product' }).click();
-  await page.getByLabel('Product 2 name').fill(`Cotton Saree ${run}`);
-  await page.getByLabel('Product 2 MRP').fill('1200');
-  await page.getByLabel('Product 2 purchase price').fill('600');
-  await page.getByLabel('Product 2 pieces').fill('2');
-
-  // Copy keeps the prices; just give it a new name.
-  await page.getByTestId('quick-rows').getByRole('listitem').nth(1).getByRole('button', { name: 'Copy' }).click();
-  await page.getByLabel('Product 3 name').fill(`Linen Saree ${run}`);
-  await expect(page.getByLabel('Product 3 MRP')).toHaveValue('1200');
-
-  await expect(page.getByTestId('quick-summary')).toHaveText('3 products · 7 pieces · purchase value ₹6,600.00');
-  await page.getByRole('button', { name: 'Save 3 products and print labels' }).click();
+  // Add stock: one main way, two other ways.
+  await expect(page.getByRole('heading', { name: 'Other ways' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /More pieces of an existing item/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Tag old stock/ })).toBeVisible();
+  await page.getByRole('link', { name: /New item/ }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
+  await companyBox(page).selectOption({ label: 'Shree Ganesh Textiles' });
+  await page.getByLabel('Category').selectOption({ label: 'Saree (SA)' });
+  await page.getByLabel('Product name').fill(`Georgette Saree ${run}`);
+  await salePrice(page).fill('2500');
+  await purchasePrice(page).fill('1400');
+  await page.getByLabel('Pieces', { exact: true }).fill('3');
+  await page.getByLabel('Counter price, if lower (₹)').fill('2200');
+  await expect(page.getByTestId('design-preview')).toHaveText('1 item · 3 pcs · purchase ₹4,200.00');
+  await page.getByRole('button', { name: 'Save 1 item' }).click();
 
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
-  await expect(page.getByText('Saved 3 new items with barcodes.')).toBeVisible();
-  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(7);
+  await expect(page.getByText('Saved 1 new item with barcodes.')).toBeVisible();
+  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(3);
   await expect(page.getByTestId('receipt-lines')).toContainText(`Georgette Saree ${run} · Assorted · Free`);
   const georgette = page.getByTestId('label-sheet').getByRole('listitem').filter({ hasText: `Georgette Saree ${run}` }).first();
   const barcode = (await georgette.getByRole('img', { name: /^Barcode/ }).getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
+
+  // Next item: company and category are already chosen.
+  await page.getByRole('link', { name: '+ Add next item' }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=.+&category=.+/);
+  await expect(companyBox(page).locator('option:checked')).toHaveText('Shree Ganesh Textiles');
+  await expect(page.getByLabel('Category').locator('option:checked')).toHaveText('Saree (SA)');
+  // The last item's name and prices are gone (Next 16 keeps the page alive; it is cleared after saving).
+  await expect(page.getByLabel('Product name')).toHaveValue('');
+  await expect(purchasePrice(page)).toHaveValue('');
+  await expect(page.getByLabel('Counter price, if lower (₹)')).toHaveValue('');
+  await page.getByLabel('Product name').fill(`Cotton Saree ${run}`);
+  await salePrice(page).fill('1200');
+  await purchasePrice(page).fill('600');
+  await page.getByRole('button', { name: 'Save 1 item' }).click();
+  await expect(page.getByTestId('receipt-lines')).toContainText(`Cotton Saree ${run} · Assorted · Free`);
 
   // The seller scans it: selling price ₹2,200 (MRP ₹2,500), no purchase price shown.
   await page.context().clearCookies(); // switch user: start logged out
@@ -475,19 +531,24 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
   await page.getByRole('button', { name: 'Add supplier' }).click();
   await expect(page.getByRole('status')).toContainText(`${company} added.`);
 
-  // One delivery from that company: a saree with 2 pieces and one with none left.
-  await page.goto('/admin/stock/quick');
-  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: company });
-  await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
-  await page.getByLabel('Bill no.').fill(`B-${run}`);
-  await page.getByLabel('Product 1 name').fill(`Silk TagLib ${run}`);
-  await page.getByLabel('Product 1 MRP').fill('2000');
-  await page.getByLabel('Product 1 pieces').fill('2');
-  await page.getByRole('button', { name: '+ Add product' }).click();
-  await page.getByLabel('Product 2 name').fill(`Net TagLib ${run}`);
-  await page.getByLabel('Product 2 MRP').fill('1500');
-  await page.getByLabel('Product 2 pieces').fill('0');
-  await page.getByRole('button', { name: 'Save 2 products and print labels' }).click();
+  // One bill from that company, entered as two items: a saree with 2 pieces and one with none left.
+  await page.goto('/admin/stock/new');
+  await companyBox(page).selectOption({ label: company });
+  await page.getByLabel('Category').selectOption({ label: 'Saree (SA)' });
+  await page.getByLabel('Product name').fill(`Silk TagLib ${run}`);
+  await salePrice(page).fill('2000');
+  await purchasePrice(page).fill('1200');
+  await page.getByLabel('Pieces', { exact: true }).fill('2');
+  await page.getByLabel('Supplier bill no. (optional)').fill(`B-${run}`);
+  await page.getByRole('button', { name: 'Save 1 item' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+  await page.getByRole('link', { name: '+ Add next item' }).click();
+  await page.getByLabel('Product name').fill(`Net TagLib ${run}`);
+  await salePrice(page).fill('1500');
+  await purchasePrice(page).fill('900');
+  await page.getByLabel('Pieces', { exact: true }).fill('0');
+  await page.getByLabel('Supplier bill no. (optional)').fill(`B-${run}`);
+  await page.getByRole('button', { name: 'Save 1 item' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
   // The print page leads to All tags; picking the company applies at once.
@@ -506,9 +567,10 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
   await page.getByRole('navigation', { name: 'Group by' }).getByRole('link', { name: 'Company' }).click();
   await expect(groups.getByRole('heading', { level: 2 })).toHaveText(company);
   await page.getByRole('navigation', { name: 'Group by' }).getByRole('link', { name: 'Delivery' }).click();
-  await expect(groups.getByRole('heading', { level: 2 })).toHaveText(`${company} · bill B-${run}`);
-  await expect(groups).toContainText('by Owner');
-  await expect(groups).toContainText('Tags: 2 · In stock: 2 pcs');
+  // Each save is its own delivery (plan v17), both on the same bill.
+  await expect(groups.getByRole('heading', { level: 2 })).toHaveText([`${company} · bill B-${run}`, `${company} · bill B-${run}`]);
+  await expect(groups.first()).toContainText('by Owner');
+  await expect(groups.filter({ hasText: 'Tags: 1 · In stock: 2 pcs' })).toHaveCount(1);
 
   // Filters: only items in stock; a category with none of them; when made.
   await page.getByLabel('Only items in stock').check();
@@ -570,18 +632,20 @@ test('combined view: one card per design (name + company + MRP) on Products and 
 
   // One design in 2 sizes × 2 colours = 4 items, 2 pieces each.
   await page.goto('/admin/stock/new');
-  await page.getByRole('combobox', { name: /^Supplier/ }).selectOption({ label: company });
+  await companyBox(page).selectOption({ label: company });
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
-  await page.getByLabel('Design / product name').fill(name);
+  await page.getByLabel('Product name').fill(name);
+  await salePrice(page).fill('1499');
+  await purchasePrice(page).fill('800');
+  await page.getByLabel('Counter price, if lower (₹)').fill('1399');
+  await showVariants(page);
   await page.getByRole('button', { name: 'Size M' }).click();
   await page.getByRole('button', { name: 'Size L' }).click();
-  await page.getByLabel('Colour').fill('Blue, Pink');
+  await page.getByLabel('Colour', { exact: true }).fill('Blue, Pink');
   await page.getByRole('button', { name: 'Add colour' }).click();
-  await page.getByLabel('MRP (₹)').fill('1499');
-  await page.getByLabel('Selling price (₹)').fill('1399');
-  await page.getByLabel('Purchase price (₹)').fill('800');
+  await tab(page, 'Details');
   await page.getByLabel('Pieces each').fill('2');
-  await page.getByRole('button', { name: 'Save 4 items and print labels' }).click();
+  await page.getByRole('button', { name: 'Save 4 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
   // Products: one card for the 4 items, with every size and colour and their pieces.
@@ -658,11 +722,11 @@ test('owner makes a salesman a catalog person; they get catalog screens but not 
   await page.goto('/admin/categories');
   await expect(page.getByRole('heading', { name: 'Categories', level: 1 })).toBeVisible();
   // No purchase (code) price field without the "Purchase price" right.
-  await page.goto('/admin/stock/quick');
-  await expect(page.getByLabel('Product 1 MRP')).toBeVisible();
-  await expect(page.getByLabel('Product 1 purchase price')).toHaveCount(0);
-  // Price by size: MRP and selling price per size, but no purchase price boxes.
   await page.goto('/admin/stock/new');
+  await expect(salePrice(page)).toBeVisible();
+  await expect(purchasePrice(page)).toHaveCount(0);
+  // Price by size: MRP and selling price per size, but no purchase price boxes.
+  await showVariants(page);
   await page.getByRole('button', { name: 'Size M', exact: true }).click();
   await page.getByRole('button', { name: 'Size L', exact: true }).click();
   await page.getByText('Price by size (optional)').click();
@@ -715,7 +779,7 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
   await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
   await page.getByLabel('Product name').fill(`Phulkari Dupatta ${run}`);
   await page.getByRole('button', { name: 'M', exact: true }).click();
-  await page.getByLabel('Colour').fill('Orange');
+  await page.getByLabel('Colour', { exact: true }).fill('Orange');
   await page.getByLabel('MRP (₹)').fill('899');
   await expect(page.getByLabel('Purchase price (₹)')).toHaveCount(0);
   await page.getByLabel('Pieces counted').fill('3');
@@ -774,7 +838,7 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   const lessons = page.getByTestId('guide-lessons');
   for (const title of ['Log in', 'Language and colours', 'Read a tag']) await expect(lessons.getByRole('button', { name: new RegExp(title) })).toBeVisible();
   await page.getByRole('button', { name: 'Stock & tags', exact: true }).click();
-  for (const title of ['New design', 'Tag old stock', 'Print tags', 'More pieces arrived']) await expect(lessons.getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  for (const title of ['New item', 'Tag old stock', 'Print tags', 'More pieces arrived']) await expect(lessons.getByRole('button', { name: new RegExp(title) })).toBeVisible();
   await expect(lessons.getByRole('button', { name: /Log in/ })).toHaveCount(0);
   // The tag lesson shows the real tag with one part ringed at a time.
   await page.getByRole('button', { name: 'Everyone', exact: true }).click();
@@ -902,7 +966,7 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await page.getByRole('button', { name: 'M', exact: true }).click();
-  await page.getByLabel('Colour').fill('White');
+  await page.getByLabel('Colour', { exact: true }).fill('White');
   await page.getByLabel('MRP (₹)').fill('999');
   await page.getByLabel('Pieces counted').fill('2');
   await page.getByRole('button', { name: 'Save and get barcode' }).click();
