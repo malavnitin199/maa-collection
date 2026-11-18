@@ -154,6 +154,7 @@ For a fresh count or a new season: **More → Clear stock**. It shows what is in
 Every sale and exchange a salesman records **waits for you**. Home shows **"n entries waiting"**; tap it (or **More → Approvals**).
 
 - Entries are grouped by day, newest first. Each card shows what was sold, quantity, the price per piece next to the **MRP and usual price** (and "x% below MRP"), who sold and who recorded it. Hand-entered sales carry a **By hand** mark with the name and size the salesman typed.
+- **Profit or loss** (owner only): each scanned sale shows its purchase price and a tag — green edge and **▲ Profit ₹…** when it sold above the purchase price, red card and **▼ Loss ₹…** when it sold below it (hand-entered sales: *No purchase price*). Each day shows its profit (or loss), and Home's Approvals tile says **n at a loss** in red. Salesmen never see any of this.
 - **Approve** one card, **Approve all for this day**, or **Approve everything**. Approved entries then count in Home, Reports, Sales team, My sales and the CSV.
 - **Reject** → choose a reason (Wrong price · Wrong item · Duplicate · Not sold · Other), add a note if you like → **Reject entry**. A scanned sale's pieces go **back into stock** (the item's history shows it); a hand-entered sale returns nothing. A rejected exchange is undone (the new item comes back, the returned piece goes out again).
 - A decision is final and made once; a second tap, or another phone, changes nothing. If a sale has an exchange on it, reject the exchange first. Your last 50 decisions are listed below the queue.
@@ -162,7 +163,7 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 ## 5. Owner set-up checklist
 
 1. **Companies** (Menu → Companies) and **categories** (Menu → Categories, each with a 2-letter code used in SKUs).
-2. **Staff & permissions**: add each person with a PIN; tick rights per salesman.
+2. **Staff & permissions** (More → Staff & permissions): **Add a person** (name, role, PIN); **Set PIN** to change a PIN; tick extra rights per salesman; **Remove** someone who left (asks once — they can't log in any more, their past sales stay) and **Bring back** from *Removed staff* if needed.
 3. **Settings → Code price** (optional): a 10-letter word with no repeated letters. Labels then show the purchase price in letters, e.g. BLACKHORSE: ₹450 = **CKE**.
 4. Add stock (or let the catalog person tag old stock).
 5. Daily: **Home** for today's sales and the entries waiting for you; **Reports** and **Team** for the month, profit and each salesperson; **Products** / **Needs attention** for low and empty stock; **Activity** for every sale and exchange.

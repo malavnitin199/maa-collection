@@ -48,6 +48,18 @@ Owner: "remove all the companies that were here, and give the owner the option t
 - Suppliers → a company → *Edit supplier details* → untick **Active** hides it again ("Previous companies").
 - Receive stock, filters and reports are unchanged (they list companies as before).
 
+## Staff, profit / loss on Approvals, colour-coded tabs (owner follow-up, 2026-11-19)
+
+Owner: "give the admin the option to manage users: add members (staff, salesmen) or remove a salesman. When a salesman sells, show the owner, on Approvals, in a different colour or style whether it was a profit or a loss deal — nothing changes for the salesman. On the stock screens, colour-code the lower part (Details, Colours, Other details) so it stands apart from the rest."
+
+| Part | Now |
+|---|---|
+| **Staff** (More → Staff & permissions) | Add a person (name, role, PIN), Set PIN, rights per salesman — as before; **Remove** (asks once: "They can no longer log in. Their past sales stay.") moves a person to **Removed staff**, with **Bring back**. Role shown as a pill. No delete: sales, stock history and approvals point to the person. Removed people are off the login screen and *Credit sale to*, and an open session stops at the next page (as before). |
+| **Approvals** (owner) | Each scanned sale shows *purchase ₹… each* and a tag: **▲ Profit ₹…** (green left edge), **▼ Loss ₹…** (red card), *At purchase price*, or *No purchase price* (hand-entered). A legend under *Approve everything*; each day shows its profit or loss. Uses the purchase price saved on the sale (`sales.cost_paise`). |
+| **Home** | The Approvals tile adds a red **n at a loss** when waiting sales were sold below their purchase price. |
+| **Salesman** | Unchanged; purchase prices are never sent to salesman screens. |
+| **Tabs** (New item, product page) | The tab bar sits on a band in the theme's colour (open tab underlined in the accent), and each tab's panel has its own tint: Details = theme tint, Colours = accent tint, Other details = grey; the cards inside stay white. |
+
 ## Two fixes found on the way
 
 Next 16 (Cache Components) keeps a page alive after you leave it, with what was typed (React `<Activity>`):
