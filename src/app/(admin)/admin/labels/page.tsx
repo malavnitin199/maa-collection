@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { IconPrinter } from '@/components/ui/icons';
 import { input, link, muted, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
+import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
+import { PrintSelected } from '@/features/catalog/bulk-actions';
 import { DesignCard } from '@/features/catalog/design-card';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { TagFilterForm } from '@/features/tag-library/filter-form';
@@ -97,14 +99,26 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
   const combined = p.show === 'designs';
   const designCount = groupDesigns(rows).length;
   /** One real hang tag: tap to open the item; pieces in stock under it. */
-  const tagCell = (item: (typeof shownRows)[number]) => (
-    <li key={item.id} className="tag-cell">
+  const tagCell = (item: (typeof shownRows)[number], selectable = true) => {
+    const tag = (
       <Link href={`/admin/products/${item.id}`} aria-label={t('stk.lib.open', { name: `${item.name} · ${item.color} · ${item.size}` })} className="tag-open">
         <HangTag product={item} sizes={sizes.get(item.id)} qrValue={itemLink(origin, item.barcode)} priceCode={labelPriceCode(settings, item.costPaise)} />
       </Link>
+    );
+    return (
+    <li key={item.id} className="tag-cell">
+      {/* Plan v17: tick tags to print just those. */}
+      {selectable ? (
+        <SelectableItem ids={[item.id]} label={`${item.name} ${item.color} ${item.size}`}>
+          {tag}
+        </SelectableItem>
+      ) : (
+        tag
+      )}
       <p className={`mt-1 text-center text-xs tabular-nums ${item.stock > 0 ? muted : 'text-red-600 dark:text-red-400'}`}>{t('stk.labels.pcs', { n: item.stock })}</p>
     </li>
-  );
+    );
+  };
   const pieces = rows.reduce((n, r) => n + Math.max(r.stock, 0), 0);
   const filtered = hasTagFilters(p);
 
@@ -198,11 +212,14 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
           </div>
         )
       ) : (
-        <>
-          <Link href={tagPrintHref(p)} className={`${secondaryButton} self-start`}>
-            <IconPrinter className="h-4 w-4" />
-            {t('stk.lib.printShown', { n: total })}
-          </Link>
+        <SelectionProvider allIds={shownRows.map((r) => r.id)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={tagPrintHref(p)} className={`${secondaryButton} self-start`}>
+              <IconPrinter className="h-4 w-4" />
+              {t('stk.lib.printShown', { n: total })}
+            </Link>
+            <SelectToggle testId="select-tags" />
+          </div>
           <TagViews
             labels={{ view: t('stk.lib.view'), grid: t('stk.lib.view.grid'), rows: t('stk.lib.view.rows'), swipeHint: t('stk.lib.swipeHint') }}
             summary={
@@ -250,6 +267,7 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
                     <ul className="tag-row">
                       {groupDesigns(g.shown).map((d) => (
                         <li key={d.key} className="design-cell">
+                          <SelectableItem ids={d.items.map((r) => r.id)} label={d.name}>
                           <DesignCard
                             design={d}
                             t={t}
@@ -259,19 +277,23 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
                             printHref={tagPrintHref(p, g.key, d.key)}
                             expandLabel={t(d.items.length === 1 ? 'cat.design.showTags.one' : 'cat.design.showTags.other', { n: d.items.length })}
                           >
-                            <ul className="tag-grid">{d.items.map(tagCell)}</ul>
+                            <ul className="tag-grid">{d.items.map((r) => tagCell(r, false))}</ul>
                           </DesignCard>
+                          </SelectableItem>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <ul className="tag-row">{g.shown.map(tagCell)}</ul>
+                    <ul className="tag-row">{g.shown.map((r) => tagCell(r))}</ul>
                   )}
                 </section>
               );
             })}
           </TagViews>
-        </>
+          <SelectionBar>
+            <PrintSelected />
+          </SelectionBar>
+        </SelectionProvider>
       )}
     </>
   );

@@ -69,11 +69,12 @@ export async function getProduct(db: Db, storeId: string, id: string): Promise<P
   return row ?? null;
 }
 
-export type ProductListFilter = { search?: string; supplierId?: string; categoryId?: string };
+/** `active`: true = only items in use, false = only hidden ones (plan v17), unset = all. */
+export type ProductListFilter = { search?: string; supplierId?: string; categoryId?: string; active?: boolean };
 export type ProductListRow = Product & { supplierName: string | null };
 
 export async function listProducts(db: Db, storeId: string, filter: ProductListFilter | string = {}): Promise<ProductListRow[]> {
-  const { search = '', supplierId, categoryId } = typeof filter === 'string' ? { search: filter } : filter;
+  const { search = '', supplierId, categoryId, active } = typeof filter === 'string' ? { search: filter } : filter;
   const term = search.trim();
   const textFilter = term
     ? or(
@@ -95,6 +96,7 @@ export async function listProducts(db: Db, storeId: string, filter: ProductListF
         textFilter,
         supplierId ? eq(products.supplierId, supplierId) : undefined,
         categoryId ? eq(products.categoryId, categoryId) : undefined,
+        active === undefined ? undefined : eq(products.active, active),
       ),
     )
     .orderBy(asc(products.name), asc(products.color), asc(products.size));
@@ -1064,4 +1066,79 @@ export async function getMyLabelsToday(db: Db, storeId: string, staffId: string,
     )
     .orderBy(asc(stockReceipts.createdAt), asc(products.name));
   return rows.map((r) => ({ ...r.product, quantity: r.quantity }));
+}
+
+/**
+ * Many items at once (plan v17, Products → Select). Every change is checked
+ * first and applied in one transaction, so a bad value changes nothing.
+ * "Hide" never deletes: sales and stock history point to items; hidden items
+ * leave the counter, Products and All tags, and can be brought back.
+ */
+export type BulkProductChange =
+  | { kind: 'hide' }
+  | { kind: 'show' }
+  | { kind: 'rename'; name: string }
+  | { kind: 'company'; supplierId: string | null }
+  | { kind: 'category'; categoryId: string }
+  | { kind: 'tags'; forGender?: string | null; ageGroup?: string | null }
+  /** null = keep each item's own value. */
+  | { kind: 'prices'; mrpPaise: number | null; pricePaise: number | null };
+
+export const BULK_MAX = 500;
+
+export async function bulkUpdateProducts(db: Db, storeId: string, ids: readonly string[], change: BulkProductChange): Promise<number> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) throw new DomainError('Choose at least one item.', { key: 'stk.err.bulkNone' });
+  if (unique.length > BULK_MAX) throw new DomainError(`Up to ${BULK_MAX} items at once.`, { key: 'stk.err.bulkTooMany', vars: { n: BULK_MAX } });
+  const mine = and(eq(products.storeId, storeId), inArray(products.id, unique));
+  const set = async (values: Partial<typeof products.$inferInsert>) => (await db.update(products).set(values).where(mine).returning({ id: products.id })).length;
+
+  switch (change.kind) {
+    case 'hide':
+    case 'show':
+      return set({ active: change.kind === 'show' });
+    case 'rename': {
+      const name = change.name.trim();
+      if (!name) throw new DomainError('Enter the product name.', { key: 'stk.err.enter.name' });
+      if (name.length > 120) throw new DomainError('The name is too long (up to 120 letters).', { key: 'stk.err.nameTooLong' });
+      return set({ name });
+    }
+    case 'company': {
+      if (change.supplierId) await resolveSupplier(db, storeId, change.supplierId);
+      return set({ supplierId: change.supplierId });
+    }
+    case 'category': {
+      const category = await resolveCategory(db, storeId, change.categoryId);
+      return set({ categoryId: category.id, category: category.name });
+    }
+    case 'tags':
+      return set(resolveTags(change));
+    case 'prices': {
+      if (change.mrpPaise === null && change.pricePaise === null) throw new DomainError('Enter a new MRP or selling price.', { key: 'stk.err.bulkNoPrice' });
+      const rows = await db.select({ id: products.id, sku: products.sku, mrpPaise: products.mrpPaise, pricePaise: products.pricePaise, costPaise: products.costPaise }).from(products).where(mine);
+      // Check every item first: a selling price never above its MRP.
+      const next = rows.map((r) => ({ ...r, mrpPaise: change.mrpPaise ?? r.mrpPaise, pricePaise: change.pricePaise ?? r.pricePaise }));
+      const above = next.filter((r) => r.pricePaise > r.mrpPaise).map((r) => r.sku);
+      if (above.length > 0) {
+        const list = above.slice(0, 5).join(', ') + (above.length > 5 ? '…' : '');
+        throw new DomainError(`Selling price would be above MRP for ${list}.`, { key: 'stk.err.bulkAboveMrp', vars: { list } });
+      }
+      for (const r of next) validatePrices(r);
+      return db.transaction(async (tx) => {
+        for (const r of next) await tx.update(products).set({ mrpPaise: r.mrpPaise, pricePaise: r.pricePaise }).where(and(eq(products.storeId, storeId), eq(products.id, r.id)));
+        return next.length;
+      });
+    }
+  }
+}
+
+/** The chosen items, in name / colour / size order (for printing their tags). */
+export async function productsByIds(db: Db, storeId: string, ids: readonly string[]): Promise<Product[]> {
+  const unique = [...new Set(ids)].slice(0, BULK_MAX);
+  if (unique.length === 0) return [];
+  return db
+    .select()
+    .from(products)
+    .where(and(eq(products.storeId, storeId), eq(products.active, true), inArray(products.id, unique)))
+    .orderBy(asc(products.name), asc(products.color), asc(products.size));
 }

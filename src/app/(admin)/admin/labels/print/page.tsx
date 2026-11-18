@@ -12,7 +12,8 @@ import { appOrigin } from '@/server/app-origin';
 import { requireAnyPermission } from '@/server/auth';
 import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
-import { getMyLabelsToday, getReceiptForLabels, tagSizesFor, type ReceiptLabelLine } from '@/server/services/products';
+import { getMyLabelsToday, getReceiptForLabels, productsByIds, tagSizesFor, type ReceiptLabelLine } from '@/server/services/products';
+import { PRINT_MAX } from '@/lib/selection-limits';
 import { getStoreSettings, labelPriceCode, type StoreSettings } from '@/server/services/settings';
 import { listTagLibrary } from '@/server/services/tag-library';
 import { groupNote, groupTitle } from '@/features/tag-library/group-title';
@@ -39,6 +40,8 @@ type Search = {
   group?: string;
   key?: string;
   design?: string;
+  /** Products / All tags → Select → Print tags (plan v17): product ids, comma-separated. */
+  items?: string;
 };
 
 /** Builds a link to this page with some query values changed. */
@@ -203,12 +206,34 @@ async function LibraryLabels({ params }: { params: Search }) {
   );
 }
 
+/** Tags of the items chosen with Select (plan v17): one per piece in stock, or one per item. */
+async function SelectedLabels({ params }: { params: Search }) {
+  const [, t] = await Promise.all([requireAnyPermission(['catalog', 'stock']), getT()]);
+  const ids = (params.items ?? '').split(',').filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, PRINT_MAX);
+  const db = await requestDb();
+  const [chosen, settings] = await Promise.all([productsByIds(db, STORE_ID, ids), getStoreSettings(db, STORE_ID)]);
+  const lines: ReceiptLabelLine[] = chosen.map((p) => ({ ...p, quantity: p.stock }));
+  return (
+    <>
+      <div className="mb-3 flex flex-col gap-1 print:hidden">
+        <Link href="/admin/products" className={`text-sm ${link}`}>
+          {t('cat.backProducts')}
+        </Link>
+        <h1 className="text-2xl font-semibold">{t('stk.lib.printSelected')}</h1>
+        <p className={`text-sm ${muted}`}>{t('stk.lib.printCount', { n: lines.length })}</p>
+      </div>
+      <LabelSheet lines={lines} params={params} data={await sheetData(lines, settings)} t={t} />
+    </>
+  );
+}
+
 async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }) {
   const [, t] = await Promise.all([requireAnyPermission(['catalog', 'stock']), getT()]);
   const locale = await getLocale();
   const params = await searchParams;
   if (params.mine === 'today') return <MyLabelsToday params={params} />;
   if (params.list === '1') return <LibraryLabels params={params} />;
+  if (params.items) return <SelectedLabels params={params} />;
   if (!params.receipt || !/^[0-9a-f-]{36}$/i.test(params.receipt)) notFound();
   const db = await requestDb();
   const [receipt, settings] = await Promise.all([getReceiptForLabels(db, STORE_ID, params.receipt), getStoreSettings(db, STORE_ID)]);

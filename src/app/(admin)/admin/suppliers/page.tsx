@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { card, muted, sectionTitle } from '@/components/ui/styles';
+import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
+import { CompanyBulkActions } from '@/features/catalog/bulk-actions';
 import { SupplierForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import { createSupplierAction } from '@/server/actions/admin';
@@ -31,9 +33,14 @@ async function SupplierList() {
     return <p className={`text-sm ${muted}`}>{t('cat.sup.none')}</p>;
   }
   return (
+    <SelectionProvider allIds={rows.map((s) => s.id)}>
+    <div className="flex justify-end">
+      <SelectToggle testId="select-companies" />
+    </div>
     <ul data-testid="supplier-list" className="flex flex-col gap-2">
       {rows.map((s) => (
         <li key={s.id}>
+          <SelectableItem ids={[s.id]} label={s.name}>
           <Link href={`/admin/suppliers/${s.id}`} className={`${card} flex items-center justify-between gap-3 active:bg-zinc-50 dark:active:bg-zinc-900`}>
             <span className="min-w-0">
               <span className="block truncate font-medium">
@@ -52,9 +59,14 @@ async function SupplierList() {
               ›
             </span>
           </Link>
+          </SelectableItem>
         </li>
       ))}
     </ul>
+    <SelectionBar>
+      <CompanyBulkActions />
+    </SelectionBar>
+    </SelectionProvider>
   );
 }
 

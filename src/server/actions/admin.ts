@@ -13,7 +13,7 @@ import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/aut
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getT } from '@/server/i18n';
 import { DomainError } from '@/server/services/errors';
-import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
+import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   clearAllStock,
   correctTaggedItem,
@@ -24,6 +24,8 @@ import {
   createProduct,
   listProducts,
   receiveStock,
+  bulkUpdateProducts,
+  type BulkProductChange,
   setDesignTags,
   stockIn,
   updateDesignRates,
@@ -239,6 +241,19 @@ export async function createSupplierAction(_prev: FormState, formData: FormData)
   }
 }
 
+/** Companies → Select (plan v17): hide or bring back the chosen companies. */
+export async function setCompaniesActiveAction(ids: string[], active: boolean): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  await requirePermission('catalog');
+  try {
+    const list = (Array.isArray(ids) ? ids : []).map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500);
+    const changed = await setSuppliersActive(await getDb(), STORE_ID, list, Boolean(active));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, message: (await getT())(changed === 1 ? 'act.bulkDone.one' : 'act.bulkDone.other', { n: changed }) };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
 export type CompanyResult = { ok: true; company: { id: string; name: string } } | { ok: false; error: string };
 
 /** Company picker (plan v17): "+ New company…" — add by name, or reuse / bring back one with that name. */
@@ -414,6 +429,46 @@ export async function receiveStockAction(input: {
     });
     revalidatePath('/admin', 'layout');
     return { ok: true, receiptId: result.receipt.id };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+export type BulkProductInput =
+  | { kind: 'hide' | 'show' }
+  | { kind: 'rename'; name: string }
+  | { kind: 'company'; supplierId: string }
+  | { kind: 'category'; categoryId: string }
+  | { kind: 'tags'; forGender: string; ageGroup: string }
+  /** Rupees as typed; '' = keep each item's own. */
+  | { kind: 'prices'; mrp: string; price: string };
+
+/** Products → Select (plan v17): one change for every chosen item. Prices need the Prices right; the rest Catalog. */
+export async function bulkProductsAction(ids: string[], input: BulkProductInput): Promise<{ ok: true; changed: number; message: string } | { ok: false; error: string }> {
+  await requirePermission(input?.kind === 'prices' ? 'prices' : 'catalog');
+  try {
+    const list = (Array.isArray(ids) ? ids : []).map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+    const rupees = (raw: string, label: MoneyLabel) => {
+      if (!String(raw ?? '').trim()) return null;
+      const paise = rupeesToPaise(String(raw));
+      if (paise === null) throw new DomainError(`Enter a valid ${label} in rupees.`, { key: RUPEES_KEY[label] });
+      return paise;
+    };
+    const change: BulkProductChange =
+      input.kind === 'rename'
+        ? { kind: 'rename', name: String(input.name ?? '') }
+        : input.kind === 'company'
+          ? { kind: 'company', supplierId: String(input.supplierId ?? '') || null }
+          : input.kind === 'category'
+            ? { kind: 'category', categoryId: String(input.categoryId ?? '') }
+            : input.kind === 'tags'
+              ? { kind: 'tags', forGender: String(input.forGender ?? ''), ageGroup: String(input.ageGroup ?? '') }
+              : input.kind === 'prices'
+                ? { kind: 'prices', mrpPaise: rupees(input.mrp, 'MRP'), pricePaise: rupees(input.price, 'selling price') }
+                : { kind: input.kind === 'show' ? 'show' : 'hide' };
+    const changed = await bulkUpdateProducts(await getDb(), STORE_ID, list, change);
+    revalidatePath('/admin', 'layout');
+    return { ok: true, changed, message: (await getT())(changed === 1 ? 'act.bulkDone.one' : 'act.bulkDone.other', { n: changed }) };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }

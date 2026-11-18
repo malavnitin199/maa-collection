@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPgliteDb, type Db } from '@/db/client';
 import { products, sales, stockMovements } from '@/db/schema';
@@ -13,11 +13,12 @@ import {
   listReceipts,
   listSuppliers,
   restoreSupplier,
+  setSuppliersActive,
   suggestCategoryCode,
   updateCategory,
   updateSupplier,
 } from './catalog';
-import { createDesign, findProductByCode, getReceiptForLabels, listDesignVariants, receiveStock, setDesignTags, updateDesignRates } from './products';
+import { bulkUpdateProducts, createDesign, findProductByCode, getReceiptForLabels, listDesignVariants, listProducts, productsByIds, receiveStock, setDesignTags, updateDesignRates } from './products';
 import { recordSale } from './sales';
 import { listStaff } from './staff';
 
@@ -177,6 +178,64 @@ describe('new design from a supplier (sizes × colours)', () => {
     await expect(setDesignTags(db, STORE_ID, girls.products[0].id, { ageGroup: 'teen' })).rejects.toThrow(/who the item is for/);
     // The database refuses unknown values too.
     await expect(db.update(products).set({ ageGroup: 'teen' }).where(eq(products.id, girls.products[0].id))).rejects.toThrow();
+  });
+});
+
+describe('many items at once (plan v17, Products → Select)', () => {
+  async function three() {
+    const xyz = await createSupplier(db, STORE_ID, { name: 'Bulk Co', ...supplierInput });
+    const kurta = (await listCategories(db, STORE_ID)).find((c) => c.code === 'KU')!;
+    const { products: made } = await createDesign(db, STORE_ID, {
+      operationId: 'bulk-1', supplierId: xyz.id, categoryId: kurta.id, name: 'Bulk Kurta', brand: 'Bulk Co',
+      sizes: ['M', 'L', 'XL'], colors: ['Red'], mrpPaise: 100000, pricePaise: 90000, costPaise: 50000, quantityEach: 2, staffId: owner,
+    });
+    return { made, ids: made.map((p) => p.id), xyz, kurta };
+  }
+  const rowsOf = (ids: string[]) => db.select().from(products).where(inArray(products.id, ids));
+
+  it('hides and brings back; hidden items leave the lists and the counter but stay in the books', async () => {
+    const { ids, made } = await three();
+    expect(await bulkUpdateProducts(db, STORE_ID, ids.slice(0, 2), { kind: 'hide' })).toBe(2);
+    const shown = await listProducts(db, STORE_ID, { search: 'Bulk Kurta', active: true });
+    expect(shown.map((p) => p.size)).toEqual(['XL']);
+    expect((await listProducts(db, STORE_ID, { search: 'Bulk Kurta', active: false })).map((p) => p.size).sort()).toEqual(['L', 'M']);
+    expect(await findProductByCode(db, STORE_ID, made[0].barcode)).toBeNull(); // not at the counter
+    expect((await productsByIds(db, STORE_ID, ids)).map((p) => p.size)).toEqual(['XL']); // not printed
+    expect(await bulkUpdateProducts(db, STORE_ID, ids, { kind: 'show' })).toBe(3);
+    expect((await rowsOf(ids)).every((p) => p.active && p.stock === 2)).toBe(true);
+  });
+
+  it('renames, moves company and category, sets For / Age', async () => {
+    const { ids } = await three();
+    await bulkUpdateProducts(db, STORE_ID, ids, { kind: 'rename', name: '  Festive Kurta ' });
+    await bulkUpdateProducts(db, STORE_ID, ids, { kind: 'company', supplierId: null });
+    const shirt = (await listCategories(db, STORE_ID)).find((c) => c.code === 'SH')!;
+    await bulkUpdateProducts(db, STORE_ID, ids, { kind: 'category', categoryId: shirt.id });
+    await bulkUpdateProducts(db, STORE_ID, ids, { kind: 'tags', forGender: 'boys', ageGroup: 'child' });
+    expect((await rowsOf(ids)).map((p) => [p.name, p.supplierId, p.categoryId, p.category, p.forGender, p.ageGroup])).toEqual(
+      Array(3).fill(['Festive Kurta', null, shirt.id, shirt.name, 'boys', 'child']),
+    );
+    await expect(bulkUpdateProducts(db, STORE_ID, ids, { kind: 'rename', name: '  ' })).rejects.toThrow(/product name/);
+    await expect(bulkUpdateProducts(db, STORE_ID, ids, { kind: 'tags', ageGroup: 'teen' })).rejects.toThrow(/who the item is for/);
+    await expect(bulkUpdateProducts(db, STORE_ID, [], { kind: 'hide' })).rejects.toThrow(/at least one/);
+  });
+
+  it('prices: one MRP and / or selling price for all; a selling price above an MRP changes nothing', async () => {
+    const { ids } = await three();
+    expect(await bulkUpdateProducts(db, STORE_ID, ids, { kind: 'prices', mrpPaise: 120000, pricePaise: null })).toBe(3);
+    expect((await rowsOf(ids)).map((p) => [p.mrpPaise, p.pricePaise])).toEqual(Array(3).fill([120000, 90000]));
+    await expect(bulkUpdateProducts(db, STORE_ID, ids, { kind: 'prices', mrpPaise: 80000, pricePaise: null })).rejects.toThrow(/above MRP for MAA-KU-/);
+    expect((await rowsOf(ids)).every((p) => p.mrpPaise === 120000)).toBe(true);
+    await expect(bulkUpdateProducts(db, STORE_ID, ids, { kind: 'prices', mrpPaise: null, pricePaise: null })).rejects.toThrow(/new MRP or selling price/);
+  });
+
+  it('companies: hide or bring back several at once', async () => {
+    const a = await createSupplier(db, STORE_ID, { name: 'Hide A', ...supplierInput });
+    const b = await createSupplier(db, STORE_ID, { name: 'Hide B', ...supplierInput });
+    expect(await setSuppliersActive(db, STORE_ID, [a.id, b.id], false)).toBe(2);
+    expect((await listSuppliers(db, STORE_ID, { activeOnly: true })).some((s) => s.name.startsWith('Hide'))).toBe(false);
+    expect(await setSuppliersActive(db, STORE_ID, [a.id], true)).toBe(1);
+    expect((await listSuppliers(db, STORE_ID, { activeOnly: true })).map((s) => s.name)).toContain('Hide A');
   });
 });
 

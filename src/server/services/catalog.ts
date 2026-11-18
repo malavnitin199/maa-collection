@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, productImages, products, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
 import { cleanSizeList, MAX_SIZES } from '@/lib/size-lists';
@@ -203,6 +203,18 @@ export async function addOrRestoreSupplier(db: Db, storeId: string, rawName: str
   }
   const supplier = await createSupplier(db, storeId, { name, contactName: '', phone: '', gstin: '', notes: '' });
   return { supplier, status: 'created' };
+}
+
+/** Companies → Select (plan v17): hide (→ "Previous companies") or bring back several at once. Nothing is deleted. */
+export async function setSuppliersActive(db: Db, storeId: string, ids: readonly string[], active: boolean): Promise<number> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return 0;
+  const changed = await db
+    .update(suppliers)
+    .set({ active })
+    .where(and(eq(suppliers.storeId, storeId), inArray(suppliers.id, unique)))
+    .returning({ id: suppliers.id });
+  return changed.length;
 }
 
 /** Brings a hidden ("previous") company back into the lists. Its details are kept. */
