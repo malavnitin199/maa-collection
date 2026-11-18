@@ -1,9 +1,9 @@
 # Development progress (living)
 
-Last updated: 2026-11-17
+Last updated: 2026-11-19
 
 ## Current milestone
-v0.6.0 (plan v16): **Bahi theme** — a clean billing-app look (indigo + orange, light grey, Poppins) as the default; owner testing.
+v0.7.0 (plan v17): **Essential Home** and **one minimal item layout** (New item + product page: name, category, size pills, For / Age tags, photo on the right; company, sale and purchase price; tabs Details · Colours · Other details).
 
 ## Task status
 - [x] P1-01: bootstrap Next.js project + quality baseline (DONE 2026-11-14)
@@ -15,6 +15,7 @@ v0.6.0 (plan v16): **Bahi theme** — a clean billing-app look (indigo + orange,
 - [x] Plan v14 combined view: one card per design on Products and All tags (DONE 2026-11-16; see below)
 - [x] Plan v15 cleaner UI: icon header, pictures, motion, counter card, shorter Home (DONE 2026-11-16; see below)
 - [x] Plan v16 Bahi theme (DONE 2026-11-17; owner feedback pending)
+- [x] Plan v17 essential Home, clear Add stock, minimal New item + product page, For / Age tags (DONE 2026-11-19; see below)
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -37,8 +38,24 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-16 | Plan v14 combined view | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` | PASS except known timing-dependent tests | 150 unit tests (5 new + 1 extended); Playwright 72 passed, 1 skipped, 3 failed: `pos.spec.ts:59`, `guide-voice.spec.ts:46` (known) and `pos.spec.ts:378` on phone (sell by hand + approvals: the scanned item card did not appear within 5 s; 3/8 then 0/8 on repeat with the same code; it visits no changed page). The new combined-view test passes at desktop + phone |
 | 2026-11-16 | Plan v15 cleaner UI | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e --workers=3` | PASS | 150 unit tests; Playwright **75 passed, 1 skipped (phone-only), 0 failed** with 3 workers. At default parallelism on the busy Mac (load 8–12) random tests timed out; the camera and Guide tests that used to flake now pass 16/16 and 24/24 on repeat |
 | 2026-11-17 | Plan v16 Bahi theme | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e --workers=3` | PASS | 150 unit tests; Playwright 75 passed, 1 skipped, 0 failed (2.0 min) |
+| 2026-11-19 | Plan v17 | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright `--workers=3` against `next start -p 3217` with `DATABASE_URL=pglite:memory` | PASS | 153 unit tests (3 new); Playwright 75 passed, 1 skipped, 0 failed. The long-running dev server on :3000 was not reused: its local database misses "Ladies Jeans" (old local data) and the new columns until it restarts |
 
-## Bahi theme: a billing-app touch — v0.6.0 (2026-11-17, latest)
+## Essential Home, one minimal item layout, For / Age tags — v0.7.0 (2026-11-19, latest)
+Owner requests: a Home with only the essentials; a clear Add stock; then a billing-app picture as the model and "don't change any logic — company, product name, sale price and purchase price minimal on top, photo on the right, small tags (girls / boys, adult / child), top tabs Details · Colours · Other details; commit, push, deploy". The owner chose **new fields** for the tags. Plan: `docs/PLAN_V17_ESSENTIAL_HOME_NEW_ITEM.md`; ADR-027; reference §27.
+
+| # | Task | Result |
+|---|---|---|
+| 1 | Home: New stock, Suppliers, Reports, Approvals + today's sales (`shopToday`) | Done |
+| 2 | Add stock: New item + other ways (receive, old stock); `/admin/stock/quick` redirects | Done |
+| 3 | New item: one minimal screen (header + photo square, must-haves, tabs); Quick add and New design merged; + Add next item | Done |
+| 4 | Product page in the same layout; Colours grid (colour × size with pieces) | Done |
+| 5 | For / Age tags: migration 0008, per design, server + database checks | Done |
+| 6 | Fix: New item and **Receive stock** clear after saving (Next 16 keeps pages alive; Receive stock could receive old lines twice — live before this) | Done |
+| 7 | Guide lesson, Help, user guide, docs; version **0.7.0** | Done |
+- Migration 0008 is additive (two nullable columns + checks); it must reach Neon **before** the deploy.
+- Verified: lint, typecheck, **153 unit tests**, build; Playwright (desktop + phone, production build, fresh database): **75 passed, 1 skipped, 0 failed**. Phone screenshots: New item (empty, Colours, Details), product page (Details, Colours, Other details, night).
+
+## Bahi theme: a billing-app touch — v0.6.0 (2026-11-17)
 Owner request: explore the Bill Book app and give our app one touch of its theme; deploy; the owner will test and give feedback. Taken as **myBillBook**: its public site's colours (indigo #4C3CCE, orange #DB631A, light grey #F6F7F7, white cards, borders #E0E2E7) and font (Poppins) were read; only the feel is borrowed (no logo / name / trade dress). Plan: `docs/PLAN_V16_BAHI_THEME.md`; ADR-026; reference §26.
 
 | # | Task | Result |

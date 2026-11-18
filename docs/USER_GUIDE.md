@@ -81,18 +81,36 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 
 **Needs attention** (Catalog menu) is the catalog to-do list: items without a photo, company or stock (and without a purchase price, for those allowed). Tap an item to fix it.
 
-### Other ways to add stock (Catalog → Add stock)
+### New stock from a company (Add stock → New item)
 
-- **Many different products** from one company: one card per product with its own prices.
-- **One design in sizes × colours**: e.g. a kurta in M/L/XL × 3 colours. Every combination gets a barcode.
-  - Enter one MRP, selling and purchase price for all sizes. If a size costs more (e.g. XL), open **Price by size**, and type that size's own MRP / selling / purchase price. Grey numbers are the default; green ones are the size's own. Every colour of that size gets the same price; colour never changes the price.
-  - Later: open any of its products → **Rates for the whole design** → change the default or one size → **Apply**. Past sales keep their prices.
-- **More of existing items** (needs *Stock*): scan each piece. Scanning the same tag again adds one more.
+**Add stock** has one big button, **New item**, and two **Other ways** under it: *More pieces of an existing item* and *Tag old stock*.
+
+1. **Top card**: type the **Product name**, choose the **Category**, and tap who it is for — **For**: Girls · Boys · Both, **Age**: Adult · Child (optional; tap again to clear). On the right is the **photo**: tap it to choose from the gallery, or 📷 for the camera; ✕ removes it.
+2. **Must-haves**: the **Company** (where you buy it), the **Sale price (MRP) ₹** and the **Purchase price ₹** (only if you have the *Purchase price* right).
+3. **Tabs** below:
+   - **Details**: **Pieces** (how many came), **Counter price, if lower** (empty = the MRP), **Supplier bill no.**
+   - **Colours**: comes in many sizes or colours? Tap the sizes (the category's sizes come first; *Pick all* takes them all) and add the colours. A grid shows every colour × size with its pieces; each pair becomes its own item with its own barcode, and *Pieces* becomes **Pieces each**. Nothing picked = one item, size *Free*, colour *Assorted*.
+     - A size costs more (e.g. XL)? **Price by size**: type that size's own MRP / selling / purchase price. Grey = the default; green = the size's own. Every colour of that size gets the same price.
+     - **Photo of each colour** (optional): every size of that colour gets it; other colours get the main photo.
+   - **Other details**: **Brand** (the company name unless you type another). More fields will go here later.
+4. Check the line above the button (items · pieces · purchase), then **Save**.
+5. On the labels page, **+ Add next item** opens an empty item with the same company and category. Each save is its own delivery; type the same bill number to keep them together in *All tags → Delivery*.
+
+### The product page (Products → tap an item)
+
+- **Top**: name, colour · size · brand, small tags (the design's sizes, category, For, Age) and the main photo on the right.
+- **Must-haves**: company, MRP, selling and purchase price, **pieces in stock**, **Print label**, **Restock**.
+- **Details** tab: the hang tag, **Rates for the whole design** (change the default or one size → **Apply**; past sales keep their prices), receive more pieces, and the stock history.
+- **Colours** tab: every colour × size of the design with its pieces (tap one to open it) and the total; the photos.
+- **Other details** tab: change **For / Age** for the whole design (**Save tags**), and **Edit this item**.
+
+### Other ways to add stock
+
+- **More pieces of an existing item** (needs *Stock*): scan each piece. Scanning the same tag again adds one more.
 
 ### Photos while creating tags (optional)
 
-- **New design**: after adding the colours, each colour has **📷 Photo / 🖼 Gallery**. Every size of that colour gets the photo.
-- **Quick add**: each product card has **📷 Photo / 🖼 Gallery**.
+- **New item**: the main photo (right of the name) goes on every item; under **Colours**, each colour can have its own **📷 Photo / 🖼 Gallery** instead.
 - **Tag old stock**: 1–4 photos, as before.
 - If a photo fails (e.g. weak signal), the items are still saved; the labels page says so — add it later on the item's page → Photos.
 
@@ -117,14 +135,14 @@ Every piece gets a **hang tag, 40 × 60 mm**: shop name, **QR code**, the **size
 
 ## 5a. Sales team dashboard (owner)
 
-**Team** in the menu (or Home → *Sales team graphs*): number of salesmen; **share of sales** per seller (bar, amount, %); **each seller day by day** (small chart per person, same scale — tap a day for its amount; "below MRP" = how much they bargain down on average); and a table with every number. Pick Today / 7 days / 30 days / This month. A sale counts for the person chosen in *Credit sale to*; exchanges are included.
+**Team** in the menu: number of salesmen; **share of sales** per seller (bar, amount, %); **each seller day by day** (small chart per person, same scale — tap a day for its amount; "below MRP" = how much they bargain down on average); and a table with every number. Pick Today / 7 days / 30 days / This month. A sale counts for the person chosen in *Credit sale to*; exchanges are included.
 
 ## 5b. Clear stock (owner)
 
 For a fresh count or a new season: **More → Clear stock**. It shows what is in stock now; tap **Clear all stock…**, enter **your PIN** and tap **Set all pieces to 0**.
 
 - Every item's pieces become 0. Items, barcodes, prices, photos and past sales **stay**; each item's history shows "Stock cleared" with your name and the date.
-- It cannot be undone. Afterwards, count the shelves and add pieces with **More of existing items** (scan each piece).
+- It cannot be undone. Afterwards, count the shelves and add pieces with **More pieces of an existing item** (scan each piece).
 - Only the owner can do it, and a wrong PIN changes nothing.
 
 ## 5c. Approvals (owner)
@@ -143,7 +161,7 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 2. **Staff & permissions**: add each person with a PIN; tick rights per salesman.
 3. **Settings → Code price** (optional): a 10-letter word with no repeated letters. Labels then show the purchase price in letters, e.g. BLACKHORSE: ₹450 = **CKE**.
 4. Add stock (or let the catalog person tag old stock).
-5. Daily: **Home** for today/month, sales per person, low stock; **Activity** for every sale and exchange.
+5. Daily: **Home** for today's sales and the entries waiting for you; **Reports** and **Team** for the month, profit and each salesperson; **Products** / **Needs attention** for low and empty stock; **Activity** for every sale and exchange.
 6. **Reports** (Menu → Reports): best sellers, items not selling for 30 days, sales by category / company / salesperson for Today, 7 days, 30 days or this month; **download sales and stock as CSV** for your accountant (opens in Excel / Google Sheets).
 
 ## 6. Required vs optional
@@ -151,7 +169,7 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 | When | Required | Optional |
 |---|---|---|
 | Tag old stock | Category, name, MRP, pieces | Photo (recommended), size (= Free), colour, company, selling price (= MRP), purchase price |
-| Quick add | Company, category, each product's name and MRP | Brand, bill no., selling/purchase price, size, colour |
+| New item | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), colours (= Assorted), brand (= company) |
 | Sale | Scan, quantity, price | Credit to a colleague |
 | Company | Name | Contact, phone, GSTIN, notes |
 

@@ -670,3 +670,21 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Zari | `globals.css` | `[data-theme="bahi"] .zari` = 3 px flat line (no mask). |
 | Picker | `appearance-menu.tsx` | 3 × 2 swatches. The Guide's picker picture shows `THEMES.slice(0, 5)`. |
 | Tests | `e2e/look.spec.ts` | Default `data-theme` is `bahi`. |
+
+## 27. Essential Home and the minimal item layout (plan v17, ADR-027)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Home | `src/app/(admin)/admin/dashboard/page.tsx` | Four `TagTile`s (New stock → `/admin/stock`, Suppliers, Reports, Approvals with `approvals-waiting`) and one `HeroStat` (`today-revenue`, `today-units`). Data: `shopToday()` + `pendingCount()`. `shopDashboard()` stays (tested) but no screen uses it. |
+| `shopToday` | `src/server/services/reports.ts` | `saleTotals` + `exchangeTotals` → `{ sales: today, netRevenuePaise }`; approved entries only, IST day. |
+| Add stock | `src/app/(admin)/admin/stock/page.tsx` | `NEW_ITEM` (primary tile, `catalog`) + `OTHER_WAYS` (receive `stock`, old stock `catalog`). |
+| New item | `src/features/catalog/new-item-form.tsx` (`NewItemForm`, `PhotoSquare`) on `/admin/stock/new` | Header card (name `aria-label` "Product name", category pill-select "Category", size pills `item-size-pills`, `TagChooser`) + photo square (`item-photo`, inputs "Camera / Gallery for this item"); must-haves: Company, "Sale price (MRP) ₹", "Purchase price ₹" (both `required`; purchase only with `costs`); `ItemTabs` Details (Pieces / Pieces each, "Counter price, if lower (₹)", bill) · Colours (chips, `combo-grid`, `colour-photos`, price by size + `size-rates-preview`) · Other details (Brand). Summary `design-preview`. Saves with `createDesignAction` (empty sizes → `Free`, colours → `Assorted`; brand → company; `forGender` / `ageGroup`). `clearItem()` after success (Activity). |
+| Product page | `src/app/(admin)/admin/products/[id]/page.tsx` | Header (`item-pills`: design sizes, category, For, Age, inactive; main photo `photos[0]` or `role="img"` "No photo"), must-haves card (`product-stock`, Print label, Restock), `ItemTabs` Details (`print: true` — the `HangTag` prints from any tab; rates, receive, `stock-history`) · Colours (`design-variants` table: colour rows × size columns, one link per item, `aria-label` "{color} {size}: {n} in stock"; `PhotoManager`) · Other details (`DesignTagsForm`, `ProductForm` edit). |
+| Tabs | `ItemTabs` in `src/features/catalog/item-parts.tsx` | `role="tablist"` / `tab` (`{prefix}-tab-{id}`) / `tabpanel`; closed panels get the `hidden` class (`hidden print:block` when `print`); ←/→ keys. Content can be server-rendered (passed as props). |
+| Tags | `src/lib/product-tags.ts` | `FOR_GENDERS` (girls, boys, both), `AGE_GROUPS` (adult, child), `FOR_LABEL` / `AGE_LABEL` (`cat.tag.*`), `parseTag` ('' = not set, unknown = `'invalid'`), `asForGender` / `asAgeGroup`. Keep label maps here, not in the client file (server pages read them). |
+| Tag storage | `products.for_gender`, `products.age_group` (migration 0008, checks `products_for_gender_valid`, `products_age_group_valid`) | `createDesign` → every row; `setDesignTags(db, storeId, productId, tags)` → every item of the design (same name, brand, category; as `listDesignVariants`); `updateDesignTagsAction` (`catalog`). Error key `stk.err.tagInvalid`. Old stock and *Add a single product* don't set tags (set them on the product page). |
+| Add next item | `nextItemHref()` in `labels/print/page.tsx` | Shown with `?created=`; `/admin/stock/new?supplier=<receipt.supplierId>&category=<first line's categoryId>`. |
+| Activity resets | `new-item-form.tsx` `clearItem()`, `restock-form.tsx` after `receiveStockAction` | Next 16 keeps visited routes in `<Activity hidden>` (state kept). Any form that saves and navigates away must clear its fields and `operationId` itself. |
+| Redirect | `next.config.ts` `redirects()` | `/admin/stock/quick` → `/admin/stock/new` (temporary; query kept). |
+| Removed | `quick-add-form.tsx`, `design-form.tsx`, `createQuickAction`, retired dictionary keys | `createProductsBatch` (service) is still used by Tag old stock. |
+| Tests | `e2e/admin-setup.spec.ts` helpers `tab`, `showVariants`, `companyBox`, `salePrice`, `purchasePrice` | Use `exact: true` for "Details" (it is inside "Other details") and "Colour" (inside "Colours"). |

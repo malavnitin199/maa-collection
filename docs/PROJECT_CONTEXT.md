@@ -30,7 +30,7 @@ The 12-page uploaded *Retail Shop Stock, Sales & Billing System* PRD is the prod
 - At completion, show commands executed, actual results, modified files, gaps and the next task.
 - Update `docs/PROGRESS.md` and check off backlog ONLY when acceptance criteria pass.
 
-## Current status (2026-11-17, live through plan v16 — v0.6.0)
+## Current status (2026-11-18, live through plan v17 — v0.7.0)
 
 Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavnitin199/maa-collection · Deployed with the Vercel CLI (repo not Git-connected).
 
@@ -46,7 +46,7 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 
 **Stock and tags (catalog / stock people)**
 - Companies (suppliers), categories with SKU codes and **size lists** (shirts S–XXL, kurtas M–XXL, Ladies Jeans 26–32, Gents Jeans 28–36; owner-editable).
-- Add stock: **Quick add** (many products, one company + category), **New design** in sizes × colours with **prices by size** (MRP / selling / purchase per size, same for all colours), **Restock** by scanning, **Tag old stock** one piece at a time with photos, with **✎ Edit this item** right after saving (same barcode; prices fixable by the creator until the first sale). Optional photo per colour / per product while creating tags.
+- Add stock (plan v17): one main way, **New item** — a minimal screen: header with product name, category, size pills and **For (Girls / Boys / Both) / Age (Adult / Child)** tags, photo square on the right; must-haves company, **sale price (MRP)** and **purchase price**; top tabs **Details** (pieces, counter price, bill) · **Colours** (sizes × colours grid with pieces, **prices by size**, a photo per colour) · **Other details** (brand, later fields). Nothing picked = one item (Free / Assorted). After saving, **+ Add next item** keeps company and category. The **product page** uses the same layout (tabs Details · Colours · Other details). Other ways: **More pieces of an existing item** (restock by scanning) and **Tag old stock** one piece at a time with photos, with **✎ Edit this item** right after saving (same barcode; prices fixable by the creator until the first sale). Optional main photo and photo per colour while creating tags.
 - Tags: **40 × 60 mm QR hang tags** (QR, name, ART. = SKU + secret code price, every size of the category with tick boxes, EAN-13, MRP); A4 (16 per page), tag printer, or 50 × 25 mm sticker.
 - **Combined view** (plan v14, default on Products and All tags): items with the same name, company and MRP are one card (photos, sizes and colours with pieces, design QR); *Show N items / tags* or *Every item / Every tag* for the separate ones. Printed tags stay one per piece.
 - **All tags** (`/admin/labels`, plan v13): every tag grouped by **date made, company, category or delivery**, with filters (search, company, category, made by, when made, in stock), **Grid** or sideways **Rows** (remembered per phone), **Print this group** / **Print these tags**; tap a tag to open its item.
@@ -56,11 +56,11 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 - **Demo data in the live shop (2026-11-16, owner request)**: 62 demo items in 12 categories from 4 "Demo …" companies and 40 demo sales (7 waiting in Approvals) so All tags and the reports can be tried. They count in Home / Reports until removed; remove them (backup first, one-off script, see `docs/PROGRESS.md`) before real stock entry, and don't print demo tags.
 - **Clear stock** (More / Settings, owner's PIN): sets every item's pieces to 0 and records it in each item's history; nothing is deleted.
 - **Approvals** (`/admin/approvals`, Home tile with the waiting count): every salesman sale / exchange by day; Approve one, a day or everything; Reject with a reason (pieces go back into stock through a new movement; an exchange is undone). Only approved entries count anywhere; hand-entered sales carry a **By hand** mark.
-- Home dashboard (today / month, profit, exchanges, low stock, activity), reports + CSV export, **sales team dashboard** (`/admin/team`: sellers, share, daily sales per seller), activity log, staff and rights, settings (code price).
+- **Home** (plan v17, essentials only): New stock, Suppliers, Reports, Approvals (with the waiting count) and **today's sales**; the month, profit, exchanges and sellers are in **Reports** / **Team**. Reports + CSV export, **sales team dashboard** (`/admin/team`: sellers, share, daily sales per seller), activity log, staff and rights, settings (code price).
 
 **Language, look, learning**
 - **Hindi + English** on every screen, chosen per person (`staff.language`).
-- **Clean header** (plan v15): one slim row of round symbols — ☀/☾ colours and day/night, sound, अ/A language, Guide, log out. Small pictures (a swinging hang tag on Sell and login, a tick when Approvals is empty), tiles that rise in, a counter card that leads with the price, size/colour and stock; Home shows the first 6 low-stock items and the latest 6 entries.
+- **Clean header** (plan v15): one slim row of round symbols — ☀/☾ colours and day/night, sound, अ/A language, Guide, log out. Small pictures (a swinging hang tag on Sell and login, a tick when Approvals is empty, a kurta on a hanger in the New item photo box), tiles that rise in, a counter card that leads with the price, size/colour and stock.
 - **Bahi theme** (plan v16, default): a clean billing-app look (indigo + orange, light grey page, Poppins, a plain line instead of the zari strip), inspired by myBillBook; the owner is testing it and will give feedback.
 - **Five dye themes** (Peacock, Marigold, Rani, Neel, Mehendi) and **Day / Night / Same as phone**, chosen per phone. Shop-made design: zari border, hang-tag action tiles, floating dock with a round Sell button.
 - `/guide`: 16 **short story lessons** by role, in both languages — one step at a time with an animated phone scene, at most 7 words on screen, and the **phone's own voice** saying a fuller line and moving on by itself; a **practice sale** that saves nothing; `/help`: quick reference and problems & fixes; `docs/USER_GUIDE.md`.
@@ -70,7 +70,7 @@ Live: https://maa-collection-pi.vercel.app · Code: https://github.com/malavniti
 **Stack actually in use**: Next.js 16.4.6 (App Router, Cache Components), React 19, TypeScript strict, Tailwind CSS 4, Drizzle ORM on Neon Postgres (PGlite locally and in tests), Zod, Vitest, Playwright (desktop + phone). Not used (yet): shadcn/ui, Better Auth, TanStack Query, Zustand, Dexie. Never put the Neon URL in `.env.local` (it lives in `.env.neon` for migrations only).
 
 **Where the details are**
-- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V16_BAHI_THEME.md`, `docs/PLAN_SIZE_PRICES.md`.
-- Decisions: `docs/DECISION_LOG.md` (ADR-001…026); open questions: `docs/DECISIONS.md`.
+- Plans, one per owner request: `docs/PLAN_V2_SHOP_OPERATIONS.md` … `docs/PLAN_V17_ESSENTIAL_HOME_NEW_ITEM.md`, `docs/PLAN_SIZE_PRICES.md`.
+- Decisions: `docs/DECISION_LOG.md` (ADR-001…027); open questions: `docs/DECISIONS.md`.
 - The original starter pack (2026-11-14), what it planned and what changed: `docs/STARTER_PACK_HISTORY.md`; the untouched originals: `docs/archive/starter-pack-2026-11-14/`.
 - How it works (developers): `docs/TECHNICAL_REFERENCE.md`; how to use it (shop): `docs/USER_GUIDE.md`; what was done and verified: `docs/PROGRESS.md`; agent rules + status: `CLAUDE.md`.

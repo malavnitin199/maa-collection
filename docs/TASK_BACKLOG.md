@@ -135,6 +135,7 @@
 - [x] **V2-09** Plan v14 (2026-11-16): **combined view** — one card per design (same name, company, MRP) on Products and All tags with sizes / colours / pieces and a design QR; every item / tag one tap away; print one design. `docs/PLAN_V14_COMBINED_VIEW.md`, ADR-024.
 - [x] **V2-10** Plan v15 (2026-11-16): **cleaner UI** — header of round symbols only, pictures and gentle motion, counter card led by price / size / stock, shorter Home. `docs/PLAN_V15_UI_CLEANUP.md`, ADR-025.
 - [x] **V2-11** Plan v16 (2026-11-17): **Bahi theme** (billing-app look, default; dye themes still selectable) — owner feedback pending. `docs/PLAN_V16_BAHI_THEME.md`, ADR-026.
+- [x] **V2-12** Plan v17 (2026-11-18/19): **Essential Home** (4 actions + today's sales); Add stock = **New item** + 2 other ways; New item and the product page in one **minimal layout** (name, category, size pills, For / Age tags, photo on the right; company, sale and purchase price; top tabs Details · Colours · Other details); **+ Add next item**; For / Age tags stored per design (migration 0008); forms clear after saving. `docs/PLAN_V17_ESSENTIAL_HOME_NEW_ITEM.md`, ADR-027.
 
 ## Suggested next tasks
 
