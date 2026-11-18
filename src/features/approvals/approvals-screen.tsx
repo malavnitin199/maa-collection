@@ -3,12 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { AllDoneArt } from '@/components/ui/art';
+import { barButton, barDanger, SelectableItem, SelectionBar, SelectionProvider, SelectToggle, useSelection } from '@/components/ui/selection';
 import { card, errorBox, input, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
 import { formatDate, type MessageKey } from '@/lib/i18n';
 import { saleDeal, type Deal } from '@/lib/deal';
 import { formatPaise } from '@/lib/money';
-import { approveAllAction, approveExchangeAction, approveSaleAction, rejectExchangeAction, rejectSaleAction } from '@/server/actions/approvals';
+import { approveAllAction, approveExchangeAction, approveSaleAction, decideSelectedAction, rejectExchangeAction, rejectSaleAction } from '@/server/actions/approvals';
 import { REJECT_REASONS, type ApprovalDay, type PendingEntry, type RejectReason } from '@/server/services/approvals';
 
 const dangerButton =
@@ -39,6 +40,80 @@ const DEAL_TAG: Record<Deal['kind'], string> = {
   even: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200',
   unknown: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
 };
+
+/** Approvals → Select (plan v17): approve or reject just the chosen entries. */
+function SelectedActions() {
+  const t = useT();
+  const router = useRouter();
+  const { selected, clear } = useSelection();
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState<RejectReason | null>(null);
+  const [note, setNote] = useState('');
+  const [message, setMessage] = useState<Message | null>(null);
+  const [busy, startBusy] = useTransition();
+  const items = selected.map((key) => {
+    const [kind, id] = key.split(':');
+    return { kind: kind === 'exchange' ? ('exchange' as const) : ('sale' as const), id };
+  });
+  const decide = (decision: 'approve' | 'reject') =>
+    startBusy(async () => {
+      setMessage(null);
+      const result = await decideSelectedAction({ items, decision, reason: reason ?? undefined, note: note.trim() || undefined });
+      if (!result.ok) return setMessage({ kind: 'error', text: result.error });
+      const r = result.data;
+      const parts: string[] = [];
+      if (r.approved) parts.push(t('appr.sel.approved', { n: r.approved }));
+      if (r.rejected) parts.push(r.stockReturned ? t('appr.sel.rejectedStock', { n: r.rejected, pcs: r.stockReturned }) : t('appr.sel.rejected', { n: r.rejected }));
+      if (r.already) parts.push(t('appr.sel.already', { n: r.already }));
+      if (r.failed.length) parts.push(t('appr.sel.failed', { n: r.failed.length, why: r.failed[0] }));
+      setMessage({ kind: r.failed.length ? 'error' : 'ok', text: parts.join(' ') });
+      setRejecting(false);
+      setReason(null);
+      setNote('');
+      clear();
+      router.refresh();
+    });
+  const none = selected.length === 0;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={none || busy} onClick={() => decide('approve')} className={`${barButton} bg-emerald-600 ring-0 hover:bg-emerald-700`}>
+          {t('appr.sel.approve', { n: selected.length })}
+        </button>
+        <button type="button" disabled={none || busy} aria-pressed={rejecting} onClick={() => setRejecting((v) => !v)} className={barDanger}>
+          {t('appr.sel.reject')}
+        </button>
+      </div>
+      {rejecting && (
+        <div className="flex flex-col gap-2 rounded-2xl bg-white p-3 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+          <div role="radiogroup" aria-label={t('appr.reject.reason')} className="flex flex-wrap gap-2">
+            {REJECT_REASONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                role="radio"
+                aria-checked={reason === r}
+                onClick={() => setReason(r)}
+                className={`rounded-full border px-3 py-1 text-sm ${reason === r ? 'border-red-600 bg-red-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
+              >
+                {t(REASON_KEY[r])}
+              </button>
+            ))}
+          </div>
+          <input aria-label={t('appr.reject.note')} placeholder={t('appr.reject.note')} value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} className={input} />
+          <button type="button" disabled={none || busy || !reason} onClick={() => decide('reject')} className={`${barDanger} w-fit`}>
+            {t('appr.sel.rejectN', { n: selected.length })}
+          </button>
+        </div>
+      )}
+      {message && (
+        <p role={message.kind === 'ok' ? 'status' : 'alert'} data-testid="selected-result" className={`text-sm ${message.kind === 'ok' ? 'text-amber-200' : 'text-red-300'}`}>
+          {message.text}
+        </p>
+      )}
+    </div>
+  );
+}
 
 /**
  * The owner's queue (plan v12): everything the counter recorded that he has not
@@ -88,7 +163,9 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
       router.refresh();
     });
 
+  const keys = days.flatMap((day) => day.entries.map((entry) => `${entry.kind}:${entry.id}`));
   return (
+    <SelectionProvider allIds={keys}>
     <div className="flex flex-col gap-5">
       {message && (
         <p role="status" className={message.kind === 'ok' ? okBox : errorBox}>
@@ -104,11 +181,14 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {total > 1 && (
-            <button type="button" data-testid="approve-all" disabled={busy} onClick={() => approveMany()} className={`${secondaryButton} w-fit`}>
-              {t('appr.approveAll', { n: total })}
-            </button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {total > 1 && (
+              <button type="button" data-testid="approve-all" disabled={busy} onClick={() => approveMany()} className={`${secondaryButton} w-fit`}>
+                {t('appr.approveAll', { n: total })}
+              </button>
+            )}
+            <SelectToggle testId="select-approvals" />
+          </div>
           <p className={`flex items-center gap-2 text-xs ${muted}`}>
             <span aria-hidden className="h-3 w-1.5 rounded-full bg-emerald-500" />
             <span aria-hidden className="h-3 w-1.5 rounded-full bg-red-500" />
@@ -147,7 +227,8 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
               const open = rejecting?.kind === entry.kind && rejecting.id === entry.id;
               const deal = dealOf(entry);
               return (
-                <li key={`${entry.kind}-${entry.id}`} data-testid="approval-entry" data-deal={deal.kind} className={`${card} flex flex-col gap-2 ${DEAL_CARD[deal.kind]}`}>
+                <li key={`${entry.kind}-${entry.id}`} data-testid="approval-entry" data-deal={deal.kind} className={`${card} relative flex flex-col gap-2 ${DEAL_CARD[deal.kind]}`}>
+                  <SelectableItem ids={[`${entry.kind}:${entry.id}`]} label={entry.title} inside>
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                     <div className="min-w-0">
                       {entry.kind === 'exchange' && <span className={`${chip} bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200`}>{t('appr.exchange')}</span>}
@@ -227,6 +308,7 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
                       </button>
                     </div>
                   )}
+                  </SelectableItem>
                 </li>
               );
             })}
@@ -234,6 +316,10 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
         </section>
         );
       })}
+      <SelectionBar>
+        <SelectedActions />
+      </SelectionBar>
     </div>
+    </SelectionProvider>
   );
 }
