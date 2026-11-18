@@ -104,6 +104,10 @@ export const products = pgTable(
     costPaise: integer('cost_paise'),
     stock: integer('stock').notNull().default(0),
     active: boolean('active').notNull().default(true),
+    /** Who it is for (plan v17): girls | boys | both; null = not set. Same for a whole design. */
+    forGender: text('for_gender'),
+    /** adult | child; null = not set. */
+    ageGroup: text('age_group'),
     createdBy: uuid('created_by').references(() => staff.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -112,6 +116,8 @@ export const products = pgTable(
     uniqueIndex('products_store_barcode_uq').on(t.storeId, t.barcode),
     check('products_stock_nonnegative', sql`${t.stock} >= 0`),
     check('products_price_le_mrp', sql`${t.pricePaise} > 0 AND ${t.pricePaise} <= ${t.mrpPaise}`),
+    check('products_for_gender_valid', sql`${t.forGender} IS NULL OR ${t.forGender} IN ('girls', 'boys', 'both')`),
+    check('products_age_group_valid', sql`${t.ageGroup} IS NULL OR ${t.ageGroup} IN ('adult', 'child')`),
   ],
 );
 

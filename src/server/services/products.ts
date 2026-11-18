@@ -4,6 +4,7 @@ import { categories, products, staff, stockMovements, stockReceipts, suppliers, 
 import { inStoreEan13, isValidEan13 } from '@/features/scanning/ean13';
 import type { MessageKey } from '@/lib/i18n';
 import { codeFromScan } from '@/lib/item-link';
+import { AGE_GROUPS, FOR_GENDERS, parseTag, type AgeGroup, type ForGender, type ProductTags } from '@/lib/product-tags';
 import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById, findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
 import { DomainError, isUniqueViolation } from './errors';
@@ -331,6 +332,9 @@ export type DesignInput = {
   /** Pieces received per size/colour combination (0 = add to catalogue only). */
   quantityEach: number;
   billNumber?: string | null;
+  /** Who it is for (plan v17), the same on every size and colour; empty = not set. */
+  forGender?: string | null;
+  ageGroup?: string | null;
   staffId: string;
 };
 
@@ -356,6 +360,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   if (colors.length === 0) throw new DomainError('Add at least one colour.', { key: 'stk.err.addColour' });
   if (sizes.length * colors.length > 60) throw new DomainError('Too many combinations at once (max 60). Split the entry.', { key: 'stk.err.tooManyCombos' });
   const rates = resolveSizeRates(sizes, input, input.sizeRates);
+  const tags = resolveTags(input);
   if (!Number.isInteger(input.quantityEach) || input.quantityEach < 0 || input.quantityEach > 10_000) {
     throw new DomainError('Pieces per size/colour must be 0 or more.', { key: 'stk.err.piecesEach' });
   }
@@ -395,9 +400,42 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
         color,
         ...rates.get(size.toLowerCase())!,
         quantity: input.quantityEach,
+        ...tags,
       })),
     ),
   });
+}
+
+/** Checks the optional "for whom" tags (plan v17); unknown values are refused. */
+function resolveTags(input: { forGender?: string | null; ageGroup?: string | null }): ProductTags {
+  const forGender = parseTag(FOR_GENDERS, input.forGender);
+  const ageGroup = parseTag(AGE_GROUPS, input.ageGroup);
+  if (forGender === 'invalid' || ageGroup === 'invalid') throw new DomainError('Choose who the item is for from the list.', { key: 'stk.err.tagInvalid' });
+  return { forGender, ageGroup };
+}
+
+/**
+ * Sets the "for whom" tags (plan v17) on every size and colour of a product's
+ * design (same name, brand and category — as `listDesignVariants`). Returns how
+ * many items changed. Prices, stock and history are not touched.
+ */
+export async function setDesignTags(db: Db, storeId: string, productId: string, input: { forGender?: string | null; ageGroup?: string | null }): Promise<number> {
+  const tags = resolveTags(input);
+  const product = await getProduct(db, storeId, productId);
+  if (!product) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  const updated = await db
+    .update(products)
+    .set(tags)
+    .where(
+      and(
+        eq(products.storeId, storeId),
+        sql`lower(${products.name}) = lower(${product.name})`,
+        sql`lower(${products.brand}) = lower(${product.brand})`,
+        product.categoryId ? eq(products.categoryId, product.categoryId) : eq(products.category, product.category),
+      ),
+    )
+    .returning({ id: products.id });
+  return updated.length;
 }
 
 type NewProductRow = {
@@ -411,6 +449,8 @@ type NewProductRow = {
   pricePaise: number;
   costPaise: number | null;
   quantity: number;
+  forGender?: ForGender | null;
+  ageGroup?: AgeGroup | null;
 };
 
 /**
@@ -468,6 +508,8 @@ async function insertNewProducts(
               pricePaise: row.pricePaise,
               costPaise: row.costPaise,
               stock: row.quantity,
+              forGender: row.forGender ?? null,
+              ageGroup: row.ageGroup ?? null,
               createdBy: input.staffId,
             })),
           )

@@ -15,7 +15,7 @@ import {
   updateCategory,
   updateSupplier,
 } from './catalog';
-import { createDesign, findProductByCode, getReceiptForLabels, listDesignVariants, receiveStock, updateDesignRates } from './products';
+import { createDesign, findProductByCode, getReceiptForLabels, listDesignVariants, receiveStock, setDesignTags, updateDesignRates } from './products';
 import { recordSale } from './sales';
 import { listStaff } from './staff';
 
@@ -137,6 +137,28 @@ describe('new design from a supplier (sizes × colours)', () => {
     await expect(createDesign(db, STORE_ID, { ...base, sizes: [] })).rejects.toThrow(/at least one size/);
     await expect(createDesign(db, STORE_ID, { ...base, colors: [' '] })).rejects.toThrow(/at least one colour/);
     await expect(createDesign(db, STORE_ID, { ...base, pricePaise: 2000 })).rejects.toThrow(/above MRP/);
+  });
+
+  it('who it is for (plan v17): saved on every size and colour, changed for the whole design only, unknown values refused', async () => {
+    const { xyz, kurta } = await setup();
+    const base = { supplierId: xyz.id, categoryId: kurta.id, brand: 'XYZ', colors: ['Pink', 'Blue'], mrpPaise: 99900, pricePaise: null, costPaise: null, quantityEach: 1, staffId: owner };
+    const girls = await createDesign(db, STORE_ID, { ...base, operationId: 'tags-1', name: 'Frock', sizes: ['M', 'L'], forGender: 'girls', ageGroup: 'child' });
+    expect(girls.products.map((p) => [p.forGender, p.ageGroup])).toEqual(Array(4).fill(['girls', 'child']));
+    // Not set = empty, as on every older item.
+    const plain = await createDesign(db, STORE_ID, { ...base, operationId: 'tags-2', name: 'Plain Kurta', sizes: ['M'], forGender: '', ageGroup: null });
+    expect(plain.products.map((p) => [p.forGender, p.ageGroup])).toEqual([[null, null], [null, null]]);
+
+    expect(await setDesignTags(db, STORE_ID, girls.products[0].id, { forGender: 'both', ageGroup: '' })).toBe(4);
+    const after = await db.select().from(products).where(eq(products.name, 'Frock'));
+    expect(after.map((p) => [p.forGender, p.ageGroup])).toEqual(Array(4).fill(['both', null]));
+    expect((await db.select().from(products).where(eq(products.name, 'Plain Kurta'))).every((p) => p.forGender === null)).toBe(true);
+    // Prices and stock are untouched.
+    expect(after.every((p) => p.mrpPaise === 99900 && p.stock === 1)).toBe(true);
+
+    await expect(createDesign(db, STORE_ID, { ...base, operationId: 'tags-3', name: 'Odd', sizes: ['M'], forGender: 'men' })).rejects.toThrow(/who the item is for/);
+    await expect(setDesignTags(db, STORE_ID, girls.products[0].id, { ageGroup: 'teen' })).rejects.toThrow(/who the item is for/);
+    // The database refuses unknown values too.
+    await expect(db.update(products).set({ ageGroup: 'teen' }).where(eq(products.id, girls.products[0].id))).rejects.toThrow();
   });
 });
 

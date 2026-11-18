@@ -57,6 +57,13 @@
       "when": 1794782097636,
       "tag": "0007_woozy_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795025858323,
+      "tag": "0008_product_tags",
+      "breakpoints": true
     }
   ]
 }
