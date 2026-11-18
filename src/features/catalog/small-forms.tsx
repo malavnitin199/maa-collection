@@ -100,14 +100,36 @@ export function ResetPinForm({ action, name }: { action: Action; name: string })
   );
 }
 
-export function ToggleActiveForm({ action, active }: { action: (state: FormState) => Promise<FormState>; active: boolean }) {
+/**
+ * Staff page (plan v17): **Remove** a person (asks once: they can't log in any
+ * more, their past sales stay) or **Bring back** a removed one. Nothing is deleted.
+ */
+export function ToggleActiveForm({ action, active, name }: { action: (state: FormState) => Promise<FormState>; active: boolean; name: string }) {
   const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
-  return (
-    <form action={formAction} className="flex items-center gap-2">
-      <button type="submit" disabled={pending} className={`${secondaryButton} py-1`}>
-        {active ? t('cat.staff.deactivate') : t('cat.staff.activate')}
+  const [asking, setAsking] = useState(false);
+  if (active && !asking) {
+    return (
+      <button type="button" onClick={() => setAsking(true)} className={`${secondaryButton} py-1 text-red-700 dark:text-red-300`}>
+        {t('cat.staff.deactivate')}
       </button>
+    );
+  }
+  return (
+    <form action={formAction} className="flex flex-wrap items-center gap-2">
+      {active && <span className="text-sm text-red-800 dark:text-red-200">{t('cat.staff.removeConfirm', { name })}</span>}
+      <button
+        type="submit"
+        disabled={pending}
+        className={active ? 'inline-flex items-center rounded-full bg-red-600 px-4 py-1 text-sm font-semibold text-white disabled:opacity-50' : `${secondaryButton} py-1`}
+      >
+        {active ? t('cat.staff.removeYes') : t('cat.staff.activate')}
+      </button>
+      {active && (
+        <button type="button" onClick={() => setAsking(false)} className={`${secondaryButton} py-1`}>
+          {t('cat.staff.keep')}
+        </button>
+      )}
       {state.error && <span className="text-xs text-red-600">{state.error}</span>}
     </form>
   );

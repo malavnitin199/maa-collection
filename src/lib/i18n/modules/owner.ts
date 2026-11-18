@@ -82,8 +82,6 @@ export const ownerEn = {
 
   // Staff & permissions
   'own.staff.title': 'Staff & permissions',
-  'own.staff.intro':
-    'Everyone logs in with their name and PIN. Salesmen can sell, exchange, credit a sale to a colleague, and see their own sales. Give a salesman extra rights below to make them a catalog / QC or stock person. Admins can do everything.',
   'own.staff.add': 'Add a person',
   'own.staff.you': 'you',
   'own.staff.permissions': 'Permissions: {list}',
@@ -210,8 +208,6 @@ export const ownerHi: Record<keyof typeof ownerEn, string> = {
   'own.act.subtitle': 'हर बिक्री और एक्सचेंज: किसके नाम है, और किसने दर्ज किया।',
 
   'own.staff.title': 'स्टाफ़ और अधिकार',
-  'own.staff.intro':
-    'हर कोई अपने नाम और PIN से लॉग इन करता है। सेल्समैन बेच सकते हैं, एक्सचेंज कर सकते हैं, किसी साथी के नाम बिक्री कर सकते हैं, और अपनी बिक्री देख सकते हैं। किसी सेल्समैन को कैटलॉग / QC या स्टॉक वाला बनाने के लिए नीचे और अधिकार दें। एडमिन सब कुछ कर सकते हैं।',
   'own.staff.add': 'नया व्यक्ति जोड़ें',
   'own.staff.you': 'आप',
   'own.staff.permissions': 'अधिकार: {list}',
