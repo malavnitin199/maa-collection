@@ -60,6 +60,20 @@ Owner: "give the admin the option to manage users: add members (staff, salesmen)
 | **Salesman** | Unchanged; purchase prices are never sent to salesman screens. |
 | **Tabs** (New item, product page) | The tab bar sits on a band in the theme's colour (open tab underlined in the accent), and each tab's panel has its own tint: Details = theme tint, Colours = accent tint, Other details = grey; the cards inside stay white. |
 
+## A calmer header, a separate look for the item tabs, selecting many (owner follow-up, 2026-11-19)
+
+Owner: "the header is clumsy and congested — improve it with different shading; on New item, give the lower part (Details · Colours · Other details) a completely different style, not the app's theme; and add selection across the app — select products to delete, rename or edit them; select particular entries on Approvals." The owner chose: **name + 2 buttons**, **slate & amber**, **hide (not delete)**, and all four product actions.
+
+| Part | Now |
+|---|---|
+| **Header** | An **MC** badge, **Maa Collection** in full and *Name · Role*; only **अ / A** and **⋯** on the right; a soft gradient in the theme's dye with a faint glow, and the zari line. **⋯** opens a sheet (pop-over on wider screens) with the colours and Day / Night, **Sound and vibration** (On / Off), **Guide** and **Log out**; it closes on Escape, a tap outside or a new screen. The login page keeps its own ☀ / ☾ button. |
+| **Item tabs** (New item, product page) | A fixed **slate & amber** look, deliberately not the theme: a dark slate band, amber line under the open tab, panels light blue (Details) / light amber (Colours) / light grey (Other details), white cards inside. |
+| **Products → Select** | **Select** / **Done**; tick boxes on each design card (= all its items) or row; tap a card to tick it; a dark bar at the bottom with *n selected · Select all · Clear* and **Hide** (asks once) · **Rename** · **Company** · **Category** · **For / Age** · **Prices** (MRP / selling; refused, all-or-nothing, if a selling price would pass an MRP) · **Print tags**. A **Hidden items** view (Show → Hidden items) with **Bring back**. Hidden items leave the counter, Products and All tags; sales and history stay. |
+| **Approvals → Select** | Tick entries (or tap the card) → **✓ Approve selected (n)** or **Reject selected** with one reason and note. Each is its own decision; exchanges are rejected before sales. |
+| **All tags → Select** | Tick tags or design cards → **Print n selected**. |
+| **Companies → Select** | Tick companies → **Hide** (they move to *Previous companies*) or **Bring back**. |
+| **Phone** | While selecting, the page leaves room under the list (and in scroll padding) for the bar, so the last items can scroll above it. |
+
 ## Two fixes found on the way
 
 Next 16 (Cache Components) keeps a page alive after you leave it, with what was typed (React `<Activity>`):

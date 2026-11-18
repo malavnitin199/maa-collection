@@ -16,20 +16,20 @@ Live app: https://maa-collection-pi.vercel.app
    - **My sales**: your totals for today and this month
    - **Catalog**: only if the owner gave you catalog or stock work
 4. To scan: tap **Scan with camera**; the camera opens in a popup anchored above that button without moving the screen. If there is not enough room above it, the popup opens below. Allow camera access, then hold the barcode flat in the green box 15–20 cm away. Use the centered **Close** button to return; you can also tap outside the popup or press Escape. A USB/Bluetooth scanner works without tapping anything.
-5. **Log out** at the end of the day, especially on a shared phone.
+5. **Log out** at the end of the day (⋯ at the top right → **Log out**), especially on a shared phone.
 
-**The top of every screen** has five round symbols: ☀/☾ colours and day/night · speaker (sound) · अ/A language · book (Guide) · door (log out). Hold a finger on one (or hover with a mouse) to see its name.
+**The top of every screen** shows **Maa Collection** with your name, and two round buttons: **अ / A** (language) and **⋯** (menu). The ⋯ menu holds the colours and Day / Night, **Sound and vibration**, **Guide** and **Log out**.
 
 ## 1a. Hindi or English, and scan sounds
 
 - Tap the round **अ** symbol (it shows **A** while you read Hindi) at the top of any screen, or on the login page. The screen changes at once. Your choice is saved **for you**: it follows you to any phone you log in on. Product names, sizes and prices stay as they were entered.
 - Hindi covers every screen (selling, owner, catalog, Guide). Printed tags stay in English.
 - A good scan shows a **green ✓** with a short **"ting"** (and a small vibration). A failed scan **shakes** with a low buzz. After a sale or exchange a **"Sale done ✓"** card shows the amount with a chime; it closes by itself, or tap it.
-- The round **speaker** symbol at the top turns the sounds and vibration off or on for that phone (crossed out = off).
+- **⋯ → Sound and vibration** turns the sounds and vibration off or on for that phone (Off / On shown on the right).
 
 ## 1b. Colours and day/night
 
-- Tap the round **☀ / ☾** symbol (top right of any screen, also on the login page; its small dot shows your colour). Pick a colour: **Bahi** (the default: a clean billing-app look in indigo and orange), **Peacock** (teal), **Marigold** (saffron), **Rani** (pink), **Neel** (indigo) or **Mehendi** (henna green). Then **Day**, **Night** (dark, easier on the eyes in the evening) or **Same as phone**.
+- Tap **⋯** at the top right (on the login page: the round ☀ / ☾ symbol). Pick a colour: **Bahi** (the default: a clean billing-app look in indigo and orange), **Peacock** (teal), **Marigold** (saffron), **Rani** (pink), **Neel** (indigo) or **Mehendi** (henna green). Then **Day**, **Night** (dark, easier on the eyes in the evening) or **Same as phone**.
 - It changes at once and is saved **on that phone** (each phone can have its own look). Printed tags never change colour.
 - Login: tap your **name circle**, then your PIN on the big number keys (⌫ deletes the last digit), then **Log in**.
 - The round **Sell** button in the middle of the bottom bar opens the counter from anywhere.
@@ -98,6 +98,15 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
    - **Other details**: **Brand** (the company name unless you type another). More fields will go here later.
 4. Check the line above the button (items · pieces · purchase), then **Save**.
 5. On the labels page, **+ Add next item** opens an empty item with the same company and category. Each save is its own delivery; type the same bill number to keep them together in *All tags → Delivery*.
+
+### Selecting many (Products, Approvals, All tags, Companies)
+
+Tap **Select** above the list. Tick boxes appear; tap a card (or its box) to tick it; a dark bar at the bottom shows how many are chosen, **Select all** and **Clear**. Tap **Done** to stop.
+
+- **Products**: **Hide** (asks once; hidden items leave the counter and the lists, their sales stay — see *Show → Hidden items* and **Bring back**), **Rename** (one new name for all), **Company**, **Category**, **For / Age**, **Prices** (a new MRP and / or selling price for all; refused if a selling price would be above an MRP), **Print tags**.
+- **Approvals**: **✓ Approve selected** or **Reject selected** (one reason for all).
+- **All tags**: **Print n selected**.
+- **Companies**: **Hide** (they go to *Previous companies*) or **Bring back**.
 
 ### The product page (Products → tap an item)
 
