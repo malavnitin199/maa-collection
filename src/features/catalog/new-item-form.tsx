@@ -616,8 +616,8 @@ export function NewItemForm({
         idPrefix="item"
         tabs={[
           { id: 'details', label: t('cat.tab.details'), content: details },
-          { id: 'colours', label: t('cat.tab.colours'), content: colours },
-          { id: 'other', label: t('cat.tab.other'), content: other },
+          { id: 'colours', label: t('cat.tab.colours'), content: colours, tone: 'accent' },
+          { id: 'other', label: t('cat.tab.other'), content: other, tone: 'neutral' },
         ]}
       />
 
