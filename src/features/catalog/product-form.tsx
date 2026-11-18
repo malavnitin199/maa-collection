@@ -5,6 +5,7 @@ import { errorBox, input, muted, okBox, primaryButton } from '@/components/ui/st
 import { useT } from '@/features/i18n/i18n-provider';
 import type { ProductTags } from '@/lib/product-tags';
 import type { FormState } from '@/server/actions/admin';
+import { CompanyPicker } from './company-picker';
 import { TagChooser } from './item-parts';
 
 export type ProductFormValues = {
@@ -26,6 +27,8 @@ type Props = {
   initial?: ProductFormValues;
   categories: { id: string; name: string; code: string }[];
   suppliers: { id: string; name: string }[];
+  /** Adding only: hidden companies the owner can bring back from the company box. */
+  previousSuppliers?: { id: string; name: string }[];
   /** Show the purchase (code) price field — only for people with the "costs" right. */
   showCost?: boolean;
 };
@@ -55,12 +58,13 @@ function Field({ label, name, defaultValue, hint, inputMode, required = true }: 
   );
 }
 
-export function ProductForm({ action, mode, initial, categories, suppliers, showCost = true }: Props) {
+export function ProductForm({ action, mode, initial, categories, suppliers, previousSuppliers = [], showCost = true }: Props) {
   const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
   const [barcodeMode, setBarcodeMode] = useState<'generate' | 'manufacturer'>('generate');
   // Who it is for (plan v17), only when adding: on the product page the design-wide tags sit above this form.
   const [tags, setTags] = useState<ProductTags>({ forGender: null, ageGroup: null });
+  const [supplierId, setSupplierId] = useState(initial?.supplierId ?? '');
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -78,17 +82,29 @@ export function ProductForm({ action, mode, initial, categories, suppliers, show
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {t('cat.form.supplierOptional')}
-          <select name="supplierId" defaultValue={initial?.supplierId ?? ''} className={input}>
-            <option value="">{t('cat.form.noSupplier')}</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {mode === 'new' ? (
+          <CompanyPicker
+            label={t('cat.form.supplierOptional')}
+            companies={suppliers}
+            previous={previousSuppliers}
+            value={supplierId}
+            emptyLabel={t('cat.form.noSupplier')}
+            name="supplierId"
+            onChange={(id) => setSupplierId(id)}
+          />
+        ) : (
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            {t('cat.form.supplierOptional')}
+            <select name="supplierId" defaultValue={initial?.supplierId ?? ''} className={input}>
+              <option value="">{t('cat.form.noSupplier')}</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {mode === 'new' && (
           <div className="sm:col-span-2">
             <TagChooser value={tags} onChange={setTags} />

@@ -13,7 +13,7 @@ import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/aut
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getT } from '@/server/i18n';
 import { DomainError } from '@/server/services/errors';
-import { createCategory, createSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
+import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   clearAllStock,
   correctTaggedItem,
@@ -236,6 +236,32 @@ export async function createSupplierAction(_prev: FormState, formData: FormData)
     return { message: (await getT())('act.added', { name: created.name }) };
   } catch (error) {
     return failure(error);
+  }
+}
+
+export type CompanyResult = { ok: true; company: { id: string; name: string } } | { ok: false; error: string };
+
+/** Company picker (plan v17): "+ New company…" — add by name, or reuse / bring back one with that name. */
+export async function addCompanyAction(name: string): Promise<CompanyResult> {
+  await requirePermission('catalog');
+  try {
+    const { supplier } = await addOrRestoreSupplier(await getDb(), STORE_ID, String(name ?? ''));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, company: { id: supplier.id, name: supplier.name } };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** Company picker (plan v17): tap a "previous" (hidden) company to use it again. */
+export async function restoreCompanyAction(id: string): Promise<CompanyResult> {
+  await requirePermission('catalog');
+  try {
+    const supplier = await restoreSupplier(await getDb(), STORE_ID, String(id));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, company: { id: supplier.id, name: supplier.name } };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
 }
 

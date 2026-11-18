@@ -6,11 +6,13 @@ import { products, sales, stockMovements } from '@/db/schema';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { STORE_ID } from '@/lib/app-config';
 import {
+  addOrRestoreSupplier,
   createCategory,
   createSupplier,
   listCategories,
   listReceipts,
   listSuppliers,
+  restoreSupplier,
   suggestCategoryCode,
   updateCategory,
   updateSupplier,
@@ -84,6 +86,22 @@ describe('suppliers', () => {
     await updateSupplier(db, STORE_ID, xyz.id, { name: 'XYZ Textiles Pvt Ltd', ...supplierInput, gstin: '27ABCDE1234F1Z5', active: true });
     const [row] = await listSuppliers(db, STORE_ID);
     expect(row).toMatchObject({ name: 'XYZ Textiles Pvt Ltd', gstin: '27ABCDE1234F1Z5', productCount: 0 });
+  });
+
+  it('company picker (plan v17): a typed name is added once; the same name in any case is reused, and brought back if hidden', async () => {
+    const added = await addOrRestoreSupplier(db, STORE_ID, '  Ravi Textiles ');
+    expect([added.status, added.supplier.name, added.supplier.active]).toEqual(['created', 'Ravi Textiles', true]);
+    const again = await addOrRestoreSupplier(db, STORE_ID, 'RAVI textiles');
+    expect([again.status, again.supplier.id]).toEqual(['existing', added.supplier.id]);
+    // Hidden ("previous") companies come back with their details.
+    await updateSupplier(db, STORE_ID, added.supplier.id, { name: 'Ravi Textiles', ...supplierInput, active: false });
+    const back = await addOrRestoreSupplier(db, STORE_ID, 'ravi textiles');
+    expect([back.status, back.supplier.id, back.supplier.active, back.supplier.phone]).toEqual(['restored', added.supplier.id, true, '98765 43210']);
+    await updateSupplier(db, STORE_ID, added.supplier.id, { name: 'Ravi Textiles', ...supplierInput, active: false });
+    expect((await restoreSupplier(db, STORE_ID, added.supplier.id)).active).toBe(true);
+    expect((await listSuppliers(db, STORE_ID)).filter((s) => s.name === 'Ravi Textiles')).toHaveLength(1);
+    await expect(addOrRestoreSupplier(db, STORE_ID, '   ')).rejects.toThrow(/company name/);
+    await expect(restoreSupplier(db, STORE_ID, '00000000-0000-0000-0000-000000000000')).rejects.toThrow(/not found/);
   });
 });
 

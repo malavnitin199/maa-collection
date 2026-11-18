@@ -6,6 +6,7 @@ import { useRef, useState, useTransition } from 'react';
 import { GarmentArt } from '@/components/ui/art';
 import { Pill } from '@/components/ui/pill';
 import { card, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { CompanyPicker } from '@/features/catalog/company-picker';
 import { ItemTabs, TagChooser } from '@/features/catalog/item-parts';
 import { hasOwnText, SizeRatesEditor, type OwnRatesText } from '@/features/catalog/size-rates-editor';
 import { useT } from '@/features/i18n/i18n-provider';
@@ -108,12 +109,15 @@ function PhotoSquare({ photo, onChange, disabled }: { photo: PickedPhoto | null;
  */
 export function NewItemForm({
   suppliers,
+  previousSuppliers,
   categories,
   initialSupplierId,
   initialCategoryId,
   showCost = true,
 }: {
   suppliers: Option[];
+  /** Hidden companies the owner can bring back from the company box. */
+  previousSuppliers: Option[];
   categories: CategoryOption[];
   initialSupplierId?: string;
   initialCategoryId?: string;
@@ -125,7 +129,8 @@ export function NewItemForm({
   const [supplierId, setSupplierId] = useState(initialSupplierId ?? '');
   const [categoryId, setCategoryId] = useState(initialCategoryId ?? '');
   const [name, setName] = useState('');
-  const [brand, setBrand] = useState(() => suppliers.find((s) => s.id === initialSupplierId)?.name ?? '');
+  const [supplierName, setSupplierName] = useState(() => suppliers.find((s) => s.id === initialSupplierId)?.name ?? '');
+  const [brand, setBrand] = useState(supplierName);
   const [tags, setTags] = useState<ProductTags>({ forGender: null, ageGroup: null });
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [mrp, setMrp] = useState('');
@@ -169,7 +174,6 @@ export function NewItemForm({
     touched();
   };
 
-  const supplierName = suppliers.find((s) => s.id === supplierId)?.name ?? '';
   const allColors = colorText.trim() ? [...colors, ...colorText.split(',').map((c) => c.trim()).filter(Boolean)] : colors;
   // What is sent: nothing picked = one plain item.
   const sendSizes = sizes.length > 0 ? sizes : [PLAIN_SIZE];
@@ -580,26 +584,20 @@ export function NewItemForm({
 
       {/* The must-haves: where it comes from and its two prices. */}
       <section className={`${card} flex flex-col gap-3`}>
-        <label className={fieldLabel}>
-          {t('stk.item.company')}
-          <select
-            required
-            value={supplierId}
-            onChange={(e) => {
-              const next = suppliers.find((s) => s.id === e.target.value);
-              if (!brand || brand === supplierName) setBrand(next?.name ?? '');
-              setSupplierId(e.target.value);
-            }}
-            className={input}
-          >
-            <option value="">{t('stk.item.chooseCompany')}</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CompanyPicker
+          label={t('stk.item.company')}
+          companies={suppliers}
+          previous={previousSuppliers}
+          value={supplierId}
+          required
+          disabled={saving}
+          emptyLabel={t('stk.item.chooseCompany')}
+          onChange={(id, companyName) => {
+            if (!brand || brand === supplierName) setBrand(companyName);
+            setSupplierId(id);
+            setSupplierName(companyName);
+          }}
+        />
         <div className={`grid gap-3 ${showCost ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <label className={fieldLabel}>
             {t('stk.item.salePrice')}

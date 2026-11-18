@@ -13,16 +13,14 @@ import { listCategories, listSuppliers } from '@/server/services/catalog';
 async function NewProduct() {
   const me = await requirePermission('catalog');
   const db = await requestDb();
-  const [categoryRows, supplierRows] = await Promise.all([
-    listCategories(db, STORE_ID, { activeOnly: true }),
-    listSuppliers(db, STORE_ID, { activeOnly: true }),
-  ]);
+  const [categoryRows, allSuppliers] = await Promise.all([listCategories(db, STORE_ID, { activeOnly: true }), listSuppliers(db, STORE_ID)]);
   return (
     <ProductForm
       mode="new"
       action={createProductAction}
       categories={categoryRows.map(({ id, name, code }) => ({ id, name, code }))}
-      suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
+      suppliers={allSuppliers.filter((s) => s.active).map(({ id, name }) => ({ id, name }))}
+      previousSuppliers={allSuppliers.filter((s) => !s.active).map(({ id, name }) => ({ id, name }))}
       showCost={can(me, 'costs')}
     />
   );

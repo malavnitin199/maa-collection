@@ -1,0 +1,137 @@
+'use client';
+
+import { useState, useTransition } from 'react';
+import { input, secondaryButton } from '@/components/ui/styles';
+import { useT } from '@/features/i18n/i18n-provider';
+import { addCompanyAction, restoreCompanyAction, type CompanyResult } from '@/server/actions/admin';
+
+type Company = { id: string; name: string };
+
+const NEW = '__new';
+const PREVIOUS = 'previous:';
+
+/**
+ * The company box on the add screens (plan v17): the companies in use, then
+ * **Previous companies** (hidden ones — tap one to use it again) and
+ * **+ New company…** (type a name; an existing name is reused, never doubled).
+ * `name` adds a hidden input for forms that post FormData.
+ */
+export function CompanyPicker({
+  label,
+  companies: initialCompanies,
+  previous: initialPrevious,
+  value,
+  onChange,
+  emptyLabel,
+  required = false,
+  name,
+  disabled = false,
+}: {
+  label: string;
+  companies: Company[];
+  previous: Company[];
+  value: string;
+  onChange: (id: string, name: string) => void;
+  emptyLabel: string;
+  required?: boolean;
+  name?: string;
+  disabled?: boolean;
+}) {
+  const t = useT();
+  const [companies, setCompanies] = useState(initialCompanies);
+  const [previous, setPrevious] = useState(initialPrevious);
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, startBusy] = useTransition();
+
+  const use = (result: CompanyResult) => {
+    if (!result.ok) return setError(result.error);
+    const company = result.company;
+    setCompanies((list) => (list.some((c) => c.id === company.id) ? list : [...list, company].sort((a, b) => a.name.localeCompare(b.name))));
+    setPrevious((list) => list.filter((c) => c.id !== company.id));
+    setAdding(false);
+    setNewName('');
+    onChange(company.id, company.name);
+  };
+
+  const add = () => {
+    setError(null);
+    const typed = newName.trim();
+    if (!typed) return;
+    startBusy(async () => use(await addCompanyAction(typed)));
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
+        {label}
+        <select
+          required={required}
+          disabled={disabled || busy}
+          value={value}
+          onChange={(e) => {
+            const choice = e.target.value;
+            setError(null);
+            if (choice === NEW) return setAdding(true);
+            if (choice.startsWith(PREVIOUS)) {
+              const id = choice.slice(PREVIOUS.length);
+              return startBusy(async () => use(await restoreCompanyAction(id)));
+            }
+            setAdding(false);
+            onChange(choice, companies.find((c) => c.id === choice)?.name ?? '');
+          }}
+          className={input}
+        >
+          <option value="">{emptyLabel}</option>
+          {companies.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+          {previous.length > 0 && (
+            <optgroup label={t('cat.company.previous')}>
+              {previous.map((c) => (
+                <option key={c.id} value={`${PREVIOUS}${c.id}`}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          <option value={NEW}>{t('cat.company.new')}</option>
+        </select>
+      </label>
+      {name && <input type="hidden" name={name} value={value} />}
+      {adding && (
+        <div className="flex gap-2">
+          <input
+            autoFocus
+            aria-label={t('cat.company.newName')}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                add();
+              }
+              if (e.key === 'Escape') setAdding(false);
+            }}
+            placeholder={t('cat.company.newName')}
+            className={`w-full min-w-0 ${input}`}
+          />
+          <button type="button" onClick={add} disabled={busy || !newName.trim()} className={`${secondaryButton} shrink-0`}>
+            {busy ? t('cat.company.adding') : t('cat.company.add')}
+          </button>
+          <button type="button" onClick={() => setAdding(false)} aria-label={t('cat.company.cancel')} className={`${secondaryButton} shrink-0 px-3`}>
+            ✕
+          </button>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}

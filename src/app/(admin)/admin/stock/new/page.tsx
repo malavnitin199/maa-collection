@@ -14,13 +14,12 @@ type Search = { supplier?: string; category?: string };
 async function NewItem({ searchParams }: { searchParams: Promise<Search> }) {
   const me = await requirePermission('catalog');
   const [{ supplier, category }, db] = await Promise.all([searchParams, requestDb()]);
-  const [supplierRows, categoryRows] = await Promise.all([
-    listSuppliers(db, STORE_ID, { activeOnly: true }),
-    listCategories(db, STORE_ID, { activeOnly: true }),
-  ]);
+  const [allSuppliers, categoryRows] = await Promise.all([listSuppliers(db, STORE_ID), listCategories(db, STORE_ID, { activeOnly: true })]);
+  const supplierRows = allSuppliers.filter((s) => s.active);
   return (
     <NewItemForm
       suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
+      previousSuppliers={allSuppliers.filter((s) => !s.active).map(({ id, name }) => ({ id, name }))}
       categories={categoryRows.map(({ id, name, code, sizes }) => ({ id, name, code, sizes }))}
       // "Add next item" on the labels page keeps the company and category.
       initialSupplierId={supplierRows.some((s) => s.id === supplier) ? supplier : undefined}

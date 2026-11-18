@@ -185,6 +185,37 @@ export async function updateSupplier(
   }
 }
 
+/**
+ * Company picker on the add screens (plan v17): a typed name becomes a company,
+ * unless one with that name already exists (any case) — then that one is used,
+ * and brought back if it was hidden. Never makes a duplicate.
+ */
+export async function addOrRestoreSupplier(db: Db, storeId: string, rawName: string): Promise<{ supplier: Supplier; status: 'created' | 'restored' | 'existing' }> {
+  const name = rawName.trim();
+  const [same] = await db
+    .select()
+    .from(suppliers)
+    .where(and(eq(suppliers.storeId, storeId), sql`lower(${suppliers.name}) = lower(${name})`))
+    .limit(1);
+  if (same) {
+    if (same.active) return { supplier: same, status: 'existing' };
+    return { supplier: await restoreSupplier(db, storeId, same.id), status: 'restored' };
+  }
+  const supplier = await createSupplier(db, storeId, { name, contactName: '', phone: '', gstin: '', notes: '' });
+  return { supplier, status: 'created' };
+}
+
+/** Brings a hidden ("previous") company back into the lists. Its details are kept. */
+export async function restoreSupplier(db: Db, storeId: string, id: string): Promise<Supplier> {
+  const [restored] = await db
+    .update(suppliers)
+    .set({ active: true })
+    .where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, id)))
+    .returning();
+  if (!restored) throw new DomainError('Supplier not found.', { key: 'cat.err.supplierNotFound' });
+  return restored;
+}
+
 // ------------------------------------------------------------------ receipts
 
 export type ReceiptSummary = {

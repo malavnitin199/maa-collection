@@ -12,14 +12,12 @@ import { listCategories, listSuppliers } from '@/server/services/catalog';
 async function Tagger() {
   const me = await requirePermission('catalog');
   const db = await requestDb();
-  const [categoryRows, supplierRows] = await Promise.all([
-    listCategories(db, STORE_ID, { activeOnly: true }),
-    listSuppliers(db, STORE_ID, { activeOnly: true }),
-  ]);
+  const [categoryRows, allSuppliers] = await Promise.all([listCategories(db, STORE_ID, { activeOnly: true }), listSuppliers(db, STORE_ID)]);
   return (
     <OldStockForm
       categories={categoryRows.map(({ id, name, code, sizes }) => ({ id, name, code, sizes }))}
-      suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
+      suppliers={allSuppliers.filter((s) => s.active).map(({ id, name }) => ({ id, name }))}
+      previousSuppliers={allSuppliers.filter((s) => !s.active).map(({ id, name }) => ({ id, name }))}
       showCost={can(me, 'costs')}
     />
   );

@@ -10,6 +10,7 @@ import { itemLink } from '@/lib/item-link';
 import { tagSizeRange } from '@/lib/size-lists';
 import { IconPencil } from '@/components/ui/icons';
 import type { ProductTags } from '@/lib/product-tags';
+import { CompanyPicker } from './company-picker';
 import { TagChooser } from './item-parts';
 import { HangTag } from './hang-tag';
 import { PhotoPickers } from './photo-manager';
@@ -22,7 +23,18 @@ type Saved = Extract<OldStockResult, { ok: true }>;
 const QUICK_SIZES = ['Free', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36', '38', '40'];
 let photoKey = 1;
 
-export function OldStockForm({ categories, suppliers, showCost }: { categories: (Option & { code: string; sizes?: string[] })[]; suppliers: Option[]; showCost: boolean }) {
+export function OldStockForm({
+  categories,
+  suppliers,
+  previousSuppliers,
+  showCost,
+}: {
+  categories: (Option & { code: string; sizes?: string[] })[];
+  suppliers: Option[];
+  /** Hidden companies the owner can bring back from the company box. */
+  previousSuppliers: Option[];
+  showCost: boolean;
+}) {
   const t = useT();
   const [categoryId, setCategoryId] = useState('');
   // The category's own sizes first (shop order), then the usual ones.
@@ -353,17 +365,17 @@ export function OldStockForm({ categories, suppliers, showCost }: { categories: 
           {t('stk.colour')}
           <input value={color} onChange={(e) => setColor(e.target.value)} placeholder={t('stk.old.colourPlaceholder')} className={input} />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {t('stk.old.companyOptional')}
-          <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={input}>
-            <option value="">{t('stk.old.notKnown')}</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CompanyPicker
+          label={t('stk.old.companyOptional')}
+          companies={suppliers}
+          previous={previousSuppliers}
+          value={supplierId}
+          emptyLabel={t('stk.old.notKnown')}
+          onChange={(id) => {
+            setSupplierId(id);
+            touched();
+          }}
+        />
       </section>
 
       <section className={`${card} flex flex-col gap-3`}>
