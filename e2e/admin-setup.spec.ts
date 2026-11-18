@@ -389,6 +389,45 @@ test('photos while creating tags: one per colour (every size gets it), or the ma
   await expect(page.getByRole('img', { name: 'Product photo 1' })).toBeVisible();
 });
 
+test('company box: add a company on the spot, the same name is reused, a hidden company comes back from "Previous companies"', async ({ page }) => {
+  await loginOwner(page);
+  const fresh = `Fresh Co ${run}`;
+  // New item: "+ New company…" adds it and chooses it.
+  await page.goto('/admin/stock/new');
+  await companyBox(page).selectOption({ label: '+ New company…' });
+  await page.getByLabel('New company name').fill(fresh);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(companyBox(page).locator('option:checked')).toHaveText(fresh);
+  // The same name again (other letters case) is reused, never doubled.
+  await companyBox(page).selectOption({ label: '+ New company…' });
+  await page.getByLabel('New company name').fill(fresh.toLowerCase());
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(companyBox(page).locator('option:checked')).toHaveText(fresh);
+  await expect(companyBox(page).locator('option', { hasText: fresh })).toHaveCount(1);
+
+  // Hide it: Suppliers → the company → untick Active.
+  await page.goto('/admin/suppliers');
+  await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(fresh) }).click();
+  await page.getByText('Edit supplier details').click();
+  await page.getByLabel(/^Active/).uncheck();
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByRole('status')).toBeVisible();
+
+  // Tag old stock: it is under "Previous companies"; choosing it brings it back.
+  await page.goto('/admin/stock/old');
+  const box = page.getByRole('combobox', { name: /^Company/ });
+  const previous = box.locator('optgroup[label="Previous companies"] option', { hasText: fresh });
+  await expect(previous).toHaveCount(1);
+  await box.selectOption({ label: fresh });
+  await expect(box.locator('option:checked')).toHaveText(fresh);
+  await expect(previous).toHaveCount(0);
+  // A normal company again everywhere.
+  await page.goto('/admin/products/new');
+  const single = page.getByRole('combobox', { name: /^Supplier/ });
+  await expect(single.locator('option', { hasText: fresh })).toHaveCount(1);
+  await expect(single.locator('optgroup option', { hasText: fresh })).toHaveCount(0);
+});
+
 test('owner restocks existing items by scanning each piece and by name search', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock/receive');
