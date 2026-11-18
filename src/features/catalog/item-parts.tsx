@@ -17,19 +17,23 @@ export type ItemTab = {
   tone?: Tone;
 };
 
-type Tone = 'brand' | 'accent' | 'neutral';
+/**
+ * Owner's choice (plan v17): this part has its own fixed "slate & amber" look,
+ * deliberately not the app's theme, so it always reads as a separate section.
+ */
+type Tone = 'sky' | 'amber' | 'slate';
 const TONE_PANEL: Record<Tone, string> = {
-  brand: 'bg-brand-50 dark:bg-brand-950/50',
-  accent: 'bg-zari/10 dark:bg-zari/10',
-  neutral: 'bg-zinc-100 dark:bg-zinc-900/80',
+  sky: 'bg-sky-50 dark:bg-slate-900',
+  amber: 'bg-amber-50 dark:bg-amber-950/40',
+  slate: 'bg-slate-100 dark:bg-slate-900/80',
 };
-const TONE_DOT: Record<Tone, string> = { brand: 'bg-white', accent: 'bg-zari', neutral: 'bg-zinc-300' };
+const TONE_DOT: Record<Tone, string> = { sky: 'bg-sky-400', amber: 'bg-amber-400', slate: 'bg-slate-400' };
 
 /**
  * The top tab bar of an item (plan v17): Details · Colours · Other details on a
- * band in the theme's colour, the open one underlined in the accent; below it
- * the open tab's panel in its own tint (colour-coded), so this part reads as
- * separate from the must-haves above. Every panel stays mounted (its fields
+ * dark slate band, the open one underlined in amber; below it the open tab's
+ * panel in its own tint (light blue / amber / grey) — a style of its own, not
+ * the app's theme, so this part reads as separate from the must-haves above. Every panel stays mounted (its fields
  * keep what was typed); closed panels are hidden on screen. ←/→ move between tabs.
  */
 export function ItemTabs({ tabs, idPrefix }: { tabs: ItemTab[]; idPrefix: string }) {
@@ -46,13 +50,13 @@ export function ItemTabs({ tabs, idPrefix }: { tabs: ItemTab[]; idPrefix: string
   return (
     <div
       data-testid={`${idPrefix}-tabs`}
-      className="flex flex-col overflow-hidden rounded-2xl shadow-sm ring-1 ring-brand-200 print:overflow-visible print:rounded-none print:shadow-none print:ring-0 dark:ring-brand-900"
+      className="flex flex-col overflow-hidden rounded-2xl shadow-md shadow-slate-900/10 ring-1 ring-slate-300 print:overflow-visible print:rounded-none print:shadow-none print:ring-0 dark:ring-slate-700"
     >
       <div
         role="tablist"
         aria-label={t('cat.tab.aria')}
         onKeyDown={move}
-        className="flex gap-1 overflow-x-auto bg-brand-700 px-2 print:hidden dark:bg-brand-900"
+        className="flex gap-1 overflow-x-auto bg-slate-900 px-2 print:hidden dark:bg-slate-950"
       >
         {tabs.map((tab) => (
           <button
@@ -65,10 +69,10 @@ export function ItemTabs({ tabs, idPrefix }: { tabs: ItemTab[]; idPrefix: string
             tabIndex={open === tab.id ? 0 : -1}
             onClick={() => setOpen(tab.id)}
             className={`flex shrink-0 items-center gap-1.5 border-b-[3px] px-4 pt-3 pb-2.5 text-sm font-semibold whitespace-nowrap transition-colors ${
-              open === tab.id ? 'border-zari text-white' : 'border-transparent text-white/70 hover:text-white'
+              open === tab.id ? 'border-amber-400 text-white' : 'border-transparent text-slate-300 hover:text-white'
             }`}
           >
-            <span aria-hidden className={`h-2 w-2 rounded-full ${TONE_DOT[tab.tone ?? 'brand']}`} />
+            <span aria-hidden className={`h-2 w-2 rounded-full ${TONE_DOT[tab.tone ?? 'sky']}`} />
             {tab.label}
           </button>
         ))}
@@ -79,8 +83,8 @@ export function ItemTabs({ tabs, idPrefix }: { tabs: ItemTab[]; idPrefix: string
           id={`${idPrefix}-panel-${tab.id}`}
           role="tabpanel"
           aria-labelledby={`${idPrefix}-tab-${tab.id}`}
-          data-tone={tab.tone ?? 'brand'}
-          className={`p-3 print:bg-transparent print:p-0 ${TONE_PANEL[tab.tone ?? 'brand']} ${open === tab.id ? '' : tab.print ? 'hidden print:block' : 'hidden'}`}
+          data-tone={tab.tone ?? 'sky'}
+          className={`p-3 print:bg-transparent print:p-0 ${TONE_PANEL[tab.tone ?? 'sky']} ${open === tab.id ? '' : tab.print ? 'hidden print:block' : 'hidden'}`}
         >
           {tab.content}
         </div>
