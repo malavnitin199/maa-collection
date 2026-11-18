@@ -15,13 +15,19 @@ async function login(page: Page, name: string, pin = PIN) {
 }
 
 /** Admin adds a product; returns its generated barcode. */
-async function addProduct(page: Page, { name, size, mrp, price, stock }: { name: string; size: string; mrp: string; price: string; stock: string }) {
+async function addProduct(
+  page: Page,
+  { name, size, mrp, price, stock, tags }: { name: string; size: string; mrp: string; price: string; stock: string; tags?: { for?: string; age?: string } },
+) {
   await page.goto('/admin/products/new');
   await page.getByLabel('Product name').fill(name);
   await page.getByLabel('Brand').fill('Test Brand');
   await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Size').fill(size);
   await page.getByLabel('Colour').fill('Blue');
+  // Plan v17: who it is for, optional.
+  if (tags?.for) await page.getByRole('group', { name: 'For' }).getByRole('button', { name: tags.for }).click();
+  if (tags?.age) await page.getByRole('group', { name: 'Age' }).getByRole('button', { name: tags.age }).click();
   await page.getByLabel('MRP (₹)').fill(mrp);
   await page.getByLabel('Selling price (₹)').fill(price);
   await page.getByLabel(/Purchase price/).fill('500');
@@ -129,7 +135,10 @@ test('camera scanner opens over the current screen without moving the scan form'
 test('admin adds a product with a generated barcode, receives stock; salesman sells it on behalf of a colleague', async ({ page }) => {
   await login(page, 'Owner');
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
-  const barcode = await addProduct(page, { name: `Test Kurta ${run}`, size: 'M', mrp: '1299', price: '1199', stock: '2' });
+  const barcode = await addProduct(page, { name: `Test Kurta ${run}`, size: 'M', mrp: '1299', price: '1199', stock: '2', tags: { for: 'Boys', age: 'Child' } });
+  // The product page shows the tags it was added with.
+  await expect(page.getByTestId('item-pills')).toContainText('Boys');
+  await expect(page.getByTestId('item-pills')).toContainText('Child');
 
   await page.getByLabel('Pieces received').fill('3');
   await page.getByRole('button', { name: 'Add stock' }).click();
