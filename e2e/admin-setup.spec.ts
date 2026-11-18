@@ -960,11 +960,15 @@ test('owner reports and CSV exports; salesmen cannot download them', async ({ pa
   await expect(page).toHaveURL(/\/pos$/);
 });
 
-test('after tagging an old item, Edit fixes it in place: same barcode, no new item, pieces unchanged', async ({ page }) => {
+test('after tagging an old item, Edit fixes it in place: same barcode, no new item, pieces unchanged; For / Age tags too', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock/old');
   await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
+  const forTags = page.getByRole('group', { name: 'For' });
+  const ageTags = page.getByRole('group', { name: 'Age' });
+  await forTags.getByRole('button', { name: 'Girls' }).click();
+  await ageTags.getByRole('button', { name: 'Adult' }).click();
   await page.getByRole('button', { name: 'M', exact: true }).click();
   await page.getByLabel('Colour', { exact: true }).fill('White');
   await page.getByLabel('MRP (₹)').fill('999');
@@ -981,6 +985,8 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   await expect(page.getByLabel('Product name')).toHaveValue(`Chikan Kurta ${run}`);
   await expect(page.getByLabel('Pieces counted')).toHaveCount(0);
   await expect(page.getByLabel('Choose photos')).toHaveCount(0);
+  await expect(forTags.getByRole('button', { name: 'Girls' })).toHaveAttribute('aria-pressed', 'true');
+  await ageTags.getByRole('button', { name: 'Child' }).click(); // Adult → Child
   await page.getByLabel('Product name').fill(`Chikan Kurta Long ${run}`);
   await page.getByRole('button', { name: 'L', exact: true }).click();
   await page.getByLabel('MRP (₹)').fill('1099');
@@ -994,6 +1000,9 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   // Still one item with that barcode, now size L, MRP 1,099, 2 pieces.
   await page.getByRole('link', { name: /Open item/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Chikan Kurta Long ${run}`);
+  await expect(page.getByTestId('item-pills')).toContainText('Girls');
+  await expect(page.getByTestId('item-pills')).toContainText('Child');
+  await expect(page.getByTestId('item-pills')).not.toContainText('Adult');
   await expect(page.getByText(barcode!).first()).toBeVisible();
   await page.goto(`/admin/products?q=${run}&show=items`); // one row per item: still exactly one
   await expect(page.getByText(`Chikan Kurta Long ${run}`)).toHaveCount(1);
