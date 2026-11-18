@@ -52,7 +52,7 @@ export const stockEn = {
   'stk.rates.aria.cost': 'Size {size} purchase price',
   'stk.rates.reset': 'All sizes back to default',
 
-  // New design (sizes × colours)
+  // Sizes and colours (New item → Colours & sizes)
   'stk.design.group.clothing': 'Clothing',
   'stk.design.group.waist': 'Waist / chest',
   'stk.design.group.other': 'Other',
@@ -104,8 +104,6 @@ export const stockEn = {
   'stk.design.savingPhotoOf': 'Saving photo of {color}…',
   'stk.design.save.one': 'Save {n} item and print labels',
   'stk.design.save.other': 'Save {n} items and print labels',
-
-  // Quick add
   'stk.quick.company': 'Company (supplier)',
   'stk.quick.chooseCompany': 'Choose company…',
   'stk.quick.companyName': 'company name',
@@ -140,6 +138,32 @@ export const stockEn = {
   'stk.quick.savingPhoto': 'Saving photo {n}…',
   'stk.quick.save.one': 'Save {n} product and print labels',
   'stk.quick.save.other': 'Save {n} products and print labels',
+
+  // New item (plan v17): one screen for everything new
+  'stk.item.title': 'New item',
+  'stk.item.back': 'Back to Add stock',
+  'stk.item.photoLabel': 'this item',
+  'stk.item.company': 'Company',
+  'stk.item.chooseCompany': 'Choose company…',
+  'stk.item.name': 'Product name',
+  'stk.item.category': 'Category',
+  'stk.item.missing': 'Missing a company or category?',
+  'stk.item.addCompany': 'Add a company',
+  'stk.item.addCategory': 'Add a category',
+  'stk.item.salePrice': 'Sale price (MRP) ₹',
+  'stk.item.purchasePrice': 'Purchase price ₹',
+  'stk.item.pieces': 'Pieces',
+  'stk.item.piecesEach': 'Pieces each',
+  'stk.item.counterPrice': 'Counter price, if lower (₹)',
+  'stk.item.sizes': 'Sizes',
+  'stk.item.count.one': '{n} item',
+  'stk.item.count.other': '{n} items',
+  'stk.item.pcs.one': '{n} pc',
+  'stk.item.pcs.other': '{n} pcs',
+  'stk.item.purchaseTotal': 'purchase {value}',
+  'stk.item.savingPhoto': 'Saving photo…',
+  'stk.item.save.one': 'Save {n} item',
+  'stk.item.save.other': 'Save {n} items',
 
   // Receive (restock)
   'stk.receive.supplierOptional': 'Supplier (optional)',
@@ -202,13 +226,16 @@ export const stockEn = {
   // Pages: Add stock hub and the entry screens
   'stk.hub.title': 'Add stock',
   'stk.hub.subtitle': 'What arrived? Every option ends with printable barcode labels.',
+  'stk.hub.item.title': 'New item',
+  'stk.hub.item.hint': 'Photo, company, name and MRP → barcode tags. One colour, or many sizes × colours.',
+  'stk.hub.otherWays': 'Other ways',
   'stk.hub.old.title': 'Tag old stock',
   'stk.hub.old.hint': 'Items already in the shop: take a photo, fill details, count pieces, get the barcode. One at a time, fast.',
   'stk.hub.quick.title': 'Many different products',
   'stk.hub.quick.hint': 'Same company and category; each product with its own name, MRP, selling and purchase price.',
   'stk.hub.design.title': 'One design in sizes × colours',
   'stk.hub.design.hint': 'e.g. a kurta in M, L, XL and three colours — every combination gets its own barcode.',
-  'stk.hub.receive.title': 'More of existing items',
+  'stk.hub.receive.title': 'More pieces of an existing item',
   'stk.hub.receive.hint': 'Restock: scan or search items already in the catalogue and add pieces.',
   'stk.new.title': 'New items from a supplier',
   'stk.new.subtitle': 'One design in all its sizes and colours. Each combination gets its own SKU and barcode, ready to print.',
@@ -243,6 +270,7 @@ export const stockEn = {
   'stk.labels.mineTitle': 'My labels today',
   'stk.labels.mine.one': '{n} item you entered today',
   'stk.labels.mine.other': '{n} items you entered today',
+  'stk.labels.addNext': '+ Add next item',
   'stk.labels.photoFailed':
     "The items are saved, but a photo could not be saved. Add it on the item's page: tap the item below → Photos.",
   'stk.labels.created.one': 'Saved {n} new item with barcodes. Print the labels and stick one on each piece.',
@@ -336,6 +364,7 @@ export const stockEn = {
   'stk.err.operationId': 'Missing operation id.',
   'stk.err.designName': 'Enter the design / product name.',
   'stk.err.pickSize': 'Pick at least one size.',
+  'stk.err.tagInvalid': 'Choose who the item is for from the list.',
   'stk.err.addColour': 'Add at least one colour.',
   'stk.err.tooManyCombos': 'Too many combinations at once (max 60). Split the entry.',
   'stk.err.piecesEach': 'Pieces per size/colour must be 0 or more.',
@@ -406,7 +435,7 @@ export const stockHi: Record<keyof typeof stockEn, string> = {
   'stk.rates.aria.cost': 'साइज़ {size} खरीद दाम',
   'stk.rates.reset': 'सब साइज़ सामान्य दाम पर वापस',
 
-  // New design (sizes × colours)
+  // Sizes and colours (New item → Colours & sizes)
   'stk.design.group.clothing': 'कपड़े',
   'stk.design.group.waist': 'कमर / छाती',
   'stk.design.group.other': 'दूसरे',
@@ -458,8 +487,6 @@ export const stockHi: Record<keyof typeof stockEn, string> = {
   'stk.design.savingPhotoOf': '{color} की फ़ोटो सेव हो रही है…',
   'stk.design.save.one': '{n} आइटम सेव करें और लेबल प्रिंट करें',
   'stk.design.save.other': '{n} आइटम सेव करें और लेबल प्रिंट करें',
-
-  // Quick add
   'stk.quick.company': 'कंपनी (सप्लायर)',
   'stk.quick.chooseCompany': 'कंपनी चुनें…',
   'stk.quick.companyName': 'कंपनी का नाम',
@@ -494,6 +521,32 @@ export const stockHi: Record<keyof typeof stockEn, string> = {
   'stk.quick.savingPhoto': 'फ़ोटो {n} सेव हो रही है…',
   'stk.quick.save.one': '{n} प्रोडक्ट सेव करें और लेबल प्रिंट करें',
   'stk.quick.save.other': '{n} प्रोडक्ट सेव करें और लेबल प्रिंट करें',
+
+  // New item (plan v17): one screen for everything new
+  'stk.item.title': 'नया आइटम',
+  'stk.item.back': 'स्टॉक जोड़ें पर वापस',
+  'stk.item.photoLabel': 'इस आइटम',
+  'stk.item.company': 'कंपनी',
+  'stk.item.chooseCompany': 'कंपनी चुनें…',
+  'stk.item.name': 'प्रोडक्ट का नाम',
+  'stk.item.category': 'कैटेगरी',
+  'stk.item.missing': 'कंपनी या कैटेगरी नहीं है?',
+  'stk.item.addCompany': 'कंपनी जोड़ें',
+  'stk.item.addCategory': 'कैटेगरी जोड़ें',
+  'stk.item.salePrice': 'बिक्री दाम (MRP) ₹',
+  'stk.item.purchasePrice': 'खरीद दाम ₹',
+  'stk.item.pieces': 'पीस',
+  'stk.item.piecesEach': 'हर एक के पीस',
+  'stk.item.counterPrice': 'काउंटर दाम, अगर कम हो (₹)',
+  'stk.item.sizes': 'साइज़',
+  'stk.item.count.one': '{n} आइटम',
+  'stk.item.count.other': '{n} आइटम',
+  'stk.item.pcs.one': '{n} पीस',
+  'stk.item.pcs.other': '{n} पीस',
+  'stk.item.purchaseTotal': 'खरीद {value}',
+  'stk.item.savingPhoto': 'फ़ोटो सेव हो रही है…',
+  'stk.item.save.one': '{n} आइटम सेव करें',
+  'stk.item.save.other': '{n} आइटम सेव करें',
 
   // Receive (restock)
   'stk.receive.supplierOptional': 'सप्लायर (ज़रूरी नहीं)',
@@ -556,6 +609,9 @@ export const stockHi: Record<keyof typeof stockEn, string> = {
   // Pages: Add stock hub and the entry screens
   'stk.hub.title': 'स्टॉक जोड़ें',
   'stk.hub.subtitle': 'क्या आया है? हर तरीके के आखिर में बारकोड लेबल प्रिंट कर सकते हैं।',
+  'stk.hub.item.title': 'नया आइटम',
+  'stk.hub.item.hint': 'फ़ोटो, कंपनी, नाम और MRP → बारकोड टैग। एक रंग, या कई साइज़ × रंग।',
+  'stk.hub.otherWays': 'दूसरे तरीके',
   'stk.hub.old.title': 'पुराने स्टॉक पर टैग लगाएँ',
   'stk.hub.old.hint': 'दुकान में पहले से रखा सामान: फ़ोटो लें, जानकारी भरें, पीस गिनें, बारकोड पाएँ। एक-एक करके, जल्दी।',
   'stk.hub.quick.title': 'कई अलग-अलग प्रोडक्ट',
@@ -597,6 +653,7 @@ export const stockHi: Record<keyof typeof stockEn, string> = {
   'stk.labels.mineTitle': 'आज के मेरे लेबल',
   'stk.labels.mine.one': 'आज आपने {n} आइटम डाला',
   'stk.labels.mine.other': 'आज आपने {n} आइटम डाले',
+  'stk.labels.addNext': '+ अगला आइटम जोड़ें',
   'stk.labels.photoFailed': 'आइटम सेव हो गए, पर एक फ़ोटो सेव नहीं हो पाई। उसे आइटम के पेज पर जोड़ें: नीचे आइटम पर टैप करें → फ़ोटो।',
   'stk.labels.created.one': 'बारकोड के साथ {n} नया आइटम सेव हो गया। लेबल प्रिंट करें और हर पीस पर एक लगाएँ।',
   'stk.labels.created.other': 'बारकोड के साथ {n} नए आइटम सेव हो गए। लेबल प्रिंट करें और हर पीस पर एक लगाएँ।',
@@ -689,6 +746,7 @@ export const stockHi: Record<keyof typeof stockEn, string> = {
   'stk.err.operationId': 'ऑपरेशन id नहीं मिली।',
   'stk.err.designName': 'डिज़ाइन / प्रोडक्ट का नाम डालें।',
   'stk.err.pickSize': 'कम से कम एक साइज़ चुनें।',
+  'stk.err.tagInvalid': 'आइटम किसके लिए है, सूची से चुनें।',
   'stk.err.addColour': 'कम से कम एक रंग जोड़ें।',
   'stk.err.tooManyCombos': 'एक बार में बहुत ज़्यादा साइज़-रंग जोड़ियाँ (ज़्यादा से ज़्यादा 60)। एंट्री को बाँट दें।',
   'stk.err.piecesEach': 'हर साइज़/रंग के पीस 0 या उससे ज़्यादा होने चाहिए।',
