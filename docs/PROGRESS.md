@@ -1,6 +1,6 @@
 # Development progress (living)
 
-Last updated: 2026-11-19
+Last updated: 2026-11-20
 
 ## Current milestone
 v0.8.0 (plan v18): **selling without internet** (scan from the phone's copy, sell by hand, sales saved on the phone and sent by themselves; the counter opens offline) and a **taller, bigger header**.
@@ -24,6 +24,7 @@ v0.8.0 (plan v18): **selling without internet** (scan from the phone's copy, sel
 - [x] **V19-03a** New item, step by step at `/admin/stock/add` (hub tile *Add stock step by step*): One item / Many items → who is it for → what is it → details → sizes & pieces → check and save (DONE 2026-11-19; see below). 
 - [x] **V19-04b (part) — the steps are the New item screen** (owner, 2026-11-19: "I'm not able to see that flow"): `/admin/stock/new` = the steps; the earlier form moved to `/admin/stock/form` (*Old form* under Other ways; `/admin/stock/quick` lands there); tags page *+ Add next item* → the steps with company, section, bill no., date and one / many kept; Categories gets a one-time **Set up Men / Women / Boys / Girls** button for a shop with no sections (the owner's local database). 
 - [x] **V19-04a** review step: **Save & print tags / Save & add next / Save** with a *Saved … SKU range · pieces* toast; purchase figures only with the *costs* right (DONE 2026-11-19; see below). Next **V19-03b** (faster pieces), **03c** (`colourLabel()`), **03d** (photo on the details step) or **04e** (release) — owner's call. Production still serves `prod-v18`
+- [x] **V19-04e** release: backup `backups/maa-backup-2026-11-20-before-0010.json`, migration 0010 on Neon, `main` (84d8cda) deployed to production (DONE 2026-11-20; see below). Owner to tap **Set up Men / Women / Boys / Girls** on Categories once, then sort the 13 old categories. Still open: 03b, 03c, 03d, 03e, 04d; `.build-mark` line still shown
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -57,7 +58,11 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-19 | Plan v17 | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright `--workers=3` against `next start -p 3217` with `DATABASE_URL=pglite:memory` | PASS | 153 unit tests (3 new); Playwright 75 passed, 1 skipped, 0 failed. The long-running dev server on :3000 was not reused: its local database misses "Ladies Jeans" (old local data) and the new columns until it restarts |
 | 2026-11-19 | Plan v18 | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright `--workers=3` against `next start -p 3217` with `DATABASE_URL=pglite:memory` | PASS | 178 unit tests (15 new: offline sales on the server, sending engine, phone-copy look-up, Clear stock below zero); Playwright 95 passed, 1 skipped, 0 failed (4 new: offline sale + by hand + list + logout warning + sent when back, below-zero stock, Made offline mark; counter reopened with no internet through the offline helper, QR link, other screens' No internet page). Header checked in phone screenshots online and offline. |
 
-## V19-04a — the review step's three ways to finish (2026-11-19, latest)
+## V19-04e — v19 live (2026-11-20, latest)
+
+Owner's call on 2026-11-20 ("all the changes to Vercel and Git"). Git: `main` was already fully pushed. Release steps, in order: (1) read-only backup of Neon to `backups/maa-backup-2026-11-20-before-0010.json` (69 products, 44 sales, 13 categories, 110 stock movements, 18 receipts); (2) `DATABASE_URL="$DATABASE_URL_UNPOOLED" pnpm db:migrate` applied **0010_sections** — checked after: `sections` table empty, `categories.section_id` / `name_hi` present, still 69 products and 13 categories (all unsorted → *Needs sorting*); (3) `vercel deploy --prod --yes` from a clean `main` (84d8cda) → status Ready, target production; (4) live check: home 200, `/admin/stock/new`, `/admin/stock/form`, `/admin/categories` redirect to login (307) as expected. Production no longer serves `prod-v18`; that branch stays as the rollback point (redeploy it, the new columns are additive and harmless to v18). The owner still has to tap **Set up Men / Women / Boys / Girls** on Categories once and move the old categories under a section; until then New item shows no sections. The temporary green `.build-mark` line is still in the header (owner has not asked to remove it).
+
+## V19-04a — the review step's three ways to finish (2026-11-19)
 
 Plan v19 task 04a. On **Check and save**: **Save & print tags** (primary: saves, opens the tags page as before), **Save & add next** (saves, shows *Saved <name>: MAA-KR-012 – MAA-KR-015 · 4 pcs* for a few seconds, and opens *What is it?* of the same section with the company, bill no. and stock date kept — the next product of the same bill), **Save** (saves, same toast, back to *What are you adding?* with everything cleared — done with this bill). Every save clears the item's fields and drops its `operationId`, so a repeated *Save & add next* never reuses an id (Activity rule); a failed save keeps everything and shows the reason on the review. `createDesignAction` now returns each item's `sku` and `size` for the toast. Purchase figures stay behind the *costs* right (unchanged). Not here: the labels page's own toast, photo (03d).
 
