@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { IconChart, IconClock, IconSun, IconUsers } from '@/components/ui/icons';
 import { muted, sectionTitle } from '@/components/ui/styles';
 import { requestDb } from '@/server/request-db';
+import { SavedSalesSection } from '@/features/offline/saved-section';
 import { ActivityList, StatTile } from '@/features/reports/widgets';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
@@ -24,6 +25,7 @@ async function MySales() {
         <h1 className="text-2xl font-semibold">{t('my.title')}</h1>
         <p className={`text-sm ${muted}`}>{t('my.subtitle', { name: me.name })}</p>
       </div>
+      <SavedSalesSection me={{ id: me.id }} />
       <div className="rise-in grid grid-cols-2 gap-3">
         <StatTile icon={<IconSun />} label={t('my.today')} value={formatPaise(todayNet)} sub={`${pcs(data.mine.today.units)} · ${count(data.mine.today.count)}`} testId="my-today" />
         <StatTile icon={<IconChart />} label={t('my.month')} value={formatPaise(monthNet)} sub={`${pcs(data.mine.month.units)} · ${count(data.mine.month.count)}`} testId="my-month" />

@@ -1088,14 +1088,14 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   await expect(tagStory.getByTestId('hang-tag')).toBeVisible();
   await expect(tagStory.getByTestId('story-text')).toHaveText('QR opens the item');
   // Finishing a lesson ticks it, and that is remembered on this phone.
-  await expect(page.getByTestId('guide-progress')).toContainText('0 of 16 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('0 of 17 learned');
   for (let i = 0; i < 5; i++) await tagStory.getByRole('button', { name: 'Next step' }).click();
   await expect(tagStory.getByTestId('story-text')).toHaveText('Every part has a job.');
   await tagStory.getByRole('button', { name: 'Got it ✓' }).click();
   await expect(tagStory).toBeHidden();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 16 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 17 learned');
   await page.reload();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 16 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 17 learned');
   // Quick help & fixes is still there.
   await page.getByRole('link', { name: 'Problems & fixes' }).click();
   await expect(page).toHaveURL(/\/help#faq$/);

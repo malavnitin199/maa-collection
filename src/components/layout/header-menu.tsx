@@ -66,7 +66,7 @@ export function HeaderMenu({ children }: { children: ReactNode }) {
         }}
         className={headerIcon}
       >
-        <IconDots className="h-5 w-5" />
+        <IconDots className="h-6 w-6" />
       </button>
       {open &&
         createPortal(

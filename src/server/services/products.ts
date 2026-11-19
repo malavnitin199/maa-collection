@@ -42,6 +42,30 @@ export function toCounterProduct(p: Product): CounterProduct {
   };
 }
 
+/**
+ * Plan v18: every item in use, as the counter sees it, for the phone's offline
+ * copy. Columns are picked one by one so the purchase price never leaves here.
+ */
+export async function counterCatalogue(db: Db, storeId: string): Promise<CounterProduct[]> {
+  return db
+    .select({
+      id: products.id,
+      sku: products.sku,
+      barcode: products.barcode,
+      name: products.name,
+      brand: products.brand,
+      category: products.category,
+      size: products.size,
+      color: products.color,
+      mrpPaise: products.mrpPaise,
+      pricePaise: products.pricePaise,
+      stock: products.stock,
+    })
+    .from(products)
+    .where(and(eq(products.storeId, storeId), eq(products.active, true)))
+    .orderBy(asc(products.name), asc(products.sku));
+}
+
 /** Finds an active product by scanned barcode, typed SKU (case-insensitive) or a tag's QR item link. */
 export async function findProductByCode(db: Db, storeId: string, code: string): Promise<Product | null> {
   const needle = codeFromScan(code);
@@ -859,7 +883,8 @@ export async function clearAllStock(db: Db, storeId: string, input: { staffId: s
     const held = await tx
       .select({ id: products.id, stock: products.stock })
       .from(products)
-      .where(and(eq(products.storeId, storeId), sql`${products.stock} > 0`))
+      // Not zero: since plan v18 a count can be below zero (offline sales); it is reset too.
+      .where(and(eq(products.storeId, storeId), sql`${products.stock} <> 0`))
       .for('update');
     if (held.length === 0) return { items: 0, pieces: 0 };
     await tx.insert(stockMovements).values(
@@ -873,7 +898,7 @@ export async function clearAllStock(db: Db, storeId: string, input: { staffId: s
       })),
     );
     await tx.update(products).set({ stock: 0 }).where(and(eq(products.storeId, storeId), inArray(products.id, held.map((p) => p.id))));
-    return { items: held.length, pieces: held.reduce((n, p) => n + p.stock, 0) };
+    return { items: held.length, pieces: held.reduce((n, p) => n + Math.max(p.stock, 0), 0) };
   });
 }
 

@@ -2,10 +2,11 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { LanguageSwitch } from '@/features/i18n/language-switch';
 import { SoundToggle } from '@/features/feedback/sound-toggle';
-import { IconBook, IconChevron, IconLogout } from '@/components/ui/icons';
+import { IconBook, IconChevron } from '@/components/ui/icons';
+import { LogoutRow } from '@/features/offline/logout-row';
+import { OfflineStrip } from '@/features/offline/offline-strip';
 import { HeaderMenu, menuRow } from './header-menu';
 import type { MessageKey } from '@/lib/i18n';
-import { logoutAction } from '@/server/actions/auth';
 import { canAny } from '@/lib/permissions';
 import { getCurrentStaff } from '@/server/auth';
 import { getT } from '@/server/i18n';
@@ -39,19 +40,20 @@ async function HeaderContent() {
     me?.role === 'admin' ? [...ADMIN_LINKS, ...SALES_LINKS] : catalogAccess ? [...SALES_LINKS, { href: '/admin/more', label: 'nav.catalog' }] : SALES_LINKS;
   return (
     <>
-      {/* Plan v17: the shop's name in full with who is logged in, then just अ / A and the ⋯ menu. */}
+      {/* Plan v17: the shop's name in full with who is logged in, then just अ / A and the ⋯ menu.
+          Plan v18: taller and bigger (owner: "looking so small"). */}
       <div className="flex items-center justify-between gap-3">
-        <Link href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'} className="flex min-w-0 items-center gap-2.5">
+        <Link href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'} className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 font-display text-[0.95rem] font-bold tracking-wide text-white shadow-inner ring-1 ring-white/30"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 font-display text-lg font-bold tracking-wide text-white shadow-inner ring-1 ring-white/30 min-[390px]:h-[3.25rem] min-[390px]:w-[3.25rem]"
           >
             MC
           </span>
           <span className="flex min-w-0 flex-col">
-            <span className="header-brand truncate font-display text-[1.15rem] leading-tight whitespace-nowrap text-white min-[390px]:text-[1.25rem]">Maa Collection</span>
+            <span className="header-brand truncate font-display text-[1.4rem] leading-tight whitespace-nowrap text-white min-[390px]:text-[1.55rem]">Maa Collection</span>
             {me && (
-              <span data-testid="current-user" className="mt-0.5 truncate text-xs leading-none font-medium text-white/80">
+              <span data-testid="current-user" className="mt-1 truncate text-sm leading-none font-medium text-white/85">
                 {me.name} · {t(me.role === 'admin' ? 'role.admin' : 'role.salesman')}
               </span>
             )}
@@ -66,12 +68,7 @@ async function HeaderContent() {
               {t('nav.guide')}
             </Link>
             {me ? (
-              <form action={logoutAction}>
-                <button type="submit" className={`${menuRow} text-red-700 dark:text-red-300`}>
-                  <IconLogout className="h-5 w-5" />
-                  {t('nav.logout')}
-                </button>
-              </form>
+              <LogoutRow staffId={me.id} className={menuRow} />
             ) : (
               <Link href="/login" className={menuRow}>
                 <IconChevron className="h-5 w-5" />
@@ -81,6 +78,8 @@ async function HeaderContent() {
           </HeaderMenu>
         </div>
       </div>
+      {/* Plan v18: no internet / sales saved on this phone — shown only then. */}
+      {me && <OfflineStrip me={{ id: me.id, name: me.name }} />}
       <nav className="hidden flex-wrap gap-x-1 gap-y-1 text-sm sm:flex">
         {links.map((item) => (
           <Link
@@ -106,8 +105,8 @@ export function RoleHeader() {
     <>
     {/* Plan v17: a soft gradient in the theme's dye with a faint glow, finished with the zari border. */}
     <header className="header-band sticky top-0 z-10 text-white shadow-lg shadow-brand-950/25 print:hidden">
-      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 pt-3 pb-2.5">
-        <Suspense fallback={<span className="font-display text-[1.45rem] leading-none text-white">Maa Collection</span>}>
+      <div className="mx-auto flex min-h-[5rem] max-w-5xl flex-col justify-center gap-3 px-4 pt-4 pb-4">
+        <Suspense fallback={<span className="font-display text-[1.55rem] leading-none text-white">Maa Collection</span>}>
           <HeaderContent />
         </Suspense>
       </div>

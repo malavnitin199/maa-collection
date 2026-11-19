@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react';
 import { IconBackspace } from '@/components/ui/icons';
 import { errorBox, primaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
+import { forgetSavedPages } from '@/offline/helper';
 import { loginAction, type LoginState } from '@/server/actions/auth';
 
 type Person = { id: string; name: string; role: 'admin' | 'salesman' };
@@ -24,7 +25,11 @@ function initials(name: string) {
  * on phones the keypad is used, so the phone keyboard stays closed.
  */
 export function LoginForm({ people }: { people: Person[] }) {
-  const [state, formAction, pending] = useActionState<LoginState, FormData>(loginAction, {});
+  // Plan v18: a new login never sees the last person's counter page saved for offline use.
+  const [state, formAction, pending] = useActionState<LoginState, FormData>(async (previous, data) => {
+    await forgetSavedPages();
+    return loginAction(previous, data);
+  }, {});
   const [staffId, setStaffId] = useState('');
   const [pin, setPin] = useState('');
   const t = useT();

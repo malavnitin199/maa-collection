@@ -7,6 +7,7 @@ import { ScanInput } from '@/features/scanning/scan-input';
 import { DoneOverlay } from '@/features/feedback/effects';
 import { feedback } from '@/features/feedback/sounds';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
+import { useOnline } from '@/features/offline/hooks';
 import { formatDate } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
 import { lookupProductAction, recordExchangeAction, returnableSalesAction } from '@/server/actions/pos';
@@ -31,6 +32,7 @@ export function ExchangeScreen({ me, staff }: { me: StaffOption; staff: StaffOpt
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [busy, startTransition] = useTransition();
   const t = useT();
+  const online = useOnline();
   const locale = useLocale();
   const [scanResult, setScanResult] = useState<{ kind: 'ok' | 'error'; id: number } | null>(null);
   const [done, setDone] = useState<{ amount: string; detail: string } | null>(null);
@@ -141,6 +143,12 @@ export function ExchangeScreen({ me, staff }: { me: StaffOption; staff: StaffOpt
         <h1 className="text-2xl font-semibold">{t('ex.title')}</h1>
         <p className={`text-sm ${muted}`}>{t('ex.subtitle')}</p>
       </div>
+      {/* Plan v18: an exchange looks up the bill on the shop's server, so it stays online-only. */}
+      {!online && (
+        <p data-testid="exchange-offline" className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950 dark:bg-amber-950 dark:text-amber-100">
+          {t('off.exchange')}
+        </p>
+      )}
       {done && <DoneOverlay title={t('done.exchange')} amount={done.amount} detail={done.detail} onClose={closeDone} />}
 
       {message && (

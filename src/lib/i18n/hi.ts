@@ -1,6 +1,7 @@
 import type { Messages } from './en';
 import { actionsHi } from './modules/actions.ts';
 import { approvalsHi } from './modules/approvals.ts';
+import { offlineHi } from './modules/offline.ts';
 import { catalogHi } from './modules/catalog.ts';
 import { helpHi } from './modules/help.ts';
 import { ownerHi } from './modules/owner.ts';
@@ -284,4 +285,4 @@ const base = {
   'login.backspace': 'आखिरी अंक मिटाएँ',
 };
 
-export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi };
+export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi, ...offlineHi };

@@ -65,6 +65,25 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 
 **Exchange:** **Exchange** → scan the returned item → choose the sale → scan the new item → check *Customer pays* / *Give back* → **Confirm exchange**.
 
+## 3a. No internet at the counter (plan v18)
+
+Selling never stops when the internet goes.
+
+| What happens | What you do |
+|---|---|
+| An **amber strip** under the shop's name: *No internet · the counter still works* | Keep selling as usual. |
+| Scan a tag (scanner, camera or its QR code) | The item comes from **this phone's copy** (an amber note says so; the stock shown may be old). Tap **Sell this item**, enter the price, **Record sale**. |
+| The card says **Saved on this phone** | The sale is kept on this phone. Nothing else to do. |
+| Tag won't scan | **Enter by hand** works the same way. |
+| See what is waiting | Tap the strip: **Saved on this phone** lists each sale and its time. |
+| Internet comes back | The sales are sent **by themselves**; a green message says how many reached the shop. Or tap **Send now**. |
+| The app was closed | Open it again: the counter opens even without internet (after it was opened once with internet on this phone). |
+
+Good to know:
+- **Use the same phone and stay logged in.** Saved sales are sent only by the person who made them; if you log out, they wait for your next login (the app warns you).
+- **Exchange needs internet.**
+- **Owner:** these sales arrive in **Approvals** like any other, with a blue **Made offline** mark and the time they were made. They are recorded even if the stock was already 0 — the count can show below zero (for example −1): recount that item and correct it.
+
 ## 4. Catalog & old stock (catalog / QC person)
 
 ### Tag one old item (~30 seconds)

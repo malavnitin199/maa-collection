@@ -194,7 +194,7 @@
 /* The sticky header and, on phones, the floating bottom dock cover part of the
    screen: anything the browser scrolls to (keyboard focus, a jump to a field)
    stays clear of both. */
-html { scroll-padding-top: 4.75rem; }
+html { scroll-padding-top: 6.5rem; }
 @media (max-width: 39.99rem) {
   html { scroll-padding-bottom: calc(7rem + var(--selection-bar, 0px)); }
 }

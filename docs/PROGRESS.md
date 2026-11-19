@@ -3,7 +3,7 @@
 Last updated: 2026-11-19
 
 ## Current milestone
-v0.7.0 (plan v17): **Essential Home** and **one minimal item layout** (New item + product page: name, category, size pills, For / Age tags, photo on the right; company, sale and purchase price; tabs Details · Colours · Other details).
+v0.8.0 (plan v18): **selling without internet** (scan from the phone's copy, sell by hand, sales saved on the phone and sent by themselves; the counter opens offline) and a **taller, bigger header**.
 
 ## Task status
 - [x] P1-01: bootstrap Next.js project + quality baseline (DONE 2026-11-14)
@@ -16,6 +16,7 @@ v0.7.0 (plan v17): **Essential Home** and **one minimal item layout** (New item 
 - [x] Plan v15 cleaner UI: icon header, pictures, motion, counter card, shorter Home (DONE 2026-11-16; see below)
 - [x] Plan v16 Bahi theme (DONE 2026-11-17; owner feedback pending)
 - [x] Plan v17 essential Home, clear Add stock, minimal New item + product page, For / Age tags (DONE 2026-11-19; see below)
+- [x] Plan v18 selling without internet + a bigger header (DONE 2026-11-19; see below)
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -39,8 +40,22 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 | 2026-11-16 | Plan v15 cleaner UI | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e --workers=3` | PASS | 150 unit tests; Playwright **75 passed, 1 skipped (phone-only), 0 failed** with 3 workers. At default parallelism on the busy Mac (load 8–12) random tests timed out; the camera and Guide tests that used to flake now pass 16/16 and 24/24 on repeat |
 | 2026-11-17 | Plan v16 Bahi theme | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e --workers=3` | PASS | 150 unit tests; Playwright 75 passed, 1 skipped, 0 failed (2.0 min) |
 | 2026-11-19 | Plan v17 | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright `--workers=3` against `next start -p 3217` with `DATABASE_URL=pglite:memory` | PASS | 153 unit tests (3 new); Playwright 75 passed, 1 skipped, 0 failed. The long-running dev server on :3000 was not reused: its local database misses "Ladies Jeans" (old local data) and the new columns until it restarts |
+| 2026-11-19 | Plan v18 | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright `--workers=3` against `next start -p 3217` with `DATABASE_URL=pglite:memory` | PASS | 178 unit tests (15 new: offline sales on the server, sending engine, phone-copy look-up, Clear stock below zero); Playwright 95 passed, 1 skipped, 0 failed (4 new: offline sale + by hand + list + logout warning + sent when back, below-zero stock, Made offline mark; counter reopened with no internet through the offline helper, QR link, other screens' No internet page). Header checked in phone screenshots online and offline. |
 
-## Essential Home, one minimal item layout, For / Age tags — v0.7.0 (2026-11-19, latest)
+## Selling without internet, bigger header — v0.8.0 (2026-11-19, latest)
+
+Owner: *"Increase the height of the header… looking so small. And give the functionality of the offline support… if salesman is offline and still scan the QR code, then the record is able to maintain when he or she back online again. So build a backup system also."* Owner chose: **let stock go below zero** (D-07), **sell by hand + see unsent sales** (+ scanning, named in the request), **the phone keeps unsent sales**. Plan: `docs/PLAN_V18_OFFLINE_COUNTER.md`; ADR-032; reference §28; user guide §3a; Guide lesson *No internet*.
+
+- **Counter offline:** an amber strip under the shop's name; scanning (scanner, camera, a tag's QR link) uses the phone's copy of the items (`/api/counter-catalogue`, no purchase prices); *Record sale* / *Enter by hand* save the sale on the phone (IndexedDB, localStorage fallback) — *Saved on this phone* card, count on the strip, the list with *Send now*.
+- **Sent by themselves** when the shop can be reached (`POST /api/offline-sales`, same `recordSale`, retry-safe `operationId`, only by the person who made them): on opening, on reconnect, every 30 s, or *Send now*. A sale the shop refuses stays on the phone with the reason (*Try again* / *Remove*). Logout warns and keeps them.
+- **Server:** an offline sale is always recorded — stock may go below zero, a since-hidden item still sells, the MRP the phone showed is kept, a since-removed salesperson keeps the credit; `sales.offline_at` = the phone's time. Online sales keep every refusal. Migration **0009** (drop `products_stock_nonnegative`, add `sales.offline_at`) must reach Neon **before** the deploy.
+- **Owner:** Approvals mark each such sale *Made offline · time* (blue). Exchanges stay online-only (*Exchange needs internet*).
+- **Offline helper** (`public/sw.js`, built app only): the counter opens without internet; `/` and `/login` go to the counter; a tag's QR link `/i/<code>` → `/pos?code=<code>`; other screens show a short *No internet* page. Saved pages are deleted at login and logout.
+- **Header:** badge 52 px, name 1.55 rem, name · role 14 px, अ / ⋯ buttons 48 px, more padding (still exactly two header buttons).
+- **Clear stock** now also resets a count below zero to 0 (its promise: every count becomes 0).
+- Tests: `offline-sales.test.ts` (9), `offline.test.ts` (6), `e2e/offline.spec.ts` (2 × desktop/phone, incl. reloading with no internet and the QR link). Guide lesson count 16 → 17 in two E2E checks.
+
+## Essential Home, one minimal item layout, For / Age tags — v0.7.0 (2026-11-19)
 Owner requests: a Home with only the essentials; a clear Add stock; then a billing-app picture as the model and "don't change any logic — company, product name, sale price and purchase price minimal on top, photo on the right, small tags (girls / boys, adult / child), top tabs Details · Colours · Other details; commit, push, deploy". The owner chose **new fields** for the tags. Plan: `docs/PLAN_V17_ESSENTIAL_HOME_NEW_ITEM.md`; ADR-027; reference §27.
 
 | # | Task | Result |

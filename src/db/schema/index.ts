@@ -114,7 +114,9 @@ export const products = pgTable(
   (t) => [
     uniqueIndex('products_store_sku_uq').on(t.storeId, t.sku),
     uniqueIndex('products_store_barcode_uq').on(t.storeId, t.barcode),
-    check('products_stock_nonnegative', sql`${t.stock} >= 0`),
+    // No "stock >= 0" rule since plan v18 (owner's decision): a sale made offline is always
+    // recorded when the phone is back online, even if that takes the count below zero.
+    // Online sales, exchanges and corrections still refuse to go below zero in the services.
     check('products_price_le_mrp', sql`${t.pricePaise} > 0 AND ${t.pricePaise} <= ${t.mrpPaise}`),
     check('products_for_gender_valid', sql`${t.forGender} IS NULL OR ${t.forGender} IN ('girls', 'boys', 'both')`),
     check('products_age_group_valid', sql`${t.ageGroup} IS NULL OR ${t.ageGroup} IN ('adult', 'child')`),
@@ -187,6 +189,8 @@ export const sales = pgTable(
     totalPaise: integer('total_paise').notNull(),
     /** Admin-only cost snapshot for profit reports; never sent to salesman screens. */
     costPaise: integer('cost_paise'),
+    /** Plan v18: made on a phone without internet, at this (phone) time; sent later. Null = online. */
+    offlineAt: timestamp('offline_at', { withTimezone: true }),
     /** Salesperson the sale is credited to. */
     soldBy: uuid('sold_by').notNull().references(() => staff.id),
     /** Logged-in staff member who entered it (may differ: "sale on behalf of"). */

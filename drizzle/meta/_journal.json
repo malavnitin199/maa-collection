@@ -64,6 +64,13 @@
       "when": 1795025858323,
       "tag": "0008_product_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795056465091,
+      "tag": "0009_offline_sales",
+      "breakpoints": true
     }
   ]
 }
