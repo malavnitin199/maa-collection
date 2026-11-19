@@ -4,7 +4,8 @@
  * paint by APPEARANCE_SCRIPT, so there is no flash of the wrong colours.
  */
 // Bahi (plan v16) is last in the picker but the default for a phone that never picked a theme.
-export const THEMES = ['peacock', 'marigold', 'rani', 'neel', 'mehendi', 'bahi'] as const;
+// Sindoor, Jamun and Aasmani were added on the owner's request (2026-11-19).
+export const THEMES = ['peacock', 'marigold', 'rani', 'neel', 'mehendi', 'sindoor', 'jamun', 'aasmani', 'bahi'] as const;
 export type Theme = (typeof THEMES)[number];
 export const MODES = ['light', 'dark', 'system'] as const;
 export type Mode = (typeof MODES)[number];
@@ -20,6 +21,9 @@ export const THEME_SWATCH: Record<Theme, { main: string; accent: string }> = {
   rani: { main: '#be185d', accent: '#e0a800' },
   neel: { main: '#4f46e5', accent: '#eab308' },
   mehendi: { main: '#5c6c1d', accent: '#c2562f' },
+  sindoor: { main: '#b91c1c', accent: '#f2b705' },
+  jamun: { main: '#7e22ce', accent: '#34c27a' },
+  aasmani: { main: '#0369a1', accent: '#f97316' },
   bahi: { main: '#4c3cce', accent: '#db631a' },
 };
 

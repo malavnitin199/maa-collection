@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 /*
- * Look and feel (plan v8). Five themes named after Indian dyes, each a full
- * brand scale (the 600 step keeps white text ≥ 4.5:1) plus a zari accent, and
- * a day/night mode. Both are attributes on <html>, set before the first paint
- * by the script in the root layout: data-theme="peacock|marigold|rani|neel|mehendi",
+ * Look and feel (plan v8). Themes named after Indian dyes (five at first, three
+ * more on 2026-11-19: Sindoor, Jamun, Aasmani; plus Bahi), each a full brand
+ * scale (the 600 step keeps white text ≥ 4.5:1) plus a zari accent, and a
+ * day/night mode. Both are attributes on <html>, set before the first paint by
+ * the script in the root layout: data-theme="peacock|marigold|rani|neel|mehendi|sindoor|jamun|aasmani|bahi",
  * data-mode="light|dark". Tailwind's `dark:` follows data-mode, not the OS
  * directly (the script maps "follow the phone" to light/dark).
  */
@@ -61,6 +62,24 @@
   --b-50: #f6f8ea; --b-100: #ebf0cf; --b-200: #d8e2a3; --b-300: #bccd6c; --b-400: #9db43f;
   --b-500: #7a8f27; --b-600: #5c6c1d; --b-700: #4a5719; --b-800: #3d4718; --b-900: #2e3614; --b-950: #1a1f0a;
   --zari: #c2562f;
+}
+/* Sindoor / सिंदूर — vermilion red + gold (owner, 2026-11-19). */
+[data-theme="sindoor"] {
+  --b-50: #fef2f2; --b-100: #fee2e2; --b-200: #fecaca; --b-300: #fca5a5; --b-400: #f87171;
+  --b-500: #dc2626; --b-600: #b91c1c; --b-700: #991b1b; --b-800: #7f1d1d; --b-900: #5f1414; --b-950: #3b0a0a;
+  --zari: #f2b705;
+}
+/* Jamun / जामुन — plum purple + the leaf's green. */
+[data-theme="jamun"] {
+  --b-50: #faf5ff; --b-100: #f3e8ff; --b-200: #e9d5ff; --b-300: #d8b4fe; --b-400: #c084fc;
+  --b-500: #9333ea; --b-600: #7e22ce; --b-700: #6b21a8; --b-800: #581c87; --b-900: #441566; --b-950: #2b0c45;
+  --zari: #34c27a;
+}
+/* Aasmani / आसमानी — sky blue + coral. */
+[data-theme="aasmani"] {
+  --b-50: #f0f9ff; --b-100: #e0f2fe; --b-200: #bae6fd; --b-300: #7dd3fc; --b-400: #38bdf8;
+  --b-500: #0284c7; --b-600: #0369a1; --b-700: #075985; --b-800: #0c4a6e; --b-900: #0a3a57; --b-950: #062a40;
+  --zari: #f97316;
 }
 
 /* Bahi / बही — a clean billing-app look (plan v16, inspired by Indian billing apps): indigo
