@@ -13,7 +13,7 @@ import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/aut
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getLocale, getT } from '@/server/i18n';
 import { localName } from '@/lib/sections';
-import { addTypeSize, createSection, createType, moveSection, moveType, updateSection } from '@/server/services/sections';
+import { addTypeSize, backfillSections, createSection, createType, moveSection, moveType, updateSection } from '@/server/services/sections';
 import { DomainError } from '@/server/services/errors';
 import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
@@ -357,6 +357,23 @@ export async function updateSectionAction(sectionId: string, _prev: FormState, f
     });
     revalidatePath('/admin', 'layout');
     return { message: (await getT())('act.saved') };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/**
+ * Categories → "Set up Men / Women / Boys / Girls" (owner only, once): the explicit one-time
+ * set-up of ADR-033 — the same `backfillSections` the script runs; never a side effect of a page read.
+ */
+export async function setUpSectionsAction(): Promise<FormState> {
+  await requireAdmin();
+  try {
+    const result = await backfillSections(await getDb(), STORE_ID);
+    revalidatePath('/admin', 'layout');
+    const t = await getT();
+    if (!result.created) return { error: t('sec.setup.already') };
+    return { message: t('sec.setup.done', { sections: result.sections.map((s) => s.name).join(', '), added: result.typesAdded.length, unsorted: result.unsorted.length }) };
   } catch (error) {
     return failure(error);
   }

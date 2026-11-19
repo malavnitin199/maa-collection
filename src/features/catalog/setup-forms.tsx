@@ -240,6 +240,21 @@ export function SectionForm({
   );
 }
 
+/** Categories with no sections yet: the owner's one-time set-up button (ADR-033). */
+export function SetUpSectionsForm({ action }: { action: Action }) {
+  const t = useT();
+  const [state, formAction, pending] = useActionState(action, {});
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <p className="text-sm">{t('sec.setup.text')}</p>
+      <Feedback state={state} />
+      <button type="submit" disabled={pending} className={`${primaryButton} py-3`}>
+        {pending ? t('common.saving') : t('sec.setup.button')}
+      </button>
+    </form>
+  );
+}
+
 /** Needs sorting → "Move under" a section: one pick, one tap. */
 export function MoveTypeForm({ action, sections, typeName }: { action: Action; sections: SectionChoice[]; typeName: string }) {
   const t = useT();

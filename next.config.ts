@@ -18,7 +18,8 @@ const nextConfig: NextConfig = {
   // Plan v17: "Quick add" became the New item screen; old links and bookmarks
   // (query such as ?supplier= is kept) land there.
   async redirects() {
-    return [{ source: "/admin/stock/quick", destination: "/admin/stock/new", permanent: false }];
+    // The old quick-add address lands on the earlier form (plan v19: /admin/stock/new is the step-by-step screen).
+    return [{ source: "/admin/stock/quick", destination: "/admin/stock/form", permanent: false }];
   },
   turbopack: {
     rules: {

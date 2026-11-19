@@ -2,11 +2,11 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { card, link, muted, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { SectionArt } from '@/features/catalog/section-art';
-import { CategoryForm, MoveTypeForm, SectionForm, type SectionChoice } from '@/features/catalog/setup-forms';
+import { CategoryForm, MoveTypeForm, SectionForm, SetUpSectionsForm, type SectionChoice } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import type { Locale, T } from '@/lib/i18n';
 import { localName } from '@/lib/sections';
-import { createCategoryAction, createSectionAction, moveSectionAction, moveTypeAction, updateCategoryAction, updateSectionAction } from '@/server/actions/admin';
+import { createCategoryAction, createSectionAction, moveSectionAction, moveTypeAction, setUpSectionsAction, updateCategoryAction, updateSectionAction } from '@/server/actions/admin';
 import { requirePermission } from '@/server/auth';
 import { getLocale, getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
@@ -168,6 +168,11 @@ async function Tree({ searchParams }: { searchParams: Promise<Search> }) {
             <CategoryForm key={`${section.id}:${section.active}`} action={createCategoryAction} submitLabel={t('cat.cat.add')} sections={choices} defaultSectionId={section.active ? section.id : null} />
           </div>
         </details>
+      )}
+      {!section && sections.length === 0 && (
+        <section data-testid="sections-setup" className={card}>
+          <SetUpSectionsForm action={setUpSectionsAction} />
+        </section>
       )}
       {!section && sections.length === 0 && (
         <details className={card}>

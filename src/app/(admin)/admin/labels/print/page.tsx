@@ -13,6 +13,7 @@ import { requireAnyPermission } from '@/server/auth';
 import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { getMyLabelsToday, getReceiptForLabels, productsByIds, tagSizesFor, type ReceiptLabelLine } from '@/server/services/products';
+import { sectionOfType } from '@/server/services/sections';
 import { PRINT_MAX } from '@/lib/selection-limits';
 import { getStoreSettings, labelPriceCode, type StoreSettings } from '@/server/services/settings';
 import { listTagLibrary } from '@/server/services/tag-library';
@@ -26,6 +27,8 @@ type Search = {
   receipt?: string;
   each?: string;
   created?: string;
+  /** Plan v19: the New item steps' one / many choice, carried to "Add next item". */
+  mode?: string;
   mine?: string;
   format?: string;
   photos?: string;
@@ -53,13 +56,19 @@ function hrefWith(params: Search, change: Partial<Search>) {
   return `/admin/labels/print?${next.toString()}`;
 }
 
-/** "Add next item" (plan v17): the New item screen with this delivery's company and category chosen. */
-function nextItemHref(supplierId?: string | null, categoryId?: string | null) {
+/**
+ * "Add next item" (plan v19, 04b): the New item steps with this bill's company, section,
+ * bill no., stock date and one / many choice kept; `n` (the receipt) makes it a fresh entry.
+ */
+function nextItemHref(receipt: { id: string; supplierId: string | null; billNumber: string | null; stockDate: string | null }, sectionId: string | null, mode?: string) {
   const next = new URLSearchParams();
-  if (supplierId) next.set('supplier', supplierId);
-  if (categoryId) next.set('category', categoryId);
-  const query = next.toString();
-  return query ? `/admin/stock/new?${query}` : '/admin/stock/new';
+  if (receipt.supplierId) next.set('supplier', receipt.supplierId);
+  if (sectionId) next.set('section', sectionId);
+  if (receipt.billNumber) next.set('bill', receipt.billNumber);
+  if (receipt.stockDate) next.set('date', receipt.stockDate);
+  if (mode === 'one' || mode === 'many') next.set('mode', mode);
+  next.set('n', receipt.id);
+  return `/admin/stock/new?${next.toString()}`;
 }
 
 type SheetData = { settings: StoreSettings; origin: string; sizes: Map<string, string[]> };
@@ -237,6 +246,7 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
   if (!params.receipt || !/^[0-9a-f-]{36}$/i.test(params.receipt)) notFound();
   const db = await requestDb();
   const [receipt, settings] = await Promise.all([getReceiptForLabels(db, STORE_ID, params.receipt), getStoreSettings(db, STORE_ID)]);
+  const nextSection = receipt ? await sectionOfType(db, STORE_ID, receipt.lines[0]?.categoryId) : null;
   if (!receipt) notFound();
 
   return (
@@ -252,8 +262,8 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
             <p role="status" className={okBox}>
               {t(params.created === '1' ? 'stk.labels.created.one' : 'stk.labels.created.other', { n: params.created })}
             </p>
-            {/* Plan v17: straight on to the next item, same company and category. */}
-            <Link href={nextItemHref(receipt.supplierId, receipt.lines[0]?.categoryId)} className={`${secondaryButton} w-fit`}>
+            {/* Plan v19: straight on to the next item of the same bill (company, section, bill no., date kept). */}
+            <Link href={nextItemHref(receipt, nextSection, params.mode)} className={`${secondaryButton} w-fit`}>
               {t('stk.labels.addNext')}
             </Link>
           </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { IconBack, IconChevron } from '@/components/ui/icons';
@@ -60,14 +61,15 @@ export function NewItemWizard({
   suppliers: Option[];
   previousSuppliers: Option[];
   showCost: boolean;
-  initial: { sectionId?: string; supplierId?: string; billNumber?: string; stockDate?: string };
+  initial: { sectionId?: string; supplierId?: string; billNumber?: string; stockDate?: string; mode?: Mode };
 }) {
   const t = useT();
   const router = useRouter();
   const [list, setList] = useState(sections);
   const startSection = list.some((s) => s.id === initial.sectionId) ? initial.sectionId! : '';
-  const [mode, setMode] = useState<Mode>('many');
-  const [step, setStep] = useState<Step>('start');
+  const [mode, setMode] = useState<Mode>(initial.mode ?? 'many');
+  // "Add next item" of the same bill: straight to "What is it?" of the same section.
+  const [step, setStep] = useState<Step>(startSection ? 'what' : 'start');
   const [direction, setDirection] = useState<'next' | 'back'>('next');
   const [sectionId, setSectionId] = useState(startSection);
   const [typeId, setTypeId] = useState('');
@@ -83,7 +85,7 @@ export function NewItemWizard({
   const [brand, setBrand] = useState('');
   const [sizes, setSizes] = useState<string[]>([]);
   const [pieces, setPieces] = useState<Record<string, number>>({});
-  const [reached, setReached] = useState(0);
+  const [reached, setReached] = useState(startSection ? 1 : 0);
   const [sheet, setSheet] = useState<'section' | 'type' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
@@ -191,7 +193,7 @@ export function NewItemWizard({
       setReached(1);
       setDirection('next');
       setStep('what');
-      router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}`);
+      router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}&mode=${mode}`);
     });
   };
 
@@ -270,6 +272,14 @@ export function NewItemWizard({
           </div>
         )}
 
+        {step === 'who' && list.length === 0 && (
+          <p className={`mb-3 text-sm ${muted}`}>
+            {t('ni.noSections')}{' '}
+            <Link href="/admin/categories" className="font-semibold text-brand-700 underline-offset-4 hover:underline dark:text-brand-300">
+              {t('ni.goCategories')}
+            </Link>
+          </p>
+        )}
         {step === 'who' && (
           <div role="group" aria-label={t('ni.step.who')} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {list.map((s) => (

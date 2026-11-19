@@ -102,21 +102,18 @@ Good to know:
 
 ### New stock from a company (Add stock → New item)
 
-**Add stock** has one big button, **New item**, and two **Other ways** under it: *More pieces of an existing item* and *Tag old stock*.
+**Add stock** has one big button, **New item**, and under **Other ways**: *Old form* (the earlier New item screen: sizes × colours grid, prices by size, photos), *More pieces of an existing item* and *Tag old stock*.
 
-1. **Top card**: type the **Product name**, choose the **Category**, and tap who it is for — **For**: Girls · Boys · Both, **Age**: Adult · Child (optional; tap again to clear). On the right is the **photo**: tap it to choose from the gallery, or 📷 for the camera; ✕ removes it.
-2. **Must-haves**: the **Company** (where you buy it), the **Sale price (MRP) ₹** and the **Purchase price ₹** (only if you have the *Purchase price* right).
-   - New company? Choose **+ New company…**, type the name, tap **Add**. Typing a name that already exists uses that company (never a double).
-   - An earlier company is under **Previous companies** at the bottom of the list: choose it to use it again. (The same company box is on Tag old stock and Add a single product.)
-   - To hide a company: Suppliers → the company → *Edit supplier details* → untick **Active**.
-3. **Tabs** below:
-   - **Details**: **Pieces** (how many came), **Counter price, if lower** (empty = the MRP), **Supplier bill no.**
-   - **Colours**: comes in many sizes or colours? Tap the sizes (the category's sizes come first; *Pick all* takes them all) and add the colours. A grid shows every colour × size with its pieces; each pair becomes its own item with its own barcode, and *Pieces* becomes **Pieces each**. Nothing picked = one item, size *Free*, colour *Assorted*.
-     - A size costs more (e.g. XL)? **Price by size**: type that size's own MRP / selling / purchase price. Grey = the default; green = the size's own. Every colour of that size gets the same price.
-     - **Photo of each colour** (optional): every size of that colour gets it; other colours get the main photo.
-   - **Other details**: **Brand** (the company name unless you type another). More fields will go here later.
-4. Check the line above the button (items · pieces · purchase), then **Save**.
-5. On the labels page, **+ Add next item** opens an empty item with the same company and category. Each save is its own delivery; type the same bill number to keep them together in *All tags → Delivery*.
+**New item** (plan v19) asks one thing at a time; the bar at the top shows where you are, the back arrow and the chips under it go back without losing anything:
+
+0. **What are you adding?** — **One item** (one size, a few pieces) or **Many items** (sizes and pieces from a bill).
+1. **Who is it for?** — **Men, Women, Boys, Girls** (or a section you added). **+ Add** makes a new one on the spot. *If this screen shows only + Add, open Categories once and tap **Set up Men / Women / Boys / Girls**.*
+2. **What is it?** — that section's categories (Jeans 28–36, Shirt M–XXL, Kurta …). **+ Add** makes a new category with its sizes.
+3. **Item details** — **Company** (or *+ New company…*), **Product name**, **Sale price (MRP) ₹**, **Purchase price ₹** per piece (only with the *Purchase price* right). Under **More**: counter price if lower, bill no., stock date, brand. **Next**.
+4. **Which sizes?** — tap the sizes that came; each gets **− pieces +** (type a number if you like): 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** adds one the category lacks and keeps it for next time. *One item* lets you pick one size. The bar at the bottom counts sizes and pieces. **Next**.
+5. **Check and save** — name, section › category, company, size × pieces, total pieces and items, MRP, purchase per piece and total. **Save & print tags** saves one item per size (its own barcode each) and opens the tags page.
+
+On the tags page, **+ Add next item** starts the next product of the same bill: same company, section, bill no. and stock date, straight at *What is it?*. There is no colour step: a new item has no colour unless you add one on its product page later.
 
 ### Selecting many (Products, Approvals, All tags, Companies)
 
@@ -214,7 +211,8 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 | When | Required | Optional |
 |---|---|---|
 | Tag old stock | Category, name, MRP, pieces | Photo (recommended), For / Age, size (= Free), colour, company, selling price (= MRP), purchase price |
-| New item | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), colours (= Assorted), brand (= company) |
+| New item (steps) | Who it is for, what it is, company, product name, sale price (MRP), purchase price (with the *Purchase price* right), at least one size | Pieces per size (= 1), counter price (= MRP), bill no., stock date (= today), brand (= none) |
+| Old form | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), colours (= Assorted), brand (= company) |
 | Sale | Scan, quantity, price | Credit to a colleague |
 | Company | Name | Contact, phone, GSTIN, notes |
 

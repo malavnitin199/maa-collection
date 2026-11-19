@@ -44,6 +44,11 @@ export const sectionsEn = {
   'sec.icon.bag': 'Bag',
   'sec.icon.shoe': 'Shoes',
   'sec.icon.hanger': 'Clothes',
+  // One-time set-up from the Categories screen (a shop that has no sections yet)
+  'sec.setup.text': 'Set up Men, Women, Boys and Girls with their usual categories. Your existing categories stay in Needs sorting for you to sort.',
+  'sec.setup.button': 'Set up Men / Women / Boys / Girls',
+  'sec.setup.done': 'Set up {sections}. {added} categories added; {unsorted} to sort.',
+  'sec.setup.already': 'This shop already has sections.',
 } as const;
 
 export const sectionsHi: Record<keyof typeof sectionsEn, string> = {
@@ -85,4 +90,8 @@ export const sectionsHi: Record<keyof typeof sectionsEn, string> = {
   'sec.icon.bag': 'बैग',
   'sec.icon.shoe': 'जूते',
   'sec.icon.hanger': 'कपड़े',
+  'sec.setup.text': 'पुरुष, महिला, लड़के और लड़कियाँ उनकी आम कैटेगरी के साथ सेट करें। आपकी मौजूदा कैटेगरी "अभी किसी में नहीं" में रहेंगी, आप उन्हें रखेंगे।',
+  'sec.setup.button': 'पुरुष / महिला / लड़के / लड़कियाँ सेट करें',
+  'sec.setup.done': '{sections} सेट हुए। {added} कैटेगरी जोड़ी गईं; {unsorted} रखनी हैं।',
+  'sec.setup.already': 'इस दुकान में सेक्शन पहले से हैं।',
 };

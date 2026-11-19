@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-/** Plan v19 task 03a: New item, step by step (ADR-034) at /admin/stock/add. */
+/** Plan v19 (03a + the swap of 04b): New item, step by step (ADR-034) at /admin/stock/new; the earlier form is at /admin/stock/form. */
 const PIN = '1234';
 const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
 
@@ -18,8 +18,8 @@ const heading = (page: Page, text: string) => expect(page.getByRole('heading', {
 test('many items: who → what → details → sizes with pieces → check → save and print; back keeps everything', async ({ page }) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   await page.goto('/admin/stock');
-  await page.getByRole('link', { name: /Add stock step by step/ }).click();
-  await expect(page).toHaveURL(/\/admin\/stock\/add$/);
+  await page.getByRole('link', { name: /^New item/ }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
   await heading(page, 'What are you adding?');
   await page.getByRole('button', { name: /^Many items/ }).click();
 
@@ -76,17 +76,26 @@ test('many items: who → what → details → sizes with pieces → check → s
   await expect(page.getByTestId('wizard-path')).toContainText('M × 1 · L × 2');
 
   await page.getByRole('button', { name: 'Save & print tags' }).click();
-  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=2$/);
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=2&mode=many$/);
   await expect(page.getByText('Saved 2 new items with barcodes.')).toBeVisible();
   const lines = page.getByTestId('receipt-lines');
   await expect(lines).toContainText(`Chikan Kurta ${run} · M`); // no colour: nothing shown (D-V19-3)
   await expect(lines.getByRole('listitem').filter({ hasText: `Chikan Kurta ${run} · L` })).toContainText('2 pcs');
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(3);
+
+  // Add next item: the same bill — company, section and the many-items choice kept; straight to "What is it?".
+  await page.getByRole('link', { name: '+ Add next item' }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=[0-9a-f-]{36}&section=[0-9a-f-]{36}&mode=many&n=[0-9a-f-]{36}$/);
+  await heading(page, 'What is it?');
+  await expect(page.getByTestId('wizard-path')).toHaveText('Men');
+  await page.getByRole('button', { name: /^Shirt/ }).click();
+  await expect(page.getByRole('combobox', { name: /^Company/ }).locator('option:checked')).toHaveText('Shree Ganesh Textiles');
+  await expect(page.getByLabel('Product name')).toHaveValue('');
 });
 
 test('one item: a new category and a new size on the spot; one size only', async ({ page }) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
-  await page.goto('/admin/stock/add');
+  await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: /^One item/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await heading(page, 'What is it?');
@@ -124,7 +133,7 @@ test('one item: a new category and a new size on the spot; one size only', async
   await heading(page, 'Check and save');
   await expect(page.getByTestId('review-sizes').getByRole('listitem')).toHaveText(['34 × 3']);
   await page.getByRole('button', { name: 'Save & print tags' }).click();
-  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=1$/);
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=1&mode=one$/);
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(3);
 
   // The new size stayed on the category.
@@ -135,6 +144,6 @@ test('one item: a new category and a new size on the spot; one size only', async
 test('a salesman without the catalog right cannot open it', async ({ page, isMobile }) => {
   test.skip(isMobile, 'same rule on both');
   await login(page, 'Vishal', /\/pos$/);
-  await page.goto('/admin/stock/add');
+  await page.goto('/admin/stock/new');
   await expect(page).toHaveURL(/\/pos$/);
 });

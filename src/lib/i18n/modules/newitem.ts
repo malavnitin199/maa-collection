@@ -5,8 +5,11 @@
  * list in docs/TECHNICAL_REFERENCE.md §15.
  */
 export const newItemEn = {
-  'ni.hub.title': 'Add stock step by step',
-  'ni.hub.hint': 'Who is it for → what is it → details → sizes',
+  'ni.hub.hint': 'Who is it for → what is it → details → sizes and pieces → tags',
+  'ni.hub.form.title': 'Old form',
+  'ni.hub.form.hint': 'Sizes × colours grid, prices by size, photos',
+  'ni.noSections': 'No sections yet (Men / Women / Boys / Girls).',
+  'ni.goCategories': 'Set them up in Categories',
   'ni.start.title': 'What are you adding?',
   'ni.start.one': 'One item',
   'ni.start.oneHint': 'One size, a few pieces',
@@ -75,8 +78,11 @@ export const newItemEn = {
 } as const;
 
 export const newItemHi: Record<keyof typeof newItemEn, string> = {
-  'ni.hub.title': 'स्टॉक चरण दर चरण जोड़ें',
-  'ni.hub.hint': 'किसके लिए → क्या है → जानकारी → साइज़',
+  'ni.hub.hint': 'किसके लिए → क्या है → जानकारी → साइज़ और पीस → टैग',
+  'ni.hub.form.title': 'पुराना फ़ॉर्म',
+  'ni.hub.form.hint': 'साइज़ × रंग की तालिका, साइज़ के हिसाब से दाम, फ़ोटो',
+  'ni.noSections': 'अभी कोई सेक्शन नहीं (पुरुष / महिला / लड़के / लड़कियाँ)।',
+  'ni.goCategories': 'कैटेगरी में सेट करें',
   'ni.start.title': 'क्या जोड़ रहे हैं?',
   'ni.start.one': 'एक आइटम',
   'ni.start.oneHint': 'एक साइज़, कुछ पीस',

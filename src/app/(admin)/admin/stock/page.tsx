@@ -5,16 +5,16 @@ import { can, type Permission } from '@/lib/permissions';
 import { requireAnyPermission } from '@/server/auth';
 import { getT } from '@/server/i18n';
 import { TagTile } from '@/components/ui/tag-tile';
-import { IconScan, IconStockAdd, IconTag } from '@/components/ui/icons';
+import { IconGrid, IconScan, IconStockAdd, IconTag } from '@/components/ui/icons';
 
 type Option = { href: string; Icon: (p: { className?: string }) => React.ReactNode; title: MessageKey; hint: MessageKey; needs: Permission };
 
-/** The usual way in (plan v17): one item, in one colour or many sizes × colours. */
-const NEW_ITEM: Option = { href: '/admin/stock/new', Icon: IconStockAdd, title: 'stk.hub.item.title', hint: 'stk.hub.item.hint', needs: 'catalog' };
+/** The usual way in (plan v19): step by step — who is it for, what is it, details, sizes and pieces. */
+const NEW_ITEM: Option = { href: '/admin/stock/new', Icon: IconStockAdd, title: 'stk.hub.item.title', hint: 'ni.hub.hint', needs: 'catalog' };
 
 const OTHER_WAYS: Option[] = [
-  // Plan v19 (03a): the step-by-step New item, here until it replaces the form above (V19-04).
-  { href: '/admin/stock/add', Icon: IconStockAdd, title: 'ni.hub.title', hint: 'ni.hub.hint', needs: 'catalog' },
+  // Plan v19: the earlier form (sizes × colours, prices by size, photos) stays here for now.
+  { href: '/admin/stock/form', Icon: IconGrid, title: 'ni.hub.form.title', hint: 'ni.hub.form.hint', needs: 'catalog' },
   { href: '/admin/stock/receive', Icon: IconScan, title: 'stk.hub.receive.title', hint: 'stk.hub.receive.hint', needs: 'stock' },
   { href: '/admin/stock/old', Icon: IconTag, title: 'stk.hub.old.title', hint: 'stk.hub.old.hint', needs: 'catalog' },
 ];

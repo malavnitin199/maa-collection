@@ -1,29 +1,50 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { IconBack } from '@/components/ui/icons';
-import { NewItemForm } from '@/features/catalog/new-item-form';
+import { NewItemWizard } from '@/features/catalog/new-item-wizard';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
+import { localName } from '@/lib/sections';
 import { requirePermission } from '@/server/auth';
-import { getT } from '@/server/i18n';
+import { getLocale, getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
-import { listCategories, listSuppliers } from '@/server/services/catalog';
+import { listSuppliers } from '@/server/services/catalog';
+import { listSections } from '@/server/services/sections';
 
-type Search = { supplier?: string; category?: string };
+/**
+ * New item, step by step (plan v19, the New item screen since 03a/04b). `supplier`,
+ * `section`, `bill`, `date`, `mode` let "Add next item" keep the bill's company, section,
+ * number, date and one/many choice; `n` makes each visit a fresh entry (Next keeps the
+ * screen alive otherwise). The earlier form lives on at /admin/stock/form.
+ */
+type Search = { supplier?: string; section?: string; bill?: string; date?: string; mode?: string; n?: string };
+const one = (value: string | string[] | undefined) => (typeof value === 'string' ? value : undefined);
 
 async function NewItem({ searchParams }: { searchParams: Promise<Search> }) {
   const me = await requirePermission('catalog');
-  const [{ supplier, category }, db] = await Promise.all([searchParams, requestDb()]);
-  const [allSuppliers, categoryRows] = await Promise.all([listSuppliers(db, STORE_ID), listCategories(db, STORE_ID, { activeOnly: true })]);
+  const [params, db, locale] = await Promise.all([searchParams, requestDb(), getLocale()]);
+  const [allSuppliers, { sections }] = await Promise.all([listSuppliers(db, STORE_ID), listSections(db, STORE_ID, { activeOnly: true })]);
   const supplierRows = allSuppliers.filter((s) => s.active);
+  const supplier = one(params.supplier);
+  const date = one(params.date);
   return (
-    <NewItemForm
+    <NewItemWizard
+      key={new URLSearchParams(Object.entries(params).filter((e): e is [string, string] => typeof e[1] === 'string')).toString()}
+      sections={sections.map((s) => ({
+        id: s.id,
+        name: localName(s, locale),
+        icon: s.icon,
+        types: s.types.map((x) => ({ id: x.id, name: localName(x, locale), code: x.code, sizes: x.sizes })),
+      }))}
       suppliers={supplierRows.map(({ id, name }) => ({ id, name }))}
       previousSuppliers={allSuppliers.filter((s) => !s.active).map(({ id, name }) => ({ id, name }))}
-      categories={categoryRows.map(({ id, name, code, sizes }) => ({ id, name, code, sizes }))}
-      // "Add next item" on the labels page keeps the company and category.
-      initialSupplierId={supplierRows.some((s) => s.id === supplier) ? supplier : undefined}
-      initialCategoryId={categoryRows.some((c) => c.id === category) ? category : undefined}
+      initial={{
+        sectionId: one(params.section),
+        supplierId: supplierRows.some((s) => s.id === supplier) ? supplier : undefined,
+        billNumber: one(params.bill)?.slice(0, 60),
+        stockDate: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined,
+        mode: params.mode === 'one' ? 'one' : params.mode === 'many' ? 'many' : undefined,
+      }}
       showCost={can(me, 'costs')}
     />
   );
@@ -33,7 +54,6 @@ export default async function NewItemPage(props: PageProps<'/admin/stock/new'>) 
   const t = await getT();
   return (
     <main className="flex flex-col gap-4">
-      {/* Minimal title bar (plan v17): back arrow and the name of the screen only. */}
       <div className="flex items-center gap-2">
         <Link href="/admin/stock" aria-label={t('stk.item.back')} className="-ml-2 rounded-full p-2 text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950">
           <IconBack className="h-5 w-5" />
