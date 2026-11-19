@@ -19,18 +19,28 @@ export type RecordSaleInput = {
   soldBy: string;
   /** Logged-in staff member entering it. */
   recordedBy: string;
+  /**
+   * Plan v18: the sale was made on a phone without internet and is being sent now.
+   * It is always recorded (owner's decision, D-07): the stock may go below zero,
+   * an item hidden since still sells, an MRP lowered since does not refuse it,
+   * and a salesperson removed since keeps the credit.
+   */
+  offline?: OfflineMade;
 };
+
+/** When the phone made it, and the MRP the phone showed then (the tag's). */
+export type OfflineMade = { at: Date; mrpPaise?: number };
 
 export type RecordSaleResult = { sale: Sale; stockLeft: number; duplicate: boolean };
 
 export const MANUAL_NAME_MAX = 80;
 export const MANUAL_SIZE_MAX = 20;
 
-export async function assertActiveStaff(db: Db, storeId: string, staffId: string) {
+export async function assertActiveStaff(db: Db, storeId: string, staffId: string, { evenRemoved = false } = {}) {
   const [person] = await db
     .select({ id: staff.id })
     .from(staff)
-    .where(and(eq(staff.storeId, storeId), eq(staff.id, staffId), eq(staff.active, true)))
+    .where(and(eq(staff.storeId, storeId), eq(staff.id, staffId), evenRemoved ? undefined : eq(staff.active, true)))
     .limit(1);
   if (!person) throw new DomainError('That salesperson is not active.', { key: 'error.sellerInactive' });
 }
@@ -43,6 +53,9 @@ export async function assertActiveStaff(db: Db, storeId: string, staffId: string
  * A hand-entered sale (`manual`) has no item: nothing is deducted, no MRP is
  * known, and the owner checks it in Approvals. The owner's own entries are
  * approved as they are recorded; everyone else's wait for the owner.
+ *
+ * A sale made offline (`offlineAt`, plan v18) skips the stock, hidden-item and
+ * MRP refusals — it already happened at the counter — and keeps the phone's time.
  */
 export async function recordSale(db: Db, storeId: string, input: RecordSaleInput): Promise<RecordSaleResult> {
   if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.');
@@ -54,10 +67,11 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
   }
   const manual = input.manual ? normaliseManual(input.manual) : null;
   if (!manual && !input.productId) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  const offlineAt = input.offline ? offlineTime(input.offline.at) : null;
 
   const existing = await findSaleByOperation(db, storeId, input.operationId);
   if (existing) return existing;
-  await assertActiveStaff(db, storeId, input.soldBy);
+  await assertActiveStaff(db, storeId, input.soldBy, { evenRemoved: offlineAt !== null });
 
   try {
     return await db.transaction(async (tx) => {
@@ -82,6 +96,7 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
             costPaise: null,
             soldBy: input.soldBy,
             recordedBy: input.recordedBy,
+            offlineAt,
           })
           .returning();
         if (owner) await autoApproveOwnEntry(tx, { storeId, saleId: sale.id, decidedBy: input.recordedBy });
@@ -91,15 +106,20 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
       const [product] = await tx
         .select()
         .from(products)
-        .where(and(eq(products.storeId, storeId), eq(products.id, input.productId!), eq(products.active, true)))
+        // Offline: the item may have been hidden since the sale; it still sold.
+        .where(and(eq(products.storeId, storeId), eq(products.id, input.productId!), offlineAt ? undefined : eq(products.active, true)))
         .limit(1);
       if (!product) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
-      if (input.unitPricePaise > product.mrpPaise) throw new DomainError('Sale price cannot be above MRP.', { key: 'error.aboveMrp' });
+      if (!offlineAt && input.unitPricePaise > product.mrpPaise) {
+        throw new DomainError('Sale price cannot be above MRP.', { key: 'error.aboveMrp' });
+      }
 
+      // Online: never below zero. Offline: the pieces already left the shop, so the
+      // count follows them, even below zero (the owner recounts).
       const [updated] = await tx
         .update(products)
         .set({ stock: sql`${products.stock} - ${input.quantity}` })
-        .where(and(eq(products.id, product.id), gte(products.stock, input.quantity)))
+        .where(and(eq(products.id, product.id), offlineAt ? undefined : gte(products.stock, input.quantity)))
         .returning({ stock: products.stock });
       if (!updated) {
         throw product.stock <= 0
@@ -117,13 +137,15 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
           productName: product.name,
           size: product.size,
           color: product.color,
-          mrpPaise: product.mrpPaise,
+          // Offline: the MRP the phone showed when it sold (the owner may have changed it since).
+          mrpPaise: offlineAt ? offlineMrp(product.mrpPaise, input.unitPricePaise, input.offline?.mrpPaise) : product.mrpPaise,
           quantity: input.quantity,
           unitPricePaise: input.unitPricePaise,
           totalPaise: input.quantity * input.unitPricePaise,
           costPaise: product.costPaise,
           soldBy: input.soldBy,
           recordedBy: input.recordedBy,
+          offlineAt,
         })
         .returning();
       await tx.insert(stockMovements).values({
@@ -144,6 +166,18 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
     }
     throw error;
   }
+}
+
+/** The phone's clock: a real time, never later than now (a phone set ahead is pulled back). */
+function offlineTime(at: Date): Date {
+  if (Number.isNaN(at.getTime())) throw new DomainError('Invalid sale time.', { key: 'error.invalid' });
+  return at.getTime() > Date.now() ? new Date() : at;
+}
+
+/** The MRP kept with an offline sale: the one the phone showed, never below the price agreed. */
+function offlineMrp(current: number, price: number, shown?: number): number {
+  if (shown !== undefined && Number.isSafeInteger(shown) && shown >= price) return shown;
+  return Math.max(current, price);
 }
 
 /** Trims and bounds what the salesman typed; a name is required. */

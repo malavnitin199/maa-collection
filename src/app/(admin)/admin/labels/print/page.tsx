@@ -15,6 +15,8 @@ import { requestDb } from '@/server/request-db';
 import { getMyLabelsToday, getReceiptForLabels, productsByIds, tagSizesFor, type ReceiptLabelLine } from '@/server/services/products';
 import { PRINT_MAX } from '@/lib/selection-limits';
 import { getStoreSettings, labelPriceCode, type StoreSettings } from '@/server/services/settings';
+import { listSuppliers } from '@/server/services/catalog';
+import { sectionOfType } from '@/server/services/sections';
 import { listTagLibrary } from '@/server/services/tag-library';
 import { groupNote, groupTitle } from '@/features/tag-library/group-title';
 import { formatDate } from '@/lib/i18n';
@@ -53,21 +55,28 @@ function hrefWith(params: Search, change: Partial<Search>) {
   return `/admin/labels/print?${next.toString()}`;
 }
 
-/** "Add next item" (plan v17): the New item screen with this delivery's company and category chosen. */
-function nextItemHref(supplierId?: string | null, categoryId?: string | null) {
+/**
+ * "Add next item" (plan v19): the New item steps again for the same bill —
+ * its company, section, bill no. and stock date chosen; `n` (this delivery)
+ * makes it a fresh entry.
+ */
+function nextItemHref(receipt: { id: string; supplierId: string | null; billNumber: string | null; stockDate: string | null }, sectionId: string | null) {
   const next = new URLSearchParams();
-  if (supplierId) next.set('supplier', supplierId);
-  if (categoryId) next.set('category', categoryId);
-  const query = next.toString();
-  return query ? `/admin/stock/new?${query}` : '/admin/stock/new';
+  if (receipt.supplierId) next.set('supplier', receipt.supplierId);
+  if (sectionId) next.set('section', sectionId);
+  if (receipt.billNumber) next.set('bill', receipt.billNumber);
+  if (receipt.stockDate) next.set('date', receipt.stockDate);
+  next.set('n', receipt.id);
+  return `/admin/stock/new?${next}`;
 }
 
-type SheetData = { settings: StoreSettings; origin: string; sizes: Map<string, string[]> };
+type SheetData = { settings: StoreSettings; origin: string; sizes: Map<string, string[]>; companies: Map<string, string> };
 
-/** Everything the tags need besides the lines: settings (code price), app address (QR), each tag's size row. */
+/** Everything the tags need besides the lines: settings (code price), app address (QR), each tag's size row, company names (never printed). */
 async function sheetData(lines: ReceiptLabelLine[], settings: StoreSettings): Promise<SheetData> {
-  const [origin, sizes] = await Promise.all([appOrigin(), tagSizesFor(await requestDb(), STORE_ID, lines)]);
-  return { settings, origin, sizes };
+  const db = await requestDb();
+  const [origin, sizes, suppliers] = await Promise.all([appOrigin(), tagSizesFor(db, STORE_ID, lines), listSuppliers(db, STORE_ID)]);
+  return { settings, origin, sizes, companies: new Map(suppliers.map((s) => [s.id, s.name])) };
 }
 
 const FORMATS: readonly (readonly [string | undefined, MessageKey])[] = [
@@ -78,7 +87,7 @@ const FORMATS: readonly (readonly [string | undefined, MessageKey])[] = [
 
 /** Shared controls + sheet: one label per piece (or per item); hang tags on A4 or a tag printer, or small stickers. */
 function LabelSheet({ lines, params, data, t }: { lines: ReceiptLabelLine[]; params: Search; data: SheetData; t: T }) {
-  const { settings, origin, sizes } = data;
+  const { settings, origin, sizes, companies } = data;
   const onePerItem = params.each === 'item';
   const sticker = params.format === 'sticker';
   const tagPrinter = params.format === 'tag';
@@ -137,6 +146,7 @@ function LabelSheet({ lines, params, data, t }: { lines: ReceiptLabelLine[]; par
               <li key={key} className={tagPrinter ? 'print:break-after-page [&>div]:print:border-0' : 'break-inside-avoid'}>
                 <HangTag
                   product={line}
+                  company={line.supplierId ? (companies.get(line.supplierId) ?? null) : null}
                   sizes={sizes.get(line.id)}
                   qrValue={itemLink(origin, line.barcode)}
                   priceCode={labelPriceCode(settings, line.costPaise)}
@@ -238,6 +248,7 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
   const db = await requestDb();
   const [receipt, settings] = await Promise.all([getReceiptForLabels(db, STORE_ID, params.receipt), getStoreSettings(db, STORE_ID)]);
   if (!receipt) notFound();
+  const sectionId = params.created ? await sectionOfType(db, STORE_ID, receipt.lines[0]?.categoryId) : null;
 
   return (
     <>
@@ -252,8 +263,8 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
             <p role="status" className={okBox}>
               {t(params.created === '1' ? 'stk.labels.created.one' : 'stk.labels.created.other', { n: params.created })}
             </p>
-            {/* Plan v17: straight on to the next item, same company and category. */}
-            <Link href={nextItemHref(receipt.supplierId, receipt.lines[0]?.categoryId)} className={`${secondaryButton} w-fit`}>
+            {/* Plan v19: straight on to the next item from the same bill. */}
+            <Link href={nextItemHref(receipt, sectionId)} className={`${secondaryButton} w-fit`}>
               {t('stk.labels.addNext')}
             </Link>
           </div>

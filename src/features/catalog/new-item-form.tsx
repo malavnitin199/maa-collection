@@ -1,55 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { GarmentArt } from '@/components/ui/art';
 import { Pill } from '@/components/ui/pill';
 import { card, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { CompanyPicker } from '@/features/catalog/company-picker';
-import { ItemTabs, TagChooser } from '@/features/catalog/item-parts';
+import { ItemTabs } from '@/features/catalog/item-parts';
 import { hasOwnText, SizeRatesEditor, type OwnRatesText } from '@/features/catalog/size-rates-editor';
 import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
-import type { MessageKey } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
-import type { ProductTags } from '@/lib/product-tags';
 import { ratesForSize, sortSizes } from '@/lib/size-prices';
 import { addPhotoToItemsAction, createDesignAction } from '@/server/actions/admin';
 import { photoForm, PhotoSlot, usePhotoPicker, type PickedPhoto } from './photo-slot';
 
 type Option = { id: string; name: string };
-type CategoryOption = Option & { code: string; sizes?: string[] };
 
-/** What an item is saved as when no size or colour is picked (same as the old quick add). */
-const PLAIN_SIZE = 'Free';
+/** What an item is saved as when no colour is given (colour is optional since plan v19). */
 const PLAIN_COLOUR = 'Assorted';
 
-const SIZE_GROUPS: { label: MessageKey; sizes: string[] }[] = [
-  { label: 'stk.design.group.clothing', sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'] },
-  { label: 'stk.design.group.waist', sizes: ['26', '28', '30', '32', '34', '36', '38', '40', '42', '44'] },
-  { label: 'stk.design.group.other', sizes: ['Free'] },
-];
-
 const fieldLabel = 'flex min-w-0 flex-col gap-1 text-sm font-medium';
-
-function Chip({ selected, onClick, children, label }: { selected: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      aria-label={label}
-      onClick={onClick}
-      className={`min-w-12 rounded-full border px-3 py-2 text-sm font-medium ${
-        selected
-          ? 'border-brand-600 bg-brand-600 text-white'
-          : 'border-zinc-300 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 /**
  * The item's picture on the right of the header: the chosen photo fills the
@@ -99,72 +70,83 @@ function PhotoSquare({ photo, onChange, disabled }: { photo: PickedPhoto | null;
   );
 }
 
+/** Today in the shop (India), for the stock date box. */
+export function shopToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+}
+
 /**
- * New item (plan v17, owner's layout): one card with the product name, category,
- * sizes and "for whom" tags on the left and the photo on the right; then the
- * must-haves — company, sale price (MRP), purchase price; then top tabs:
- * **Details** (pieces, counter price, bill), **Colours** (sizes × colours, each
- * pair its own item and barcode) and **Other details** (brand; more fields later).
- * Nothing picked under Colours = one item, size Free, colour Assorted.
+ * New item, last step (plan v19): what was chosen in the first three steps
+ * (section › type, sizes with their pieces) is fixed here; this step asks the
+ * product name and photo, the must-haves — company, sale price (MRP),
+ * purchase price — and behind top tabs **Details** (counter price, bill no.,
+ * stock date), **Colours** (optional; each colour × size its own item, a photo
+ * per colour, a price by size) and **Other details** (brand). The company,
+ * bill no. and stock date belong to the whole entry (kept for the next item).
  */
 export function NewItemForm({
   suppliers,
   previousSuppliers,
-  categories,
-  initialSupplierId,
-  initialCategoryId,
+  type,
+  path,
+  sizes,
+  pieces,
+  supplierId,
+  onSupplier,
+  billNumber,
+  onBillNumber,
+  stockDate,
+  onStockDate,
+  onChangeSizes,
+  onSaved,
   showCost = true,
 }: {
   suppliers: Option[];
   /** Hidden companies the owner can bring back from the company box. */
   previousSuppliers: Option[];
-  categories: CategoryOption[];
-  initialSupplierId?: string;
-  initialCategoryId?: string;
+  /** The chosen type (category). */
+  type: Option & { code: string };
+  /** "Boy › Jeans", shown in the header. */
+  path: string;
+  /** The chosen sizes (at least one) and the pieces of each. */
+  sizes: string[];
+  pieces: Record<string, number>;
+  supplierId: string;
+  onSupplier: (id: string, name: string) => void;
+  billNumber: string;
+  onBillNumber: (value: string) => void;
+  stockDate: string;
+  onStockDate: (value: string) => void;
+  /** Back to the sizes step. */
+  onChangeSizes: () => void;
+  /** Saved: the labels page is next (`href`). */
+  onSaved: (href: string) => void;
   /** Purchase (code) price field — only with the "costs" right. */
   showCost?: boolean;
 }) {
   const t = useT();
-  const router = useRouter();
-  const [supplierId, setSupplierId] = useState(initialSupplierId ?? '');
-  const [categoryId, setCategoryId] = useState(initialCategoryId ?? '');
   const [name, setName] = useState('');
-  const [supplierName, setSupplierName] = useState(() => suppliers.find((s) => s.id === initialSupplierId)?.name ?? '');
-  const [brand, setBrand] = useState(supplierName);
-  const [tags, setTags] = useState<ProductTags>({ forGender: null, ageGroup: null });
+  const supplierName = suppliers.find((s) => s.id === supplierId)?.name ?? previousSuppliers.find((s) => s.id === supplierId)?.name ?? '';
+  const [brand, setBrand] = useState('');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [mrp, setMrp] = useState('');
   const [cost, setCost] = useState('');
-  const [quantity, setQuantity] = useState('1');
   const [price, setPrice] = useState('');
-  const [billNumber, setBillNumber] = useState('');
-  const [sizes, setSizes] = useState<string[]>([]);
-  const [customSize, setCustomSize] = useState('');
   const [colors, setColors] = useState<string[]>([]);
   const [colorText, setColorText] = useState('');
-  // Sizes' own rates (kept while a size is unticked; only ticked sizes are saved).
+  // Sizes' own rates (only the chosen sizes are saved).
   const [sizeOwn, setSizeOwn] = useState<OwnRatesText>({});
   // Optional photo per colour (key: colour in lower case); colours without one get the main photo.
   const [colorPhotos, setColorPhotos] = useState<Record<string, PickedPhoto>>({});
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
-  // Same id while the form is unchanged: a double tap or retry saves once.
+  // Same id while the entry is unchanged: a double tap or retry saves once.
   const operationId = useRef<string | null>(null);
   const touched = () => {
     operationId.current = null;
   };
 
-  const toggleSize = (size: string) => {
-    touched();
-    setSizes((current) => (current.includes(size) ? current.filter((s) => s !== size) : [...current, size]));
-  };
-  const addCustomSize = () => {
-    const value = customSize.trim();
-    if (value && !sizes.some((s) => s.toLowerCase() === value.toLowerCase())) setSizes([...sizes, value]);
-    setCustomSize('');
-    touched();
-  };
   const addColor = () => {
     const values = colorText.split(',').map((c) => c.trim()).filter(Boolean);
     const next = [...colors];
@@ -175,33 +157,15 @@ export function NewItemForm({
   };
 
   const allColors = colorText.trim() ? [...colors, ...colorText.split(',').map((c) => c.trim()).filter(Boolean)] : colors;
-  // What is sent: nothing picked = one plain item.
-  const sendSizes = sizes.length > 0 ? sizes : [PLAIN_SIZE];
+  // What is sent: no colour given = one plain colour per size.
   const sendColors = allColors.length > 0 ? allColors : [PLAIN_COLOUR];
-  const combos = sendSizes.length * sendColors.length;
-  const qty = /^\d+$/.test(quantity) ? Number(quantity) : 0;
-  const category = categories.find((c) => c.id === categoryId);
-  // The category's sizes come first; every other size stays one tap away under "More sizes".
-  const categorySizes = category?.sizes ?? [];
-  const inCategory = (size: string) => categorySizes.some((c) => c.toLowerCase() === size.toLowerCase());
-  const otherGroups = SIZE_GROUPS.map((g) => ({ ...g, sizes: g.sizes.filter((size) => !inCategory(size)) })).filter((g) => g.sizes.length > 0);
-  const isListed = (size: string) => inCategory(size) || SIZE_GROUPS.some((g) => g.sizes.includes(size));
-  const sizeGroups = otherGroups.map((group) => (
-    <div key={group.label} className="flex flex-col gap-1.5">
-      <span className={`text-xs ${muted}`}>{t(group.label)}</span>
-      <div className="flex flex-wrap gap-2">
-        {group.sizes.map((size) => (
-          <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={t('stk.sizeAria', { size })}>
-            {size}
-          </Chip>
-        ))}
-      </div>
-    </div>
-  ));
+  const orderedSizes = sortSizes(sizes);
+  const piecesOf = (size: string) => pieces[size] ?? 1;
+  const combos = orderedSizes.length * sendColors.length;
+  const totalPieces = orderedSizes.reduce((sum, size) => sum + piecesOf(size), 0) * sendColors.length;
 
   // Price by size needs 2+ sizes; what the preview shows is exactly what is sent.
-  const orderedSizes = sortSizes(sendSizes);
-  const bySize = sizes.length >= 2;
+  const bySize = orderedSizes.length >= 2;
   const ownRows = bySize
     ? orderedSizes
         .filter((size) => hasOwnText(sizeOwn[size]))
@@ -217,29 +181,9 @@ export function NewItemForm({
       ...ratesForSize(defaults, own && { mrpPaise: paise(own.mrp), pricePaise: paise(own.price), costPaise: paise(own.cost) }),
     };
   });
-  const purchaseValue = sizeRows.reduce((sum, r) => sum + (r.costPaise ?? 0), 0) * sendColors.length * qty;
+  const purchaseValue = sizeRows.reduce((sum, r) => sum + (r.costPaise ?? 0) * piecesOf(r.size), 0) * sendColors.length;
   const aboveMrp = sizeRows.filter((r) => r.mrpPaise !== null && r.pricePaise !== null && r.pricePaise > r.mrpPaise).map((r) => r.size);
   const money = (value: number | null) => (value === null ? '—' : formatPaise(value));
-
-  function clearItem() {
-    operationId.current = null;
-    if (photo) URL.revokeObjectURL(photo.url);
-    for (const p of Object.values(colorPhotos)) URL.revokeObjectURL(p.url);
-    setPhoto(null);
-    setColorPhotos({});
-    setName('');
-    setMrp('');
-    setCost('');
-    setQuantity('1');
-    setPrice('');
-    setBillNumber('');
-    setSizes([]);
-    setCustomSize('');
-    setColors([]);
-    setColorText('');
-    setSizeOwn({});
-    setProgress(null);
-  }
 
   function save() {
     setError(null);
@@ -250,19 +194,20 @@ export function NewItemForm({
       const result = await createDesignAction({
         operationId: opId,
         supplierId,
-        categoryId,
+        categoryId: type.id,
         name,
+        // No brand typed: kept as the company's name, which a tag never prints (plan v19).
         brand: brand.trim() || supplierName,
-        sizes: sendSizes,
+        sizes: orderedSizes,
         colors: sendColors,
         mrp,
         price,
         cost,
         sizeRates: ownRows,
-        quantityEach: quantity,
+        quantityEach: '1',
+        quantities: Object.fromEntries(orderedSizes.map((size) => [size, piecesOf(size)])),
         billNumber,
-        forGender: tags.forGender ?? '',
-        ageGroup: tags.ageGroup ?? '',
+        stockDate,
       });
       if (!result.ok) {
         setError(result.error);
@@ -286,115 +231,52 @@ export function NewItemForm({
         const saved = await addPhotoToItemsAction(upload.ids, photoForm(upload.photo));
         if (saved.error) photoFailed = true;
       }
-      // Next 16 keeps this page alive (React Activity) after we leave it: clear the
-      // item now, so "Add next item" opens an empty form with a new save id —
-      // never the last item's prices. Company, category, tags and brand stay.
-      clearItem();
-      router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}${photoFailed ? '&photos=failed' : ''}`);
+      if (photo) URL.revokeObjectURL(photo.url);
+      for (const p of Object.values(colorPhotos)) URL.revokeObjectURL(p.url);
+      onSaved(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}${photoFailed ? '&photos=failed' : ''}`);
     });
   }
 
   const details = (
     <div className={`${card} flex flex-col gap-3`}>
       <label className={fieldLabel}>
-        {t(combos > 1 ? 'stk.item.piecesEach' : 'stk.item.pieces')}
-        <input inputMode="numeric" value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${input} tabular-nums`} />
-      </label>
-      <label className={fieldLabel}>
         {t('stk.item.counterPrice')}
         <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={mrp || t('stk.sameAsMrp')} className={`${input} tabular-nums`} />
       </label>
-      <label className={fieldLabel}>
-        {t('stk.billNoOptional')}
-        <input value={billNumber} onChange={(e) => setBillNumber(e.target.value)} className={input} />
-      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className={fieldLabel}>
+          {t('stk.billNoOptional')}
+          <input value={billNumber} onChange={(e) => onBillNumber(e.target.value)} className={input} />
+        </label>
+        <label className={fieldLabel}>
+          {t('ns.stockDate')}
+          <input type="date" value={stockDate} max={shopToday()} onChange={(e) => onStockDate(e.target.value)} className={`${input} min-w-0`} />
+        </label>
+      </div>
     </div>
   );
 
   const colours = (
     <div className={`${card} flex flex-col gap-3`}>
-      <span className="text-sm font-medium">{t('stk.item.sizes')}</span>
-      {category && categorySizes.length > 0 ? (
-        <>
-          <div data-testid="category-size-chips" className="flex flex-col gap-1.5">
-            <span className="flex items-center justify-between gap-2 text-xs font-medium text-brand-800 dark:text-brand-300">
-              {t('stk.design.sizesFor', { name: category.name })}
-              <button
-                type="button"
-                onClick={() => {
-                  setSizes((current) => [...current, ...categorySizes.filter((c) => !current.some((s) => s.toLowerCase() === c.toLowerCase()))]);
-                  touched();
-                }}
-                className={`text-xs ${link}`}
-              >
-                {t('stk.design.pickAll')}
-              </button>
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {categorySizes.map((size) => (
-                <Chip key={size} selected={sizes.includes(size)} onClick={() => toggleSize(size)} label={t('stk.sizeAria', { size })}>
-                  {size}
-                </Chip>
-              ))}
-            </div>
-          </div>
-          <details open={sizes.some((size) => !inCategory(size)) || undefined}>
-            <summary className={`cursor-pointer text-xs ${muted}`}>{t('stk.design.moreSizes')}</summary>
-            <div className="mt-2 flex flex-col gap-3">{sizeGroups}</div>
-          </details>
-        </>
-      ) : (
-        <>
-          {!category && <p className={`text-xs ${muted}`}>{t('stk.design.chooseCategoryFirst')}</p>}
-          {sizeGroups}
-        </>
-      )}
-      {sizes.filter((s) => !isListed(s)).length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {sizes
-            .filter((s) => !isListed(s))
-            .map((size) => (
-              <Chip key={size} selected onClick={() => toggleSize(size)} label={t('stk.sizeAria', { size })}>
-                {size} ✕
-              </Chip>
-            ))}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input
-          value={customSize}
-          onChange={(e) => setCustomSize(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              addCustomSize();
-            }
-          }}
-          placeholder={t('stk.design.otherSizePlaceholder')}
-          aria-label={t('stk.design.otherSize')}
-          className={`w-full ${input}`}
-        />
-        <button type="button" onClick={addCustomSize} className={secondaryButton}>
-          {t('stk.design.addSize')}
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-900">
-        <span className="text-sm font-medium">{t('stk.design.colours')}</span>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium">
+          {t('stk.design.colours')} <span className={`font-normal ${muted}`}>{t('stk.optional')}</span>
+        </span>
         {colors.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {colors.map((color) => (
-              <Chip
+              <button
                 key={color}
-                selected
-                label={t('stk.design.removeColour', { color })}
+                type="button"
+                aria-label={t('stk.design.removeColour', { color })}
                 onClick={() => {
                   setColors(colors.filter((c) => c !== color));
                   touched();
                 }}
+                className="rounded-full border border-brand-600 bg-brand-600 px-3 py-2 text-sm font-medium text-white"
               >
                 {color} ✕
-              </Chip>
+              </button>
             ))}
           </div>
         )}
@@ -438,7 +320,7 @@ export function NewItemForm({
                   <th className="px-2 py-1.5 text-left font-medium">{c}</th>
                   {orderedSizes.map((s) => (
                     <td key={s} className="px-2 py-1.5">
-                      {qty}
+                      {piecesOf(s)}
                     </td>
                   ))}
                 </tr>
@@ -508,8 +390,8 @@ export function NewItemForm({
   const other = (
     <div className={`${card} flex flex-col gap-3`}>
       <label className={fieldLabel}>
-        {t('stk.brand')}
-        <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={supplierName} className={input} />
+        {t('stk.brand')} <span className={`text-xs font-normal ${muted}`}>{t('ns.brandHint')}</span>
+        <input value={brand} onChange={(e) => setBrand(e.target.value)} className={input} />
       </label>
       <p className={`text-xs ${muted}`}>
         {t('stk.item.missing')}{' '}
@@ -533,7 +415,7 @@ export function NewItemForm({
       onChange={touched}
       className="flex flex-col gap-4"
     >
-      {/* Header: name, category and sizes on the left, the photo on the right; "for whom" tags below. */}
+      {/* Header: name, what it is and its sizes on the left (tap the sizes to change them), the photo on the right. */}
       <section className={`${card} flex flex-col gap-3`}>
         <div className="flex items-start gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -545,27 +427,16 @@ export function NewItemForm({
               placeholder={t('stk.item.name')}
               className="w-full min-w-0 border-0 border-b-2 border-zinc-200 bg-transparent px-0 py-1 text-lg font-semibold placeholder:font-normal placeholder:text-zinc-400 focus:border-brand-600 focus:outline-none dark:border-zinc-700"
             />
-            <select
-              required
-              aria-label={t('stk.item.category')}
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-fit max-w-full rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200"
-            >
-              <option value="">{t('stk.chooseCategory')}</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.code})
-                </option>
-              ))}
-            </select>
-            {sizes.length > 0 && (
-              <div data-testid="item-size-pills" className="flex flex-wrap gap-1">
-                {sortSizes(sizes).map((s) => (
+            <span data-testid="item-path" className="w-fit rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
+              {path}
+            </span>
+            <button type="button" onClick={onChangeSizes} aria-label={t('ns.changeSizes')} className="flex flex-wrap gap-1 text-left">
+              <span data-testid="item-size-pills" className="flex flex-wrap gap-1">
+                {orderedSizes.map((s) => (
                   <Pill key={s}>{s}</Pill>
                 ))}
-              </div>
-            )}
+              </span>
+            </button>
           </div>
           <PhotoSquare
             photo={photo}
@@ -575,10 +446,6 @@ export function NewItemForm({
               setPhoto(next);
             }}
           />
-        </div>
-        {/* Who it is for: full width, so each row of tags fits on one line on a phone. */}
-        <div className="border-t border-zinc-100 pt-3 dark:border-zinc-900">
-          <TagChooser value={tags} onChange={setTags} />
         </div>
       </section>
 
@@ -593,9 +460,8 @@ export function NewItemForm({
           disabled={saving}
           emptyLabel={t('stk.item.chooseCompany')}
           onChange={(id, companyName) => {
-            if (!brand || brand === supplierName) setBrand(companyName);
-            setSupplierId(id);
-            setSupplierName(companyName);
+            touched();
+            onSupplier(id, companyName);
           }}
         />
         <div className={`grid gap-3 ${showCost ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -624,7 +490,7 @@ export function NewItemForm({
       <p data-testid="design-preview" className={`text-sm ${muted}`}>
         <strong className="text-zinc-900 dark:text-zinc-100">{t(combos === 1 ? 'stk.item.count.one' : 'stk.item.count.other', { n: combos })}</strong>
         {' · '}
-        {t(combos * qty === 1 ? 'stk.item.pcs.one' : 'stk.item.pcs.other', { n: combos * qty })}
+        {t(totalPieces === 1 ? 'stk.item.pcs.one' : 'stk.item.pcs.other', { n: totalPieces })}
         {purchaseValue > 0 && ` · ${t('stk.item.purchaseTotal', { value: formatPaise(purchaseValue) })}`}
       </p>
       {aboveMrp.length > 0 && (

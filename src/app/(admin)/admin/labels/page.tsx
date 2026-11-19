@@ -1,3 +1,4 @@
+import { typeOptionName } from '@/lib/sections';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { IconPrinter } from '@/components/ui/icons';
@@ -102,7 +103,7 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
   const tagCell = (item: (typeof shownRows)[number], selectable = true) => {
     const tag = (
       <Link href={`/admin/products/${item.id}`} aria-label={t('stk.lib.open', { name: `${item.name} · ${item.color} · ${item.size}` })} className="tag-open">
-        <HangTag product={item} sizes={sizes.get(item.id)} qrValue={itemLink(origin, item.barcode)} priceCode={labelPriceCode(settings, item.costPaise)} />
+        <HangTag product={item} company={item.supplierName} sizes={sizes.get(item.id)} qrValue={itemLink(origin, item.barcode)} priceCode={labelPriceCode(settings, item.costPaise)} />
       </Link>
     );
     return (
@@ -156,7 +157,7 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
             <option value="">{t('stk.lib.allCategories')}</option>
             {categoryRows.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {typeOptionName(c, t)}
               </option>
             ))}
           </select>

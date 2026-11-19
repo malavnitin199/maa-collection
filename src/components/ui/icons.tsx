@@ -71,3 +71,9 @@ export const IconDots = ({ className }: IconProps) => base(<><circle cx="5.5" cy
 export const IconBack = ({ className }: IconProps) => base(<><path d="M19.5 12h-15" /><path d="m10.5 6-6 6 6 6" /></>, className);
 /** Rows of tags that scroll sideways (All tags, plan v13). */
 export const IconRows = ({ className }: IconProps) => base(<><rect x="3.5" y="5" width="5" height="5.5" rx="1" /><rect x="10" y="5" width="5" height="5.5" rx="1" /><path d="M16.5 5h4M16.5 10.5h4" /><rect x="3.5" y="13.5" width="5" height="5.5" rx="1" /><rect x="10" y="13.5" width="5" height="5.5" rx="1" /><path d="M16.5 13.5h4M16.5 19h4" /></>, className);
+/** Plan v18: no internet (Wi-Fi arcs, crossed out). */
+export const IconWifiOff = ({ className }: IconProps) => bold(<><path d="M2.5 8.8a14.5 14.5 0 0 1 4-2.6M10 5.1a14.6 14.6 0 0 1 11.5 3.7M5.4 12.4a9.6 9.6 0 0 1 3.3-2M13.8 9.9a9.6 9.6 0 0 1 4.8 2.5M8.8 15.9a4.8 4.8 0 0 1 6.4 0" /><path d="M12 19.5h.01" /><path d="m3.5 3.5 17 17" /></>, className);
+/** Plan v18: a sale saved on the phone, going up to the shop. */
+export const IconUpload = ({ className }: IconProps) => bold(<><path d="M7.5 18.5H6.8a4.3 4.3 0 0 1-.6-8.6 6 6 0 0 1 11.6 0 4.3 4.3 0 0 1-.6 8.6h-.7" /><path d="M12 20.5v-8M9 15l3-3 3 3" /></>, className);
+/** Plan v18: try again. */
+export const IconRetry = ({ className }: IconProps) => bold(<><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></>, className);

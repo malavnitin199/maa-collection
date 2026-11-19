@@ -5,17 +5,17 @@ import { GarmentArt } from '@/components/ui/art';
 import { Pill } from '@/components/ui/pill';
 import { card, link, muted, okBox, sectionTitle } from '@/components/ui/styles';
 import { HangTag } from '@/features/catalog/hang-tag';
-import { DesignTagsForm, ItemTabs } from '@/features/catalog/item-parts';
+import { ItemTabs } from '@/features/catalog/item-parts';
 import { PrintButton } from '@/features/catalog/print-button';
 import { ProductForm } from '@/features/catalog/product-form';
 import { DesignRatesForm, StockInForm } from '@/features/catalog/small-forms';
 import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
-import { stockInAction, updateDesignRatesAction, updateDesignTagsAction, updateProductAction } from '@/server/actions/admin';
+import { stockInAction, updateDesignRatesAction, updateProductAction } from '@/server/actions/admin';
 import type { MessageKey } from '@/lib/i18n';
 import { can } from '@/lib/permissions';
 import { itemLink } from '@/lib/item-link';
-import { AGE_LABEL, asAgeGroup, asForGender, FOR_LABEL } from '@/lib/product-tags';
+import { defaultSectionKey, typeOptionName } from '@/lib/sections';
 import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById, sortSizes, splitDesignRates } from '@/lib/size-prices';
 import { appOrigin } from '@/server/app-origin';
@@ -83,8 +83,9 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const rates = splitDesignRates(
     variants.map((v) => ({ size: v.size, mrpPaise: v.mrpPaise, pricePaise: v.pricePaise, costPaise: showCost ? v.costPaise : null })),
   );
-  const forGender = asForGender(product.forGender);
-  const ageGroup = asAgeGroup(product.ageGroup);
+  // Plan v19: Man / Woman / Girl / Boy comes from the item's category (replaces the For / Age tags).
+  const sectionName = categoryRows.find((c) => c.id === product.categoryId)?.sectionName ?? null;
+  const sectionKey = defaultSectionKey(sectionName);
   const designSizes = sortSizes([...new Set(variants.map((v) => v.size))]);
   const designColours = [...new Set(variants.map((v) => v.color))];
   const totalPieces = variants.reduce((n, v) => n + v.stock, 0);
@@ -95,6 +96,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
       <div className="mx-auto">
         <HangTag
           product={product}
+          company={supplier?.name ?? null}
           sizes={tagSizeRange(categoryRows.find((c) => c.id === product.categoryId)?.sizes ?? [], designSizesById(variants).get(product.id) ?? [], product.size)}
           qrValue={itemLink(origin, product.barcode)}
           priceCode={labelPriceCode(settings, product.costPaise)}
@@ -215,14 +217,11 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
       {can(me, 'catalog') ? (
         <>
           <section className={`${card} flex flex-col gap-3`}>
-            <DesignTagsForm action={updateDesignTagsAction.bind(null, product.id)} initial={{ forGender, ageGroup }} count={variants.length} />
-          </section>
-          <section className={`${card} flex flex-col gap-3`}>
             <h2 className={sectionTitle}>{t('cat.product.editDetails')}</h2>
             <ProductForm
               mode="edit"
               action={updateProductAction.bind(null, product.id)}
-              categories={categoryRows.filter((c) => c.active || c.id === product.categoryId).map(({ id, name, code }) => ({ id, name, code }))}
+              categories={categoryRows.filter((c) => c.active || c.id === product.categoryId).map((c) => ({ id: c.id, name: typeOptionName(c, t), code: c.code }))}
               suppliers={supplierRows.filter((s) => s.active || s.id === product.supplierId).map(({ id, name }) => ({ id, name }))}
               initial={{
                 name: product.name,
@@ -273,9 +272,8 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
             {designSizes.map((s) => (
               <Pill key={s}>{s}</Pill>
             ))}
+            {sectionName && <Pill strong>{sectionKey ? t(`sec.default.${sectionKey}`) : sectionName}</Pill>}
             <Pill>{product.category}</Pill>
-            {forGender && <Pill strong>{t(FOR_LABEL[forGender])}</Pill>}
-            {ageGroup && <Pill strong>{t(AGE_LABEL[ageGroup])}</Pill>}
             {!product.active && <Pill>{t('cat.inactive')}</Pill>}
           </div>
         </div>

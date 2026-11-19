@@ -1,3 +1,4 @@
+import { typeOptionName } from '@/lib/sections';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { card, input, muted, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
@@ -131,7 +132,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
             <option value="">{t('cat.allCategories')}</option>
             {categoryRows.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {typeOptionName(c, t)}
               </option>
             ))}
           </select>
@@ -206,7 +207,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
       <SelectionBar>
         <ProductBulkActions
           companies={supplierRows.filter((x) => x.active).map(({ id, name }) => ({ id, name }))}
-          categories={categoryRows.filter((c) => c.active).map(({ id, name, code }) => ({ id, name, code }))}
+          categories={categoryRows.filter((c) => c.active).map((c) => ({ id: c.id, name: typeOptionName(c, t), code: c.code }))}
           canCatalog={can(me, 'catalog')}
           canPrices={can(me, 'prices')}
           canPrint={canPrint}

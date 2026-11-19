@@ -9,16 +9,17 @@ import { can } from '@/lib/permissions';
 import { requirePermission } from '@/server/auth';
 import { getT } from '@/server/i18n';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
+import { typeOptionName } from '@/lib/sections';
 
 async function NewProduct() {
-  const me = await requirePermission('catalog');
+  const [me, t] = await Promise.all([requirePermission('catalog'), getT()]);
   const db = await requestDb();
   const [categoryRows, allSuppliers] = await Promise.all([listCategories(db, STORE_ID, { activeOnly: true }), listSuppliers(db, STORE_ID)]);
   return (
     <ProductForm
       mode="new"
       action={createProductAction}
-      categories={categoryRows.map(({ id, name, code }) => ({ id, name, code }))}
+      categories={categoryRows.map((c) => ({ id: c.id, name: typeOptionName(c, t), code: c.code }))}
       suppliers={allSuppliers.filter((s) => s.active).map(({ id, name }) => ({ id, name }))}
       previousSuppliers={allSuppliers.filter((s) => !s.active).map(({ id, name }) => ({ id, name }))}
       showCost={can(me, 'costs')}

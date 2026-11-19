@@ -10,14 +10,14 @@
 | D-04 | Stores and locations | OPEN | One store, with storefront/godown/quarantine locations | Affects balance schema and receipt lookup |
 | D-05 | Tax/GST and legal invoice | OPEN | No tax formula invented | Required before final invoice layout |
 | D-06 | Payment modes and verification | OPEN | Manual tender record until gateway selected | Manual UPI entry is not bank confirmation |
-| D-07 | Offline oversell policy | OPEN | Cash-only provisional checkout plus owner conflict audit | Real offline sales can conflict across devices |
+| D-07 | Offline oversell policy | CONFIRMED 2026-11-19 (ADR-032) | Owner: **let stock go below zero** — a sale made offline is always recorded when it is sent; the owner checks it in Approvals (*Made offline* mark) and recounts | Online sales still refuse overselling; counts can be negative until recounted |
 | D-08 | Discount authority | OPEN | Cashier limits set by owner | Required for server-side discount validation |
 | D-09 | Return/exchange policy | OPEN | Linked to original sale, cannot over-return | Refund/stock rules and audit constraints |
 | D-10 | Hardware | OPEN | USB/Bluetooth HID barcode scanner; tested label printer profile | Browser support and direct/silent print vary |
 | D-11 | Receipt numbering | OPEN | Server-assigned canonical sequence, provisional local slip for offline | Avoid duplicate offline legal invoices |
 | D-12 | Gross vs net profit | PROPOSED | Call selling minus cost 'gross profit' | Avoid false net profit claims |
 | D-13 | Source of truth for inventory | PROPOSED | Append-only movements + canonical balance projection | Supports reconciliations and audited corrections |
-| D-14 | MVP and go-live | OPEN | Pilot online first; offline only after dedicated signoff | Makes release risk visible |
+| D-14 | MVP and go-live | CONFIRMED 2026-11-19 (ADR-032) | Owner signed off offline selling at the counter (scan, by hand, saved on the phone, sent later); exchanges stay online-only | Offline is live from plan v18 |
 
 ## Decision record template
 
@@ -65,3 +65,13 @@ Evidence (shop walkthrough, printer model, sample invoice):
 | D-ST-2 | Lowering a piece count typed wrongly (e.g. 5 instead of 3) — owner said **not now** (2026-11-16). Needs a "stock correction" kind in the stock ledger (DB change), saved with who and why, shown in the item's history | Pieces can only be added per item; the owner can set **all** counts to 0 with Clear stock (ADR-021). A per-item correction / stock-take is still open |
 | D-EX-2 | An exchange of a piece **sold before the app** (no bill in the app): should the salesman be able to type the price the customer paid and swap it? Migration 0007 already allows an exchange without an original sale | Not possible in the app: an exchange needs a sale recorded in the app. Nothing is built for it until the owner asks |
 | D-IMG-1 | Move photos to Vercel Blob (needs the owner to approve creating a Blob store on the Vercel account)? | Photos in Postgres; switch before ~5k photos |
+
+## Open questions from plan v19 (2026-11-19) — see `docs/PLAN_V19_PRODUCT_MANAGEMENT.md` §7
+
+| ID | Question | Current behaviour until decided |
+|---|---|---|
+| D-V19-1 | Names of the four starting sections: Men / Women / Boys / Girls (brief) or Man / Woman / Girl / Boy (uncommitted code)? | Uncommitted code uses Man / Woman / Girl / Boy; nothing is live |
+| D-V19-2 | Existing categories: a **Needs sorting** bucket the owner sorts once (recommended), or auto-sort men's names → Men and everything else → Women? Add the suggested starting types for Men and Women? | Uncommitted code auto-sorts and adds starter types on first page read; nothing is live |
+| D-V19-3 | An item with no colour: show nothing (store empty, recommended) or keep showing "Assorted"? | "Assorted" is stored and printed on tags |
+| D-V19-4 | For / Age tags (ADR-027) once sections exist: retire the tag UI and keep the data read-only (recommended), or keep both? | Tags UI live in v17; removed in the uncommitted v19 code |
+| D-V19-5 | Brand left empty: stays empty (recommended) or the company's name as today? | Company's name is saved as brand and shown at the counter |

@@ -27,7 +27,7 @@ export function LanguageSwitch({ onBand = false }: { onBand?: boolean }) {
       title={t('lang.switchLabel')}
       className={
         onBand
-          ? `${headerIcon} text-[15px] font-bold`
+          ? `${headerIcon} text-lg font-bold`
           : 'rounded-full border border-zinc-300 bg-white/70 px-3 py-1 text-sm font-semibold transition hover:border-brand-400 active:scale-95 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900/60'
       }
     >

@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   customType,
+  date,
   index,
   integer,
   pgTable,
@@ -63,12 +64,34 @@ export const suppliers = pgTable(
   (t) => [uniqueIndex('suppliers_store_name_uq').on(t.storeId, t.name)],
 );
 
-/** Shop-defined categories; `code` (2–3 letters) goes into generated SKUs. */
+/**
+ * Plan v19: who an item is for — Man, Woman, Girl, Boy, and any the owner adds.
+ * Every item type (category) sits under one section; an item's section is its type's.
+ */
+export const sections = pgTable(
+  'sections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    name: text('name').notNull(),
+    /** Picture key, one of `SECTION_ICONS` (src/lib/sections.ts). */
+    icon: text('icon').notNull().default('hanger'),
+    /** Shop order on the New item screen. */
+    sort: integer('sort').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sections_store_name_uq').on(t.storeId, t.name)],
+);
+
+/** Shop-defined categories (item types); `code` (2–3 letters) goes into generated SKUs. */
 export const categories = pgTable(
   'categories',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     storeId: text('store_id').notNull().references(() => stores.id),
+    /** Plan v19: Man / Woman / Girl / Boy …; null only for a type not sorted yet. */
+    sectionId: uuid('section_id').references(() => sections.id),
     name: text('name').notNull(),
     code: text('code').notNull(),
     /** Sizes this category comes in, shop order (tags print them all; stock entry offers them first). */
@@ -77,7 +100,8 @@ export const categories = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('categories_store_name_uq').on(t.storeId, t.name),
+    // Plan v19: the same name may sit under two sections (Boy › Jeans, Girl › Jeans).
+    uniqueIndex('categories_store_section_name_uq').on(t.storeId, t.sectionId, t.name),
     uniqueIndex('categories_store_code_uq').on(t.storeId, t.code),
   ],
 );
@@ -114,7 +138,9 @@ export const products = pgTable(
   (t) => [
     uniqueIndex('products_store_sku_uq').on(t.storeId, t.sku),
     uniqueIndex('products_store_barcode_uq').on(t.storeId, t.barcode),
-    check('products_stock_nonnegative', sql`${t.stock} >= 0`),
+    // No "stock >= 0" rule since plan v18 (owner's decision): a sale made offline is always
+    // recorded when the phone is back online, even if that takes the count below zero.
+    // Online sales, exchanges and corrections still refuse to go below zero in the services.
     check('products_price_le_mrp', sql`${t.pricePaise} > 0 AND ${t.pricePaise} <= ${t.mrpPaise}`),
     check('products_for_gender_valid', sql`${t.forGender} IS NULL OR ${t.forGender} IN ('girls', 'boys', 'both')`),
     check('products_age_group_valid', sql`${t.ageGroup} IS NULL OR ${t.ageGroup} IN ('adult', 'child')`),
@@ -134,6 +160,8 @@ export const stockReceipts = pgTable(
     operationId: text('operation_id').notNull(),
     supplierId: uuid('supplier_id').references(() => suppliers.id),
     billNumber: text('bill_number'),
+    /** Plan v19: the day the stock (bill) is dated, as the owner gave it; null = the day it was entered. */
+    stockDate: date('stock_date', { mode: 'string' }),
     note: text('note'),
     staffId: uuid('staff_id').notNull().references(() => staff.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -187,6 +215,8 @@ export const sales = pgTable(
     totalPaise: integer('total_paise').notNull(),
     /** Admin-only cost snapshot for profit reports; never sent to salesman screens. */
     costPaise: integer('cost_paise'),
+    /** Plan v18: made on a phone without internet, at this (phone) time; sent later. Null = online. */
+    offlineAt: timestamp('offline_at', { withTimezone: true }),
     /** Salesperson the sale is credited to. */
     soldBy: uuid('sold_by').notNull().references(() => staff.id),
     /** Logged-in staff member who entered it (may differ: "sale on behalf of"). */
@@ -307,6 +337,7 @@ export const productImages = pgTable(
 export type Staff = typeof staff.$inferSelect;
 export type Supplier = typeof suppliers.$inferSelect;
 export type Category = typeof categories.$inferSelect;
+export type Section = typeof sections.$inferSelect;
 export type StockReceipt = typeof stockReceipts.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Sale = typeof sales.$inferSelect;

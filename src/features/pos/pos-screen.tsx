@@ -1,24 +1,42 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useState, useTransition } from 'react';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 import { ScanTagArt } from '@/components/ui/art';
-import { IconPencil, IconRupee } from '@/components/ui/icons';
+import { IconPencil, IconRupee, IconWifiOff } from '@/components/ui/icons';
 import { card, errorBox, input, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { rupeesToPaise, saleTotalPaise, validateSaleDraft } from '@/features/inventory/inventory';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { DoneOverlay } from '@/features/feedback/effects';
 import { feedback } from '@/features/feedback/sounds';
-import { useT } from '@/features/i18n/i18n-provider';
+import { useLocale, useT } from '@/features/i18n/i18n-provider';
+import { useOnline } from '@/features/offline/hooks';
+import { formatWhen } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
+import { findOnPhone, phoneCatalogue, setPhoneStock } from '@/offline/catalogue';
+import { keepForOffline, offlineHelperEnabled } from '@/offline/helper';
+import { isOnline, markReachable, markUnreachable, withTimeout } from '@/offline/network';
+import { queueSale } from '@/offline/outbox';
+import type { QueuedSale } from '@/offline/types';
 import { lookupProductAction, recordSaleAction } from '@/server/actions/pos';
 import type { CounterProduct } from '@/server/services/products';
 import { ProductCard } from './product-card';
 import { StaffSelect, type StaffOption } from './staff-select';
 
 type Message = { kind: 'ok' | 'error'; text: string };
-type Pending = { product: CounterProduct; step: 'details' | 'sell'; operationId: string };
+/** `fromPhone`: found in the phone's copy (no internet), saved at this time. */
+type Pending = { product: CounterProduct; step: 'details' | 'sell'; operationId: string; fromPhone?: string };
+/** What a sale saved on the phone (plan v18) needs besides price, quantity and credit. */
+type PhoneItem = Pick<QueuedSale, 'productId' | 'mrpPaise' | 'manual' | 'name' | 'size' | 'color'>;
+
+/**
+ * Plan v18: how long the counter waits for the shop before using the phone
+ * instead. `next dev` builds each screen on first use, so it gets much longer.
+ */
+const SLOW_DEV = process.env.NODE_ENV === 'production' ? 1 : 8;
+const LOOKUP_WAIT_MS = 6000 * SLOW_DEV;
+const SALE_WAIT_MS = 12000 * SLOW_DEV;
 
 export function PosScreen({
   me,
@@ -31,6 +49,8 @@ export function PosScreen({
   initial?: { code: string; product: CounterProduct | null };
 }) {
   const t = useT();
+  const locale = useLocale();
+  const online = useOnline();
   const [pending, setPending] = useState<Pending | null>(() =>
     initial?.product ? { product: initial.product, step: 'details', operationId: crypto.randomUUID() } : null,
   );
@@ -46,7 +66,7 @@ export function PosScreen({
   );
   // Last scan result for the tick / shake, and the "Sale done" card.
   const [scanResult, setScanResult] = useState<{ kind: 'ok' | 'error'; id: number } | null>(null);
-  const [done, setDone] = useState<{ amount: string; detail: string } | null>(null);
+  const [done, setDone] = useState<{ title: string; amount: string; detail: string } | null>(null);
   const closeDone = useCallback(() => setDone(null), []);
   const signal = (kind: 'ok' | 'error') => {
     feedback(kind === 'ok' ? 'scan' : 'error');
@@ -57,27 +77,99 @@ export function PosScreen({
   function handleScan(code: string) {
     setDone(null);
     setHand(null);
-    startTransition(async () => {
-      const result = await lookupProductAction(code);
-      if (!result.ok) {
-        signal('error');
-        return setMessage({ kind: 'error', text: result.error });
+    startTransition(() => lookUp(code));
+  }
+
+  /** A scanned code: the shop first; the phone's copy when there is no internet (plan v18). */
+  async function lookUp(code: string) {
+    if (isOnline()) {
+      try {
+        const result = await withTimeout(lookupProductAction(code), LOOKUP_WAIT_MS);
+        markReachable();
+        if (!result.ok) {
+          signal('error');
+          return setMessage({ kind: 'error', text: result.error });
+        }
+        if (!result.data) {
+          signal('error');
+          setPending(null);
+          return setMessage({ kind: 'error', text: t('scan.notFound', { code }) });
+        }
+        const product = result.data;
+        signal('ok');
+        setPending({ product, step: 'details', operationId: crypto.randomUUID() });
+        setMessage(null);
+        void setPhoneStock(product.id, () => product.stock);
+        return;
+      } catch {
+        // No answer from the shop: use the phone's copy below.
+        markUnreachable();
       }
-      if (!result.data) {
-        signal('error');
-        setPending(null);
-        return setMessage({ kind: 'error', text: t('scan.notFound', { code }) });
-      }
-      signal('ok');
-      setPending({ product: result.data, step: 'details', operationId: crypto.randomUUID() });
-      setMessage(null);
-    });
+    }
+    // Plan v18: no internet — the phone's copy of the items.
+    const copy = await phoneCatalogue();
+    const product = findOnPhone(copy, code);
+    if (!copy || !product) {
+      signal('error');
+      setPending(null);
+      return setMessage({ kind: 'error', text: copy ? t('off.notOnPhone', { code }) : t('off.noCopy') });
+    }
+    signal('ok');
+    setPending({ product, step: 'details', operationId: crypto.randomUUID(), fromPhone: copy.savedAt });
+    setMessage(null);
+  }
+
+  // Opened offline from a tag's QR code: the saved counter page has no item in it, so look it up here.
+  useEffect(() => {
+    if (initial) return;
+    const code = new URLSearchParams(window.location.search).get('code')?.trim().slice(0, 64);
+    if (code) startTransition(() => lookUp(code));
+    // Only when the screen opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Plan v18: once online, load the camera's barcode reader and keep it for offline use.
+  useEffect(() => {
+    if (!online || !offlineHelperEnabled()) return;
+    const timer = setTimeout(() => {
+      import('@zxing/browser').then(() => keepForOffline()).catch(() => {});
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [online]);
+
+  /**
+   * Plan v18: no internet (or no answer) — the sale waits on this phone and is
+   * sent by itself later (same operation id, so never twice). Returns false if
+   * the phone could not store it.
+   */
+  async function saveOnPhone(item: PhoneItem, sale: { operationId: string; quantity: number; unitPricePaise: number }): Promise<boolean> {
+    const queued: QueuedSale = {
+      ...item,
+      ...sale,
+      recordedBy: me.id,
+      recordedByName: me.name,
+      madeAt: new Date().toISOString(),
+      soldBy: creditTo,
+      soldByName: staff.find((s) => s.id === creditTo)?.name ?? me.name,
+      state: 'waiting',
+      tries: 0,
+    };
+    try {
+      await queueSale(queued);
+    } catch {
+      feedback('error');
+      setMessage({ kind: 'error', text: t('off.cannotSave') });
+      return false;
+    }
+    if (item.productId) void setPhoneStock(item.productId, (stock) => stock - sale.quantity);
+    return true;
   }
 
   function startSell() {
     if (!pending) return;
     const { product } = pending;
-    if (product.stock <= 0) {
+    // The shop's count refuses; the phone's copy may be behind, and the owner chose to save such sales anyway (D-07).
+    if (product.stock <= 0 && !pending.fromPhone) {
       return setMessage({ kind: 'error', text: t('sell.outOfStock', { name: product.name, size: product.size, color: product.color }) });
     }
     setQtyText('1');
@@ -89,26 +181,49 @@ export function PosScreen({
 
   function handleRecordSale() {
     if (!pending) return;
-    const { product, operationId } = pending;
+    const { product, operationId, fromPhone } = pending;
     const quantity = /^\d+$/.test(qtyText.trim()) ? Number(qtyText.trim()) : NaN;
     const unitPricePaise = rupeesToPaise(priceText);
     if (unitPricePaise === null) return setMessage({ kind: 'error', text: t('error.salePrice') });
-    const problem = validateSaleDraft({ quantity, unitPricePaise }, { stock: product.stock, mrpPaise: product.mrpPaise }, t);
+    // From the phone's copy only quantity and price are checked (its count may be behind).
+    const limits = { stock: fromPhone ? Number.MAX_SAFE_INTEGER : product.stock, mrpPaise: product.mrpPaise };
+    const problem = validateSaleDraft({ quantity, unitPricePaise }, limits, t);
     if (problem) return setMessage({ kind: 'error', text: problem });
+    const creditedName = staff.find((s) => s.id === creditTo)?.name ?? me.name;
+    const values = { qty: quantity, name: product.name, size: product.size, color: product.color, price: formatPaise(unitPricePaise), me: me.name, other: creditedName };
+    const item = `${quantity} × ${product.name} (${product.size}, ${product.color})`;
+    const amount = formatPaise(saleTotalPaise(quantity, unitPricePaise));
 
     startTransition(async () => {
-      const result = await recordSaleAction({ operationId, productId: product.id, quantity, unitPricePaise, soldBy: creditTo });
-      if (!result.ok) {
-        feedback('error');
-        return setMessage({ kind: 'error', text: result.error });
+      if (isOnline()) {
+        try {
+          const result = await withTimeout(recordSaleAction({ operationId, productId: product.id, quantity, unitPricePaise, soldBy: creditTo }), SALE_WAIT_MS);
+          markReachable();
+          if (!result.ok) {
+            feedback('error');
+            return setMessage({ kind: 'error', text: result.error });
+          }
+          const note = result.data.status === 'waiting' ? ` ${t('sell.sentToOwner')}` : '';
+          setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'sell.doneMine' : 'sell.doneOther', { ...values, left: result.data.stockLeft }) + note });
+          // Payment-app style: chime + "Sale done" card with the amount.
+          feedback('done');
+          setDone({ title: t('done.sale'), amount, detail: item });
+          setPending(null);
+          void setPhoneStock(product.id, () => result.data.stockLeft);
+          return;
+        } catch {
+          // No answer from the shop: keep the sale on the phone below.
+          markUnreachable();
+        }
       }
-      const creditedName = staff.find((s) => s.id === creditTo)?.name ?? me.name;
-      const values = { qty: quantity, name: product.name, size: product.size, color: product.color, price: formatPaise(unitPricePaise), me: me.name, other: creditedName, left: result.data.stockLeft };
-      const note = result.data.status === 'waiting' ? ` ${t('sell.sentToOwner')}` : '';
-      setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'sell.doneMine' : 'sell.doneOther', values) + note });
-      // Payment-app style: chime + "Sale done" card with the amount.
+      const saved = await saveOnPhone(
+        { productId: product.id, mrpPaise: product.mrpPaise, name: product.name, size: product.size, color: product.color },
+        { operationId, quantity, unitPricePaise },
+      );
+      if (!saved) return;
+      setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'off.saved.mine' : 'off.saved.other', values) });
       feedback('done');
-      setDone({ amount: formatPaise(saleTotalPaise(quantity, unitPricePaise)), detail: `${quantity} × ${product.name} (${product.size}, ${product.color})` });
+      setDone({ title: t('off.saved.title'), amount, detail: t('off.saved.detail', { item }) });
       setPending(null);
     });
   }
@@ -136,18 +251,35 @@ export function PosScreen({
     if (unitPricePaise === null || unitPricePaise <= 0) return setMessage({ kind: 'error', text: t('error.salePrice') });
     const size = handSize.trim();
     const { operationId } = hand;
+    const manual = { name, size: size || undefined };
+    const creditedName = staff.find((s) => s.id === creditTo)?.name ?? me.name;
+    const values = { qty: quantity, name, price: formatPaise(unitPricePaise), me: me.name, other: creditedName };
+    const item = `${quantity} × ${name}${size ? ` (${size})` : ''}`;
+    const amount = formatPaise(saleTotalPaise(quantity, unitPricePaise));
     startTransition(async () => {
-      const result = await recordSaleAction({ operationId, manual: { name, size: size || undefined }, quantity, unitPricePaise, soldBy: creditTo });
-      if (!result.ok) {
-        feedback('error');
-        return setMessage({ kind: 'error', text: result.error });
+      if (isOnline()) {
+        try {
+          const result = await withTimeout(recordSaleAction({ operationId, manual, quantity, unitPricePaise, soldBy: creditTo }), SALE_WAIT_MS);
+          markReachable();
+          if (!result.ok) {
+            feedback('error');
+            return setMessage({ kind: 'error', text: result.error });
+          }
+          const note = result.data.status === 'waiting' ? ` ${t('sell.sentToOwner')}` : '';
+          setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'sell.byHand.doneMine' : 'sell.byHand.doneOther', values) + note });
+          feedback('done');
+          setDone({ title: t('done.sale'), amount, detail: item });
+          setHand(null);
+          return;
+        } catch {
+          markUnreachable();
+        }
       }
-      const creditedName = staff.find((s) => s.id === creditTo)?.name ?? me.name;
-      const values = { qty: quantity, name, price: formatPaise(unitPricePaise), me: me.name, other: creditedName };
-      const note = result.data.status === 'waiting' ? ` ${t('sell.sentToOwner')}` : '';
-      setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'sell.byHand.doneMine' : 'sell.byHand.doneOther', values) + note });
+      const saved = await saveOnPhone({ manual, name, size, color: '' }, { operationId, quantity, unitPricePaise });
+      if (!saved) return;
+      setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'off.saved.handMine' : 'off.saved.handOther', values) });
       feedback('done');
-      setDone({ amount: formatPaise(saleTotalPaise(quantity, unitPricePaise)), detail: `${quantity} × ${name}${size ? ` (${size})` : ''}` });
+      setDone({ title: t('off.saved.title'), amount, detail: t('off.saved.detail', { item }) });
       setHand(null);
     });
   }
@@ -190,7 +322,7 @@ export function PosScreen({
           </div>
         </section>
       )}
-      {done && <DoneOverlay title={t('done.sale')} amount={done.amount} detail={done.detail} onClose={closeDone} />}
+      {done && <DoneOverlay title={done.title} amount={done.amount} detail={done.detail} onClose={closeDone} />}
 
       {message && (
         <p role="status" className={message.kind === 'ok' ? okBox : errorBox}>
@@ -238,6 +370,7 @@ export function PosScreen({
 
       {pending?.step === 'details' && (
         <ProductCard product={pending.product}>
+          {pending.fromPhone && <PhoneCopyNote text={t('off.fromPhone', { time: formatWhen(locale, pending.fromPhone) })} />}
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" onClick={() => setPending(null)} className={secondaryButton}>
               {t('common.cancel')}
@@ -260,13 +393,18 @@ export function PosScreen({
           <p className={`mt-1 text-sm ${muted}`}>
             {t('sell.stockLine', { stock: pending.product.stock, mrp: formatPaise(pending.product.mrpPaise) })}
           </p>
+          {pending.fromPhone && (
+            <PhoneCopyNote
+              text={pending.product.stock <= 0 ? t('off.noneLeft') : t('off.fromPhone', { time: formatWhen(locale, pending.fromPhone) })}
+            />
+          )}
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('sell.quantity')}
               <input
                 type="number"
                 min={1}
-                max={pending.product.stock}
+                max={pending.fromPhone ? undefined : pending.product.stock}
                 value={qtyText}
                 onChange={(e) => setQtyText(e.target.value)}
                 className={input}
@@ -293,5 +431,15 @@ export function PosScreen({
         </section>
       )}
     </main>
+  );
+}
+
+/** Plan v18: the item came from the phone's copy (no internet). */
+function PhoneCopyNote({ text }: { text: string }) {
+  return (
+    <p data-testid="phone-copy" className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 dark:bg-amber-950/60 dark:text-amber-100">
+      <IconWifiOff className="mt-0.5 h-4 w-4 shrink-0" />
+      {text}
+    </p>
   );
 }

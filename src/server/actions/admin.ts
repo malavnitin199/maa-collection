@@ -26,13 +26,13 @@ import {
   receiveStock,
   bulkUpdateProducts,
   type BulkProductChange,
-  setDesignTags,
   stockIn,
   updateDesignRates,
   updateProduct,
   type ProductInput,
 } from '@/server/services/products';
 import { addPhotoToProducts, addProductImage, deleteImage, makeMainImage } from '@/server/services/images';
+import { addTypeSize, createSection, createType, updateSection } from '@/server/services/sections';
 import { updatePriceCode } from '@/server/services/settings';
 import { createStaff, setStaffActive, setStaffPermissions, setStaffPin, verifyLogin } from '@/server/services/staff';
 
@@ -296,7 +296,13 @@ export async function updateSupplierAction(supplierId: string, _prev: FormState,
 export async function createCategoryAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requirePermission('catalog');
   try {
-    const created = await createCategory(await getDb(), STORE_ID, { name: text(formData, 'name'), code: text(formData, 'code'), sizes: text(formData, 'sizes') });
+    const created = await createCategory(await getDb(), STORE_ID, {
+      name: text(formData, 'name'),
+      code: text(formData, 'code'),
+      sizes: text(formData, 'sizes'),
+      // Plan v19: the section it goes under (Man / Woman / Girl / Boy …).
+      sectionId: text(formData, 'sectionId') || null,
+    });
     revalidatePath('/admin', 'layout');
     return { message: (await getT())('act.categoryAdded', { name: created.name, code: created.code }) };
   } catch (error) {
@@ -312,11 +318,66 @@ export async function updateCategoryAction(categoryId: string, _prev: FormState,
       code: text(formData, 'code'),
       active: formData.get('active') === 'on',
       sizes: text(formData, 'sizes'),
+      sectionId: text(formData, 'sectionId') || undefined,
     });
     revalidatePath('/admin', 'layout');
     return { message: (await getT())('act.saved') };
   } catch (error) {
     return failure(error);
+  }
+}
+
+// ------------------------------------- plan v19: sections, types and sizes on the spot
+
+export type SectionResult = { ok: true; section: { id: string; name: string; icon: string } } | { ok: false; error: string };
+export type TypeResult = { ok: true; type: { id: string; name: string; code: string; sizes: string[] } } | { ok: false; error: string };
+export type SizesResult = { ok: true; sizes: string[] } | { ok: false; error: string };
+
+/** New item → "+ Add" on the first step: a section (e.g. Kids) with a picture. */
+export async function createSectionAction(input: { name: string; icon: string }): Promise<SectionResult> {
+  await requirePermission('catalog');
+  try {
+    const section = await createSection(await getDb(), STORE_ID, { name: String(input.name ?? ''), icon: String(input.icon ?? '') });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, section: { id: section.id, name: section.name, icon: section.icon } };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** Categories → a section's name, picture, or hide / bring back. */
+export async function updateSectionAction(sectionId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requirePermission('catalog');
+  try {
+    await updateSection(await getDb(), STORE_ID, sectionId, { name: text(formData, 'name'), icon: text(formData, 'icon'), active: formData.get('active') === 'on' });
+    revalidatePath('/admin', 'layout');
+    return { message: (await getT())('act.saved') };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** New item → "+ Add" on the second step: a type under the chosen section, with its sizes. */
+export async function createTypeAction(input: { sectionId: string; name: string; sizes: string }): Promise<TypeResult> {
+  await requirePermission('catalog');
+  try {
+    const type = await createType(await getDb(), STORE_ID, { sectionId: String(input.sectionId ?? ''), name: String(input.name ?? ''), sizes: String(input.sizes ?? '') });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, type: { id: type.id, name: type.name, code: type.code, sizes: type.sizes } };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** New item → "+ Add size": the type keeps it for next time. */
+export async function addTypeSizeAction(categoryId: string, size: string): Promise<SizesResult> {
+  await requirePermission('catalog');
+  try {
+    const sizes = await addTypeSize(await getDb(), STORE_ID, String(categoryId), String(size ?? ''));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, sizes };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
 }
 
@@ -336,7 +397,11 @@ export type DesignActionInput = {
   /** Sizes with their own MRP / selling / purchase price (all colours of that size). */
   sizeRates?: SizeRatesText[];
   quantityEach: string;
+  /** Plan v19: pieces of each colour in a size (size → whole number); sizes left out get `quantityEach`. */
+  quantities?: Record<string, string | number>;
   billNumber: string;
+  /** Plan v19: YYYY-MM-DD; empty = today. */
+  stockDate?: string;
   /** Plan v17 tags: '' = not set. */
   forGender?: string;
   ageGroup?: string;
@@ -358,6 +423,12 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
     };
     const qty = input.quantityEach.trim() || '0';
     if (!/^\d+$/.test(qty)) throw new DomainError('Pieces must be a whole number.', { key: 'act.err.piecesWhole' });
+    const quantities: Record<string, number> = {};
+    for (const [size, raw] of Object.entries(input.quantities ?? {})) {
+      const value = String(raw).trim() || '0';
+      if (!/^\d+$/.test(value)) throw new DomainError('Pieces must be a whole number.', { key: 'act.err.piecesWhole' });
+      quantities[String(size).slice(0, 20)] = Number(value);
+    }
     const mrpPaise = toPaise(input.mrp, 'MRP') as number;
     const result = await createDesign(await getDb(), STORE_ID, {
       operationId: String(input.operationId).slice(0, 100),
@@ -373,7 +444,9 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
       costPaise: can(admin, 'costs') ? toPaise(String(input.cost ?? ''), 'cost price', true) : null,
       sizeRates: sizeRatesInput(input.sizeRates, admin),
       quantityEach: Number(qty),
+      quantities,
       billNumber: input.billNumber,
+      stockDate: String(input.stockDate ?? ''),
       forGender: String(input.forGender ?? ''),
       ageGroup: String(input.ageGroup ?? ''),
       staffId: admin.id,
@@ -471,18 +544,6 @@ export async function bulkProductsAction(ids: string[], input: BulkProductInput)
     return { ok: true, changed, message: (await getT())(changed === 1 ? 'act.bulkDone.one' : 'act.bulkDone.other', { n: changed }) };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
-  }
-}
-
-/** Plan v17: "For" and "Age" tags on every size and colour of this product's design (catalog right). */
-export async function updateDesignTagsAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requirePermission('catalog');
-  try {
-    const count = await setDesignTags(await getDb(), STORE_ID, productId, { forGender: text(formData, 'forGender'), ageGroup: text(formData, 'ageGroup') });
-    revalidatePath('/admin', 'layout');
-    return { message: (await getT())(count === 1 ? 'act.tagsUpdated.one' : 'act.tagsUpdated.other', { n: count }) };
-  } catch (error) {
-    return failure(error);
   }
 }
 
@@ -701,8 +762,9 @@ export async function editTaggedItemAction(productId: string, formData: FormData
       mrpPaise,
       pricePaise,
       costPaise: canCosts ? money(formData, 'cost', 'purchase price', { optional: true }) : null,
-      forGender: text(formData, 'forGender'),
-      ageGroup: text(formData, 'ageGroup'),
+      // Plan v19: the For / Age tags are no longer asked; a form without them keeps what is saved.
+      forGender: formData.has('forGender') ? text(formData, 'forGender') : undefined,
+      ageGroup: formData.has('ageGroup') ? text(formData, 'ageGroup') : undefined,
     });
     revalidatePath('/admin', 'layout');
     const { id, sku, barcode, size, color } = product;

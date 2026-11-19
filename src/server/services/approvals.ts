@@ -290,6 +290,8 @@ export type PendingEntry = {
   note: string | null;
   soldBy: string;
   recordedBy: string;
+  /** Sale only (plan v18): made on a phone without internet at this time, sent later. */
+  offlineAt: Date | null;
   /** Exchange only. */
   swap?: { returned: string; issued: string; hasBill: boolean };
 };
@@ -325,6 +327,7 @@ export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: 
         mrpPaise: sales.mrpPaise,
         listPricePaise: item.pricePaise,
         costPaise: sales.costPaise,
+        offlineAt: sales.offlineAt,
         soldBy: credited.name,
         recordedBy: recorder.name,
         day: sql<string>`to_char(${sales.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')`,
@@ -381,6 +384,7 @@ export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: 
       note: r.manualNote,
       soldBy: r.soldBy,
       recordedBy: r.recordedBy,
+      offlineAt: r.offlineAt ?? null,
     })),
     ...exchangeRows.map((r) => ({
       kind: 'exchange' as const,
@@ -398,6 +402,7 @@ export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: 
       note: null,
       soldBy: r.soldBy,
       recordedBy: r.recordedBy,
+      offlineAt: null,
       swap: {
         returned: `${r.returnedQuantity} × ${r.returnedName} (${r.returnedSize})`,
         issued: `${r.issuedQuantity} × ${r.issuedName} (${r.issuedSize})`,

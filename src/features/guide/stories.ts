@@ -192,6 +192,41 @@ export const STORIES: Story[] = [
     open: { href: '/pos', label: { en: 'Open Sell', hi: 'बेचें खोलें' } },
   },
   {
+    // Plan v18: selling without internet.
+    id: 'offline',
+    audience: 'sellers',
+    title: { en: 'No internet', hi: 'इंटरनेट नहीं' },
+    goal: { en: 'Keep selling; it is sent later.', hi: 'बेचते रहें; बाद में अपने आप जाएगी।' },
+    steps: [
+      {
+        scene: { kind: 'scan' },
+        text: { en: 'No internet? **Still scan**', hi: 'इंटरनेट नहीं? **फिर भी स्कैन करें**' },
+        say: {
+          en: "No internet? The counter still works. Scan the tag as usual: the item comes from this phone's copy.",
+          hi: 'इंटरनेट नहीं है? काउंटर फिर भी चलता है। टैग हमेशा की तरह स्कैन करें: आइटम इस फ़ोन की कॉपी से आएगा।',
+        },
+      },
+      {
+        scene: { kind: 'done', title: { en: 'Saved on this phone', hi: 'इस फ़ोन में सेव' }, amount: '₹1,299' },
+        text: { en: '**Saved** on this phone', hi: 'इस फ़ोन में **सेव**' },
+        say: {
+          en: 'Record the sale as usual. It is saved on this phone. Stay logged in on this phone.',
+          hi: 'बिक्री हमेशा की तरह दर्ज करें। यह इस फ़ोन में सेव हो जाती है। इसी फ़ोन पर लॉग इन रहें।',
+        },
+      },
+      {
+        scene: { kind: 'buttons', items: [{ en: 'Send now', hi: 'अभी भेजें' }], tap: 0 },
+        text: { en: 'Internet back: **sent by itself**', hi: 'इंटरनेट आया: **अपने आप गई**' },
+        say: {
+          en: 'When internet is back, the sales go to the shop by themselves. Or tap the yellow strip, then Send now.',
+          hi: 'इंटरनेट आते ही बिक्री अपने आप दुकान को चली जाती है। या पीली पट्टी दबाकर अभी भेजें दबाएँ।',
+        },
+      },
+    ],
+    tip: { en: 'Exchange needs internet. Saved sales are sent by the same person.', hi: 'एक्सचेंज को इंटरनेट चाहिए। सेव बिक्री उसी व्यक्ति से जाती है।' },
+    open: { href: '/pos', label: { en: 'Open Sell', hi: 'बेचें खोलें' } },
+  },
+  {
     id: 'qr',
     audience: 'sellers',
     title: { en: 'Open from the QR', hi: 'QR से खोलें' },

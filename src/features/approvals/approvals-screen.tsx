@@ -251,6 +251,12 @@ export function ApprovalsScreen({ days, total }: { days: ApprovalDay[]; total: n
                     <div className="min-w-0">
                       {entry.kind === 'exchange' && <span className={`${chip} bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200`}>{t('appr.exchange')}</span>}
                       {entry.manual && <span className={`${chip} bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200`}>{t('appr.byHand')}</span>}
+                      {/* Plan v18: made on a phone without internet and sent later (phone's time). */}
+                      {entry.offlineAt && (
+                        <span data-testid="made-offline" className={`${chip} bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200`}>
+                          {t('off.chip', { time: formatDate(locale, entry.offlineAt, 'dayTime') })}
+                        </span>
+                      )}
                       <span className="font-semibold">
                         {entry.quantity} × {entry.title}
                       </span>

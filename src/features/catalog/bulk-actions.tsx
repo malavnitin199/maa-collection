@@ -2,18 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { IconBuilding, IconEye, IconEyeOff, IconLayers, IconPeople, IconPriceTag, IconPrint, IconRename } from '@/components/ui/icons';
+import { IconBuilding, IconEye, IconEyeOff, IconLayers, IconPriceTag, IconPrint, IconRename } from '@/components/ui/icons';
 import { ActionGrid, ActionSheet, ActionTile, sheetDanger, sheetPrimary, sheetSecondary, useSelection } from '@/components/ui/selection';
 import { input } from '@/components/ui/styles';
-import { TagChooser } from '@/features/catalog/item-parts';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
-import type { ProductTags } from '@/lib/product-tags';
 import { PRINT_MAX } from '@/lib/selection-limits';
 import { bulkProductsAction, setCompaniesActiveAction, type BulkProductInput } from '@/server/actions/admin';
 
 type Option = { id: string; name: string };
-type Sheet = 'hide' | 'rename' | 'company' | 'category' | 'tags' | 'prices';
+type Sheet = 'hide' | 'rename' | 'company' | 'category' | 'prices';
 
 const fieldLabel = 'flex flex-col gap-1.5 text-sm font-semibold';
 
@@ -31,7 +29,7 @@ export function ProductBulkActions({
 }: {
   companies: Option[];
   categories: (Option & { code: string })[];
-  /** Hide / bring back / rename / company / category / tags need the Catalog right. */
+  /** Hide / bring back / rename / company / category need the Catalog right (plan v19: the category carries Man / Woman / Girl / Boy). */
   canCatalog: boolean;
   canPrices: boolean;
   canPrint: boolean;
@@ -45,7 +43,6 @@ export function ProductBulkActions({
   const [name, setName] = useState('');
   const [supplierId, setSupplierId] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [tags, setTags] = useState<ProductTags>({ forGender: null, ageGroup: null });
   const [mrp, setMrp] = useState('');
   const [price, setPrice] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +75,6 @@ export function ProductBulkActions({
     { id: 'rename', label: 'bulk.rename', icon: <IconRename />, show: !hiddenView && canCatalog },
     { id: 'company', label: 'bulk.company', icon: <IconBuilding />, show: !hiddenView && canCatalog },
     { id: 'category', label: 'bulk.category', icon: <IconLayers />, show: !hiddenView && canCatalog },
-    { id: 'tags', label: 'bulk.tags', icon: <IconPeople />, show: !hiddenView && canCatalog },
     { id: 'prices', label: 'bulk.prices', icon: <IconPriceTag />, show: !hiddenView && canPrices },
   ];
 
@@ -201,22 +197,6 @@ export function ProductBulkActions({
                 ))}
               </select>
             </label>
-            {problem}
-            {apply}
-            {cancel}
-          </form>
-        </ActionSheet>
-      )}
-      {sheet === 'tags' && (
-        <ActionSheet title={title('bulk.tags')} onClose={close}>
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              run({ kind: 'tags', forGender: tags.forGender ?? '', ageGroup: tags.ageGroup ?? '' });
-            }}
-          >
-            <TagChooser value={tags} onChange={setTags} />
             {problem}
             {apply}
             {cancel}

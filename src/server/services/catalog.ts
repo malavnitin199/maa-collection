@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
-import { categories, productImages, products, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
+import { categories, productImages, products, sections, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
 import { cleanSizeList, MAX_SIZES } from '@/lib/size-lists';
 import { DomainError, isUniqueViolation } from './errors';
 
@@ -19,7 +19,19 @@ export function suggestCategoryCode(name: string, taken: Set<string>): string {
   throw new DomainError('No free category code left.', { key: 'cat.err.noFreeCode' });
 }
 
-export type CategoryRow = Category & { productCount: number; stockUnits: number };
+/**
+ * Plan v19: a code for a type under a section — section letter + type letter
+ * first (Boy › Jeans → BJ, then BJE), then the type's own letters (JE, JA…).
+ */
+export function suggestSectionCode(sectionName: string, typeName: string, taken: Set<string>): string {
+  const s = sectionName.toUpperCase().replace(/[^A-Z]/g, '') || 'X';
+  const t = typeName.toUpperCase().replace(/[^A-Z]/g, '') || 'X';
+  const candidates = [s[0] + t[0], s[0] + t.slice(0, 2).padEnd(2, 'X'), ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((l) => s[0] + t[0] + l)];
+  for (const code of candidates) if (/^[A-Z]{2,3}$/.test(code) && !taken.has(code)) return code;
+  return suggestCategoryCode(typeName, taken);
+}
+
+export type CategoryRow = Category & { productCount: number; stockUnits: number; sectionName: string | null };
 
 export async function listCategories(db: Db, storeId: string, { activeOnly = false } = {}): Promise<CategoryRow[]> {
   return db
@@ -31,14 +43,17 @@ export async function listCategories(db: Db, storeId: string, { activeOnly = fal
       sizes: categories.sizes,
       active: categories.active,
       createdAt: categories.createdAt,
+      sectionId: categories.sectionId,
+      sectionName: sections.name,
       productCount: int(sql`count(${products.id})`),
       stockUnits: int(sql`coalesce(sum(${products.stock}), 0)`),
     })
     .from(categories)
     .leftJoin(products, eq(products.categoryId, categories.id))
+    .leftJoin(sections, eq(sections.id, categories.sectionId))
     .where(and(eq(categories.storeId, storeId), activeOnly ? eq(categories.active, true) : undefined))
-    .groupBy(categories.id)
-    .orderBy(asc(categories.name));
+    .groupBy(categories.id, sections.id)
+    .orderBy(asc(sections.sort), asc(categories.name));
 }
 
 function cleanCode(code: string | undefined | null): string | null {
@@ -49,7 +64,7 @@ function cleanCode(code: string | undefined | null): string | null {
 }
 
 /** A category's size list: cleaned, in the given order, short sizes, at most MAX_SIZES. */
-function checkedSizes(input: string | readonly string[] | undefined): string[] {
+export function checkedSizes(input: string | readonly string[] | undefined): string[] {
   const sizes = cleanSizeList(input ?? []);
   if (sizes.length > MAX_SIZES) throw new DomainError(`Up to ${MAX_SIZES} sizes per category.`, { key: 'cat.err.tooManySizes', vars: { n: MAX_SIZES } });
   const long = sizes.find((s) => s.length > 12);
@@ -57,21 +72,51 @@ function checkedSizes(input: string | readonly string[] | undefined): string[] {
   return sizes;
 }
 
+/** Plan v19: the section a type goes under (must be this shop's). */
+async function sectionFor(db: Db, storeId: string, sectionId: string) {
+  const [section] = await db
+    .select({ id: sections.id, name: sections.name })
+    .from(sections)
+    .where(and(eq(sections.storeId, storeId), eq(sections.id, sectionId)))
+    .limit(1);
+  if (!section) throw new DomainError('Choose Man, Woman, Girl or Boy.', { key: 'sec.err.sectionNotFound' });
+  return section;
+}
+
+/** Plan v19: one name once per section (Boy › Jeans and Girl › Jeans may both exist). */
+async function assertFreeTypeName(db: Db, storeId: string, sectionId: string | null, name: string, exceptId?: string) {
+  const [same] = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(
+      and(
+        eq(categories.storeId, storeId),
+        sectionId ? eq(categories.sectionId, sectionId) : sql`${categories.sectionId} is null`,
+        sql`lower(${categories.name}) = lower(${name})`,
+        exceptId ? sql`${categories.id} <> ${exceptId}` : undefined,
+      ),
+    )
+    .limit(1);
+  if (same) throw new DomainError('A category with that name or code already exists.', { key: 'cat.err.categoryExists' });
+}
+
 export async function createCategory(
   db: Db,
   storeId: string,
-  input: { name: string; code?: string | null; sizes?: string | readonly string[] },
+  input: { name: string; code?: string | null; sizes?: string | readonly string[]; sectionId?: string | null },
 ): Promise<Category> {
   const name = input.name.trim();
   if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).', { key: 'cat.err.categoryName' });
   const sizes = checkedSizes(input.sizes);
+  const section = input.sectionId ? await sectionFor(db, storeId, input.sectionId) : null;
+  await assertFreeTypeName(db, storeId, section?.id ?? null, name);
   let code = cleanCode(input.code);
   if (!code) {
     const taken = new Set((await db.select({ code: categories.code }).from(categories).where(eq(categories.storeId, storeId))).map((r) => r.code));
-    code = suggestCategoryCode(name, taken);
+    code = section ? suggestSectionCode(section.name, name, taken) : suggestCategoryCode(name, taken);
   }
   try {
-    const [created] = await db.insert(categories).values({ storeId, name, code, sizes }).returning();
+    const [created] = await db.insert(categories).values({ storeId, name, code, sizes, sectionId: section?.id ?? null }).returning();
     return created;
   } catch (error) {
     if (isUniqueViolation(error)) throw new DomainError('A category with that name or code already exists.', { key: 'cat.err.categoryExists' });
@@ -84,19 +129,21 @@ export async function updateCategory(
   db: Db,
   storeId: string,
   id: string,
-  input: { name: string; code: string; active: boolean; sizes?: string | readonly string[] },
+  input: { name: string; code: string; active: boolean; sizes?: string | readonly string[]; sectionId?: string | null },
 ): Promise<Category> {
   const name = input.name.trim();
   if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).', { key: 'cat.err.categoryName' });
   const code = cleanCode(input.code);
-  // Leaving sizes out keeps the current list.
+  // Leaving sizes out keeps the current list; leaving the section out keeps it too.
   const sizes = input.sizes === undefined ? undefined : checkedSizes(input.sizes);
   if (!code) throw new DomainError('Enter a 2–3 letter code.', { key: 'cat.err.codeRequired' });
+  const section = input.sectionId ? await sectionFor(db, storeId, input.sectionId) : undefined;
+  if (section) await assertFreeTypeName(db, storeId, section.id, name, id);
   try {
     return await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(categories)
-        .set({ name, code, active: input.active, ...(sizes ? { sizes } : {}) })
+        .set({ name, code, active: input.active, ...(sizes ? { sizes } : {}), ...(section ? { sectionId: section.id } : {}) })
         .where(and(eq(categories.storeId, storeId), eq(categories.id, id)))
         .returning();
       if (!updated) throw new DomainError('Category not found.', { key: 'cat.err.categoryNotFound' });

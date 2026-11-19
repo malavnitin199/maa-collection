@@ -19,6 +19,27 @@ async function loginOwner(page: Page) {
 const tab = (page: Page, name: 'Details' | 'Colours' | 'Other details') => page.getByRole('tab', { name, exact: true }).click();
 const showVariants = (page: Page) => tab(page, 'Colours');
 const companyBox = (page: Page) => page.getByRole('combobox', { name: /^Company/ });
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * New item step by step (plan v19): who it is for → category → sizes (pieces of each) → the details step.
+ * Opens a fresh entry unless `open: false` (already on the screen, e.g. from a company or "Add next item").
+ */
+async function startItem(
+  page: Page,
+  { section, category, sizes = [], pieces = {}, open = true }: { section?: string; category: string; sizes?: string[]; pieces?: Record<string, number>; open?: boolean },
+) {
+  if (open) await page.goto(`/admin/stock/new?n=${Math.random().toString(36).slice(2)}`);
+  if (section) await page.getByRole('group', { name: 'Who is it for?' }).getByRole('button', { name: section, exact: true }).click();
+  await page.getByRole('group', { name: 'What is it?' }).getByRole('button', { name: new RegExp(`^${escape(category)}( |$)`) }).click();
+  for (const size of sizes) {
+    const chip = page.getByRole('button', { name: `Size ${size}`, exact: true });
+    if ((await chip.getAttribute('aria-pressed')) !== 'true') await chip.click();
+  }
+  for (const [size, n] of Object.entries(pieces)) await page.getByLabel(`Pieces of size ${size}`, { exact: true }).fill(String(n));
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByLabel('Product name')).toBeVisible();
+}
 const salePrice = (page: Page) => page.getByLabel('Sale price (MRP) ₹');
 const purchasePrice = (page: Page) => page.getByLabel('Purchase price ₹', { exact: true });
 
@@ -88,27 +109,23 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await page.getByRole('link', { name: `+ New item from Design Co ${run}` }).click();
   await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=/);
 
-  // Company preselected; brand (Other details) defaults to the company name. Details is the tab open first.
+  // Plan v19: who it is for → category → sizes with 2 pieces each; then the details, company already chosen.
+  await startItem(page, { open: false, section: 'Man', category: 'Kurta', sizes: ['M', 'L'], pieces: { M: 2, L: 2 } });
+  await expect(page.getByTestId('item-path')).toHaveText('Man › Kurta');
+  await expect(page.getByTestId('item-size-pills')).toHaveText('ML');
   await expect(page.getByRole('tab', { name: 'Details', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(companyBox(page).locator('option:checked')).toHaveText(`Design Co ${run}`);
+  // The brand is empty: the company is never printed on a tag.
   await tab(page, 'Other details');
-  await expect(page.getByLabel('Brand')).toHaveValue(`Design Co ${run}`);
-  // Header: name, category and "for whom" tags; then the must-haves.
+  await expect(page.getByLabel(/^Brand/)).toHaveValue('');
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
-  await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
-  await page.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Girls' }).click();
-  await page.getByRole('group', { name: 'Age' }).getByRole('button', { name: 'Adult' }).click();
-  await expect(page.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Girls' })).toHaveAttribute('aria-pressed', 'true');
   await salePrice(page).fill('1499');
   await purchasePrice(page).fill('800');
   await showVariants(page);
-  await page.getByRole('button', { name: 'Size M' }).click();
-  await page.getByRole('button', { name: 'Size L' }).click();
   await page.getByLabel('Colour', { exact: true }).fill('Blue, Pink');
   await page.getByRole('button', { name: 'Add colour' }).click();
-  await expect(page.getByTestId('item-size-pills')).toHaveText('ML');
   await expect(page.getByTestId('combo-grid').getByRole('row')).toHaveCount(3); // sizes + Blue + Pink
   await tab(page, 'Details');
-  await page.getByLabel('Pieces each').fill('2');
   await page.getByLabel('Counter price, if lower (₹)').fill('1399');
   await page.getByLabel('Supplier bill no. (optional)').fill('INV-42');
   await expect(page.getByTestId('design-preview')).toHaveText('4 items · 8 pcs · purchase ₹6,400.00');
@@ -118,7 +135,10 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   await expect(page.getByText('Saved 4 new items with barcodes.')).toBeVisible();
   await expect(page.getByTestId('receipt-lines')).toContainText(`Chikan Kurta ${run} · Pink · L`);
-  await expect(page.getByRole('link', { name: '+ Add next item' })).toHaveAttribute('href', /^\/admin\/stock\/new\?supplier=[0-9a-f-]{36}&category=[0-9a-f-]{36}$/);
+  await expect(page.getByRole('link', { name: '+ Add next item' })).toHaveAttribute('href', /^\/admin\/stock\/new\?supplier=[0-9a-f-]{36}&section=[0-9a-f-]{36}&bill=INV-42&n=[0-9a-f-]{36}$/);
+  // The tag never prints the company.
+  await expect(page.getByTestId('label-sheet').getByTestId('tag-brand')).toHaveCount(0);
+  await expect(page.getByTestId('label-sheet')).not.toContainText(`DESIGN CO ${run}`.toUpperCase());
   const labels = page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ });
   await expect(labels).toHaveCount(8);
   await page.getByRole('link', { name: 'One per item instead (4)' }).click();
@@ -126,18 +146,13 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   const barcode = (await labels.first().getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
   expect(barcode).toMatch(/^200\d{10}$/);
 
-  // Product page: header tags; Colours shows every colour × size with its pieces.
+  // Product page: Man and Kurta in the header; Colours shows every colour × size with its pieces.
   await page.getByTestId('receipt-lines').getByRole('link').first().click();
-  await expect(page.getByTestId('item-pills')).toContainText('Girls');
-  await expect(page.getByTestId('item-pills')).toContainText('Adult');
+  await expect(page.getByTestId('item-pills')).toContainText('Man');
+  await expect(page.getByTestId('item-pills')).toContainText('Kurta');
   await tab(page, 'Colours');
   await expect(page.getByTestId('design-variants').getByRole('link')).toHaveCount(4);
   await expect(page.getByTestId('design-variants').getByRole('link', { name: `Pink L: 2 in stock` })).toBeVisible();
-  // Other details: change "for whom" for the whole design.
-  await tab(page, 'Other details');
-  await page.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Both' }).click();
-  await page.getByRole('button', { name: 'Save tags' }).click();
-  await expect(page.getByText('Tags saved for 4 items.')).toBeVisible();
   // Rates for the whole design (Details).
   await tab(page, 'Details');
   const rates = page.locator('section', { has: page.getByRole('heading', { name: 'Rates for the whole design' }) });
@@ -149,14 +164,12 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await expect(page.getByTestId('product-list').getByRole('listitem').filter({ hasText: '₹1,499.00' })).toHaveCount(4);
 
   // Same entry again is refused (sizes/colours already exist).
-  await page.goto('/admin/stock/new');
+  await startItem(page, { section: 'Man', category: 'Kurta', sizes: ['M'] });
   await companyBox(page).selectOption({ label: `Design Co ${run}` });
-  await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await salePrice(page).fill('1499');
   await purchasePrice(page).fill('800');
   await showVariants(page);
-  await page.getByRole('button', { name: 'Size M' }).click();
   await page.getByLabel('Colour', { exact: true }).fill('Blue');
   await page.getByRole('button', { name: /^Save 1 item/ }).click();
   await expect(page.getByText(/Already in the catalogue: Blue M/)).toBeVisible();
@@ -178,15 +191,13 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
 test('owner gives sizes their own MRP, selling and purchase price; every colour of a size gets them', async ({ page }) => {
   await loginOwner(page);
   const name = `Linen Shirt ${run}`;
-  await page.goto('/admin/stock/new');
+  await startItem(page, { section: 'Man', category: 'Kurta', sizes: ['XL', 'M', 'L'] });
   await companyBox(page).selectOption({ label: 'Royal Garments' });
-  await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(name);
   await salePrice(page).fill('700');
   await purchasePrice(page).fill('300');
   await page.getByLabel('Counter price, if lower (₹)').fill('500');
   await showVariants(page);
-  for (const size of ['XL', 'M', 'L']) await page.getByRole('button', { name: `Size ${size}`, exact: true }).click();
   await page.getByLabel('Colour', { exact: true }).fill('Black, White');
   await page.getByRole('button', { name: 'Add colour' }).click();
 
@@ -1088,14 +1099,14 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   await expect(tagStory.getByTestId('hang-tag')).toBeVisible();
   await expect(tagStory.getByTestId('story-text')).toHaveText('QR opens the item');
   // Finishing a lesson ticks it, and that is remembered on this phone.
-  await expect(page.getByTestId('guide-progress')).toContainText('0 of 16 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('0 of 17 learned');
   for (let i = 0; i < 5; i++) await tagStory.getByRole('button', { name: 'Next step' }).click();
   await expect(tagStory.getByTestId('story-text')).toHaveText('Every part has a job.');
   await tagStory.getByRole('button', { name: 'Got it ✓' }).click();
   await expect(tagStory).toBeHidden();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 16 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 17 learned');
   await page.reload();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 16 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 17 learned');
   // Quick help & fixes is still there.
   await page.getByRole('link', { name: 'Problems & fixes' }).click();
   await expect(page).toHaveURL(/\/help#faq$/);

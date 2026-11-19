@@ -17,8 +17,14 @@ export function HangTag({
   sizes = [],
   qrValue = null,
   priceCode = null,
+  company,
 }: {
   product: TagProduct;
+  /**
+   * Plan v19: the company the item was bought from — never printed. The brand line
+   * shows only a real brand: one that is not this company's name. Not given = no brand line.
+   */
+  company?: string | null;
   /** The size row: the category's sizes in shop order (see `tagSizeRange`); 2+ shows it. */
   sizes?: string[];
   /** Item link for the QR code; no QR when absent. */
@@ -27,6 +33,8 @@ export function HangTag({
   priceCode?: string | null;
 }) {
   const [rupees, paise] = formatPaise(product.mrpPaise).split('.');
+  const brand = product.brand?.trim() ?? '';
+  const printedBrand = brand && company !== undefined && brand.toLowerCase() !== (company ?? '').trim().toLowerCase() ? brand : null;
   const longSize = product.size.length > 4;
   return (
     <div
@@ -40,7 +48,7 @@ export function HangTag({
             <span aria-hidden className="h-[2.2mm] w-[2.2mm] shrink-0 rounded-full border border-zinc-400" />
             <span className="truncate">{STORE_NAME}</span>
           </p>
-          {product.brand && <p className="mt-[0.5mm] truncate text-[4.5pt] leading-none text-zinc-500 uppercase">{product.brand}</p>}
+          {printedBrand && <p data-testid="tag-brand" className="mt-[0.5mm] truncate text-[4.5pt] leading-none text-zinc-500 uppercase">{printedBrand}</p>}
           <div className="mt-[0.8mm] border border-zinc-800 px-[1mm] pt-[0.3mm] pb-[0.5mm]">
             <p className="flex justify-between text-[4pt] leading-none font-semibold tracking-wide uppercase">
               <span>Size</span>

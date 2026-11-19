@@ -7,6 +7,7 @@ import { codeFromScan } from '@/lib/item-link';
 import { AGE_GROUPS, FOR_GENDERS, parseTag, type AgeGroup, type ForGender, type ProductTags } from '@/lib/product-tags';
 import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById, findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
+import { STORE_TIMEZONE } from '@/lib/app-config';
 import { DomainError, isUniqueViolation } from './errors';
 
 /** What salesman screens may see about a product: never the cost price. */
@@ -40,6 +41,30 @@ export function toCounterProduct(p: Product): CounterProduct {
     pricePaise: p.pricePaise,
     stock: p.stock,
   };
+}
+
+/**
+ * Plan v18: every item in use, as the counter sees it, for the phone's offline
+ * copy. Columns are picked one by one so the purchase price never leaves here.
+ */
+export async function counterCatalogue(db: Db, storeId: string): Promise<CounterProduct[]> {
+  return db
+    .select({
+      id: products.id,
+      sku: products.sku,
+      barcode: products.barcode,
+      name: products.name,
+      brand: products.brand,
+      category: products.category,
+      size: products.size,
+      color: products.color,
+      mrpPaise: products.mrpPaise,
+      pricePaise: products.pricePaise,
+      stock: products.stock,
+    })
+    .from(products)
+    .where(and(eq(products.storeId, storeId), eq(products.active, true)))
+    .orderBy(asc(products.name), asc(products.sku));
 }
 
 /** Finds an active product by scanned barcode, typed SKU (case-insensitive) or a tag's QR item link. */
@@ -338,7 +363,11 @@ export type DesignInput = {
   sizeRates?: SizeRates[];
   /** Pieces received per size/colour combination (0 = add to catalogue only). */
   quantityEach: number;
+  /** Plan v19: pieces of each colour in a size (key: size in lower case); sizes left out get `quantityEach`. */
+  quantities?: Record<string, number>;
   billNumber?: string | null;
+  /** Plan v19: the stock's (bill's) date, YYYY-MM-DD; empty = the day it is entered. */
+  stockDate?: string | null;
   /** Who it is for (plan v17), the same on every size and colour; empty = not set. */
   forGender?: string | null;
   ageGroup?: string | null;
@@ -371,6 +400,12 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   if (!Number.isInteger(input.quantityEach) || input.quantityEach < 0 || input.quantityEach > 10_000) {
     throw new DomainError('Pieces per size/colour must be 0 or more.', { key: 'stk.err.piecesEach' });
   }
+  const quantities = new Map<string, number>();
+  for (const [size, pieces] of Object.entries(input.quantities ?? {})) {
+    if (!Number.isInteger(pieces) || pieces < 0 || pieces > 10_000) throw new DomainError('Pieces per size/colour must be 0 or more.', { key: 'stk.err.piecesEach' });
+    quantities.set(size.toLowerCase(), pieces);
+  }
+  const stockDate = cleanStockDate(input.stockDate);
   const category = await resolveCategory(db, storeId, input.categoryId);
   await resolveSupplier(db, storeId, input.supplierId);
 
@@ -397,6 +432,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
     supplierId: input.supplierId,
     category,
     billNumber: input.billNumber,
+    stockDate,
     note: `New design: ${name}`,
     staffId: input.staffId,
     rows: colors.flatMap((color) =>
@@ -406,11 +442,28 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
         size,
         color,
         ...rates.get(size.toLowerCase())!,
-        quantity: input.quantityEach,
+        quantity: quantities.get(size.toLowerCase()) ?? input.quantityEach,
         ...tags,
       })),
     ),
   });
+}
+
+/** Plan v19: a stock date as typed (YYYY-MM-DD): a real day, not after today in the shop, from 2000 on. Empty = null. */
+export function cleanStockDate(raw: string | null | undefined, today: string = shopToday()): string | null {
+  const value = (raw ?? '').trim();
+  if (!value) return null;
+  const day = new Date(`${value}T00:00:00Z`);
+  // A date that does not exist (31 Feb) moves to another day, so it no longer matches.
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === value;
+  if (!valid || value < '2000-01-01') throw new DomainError('Enter a valid stock date.', { key: 'ns.err.stockDate' });
+  if (value > today) throw new DomainError('The stock date cannot be after today.', { key: 'ns.err.stockDateFuture' });
+  return value;
+}
+
+/** Today's date in the shop's time zone (YYYY-MM-DD). */
+function shopToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: STORE_TIMEZONE }).format(new Date());
 }
 
 /** Checks the optional "for whom" tags (plan v17); unknown values are refused. */
@@ -474,6 +527,7 @@ async function insertNewProducts(
     supplierId: string | null;
     category: { id: string; name: string; code: string };
     billNumber?: string | null;
+    stockDate?: string | null;
     note: string;
     staffId: string;
     rows: NewProductRow[];
@@ -493,6 +547,7 @@ async function insertNewProducts(
             operationId: input.operationId,
             supplierId: input.supplierId,
             billNumber: input.billNumber?.trim() || null,
+            stockDate: input.stockDate ?? null,
             note: input.note,
             staffId: input.staffId,
           })
@@ -859,7 +914,8 @@ export async function clearAllStock(db: Db, storeId: string, input: { staffId: s
     const held = await tx
       .select({ id: products.id, stock: products.stock })
       .from(products)
-      .where(and(eq(products.storeId, storeId), sql`${products.stock} > 0`))
+      // Not zero: since plan v18 a count can be below zero (offline sales); it is reset too.
+      .where(and(eq(products.storeId, storeId), sql`${products.stock} <> 0`))
       .for('update');
     if (held.length === 0) return { items: 0, pieces: 0 };
     await tx.insert(stockMovements).values(
@@ -873,7 +929,7 @@ export async function clearAllStock(db: Db, storeId: string, input: { staffId: s
       })),
     );
     await tx.update(products).set({ stock: 0 }).where(and(eq(products.storeId, storeId), inArray(products.id, held.map((p) => p.id))));
-    return { items: held.length, pieces: held.reduce((n, p) => n + p.stock, 0) };
+    return { items: held.length, pieces: held.reduce((n, p) => n + Math.max(p.stock, 0), 0) };
   });
 }
 

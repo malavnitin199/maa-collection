@@ -9,9 +9,7 @@ import { ScanInput } from '@/features/scanning/scan-input';
 import { itemLink } from '@/lib/item-link';
 import { tagSizeRange } from '@/lib/size-lists';
 import { IconPencil } from '@/components/ui/icons';
-import type { ProductTags } from '@/lib/product-tags';
 import { CompanyPicker } from './company-picker';
-import { TagChooser } from './item-parts';
 import { HangTag } from './hang-tag';
 import { PhotoPickers } from './photo-manager';
 import { resizePhoto } from './resize-photo';
@@ -48,8 +46,6 @@ export function OldStockForm({
   const [price, setPrice] = useState('');
   const [cost, setCost] = useState('');
   const [quantity, setQuantity] = useState('1');
-  // Who it is for (plan v17); kept for the next item, like category and size.
-  const [tags, setTags] = useState<ProductTags>({ forGender: null, ageGroup: null });
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [scanning, setScanning] = useState(false);
   const [tag, setTag] = useState<TagLookup | null>(null);
@@ -115,8 +111,6 @@ export function OldStockForm({
     form.set('price', price);
     form.set('cost', cost);
     form.set('quantity', quantity);
-    form.set('forGender', tags.forGender ?? '');
-    form.set('ageGroup', tags.ageGroup ?? '');
     form.set('barcode', tag?.status === 'new' ? tag.barcode : '');
     for (const photo of photos) form.append('photos', new File([photo.blob], 'photo.jpg', { type: 'image/jpeg' }));
     if (editing && saved) {
@@ -328,13 +322,6 @@ export function OldStockForm({
           {t('stk.old.productName')}
           <input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('stk.old.namePlaceholder')} className={input} />
         </label>
-        <TagChooser
-          value={tags}
-          onChange={(next) => {
-            setTags(next);
-            touched();
-          }}
-        />
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">{t('stk.size')}</span>
           <div className="flex flex-wrap gap-1.5">

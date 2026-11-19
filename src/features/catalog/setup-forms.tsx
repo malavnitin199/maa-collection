@@ -112,15 +112,33 @@ export function CategoryForm({
   action,
   initial,
   submitLabel,
+  sections,
 }: {
   action: Action;
-  initial?: { name: string; code: string; active: boolean; sizes?: readonly string[] };
+  initial?: { name: string; code: string; active: boolean; sizes?: readonly string[]; sectionId?: string | null };
   submitLabel: string;
+  /** Plan v19: who the category is for (Man / Woman / Girl / Boy …), names in the person's language. */
+  sections?: { id: string; name: string }[];
 }) {
   const t = useT();
   const [state, formAction, pending] = useActionState(action, {});
   return (
     <form action={formAction} className="flex flex-col gap-3">
+      {sections && (
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          {t('sec.formLabel')}
+          <select name="sectionId" required defaultValue={initial?.sectionId ?? ''} className={input}>
+            <option value="" disabled>
+              {t('sec.choose')}
+            </option>
+            {sections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="grid grid-cols-[1fr_6rem] gap-3">
         <Text label={t('cat.catf.name')} name="name" required defaultValue={initial?.name} placeholder={t('cat.catf.namePlaceholder')} />
         <Text
@@ -145,6 +163,46 @@ export function CategoryForm({
       <Feedback state={state} />
       <button type="submit" disabled={pending} className={`${primaryButton} py-3`}>
         {pending ? t('common.saving') : submitLabel}
+      </button>
+    </form>
+  );
+}
+
+/** Categories (plan v19): a section's name, picture and whether it is in use (hidden ones leave New item; nothing is deleted). */
+export function SectionForm({
+  action,
+  initial,
+  pictures,
+}: {
+  action: Action;
+  initial: { name: string; icon: string; active: boolean };
+  /** Picture keys with their names in the person's language. */
+  pictures: { key: string; label: string }[];
+}) {
+  const t = useT();
+  const [state, formAction, pending] = useActionState(action, {});
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <div className="grid grid-cols-[1fr_8rem] gap-3">
+        <Text label={t('ns.addSection.name')} name="name" required defaultValue={initial.name} maxLength={30} />
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          {t('ns.addSection.picture')}
+          <select name="icon" defaultValue={initial.icon} className={input}>
+            {pictures.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="active" defaultChecked={initial.active} className="h-5 w-5" />
+        {t('sec.inUse')}
+      </label>
+      <Feedback state={state} />
+      <button type="submit" disabled={pending} className={`${primaryButton} py-3`}>
+        {pending ? t('common.saving') : t('cat.cat.save')}
       </button>
     </form>
   );

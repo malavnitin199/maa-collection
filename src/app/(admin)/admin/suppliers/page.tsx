@@ -10,7 +10,10 @@ import { requirePermission } from '@/server/auth';
 import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listSuppliers } from '@/server/services/catalog';
-import { formatDate } from '@/lib/i18n';
+import { companySummaries } from '@/server/services/company';
+import { formatDate, plural } from '@/lib/i18n';
+import { formatPaise } from '@/lib/money';
+import { can } from '@/lib/permissions';
 
 
 async function AddSupplier() {
@@ -26,9 +29,11 @@ async function AddSupplier() {
 }
 
 async function SupplierList() {
-  const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
+  const [me, t] = await Promise.all([requirePermission('catalog'), getT()]);
   const locale = await getLocale();
-  const rows = await listSuppliers(await requestDb(), STORE_ID);
+  const db = await requestDb();
+  // Plan v19: each company's bills, pieces, bill amount (purchase price right only) and last bill.
+  const [rows, summaries] = await Promise.all([listSuppliers(db, STORE_ID), companySummaries(db, STORE_ID, { amounts: can(me, 'costs') })]);
   if (rows.length === 0) {
     return <p className={`text-sm ${muted}`}>{t('cat.sup.none')}</p>;
   }
@@ -52,8 +57,16 @@ async function SupplierList() {
               </span>
               <span className={`block text-xs ${muted}`}>
                 {t('cat.productsInStock', { products: s.productCount, pcs: s.stockUnits })}
-                {s.lastReceiptAt && ` · ${t('cat.sup.lastDelivery', { date: formatDate(locale, s.lastReceiptAt, 'date') })}`}
               </span>
+              {summaries.get(s.id) && (
+                <span data-testid="company-summary" className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold text-brand-800 dark:text-brand-300">
+                  <span>{plural(t, 'co.bills', summaries.get(s.id)!.bills)}</span>
+                  {summaries.get(s.id)!.amountPaise !== null && <span>· {formatPaise(summaries.get(s.id)!.amountPaise!)}</span>}
+                  {summaries.get(s.id)!.lastDate && (
+                    <span className={`font-normal ${muted}`}>· {t('co.list.lastBill', { date: formatDate(locale, `${summaries.get(s.id)!.lastDate}T00:00:00Z`, 'date') })}</span>
+                  )}
+                </span>
+              )}
             </span>
             <span aria-hidden className={muted}>
               ›
