@@ -26,6 +26,17 @@ test('theme and day/night apply at once and stay after a reload', async ({ page 
   await panel.getByRole('radio', { name: 'Day' }).click();
   await expect(html).toHaveAttribute('data-theme', 'peacock');
   await expect(html).toHaveAttribute('data-mode', 'light');
+
+  // The three themes added on 2026-11-19 (Sindoor, Jamun, Aasmani) are in the picker and apply too.
+  await expect(panel.getByRole('radiogroup', { name: 'Colour theme' }).getByRole('radio')).toHaveText(['Peacock', 'Marigold', 'Rani', 'Neel', 'Mehendi', 'Sindoor', 'Jamun', 'Aasmani', 'Bahi']);
+  for (const [name, id, main] of [['Sindoor', 'sindoor', '#b91c1c'], ['Jamun', 'jamun', '#7e22ce'], ['Aasmani', 'aasmani', '#0369a1']] as const) {
+    await panel.getByRole('radio', { name }).click();
+    await expect(html).toHaveAttribute('data-theme', id);
+    // The brand scale really changes (the 600 step the header and buttons use).
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--b-600').trim())).toBe(main);
+  }
+  await page.reload();
+  await expect(html).toHaveAttribute('data-theme', 'aasmani');
 });
 
 test('the PIN keypad fills the PIN and logs in', async ({ page }) => {
