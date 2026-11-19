@@ -11,7 +11,9 @@ import { sizeFieldName, type SizeRates } from '@/lib/size-prices';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
 import type { MessageKey } from '@/lib/i18n';
-import { errorText, getT } from '@/server/i18n';
+import { errorText, getLocale, getT } from '@/server/i18n';
+import { localName } from '@/lib/sections';
+import { createSection, moveSection, moveType, updateSection } from '@/server/services/sections';
 import { DomainError } from '@/server/services/errors';
 import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
@@ -296,7 +298,14 @@ export async function updateSupplierAction(supplierId: string, _prev: FormState,
 export async function createCategoryAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requirePermission('catalog');
   try {
-    const created = await createCategory(await getDb(), STORE_ID, { name: text(formData, 'name'), code: text(formData, 'code'), sizes: text(formData, 'sizes') });
+    const created = await createCategory(await getDb(), STORE_ID, {
+      name: text(formData, 'name'),
+      code: text(formData, 'code'),
+      sizes: text(formData, 'sizes'),
+      // Plan v19: the section it goes under (Men / Women / Boys / Girls …) and its Hindi name.
+      sectionId: text(formData, 'sectionId') || null,
+      nameHi: text(formData, 'nameHi'),
+    });
     revalidatePath('/admin', 'layout');
     return { message: (await getT())('act.categoryAdded', { name: created.name, code: created.code }) };
   } catch (error) {
@@ -312,9 +321,62 @@ export async function updateCategoryAction(categoryId: string, _prev: FormState,
       code: text(formData, 'code'),
       active: formData.get('active') === 'on',
       sizes: text(formData, 'sizes'),
+      sectionId: text(formData, 'sectionId') || undefined,
+      nameHi: text(formData, 'nameHi'),
     });
     revalidatePath('/admin', 'layout');
     return { message: (await getT())('act.saved') };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// ------------------------------------------------ plan v19 (02b): sections on Categories
+
+/** Categories → + Add section (e.g. Kids) with a Hindi name and a picture; it goes last. */
+export async function createSectionAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requirePermission('catalog');
+  try {
+    const section = await createSection(await getDb(), STORE_ID, { name: text(formData, 'name'), nameHi: text(formData, 'nameHi'), icon: text(formData, 'icon') });
+    revalidatePath('/admin', 'layout');
+    return { message: (await getT())('sec.added', { name: localName(section, await getLocale()) }) };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Categories → a section's name (English / Hindi), picture, or hide / bring back. */
+export async function updateSectionAction(sectionId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requirePermission('catalog');
+  try {
+    await updateSection(await getDb(), STORE_ID, sectionId, {
+      name: text(formData, 'name'),
+      nameHi: text(formData, 'nameHi'),
+      icon: text(formData, 'icon'),
+      active: formData.get('active') === 'on',
+    });
+    revalidatePath('/admin', 'layout');
+    return { message: (await getT())('act.saved') };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Categories → ▲ / ▼ on a section: one place up or down in the shop order. */
+export async function moveSectionAction(sectionId: string, direction: 'up' | 'down'): Promise<void> {
+  await requirePermission('catalog');
+  await moveSection(await getDb(), STORE_ID, sectionId, direction === 'up' ? 'up' : 'down');
+  revalidatePath('/admin', 'layout');
+}
+
+/** Categories → Needs sorting → Move under…: the category goes under the chosen section. */
+export async function moveTypeAction(categoryId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requirePermission('catalog');
+  try {
+    const { type, section } = await moveType(await getDb(), STORE_ID, categoryId, text(formData, 'sectionId'));
+    revalidatePath('/admin', 'layout');
+    const locale = await getLocale();
+    return { message: (await getT())('sec.moved', { name: localName(type, locale), section: localName(section, locale) }) };
   } catch (error) {
     return failure(error);
   }

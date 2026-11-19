@@ -108,6 +108,9 @@ export async function seedDemoData(
         }),
       )
       .returning();
+    // Plan v19: one category the way the live shop's old ones are — under no section
+    // yet, so the owner's "Needs sorting" tile has something to sort.
+    await tx.insert(categories).values({ storeId: STORE_ID, name: 'Dress Material', code: 'DM', sizes: [], sectionId: null });
     const categoryId = (name: string) => categoryRows.find((c) => c.name === name)?.id;
     const inserted = await tx
       .insert(products)

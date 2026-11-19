@@ -4,7 +4,7 @@ import { categories, products, sections, type Category, type Section } from '@/d
 import { asSectionIcon, DEFAULT_SECTIONS, STARTER_TYPES, starterKeys, typeKey, type SectionIcon } from '@/lib/sections';
 import { MAX_SIZES } from '@/lib/size-lists';
 import { sameSize } from '@/lib/size-prices';
-import { checkedSizes, cleanHindi, createCategory, suggestSectionCode } from './catalog';
+import { assertFreeTypeName, checkedSizes, cleanHindi, createCategory, suggestSectionCode } from './catalog';
 import { DomainError, isUniqueViolation } from './errors';
 
 /**
@@ -208,6 +208,36 @@ export async function moveSection(db: Db, storeId: string, id: string, direction
   await db.transaction(async (tx) => {
     for (const [i, sectionId] of order.entries()) await tx.update(sections).set({ sort: i + 1 }).where(and(eq(sections.storeId, storeId), eq(sections.id, sectionId)));
   });
+}
+
+/**
+ * Categories → "Move under…": a type (sorted or from Needs sorting) goes under a
+ * section. Its code, sizes and items stay; only the section changes. A hidden
+ * section is refused (bring it back first), as is a name already used there.
+ */
+export async function moveType(db: Db, storeId: string, categoryId: string, sectionId: string): Promise<{ type: Category; section: Section }> {
+  const [type] = await db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.storeId, storeId), eq(categories.id, categoryId)))
+    .limit(1);
+  if (!type) throw new DomainError('Category not found.', { key: 'cat.err.categoryNotFound' });
+  const [section] = await db
+    .select()
+    .from(sections)
+    .where(and(eq(sections.storeId, storeId), eq(sections.id, sectionId)))
+    .limit(1);
+  if (!section) throw new DomainError('Choose Men, Women, Boys or Girls.', { key: 'sec.err.sectionNotFound' });
+  if (!section.active) throw new DomainError('This section is hidden. Bring it back in Categories first.', { key: 'sec.err.hidden' });
+  if (type.sectionId === section.id) return { type, section };
+  await assertFreeTypeName(db, storeId, section.id, type.name, type.id);
+  try {
+    const [updated] = await db.update(categories).set({ sectionId: section.id }).where(eq(categories.id, type.id)).returning();
+    return { type: updated, section };
+  } catch (error) {
+    if (isUniqueViolation(error)) throw new DomainError('A category with that name or code already exists.', { key: 'cat.err.categoryExists' });
+    throw error;
+  }
 }
 
 /** A type under a section, with its sizes (code made from both names). */

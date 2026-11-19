@@ -5,7 +5,7 @@ import { categories, sections } from '@/db/schema';
 import { STORE_ID } from '@/lib/app-config';
 import { createCategory, createSupplier, listCategories, suggestSectionCode, updateCategory } from './catalog';
 import { bulkUpdateProducts, createDesign, createProduct, createProductsBatch, listProducts, receiveStock } from './products';
-import { addTypeSize, backfillSections, createSection, createType, listSections, moveSection, unsortedCount, updateSection } from './sections';
+import { addTypeSize, backfillSections, createSection, createType, listSections, moveSection, moveType, unsortedCount, updateSection } from './sections';
 import { listStaff } from './staff';
 
 /** Plan v19, V19-02a (ADR-033): sections, the one-time set-up, and "a new item needs both levels". */
@@ -37,7 +37,7 @@ describe('one-time set-up (backfillSections)', () => {
 
     const result = await backfillSections(db, STORE_ID);
     expect(result.created).toBe(true);
-    expect(result.unsorted.sort()).toEqual(['Dress', 'Jeans', 'Kurta', 'Saree', 'Shirt', 'T-Shirt']);
+    expect(result.unsorted.sort()).toEqual(['Dress', 'Dress Material', 'Jeans', 'Kurta', 'Saree', 'Shirt', 'T-Shirt']);
     // Demo shop has Shirt, T-Shirt, Jeans, Kurta, Saree, Dress: those starters are skipped everywhere (D-V19-2).
     expect(result.typesSkipped).toEqual([
       'Men › Shirt', 'Men › T-shirt', 'Men › Jeans', 'Men › Kurta',
@@ -60,8 +60,8 @@ describe('one-time set-up (backfillSections)', () => {
     expect(names(list, 'Women')).toEqual(['Dupatta', 'Kurti', 'Leggings', 'Lehenga', 'Night Suit', 'Tops']);
     expect(names(list, 'Boys')).toEqual([]);
     expect(names(list, 'Girls')).toEqual(['Skirt', 'Tops']);
-    expect(list.unsorted.map((t) => t.name).sort()).toEqual(['Dress', 'Jeans', 'Kurta', 'Saree', 'Shirt', 'T-Shirt']);
-    expect(await unsortedCount(db, STORE_ID)).toBe(6);
+    expect(list.unsorted.map((t) => t.name).sort()).toEqual(['Dress', 'Dress Material', 'Jeans', 'Kurta', 'Saree', 'Shirt', 'T-Shirt']);
+    expect(await unsortedCount(db, STORE_ID)).toBe(7);
     // The existing categories themselves (codes, sizes, items) are untouched.
     const kept = (await listCategories(db, STORE_ID)).filter((c) => !c.sectionId).map((c) => `${c.code}:${c.name}`).sort();
     expect(kept).toEqual(before);
@@ -83,10 +83,10 @@ describe('one-time set-up (backfillSections)', () => {
     expect(await listSections(db, STORE_ID)).toEqual(before);
   });
 
-  it('the dev / test seed puts every demo category under a section', async () => {
+  it('the dev / test seed puts every demo category under a section, except one old-style one for "Needs sorting"', async () => {
     const list = await listSections(db, STORE_ID);
     expect(list.sections.map((s) => s.name)).toEqual(['Men', 'Women', 'Boys', 'Girls']);
-    expect(list.unsorted).toEqual([]);
+    expect(list.unsorted.map((t) => t.name)).toEqual(['Dress Material']);
     expect(names(list, 'Men')).toEqual(['Jeans', 'Kurta', 'Shirt', 'T-Shirt']);
     expect(names(list, 'Women')).toEqual(['Dress', 'Saree']);
   });
@@ -137,7 +137,7 @@ describe('sections', () => {
     // A category made without a section (older screens) is allowed and lands in "Needs sorting".
     const socks = await createCategory(db, STORE_ID, { name: 'Socks' });
     expect(socks.sectionId).toBeNull();
-    expect((await listSections(db, STORE_ID)).unsorted.map((t) => t.name)).toEqual(['Socks']);
+    expect((await listSections(db, STORE_ID)).unsorted.map((t) => t.name)).toEqual(['Dress Material', 'Socks']);
   });
 
   it('codes: the type\'s own letters when free, else section letter + type letters', () => {
@@ -202,5 +202,36 @@ describe('a new item needs both levels (section + type)', () => {
     await expect(
       createProductsBatch(db, STORE_ID, { operationId: 'old-ok-2', categoryId: kurta.id, staffId: owner, rows: [{ name: 'New Kurta', mrpPaise: 9900, pricePaise: 9900, costPaise: null, quantity: 1 }] }),
     ).rejects.toThrow(/Sort this category/);
+  });
+});
+
+describe('Categories → Move under… (moveType)', () => {
+  it('puts an unsorted category under a section; code, sizes and items stay; a hidden section or a taken name is refused', async () => {
+    const { sections: list, unsorted } = await listSections(db, STORE_ID);
+    const women = list.find((s) => s.name === 'Women')!;
+    const boys = list.find((s) => s.name === 'Boys')!;
+    const material = unsorted.find((t) => t.name === 'Dress Material')!;
+    const before = (await listCategories(db, STORE_ID)).find((c) => c.id === material.id)!;
+
+    const moved = await moveType(db, STORE_ID, material.id, women.id);
+    expect(moved.section.name).toBe('Women');
+    expect([moved.type.code, moved.type.sizes, moved.type.active]).toEqual([before.code, before.sizes, before.active]);
+    const after = await listSections(db, STORE_ID);
+    expect(after.unsorted).toEqual([]);
+    expect(names(after, 'Women')).toContain('Dress Material');
+    expect(await unsortedCount(db, STORE_ID)).toBe(0);
+    // Again to the same place: nothing to do.
+    expect((await moveType(db, STORE_ID, material.id, women.id)).type.sectionId).toBe(women.id);
+
+    // A sorted category can be moved too (Women › Dress Material → Boys).
+    expect((await moveType(db, STORE_ID, material.id, boys.id)).type.sectionId).toBe(boys.id);
+    // Women already has a Dress: a Boys › Dress cannot go there.
+    const boysDress = await createType(db, STORE_ID, { sectionId: boys.id, name: 'Dress', sizes: [] });
+    await expect(moveType(db, STORE_ID, boysDress.id, women.id)).rejects.toThrow(/already exists/);
+    // Hidden section: bring it back first.
+    await updateSection(db, STORE_ID, boys.id, { name: 'Boys', active: false });
+    await expect(moveType(db, STORE_ID, material.id, boys.id)).rejects.toThrow(/hidden/);
+    await expect(moveType(db, STORE_ID, material.id, '00000000-0000-0000-0000-000000000000')).rejects.toThrow(/Choose Men/);
+    await expect(moveType(db, STORE_ID, '00000000-0000-0000-0000-000000000000', women.id)).rejects.toThrow(/not found/);
   });
 });

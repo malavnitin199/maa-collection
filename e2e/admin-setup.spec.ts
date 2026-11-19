@@ -302,7 +302,8 @@ test('each category has its sizes: owner sets them with a preset; new stock offe
   await page.reload();
   const row = page.getByTestId('category-list').getByRole('listitem').filter({ hasText: `Gents Trousers ${run}` });
   await expect(row.getByTestId('category-sizes')).toHaveText('Sizes: 28 · 30 · 32 · 34 · 36');
-  // The built-in jeans categories by gender.
+  // The built-in jeans categories by gender (plan v19: Ladies Jeans sits under the Women tile).
+  await page.getByTestId('section-tiles').getByRole('link', { name: /^Women/ }).click();
   await expect(page.getByTestId('category-list').getByRole('listitem').filter({ hasText: 'Ladies Jeans' }).getByTestId('category-sizes')).toHaveText('Sizes: 26 · 28 · 30 · 32');
 
   // New stock: choose the category first → its sizes come first; "Pick all" takes them all.
@@ -315,6 +316,121 @@ test('each category has its sizes: owner sets them with a preset; new stock offe
   await expect(chips.getByRole('button', { name: /^Size / })).toHaveText(['28', '30', '32', '34', '36']);
   await chips.getByRole('button', { name: 'Pick all' }).click();
   await expect(chips.getByRole('button', { name: /^Size /, pressed: true })).toHaveCount(5);
+});
+
+test('categories by section (plan v19): tiles; the owner\'s own section with a Hindi name and picture, renamed, reordered, hidden and brought back; a category with a Hindi name under it', async ({ page, isMobile }) => {
+  await loginOwner(page);
+  await page.goto('/admin/categories');
+  const tiles = page.getByTestId('section-tiles');
+  const list = page.getByTestId('category-list');
+  const head = page.getByTestId('section-head');
+  // Tile texts are "Name<count>"; the run id ends in digits too, so match by prefix.
+  const order = async () => tiles.getByRole('link').allTextContents();
+  const indexOf = async (name: string) => (await order()).findIndex((text) => text.startsWith(name));
+  await expect(tiles.getByRole('link').nth(3)).toContainText('Girls');
+  expect((await order()).slice(0, 4).map((text) => text.replace(/\d+$/, ''))).toEqual(['Men', 'Women', 'Boys', 'Girls']);
+  // Men opens first: its categories only; the first section cannot move up.
+  await expect(list).toContainText('Kurta');
+  await expect(list).not.toContainText('Saree');
+  await expect(head.getByRole('button', { name: 'Move Men up' })).toBeDisabled();
+  await tiles.getByRole('link', { name: /^Women/ }).click();
+  await expect(page).toHaveURL(/\/admin\/categories\?s=[0-9a-f-]{36}$/);
+  await expect(list).toContainText('Saree');
+  await expect(head).toContainText('Women');
+  await expect(head).toContainText('महिला');
+
+  // The owner's own section (e.g. Kids) goes last, with its picture.
+  await page.getByText('+ Add section').click();
+  const addSection = page.locator('details', { hasText: '+ Add section' });
+  await addSection.getByLabel('Section name').fill(`Kids ${run}`);
+  await addSection.locator('label').filter({ hasText: 'Baby' }).click();
+  await addSection.getByRole('button', { name: 'Add section' }).click();
+  await expect(addSection.getByRole('status')).toContainText(`Kids ${run} added.`);
+  await expect(tiles.getByRole('link').filter({ hasNotText: 'Needs sorting' }).last()).toContainText(`Kids ${run}`); // Needs sorting stays last
+  await tiles.getByRole('link', { name: `Kids ${run}` }).click();
+  await expect(head).toContainText(`Kids ${run}`);
+  await expect(head).toContainText('0 categories');
+  await expect(page.getByText('No categories here yet.')).toBeVisible();
+
+  // Rename, Hindi name and picture.
+  await head.getByText('Edit section').click();
+  await head.getByLabel('Section name').fill(`Junior ${run}`);
+  await head.getByLabel('Hindi name').fill('जूनियर');
+  await head.locator('label').filter({ hasText: 'Family' }).click();
+  await head.getByRole('button', { name: 'Save section' }).click();
+  await expect(head.getByRole('status')).toContainText('Saved');
+  await expect(tiles.getByRole('link', { name: `Junior ${run}` })).toBeVisible();
+  await expect(head).toContainText('जूनियर');
+
+  // Shop order: ▲ / ▼ swap with the neighbour (desktop run only: the phone run adds sections at the same time).
+  if (!isMobile) {
+    const was = await indexOf(`Junior ${run}`);
+    await head.getByRole('button', { name: `Move Junior ${run} up` }).click();
+    await expect.poll(() => indexOf(`Junior ${run}`)).toBe(was - 1);
+    await head.getByRole('button', { name: `Move Junior ${run} down` }).click();
+    await expect.poll(() => indexOf(`Junior ${run}`)).toBe(was);
+  }
+
+  // Hide it and bring it back (nothing deleted).
+  await head.getByLabel('Shown in New item').uncheck();
+  await head.getByRole('button', { name: 'Save section' }).click();
+  await expect(tiles.getByRole('link', { name: `Junior ${run}` })).toContainText('(Hidden)');
+  await expect(head).toContainText('Hidden');
+  await head.getByLabel('Shown in New item').check();
+  await head.getByRole('button', { name: 'Save section' }).click();
+  await expect(tiles.getByRole('link', { name: `Junior ${run}` })).not.toContainText('Hidden');
+
+  // A category with a Hindi name lands under it.
+  await page.getByText('+ Add category').click();
+  const addCategory = page.locator('details', { hasText: '+ Add category' });
+  await addCategory.getByLabel('Category name').fill(`Frock ${run}`);
+  await addCategory.getByLabel('Hindi name (optional)').fill('फ़्रॉक');
+  await addCategory.getByRole('button', { name: 'Add category' }).click();
+  await expect(addCategory.getByRole('status')).toContainText(`Frock ${run} added with code`);
+  await expect(list.getByRole('listitem').filter({ hasText: `Frock ${run}` })).toContainText('फ़्रॉक');
+  await expect(head).toContainText('1 category');
+
+  // The same section name again is refused (the add form is still open from before).
+  if (!(await addSection.getByLabel('Section name').isVisible())) await page.getByText('+ Add section').click();
+  await addSection.getByLabel('Section name').fill(`Junior ${run}`);
+  await addSection.getByRole('button', { name: 'Add section' }).click();
+  await expect(addSection.getByRole('alert')).toContainText('That name is already in the list.');
+});
+
+// The next two share the seed's one old-style category ("Dress Material", under no section):
+// desktop only, in this order, so the phone run cannot sort it first.
+test('plan v19: New item refuses a category that is not sorted under a section yet', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'one shared seed row; the desktop run covers it');
+  await loginOwner(page);
+  await page.goto('/admin/stock/new');
+  await companyBox(page).selectOption({ label: 'Shree Ganesh Textiles' });
+  await page.getByLabel('Category').selectOption({ label: 'Dress Material (DM)' });
+  await page.getByLabel('Product name').fill(`Cotton Suit Piece ${run}`);
+  await salePrice(page).fill('900');
+  await purchasePrice(page).fill('500');
+  await page.getByLabel('Pieces', { exact: true }).fill('2');
+  await page.getByRole('button', { name: 'Save 1 item' }).click();
+  await expect(page.getByText('Sort this category under Men, Women, Boys or Girls first (Categories).')).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
+});
+
+test('plan v19: Needs sorting → Move under puts the shop\'s old category under a section; the tile goes once it is empty', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'one shared seed row; the desktop run covers it');
+  await loginOwner(page);
+  await page.goto('/admin/categories');
+  const tiles = page.getByTestId('section-tiles');
+  const list = page.getByTestId('category-list');
+  await tiles.getByRole('link', { name: /^Needs sorting/ }).click();
+  await expect(page).toHaveURL(/\?s=unsorted$/);
+  await expect(list).toContainText('Dress Material');
+  await expect(page.getByTestId('section-head')).toHaveCount(0);
+  await list.getByLabel('Move under Dress Material').selectOption({ label: 'Women' });
+  await list.getByRole('button', { name: 'Move' }).click();
+  // The row leaves the list as it is sorted; the tile goes with it.
+  await expect(tiles.getByRole('link', { name: /^Needs sorting/ })).toHaveCount(0);
+  await expect(page.getByText('No categories here yet.')).toBeVisible();
+  await tiles.getByRole('link', { name: /^Women/ }).click();
+  await expect(list.getByRole('listitem').filter({ hasText: 'Dress Material' })).toContainText('DM');
 });
 
 test('photos while creating tags: one per colour (every size gets it), or the main photo at the top of a new item', async ({ page }) => {

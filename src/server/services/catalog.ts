@@ -96,7 +96,7 @@ async function sectionFor(db: Db, storeId: string, sectionId: string) {
 }
 
 /** Plan v19: one name once per section (Boys › Jeans and Girls › Jeans may both exist). */
-async function assertFreeTypeName(db: Db, storeId: string, sectionId: string | null, name: string, exceptId?: string) {
+export async function assertFreeTypeName(db: Db, storeId: string, sectionId: string | null, name: string, exceptId?: string) {
   const [same] = await db
     .select({ id: categories.id })
     .from(categories)
