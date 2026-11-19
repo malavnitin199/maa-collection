@@ -99,21 +99,29 @@ Login + PIN, permissions (`catalog`, `prices`, `stock`, `costs`), photos (`produ
 
 ### 5.1 New item (Add stock → New item)
 
+**Owner clarification 2026-11-19 (after seeing v18 live; replaces the first draft of this flow):** the owner wants a start screen with two choices, the section and the type each on their own screen, the details *before* the sizes, and **size as the only variant** (no colour in the flow for now). Pieces are entered per size (2 × M, 2 × L, 5 × XL) or the sizes are "generated" from the type's size list; the owner can add a size that the list lacks. Each name × size becomes one SKU row (as today).
+
 ```
-Step 1  Who is it for?        [Men] [Women] [Boys] [Girls] [+ Add]        (one tap → next)
-Step 2  What is it?           [Jeans 28–34] [Shirt M–XXL] [T-shirt] [+ Add]  (one tap → next)
-Step 3  Sizes & pieces        28 ▢  30 ▣ − 2 +  32 ▣ − 2 +  34 ▢   [Pick all] [+ Add size]
-                              ───────── 2 sizes · 4 pieces ──────── [Next ▸]  (sticky)
-Step 4  Details               Name ________________        [photo]
-                              Boys › Jeans   28 · 30 · 32 (tap to change)
-                              Company ▾   Sale price (MRP) ₹___   Purchase ₹___
-                              Tabs: Details (counter price, bill no., stock date) · Colours (optional) · Other (brand, notes)
-Step 5  Review                Name · Boys › Jeans · Company
-                              30 × 2, 32 × 2 → 4 pieces · 2 items (+ colours)
-                              MRP ₹999 · purchase ₹650 · purchase total ₹2,600
-                              [Save & print tags]  [Save & add next]  [Save]
+Step 0  Add new product        [One item]            [Many items / a bill]          (owner's two options)
+Step 1  Who is it for?         [Men] [Women] [Boys] [Girls] [+ Add]           (one tap → next; the owner can add more later)
+Step 2  What is it?            [Jeans 28–36] [Shirt M–XXL] [T-shirt] [Kurta] [+ Add]   (types of the chosen section only)
+Step 3  Details                Name ________________        [photo]
+                               Men › Jeans (tap to change)
+                               Company ▾   Sale price (MRP) ₹___   Purchase ₹___ per piece
+                               Tabs: Details (counter price, bill no., stock date) · Other (brand, notes)
+Step 4  Sizes & pieces         Type's sizes first:  28 ▢  30 ▣ − 2 +  32 ▣ − 2 +  34 ▢  36 ▢
+                               [All sizes] [+ Add size]      (a new size is saved on the type)
+                               ───────── 2 sizes · 4 pieces · purchase ₹2,600 ──────── [Next ▸]  (sticky)
+Step 5  Review                 Name · Men › Jeans · Company
+                               30 × 2, 32 × 2 → 4 pieces · 2 items (one SKU per size)
+                               MRP ₹999 · purchase ₹650 · purchase total ₹2,600
+                               [Save & print tags]  [Save & add next]  [Save]
 ```
 
+- *One item* = the same screens, but step 4 asks for one size and its pieces only (quick single entry). *Many items* = the full size grid and *Save & add next* for the next product of the same bill (open point **D-V19-6**, §7: this is the recommended meaning; the owner may mean something else).
+- Default sizes per type come from `categories.sizes` (jeans 28 / 30 / 32 / 34 / 36, shirts M / L / XL / XXL, …); the owner edits them in Categories (02b) or adds one inline in step 4 (03d).
+- One purchase price per piece for the whole product (all sizes), as today; a size's own price stays possible later on the product page (ADR-013).
+- Colour: **no colour step in the wizard** (owner, 2026-11-19); new items store an empty colour (D-V19-3) and colour stays editable on the product page.
 - Back arrow and crumb chips return to any step; **state is kept** (no retyping).
 - After *Save & add next*: step 2 of the same section, same company / bill no. / stock date, fields empty, new `operationId` (Activity rule).
 - After *Save & print tags*: labels page as today (reprint never touches stock).
@@ -171,6 +179,7 @@ Integer paise only (unchanged). All stock changes still go through `insertNewPro
 | **D-V19-3** | Item without a colour | (a) store empty, show nothing on tags / counter / lists · (b) keep showing **Assorted** (today) | (a) for new items; existing *Assorted* rows untouched |
 | **D-V19-4** | For / Age tags (ADR-027) now that sections exist | (a) retire the tag UI, keep the columns and show a legacy value read-only · (b) keep both | (a) |
 | **D-V19-5** | Brand left empty | (a) stays empty (counter shows no brand) · (b) company's name as today | (a) |
+| **D-V19-6** (open, 2026-11-19) | The start screen's two choices, *One item* vs *Many items*: what does each mean? | (a) same steps; *One item* asks for one size + pieces, *Many* shows the full size grid and *Save & add next* for the next product of the bill · (b) *Many* = several different products on one screen (old Quick add table) | (a) — one flow to learn, one set of tests; (b) brings back the all-at-once form the owner rejected. Not blocking 02b; needed before 03a |
 
 Process approval needed too: **V19-00** (commit v18 alone, run 0009 on Neon, deploy v18, park v19 code on a branch) — see §8.
 
@@ -194,10 +203,10 @@ Remaining checks on real data before V19-02: count categories, products with `ca
 - **Acceptance:** owner can create the full Men / Women / Boys / Girls tree with the brief's example types and sizes without a developer; no product row changed by the migration (row count and checksums equal before / after).
 
 ### V19-03 Category-first New item UX
-- **03a** Wizard review against the brief: names via `name_hi`, selection kept on back, progress, sticky Next, reduced motion, focus order, `aria-current`, 44 px targets, small-phone (360 px) layout.
-- **03b** Step 3 speed: tap a number pad for pieces, *Same for all*, long-press − / + repeat; total pieces always visible.
-- **03c** Colour per D-V19-3 (`colourLabel()` helper used by tags, counter card, lists, approvals, CSV); brand per D-V19-5.
-- **03d** Inline **+ Add** for section / type / size / company: permission checks on the server (exist), error states, duplicate names.
+- **03a** Wizard review against the brief **and the owner's clarification of 2026-11-19 (§5.1)**: start screen *One item* / *Many items* (D-V19-6), section → type → details → sizes & pieces → review, names via `name_hi`, selection kept on back, progress, sticky Next, reduced motion, focus order, `aria-current`, 44 px targets, small-phone (360 px) layout.
+- **03b** Step 4 speed: pieces per size (2 × M, 2 × L, 5 × XL), *All sizes*, tap a number pad for pieces, *Same for all*, long-press − / + repeat; total pieces and purchase total always visible.
+- **03c** No colour step in the wizard (owner, 2026-11-19); empty colour per D-V19-3 (`colourLabel()` helper used by tags, counter card, lists, approvals, CSV); brand per D-V19-5.
+- **03d** Inline **+ Add** for section / type / size / company (a new size is saved on the type's size list): permission checks on the server (exist), error states, duplicate names.
 - **03e** E2E: full flow at 360 × 780 and desktop, en + hi, light + dark; back navigation keeps input.
 - **Acceptance:** new item from a cold start in ≤ 12 taps + typing name and two prices; every string in both languages; no new dependency.
 
