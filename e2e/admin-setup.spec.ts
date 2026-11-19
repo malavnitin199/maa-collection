@@ -502,16 +502,29 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
   const rows = page.getByTestId('product-list').getByRole('listitem');
   await expect(rows).toHaveCount(3);
-  await page.getByTestId('select-products').click();
+  // A long-press on a card starts selecting with that card ticked (and does not open it).
+  const first = await rows.first().boundingBox();
+  await page.mouse.move(first!.x + first!.width / 2, first!.y + first!.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await expect(page.getByTestId('selected-count')).toHaveText('1 selected');
+  await expect(page).toHaveURL(/show=items/);
   const bar = page.getByTestId('selection-bar');
-  await bar.getByRole('button', { name: 'Select all (3)' }).click();
+  const sheet = page.getByTestId('action-sheet');
+  const toast = page.getByTestId('selection-toast');
+  const selectAll = page.getByRole('checkbox', { name: 'Select all', exact: true });
+  await selectAll.click();
   await expect(page.getByTestId('selected-count')).toHaveText('3 selected');
+  await expect(selectAll).toHaveAttribute('aria-checked', 'true');
 
   // Rename all three.
   await bar.getByRole('button', { name: 'Rename' }).click();
-  await bar.getByLabel('New name for all').fill(`${name} Pro`);
-  await bar.getByRole('button', { name: 'Apply' }).click();
-  await expect(bar.getByRole('status')).toHaveText('Done for 3 items.');
+  await expect(sheet).toHaveAccessibleName('Rename · 3 selected');
+  await sheet.getByLabel('New name for all').fill(`${name} Pro`);
+  await sheet.getByRole('button', { name: 'Apply' }).click();
+  await expect(toast).toContainText('Done for 3 items.');
+  await expect(sheet).toBeHidden();
   await expect(rows.filter({ hasText: `${name} Pro` })).toHaveCount(3);
 
   // For / Age and a new MRP for two of them (tick boxes).
@@ -519,17 +532,17 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   await page.getByRole('checkbox', { name: `Select ${name} Pro Black L` }).check();
   await expect(page.getByTestId('selected-count')).toHaveText('2 selected');
   await bar.getByRole('button', { name: 'For / Age' }).click();
-  await bar.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Boys' }).click();
-  await bar.getByRole('button', { name: 'Apply' }).click();
-  await expect(bar.getByRole('status')).toHaveText('Done for 2 items.');
+  await sheet.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Boys' }).click();
+  await sheet.getByRole('button', { name: 'Apply' }).click();
+  await expect(toast).toContainText('Done for 2 items.');
   await page.getByRole('checkbox', { name: `Select ${name} Pro Black XL` }).check();
   await bar.getByRole('button', { name: 'Prices' }).click();
-  await bar.getByLabel('New MRP ₹').fill('200');
-  await bar.getByRole('button', { name: 'Apply' }).click();
-  await expect(bar.getByRole('alert')).toContainText('Selling price would be above MRP');
-  await bar.getByLabel('New MRP ₹').fill('650');
-  await bar.getByRole('button', { name: 'Apply' }).click();
-  await expect(bar.getByRole('status')).toHaveText('Done for 1 item.');
+  await sheet.getByLabel('New MRP ₹').fill('200');
+  await sheet.getByRole('button', { name: 'Apply' }).click();
+  await expect(sheet.getByRole('alert')).toContainText('Selling price would be above MRP');
+  await sheet.getByLabel('New MRP ₹').fill('650');
+  await sheet.getByRole('button', { name: 'Apply' }).click();
+  await expect(toast).toContainText('Done for 1 item.');
   await expect(rows.filter({ hasText: 'MRP ₹650.00' })).toHaveCount(1);
 
   // Print just two tags.
@@ -544,19 +557,44 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   // Hide all three: gone from Products; Hidden items brings them back.
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
   await page.getByTestId('select-products').click();
-  await page.getByTestId('selection-bar').getByRole('button', { name: 'Select all (3)' }).click();
-  await page.getByTestId('selection-bar').getByRole('button', { name: 'Hide' }).click();
-  await page.getByTestId('selection-bar').getByRole('button', { name: 'Yes, hide 3' }).click();
+  await selectAll.click();
+  await bar.getByRole('button', { name: 'Hide' }).click();
+  await sheet.getByRole('button', { name: 'Yes, hide 3' }).click();
+  await expect(toast).toContainText('Done for 3 items.');
   await expect(rows).toHaveCount(0);
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=hidden`);
   await expect(rows).toHaveCount(3);
   await page.getByTestId('select-products').click();
-  await page.getByTestId('selection-bar').getByRole('button', { name: 'Select all (3)' }).click();
-  await page.getByTestId('selection-bar').getByRole('button', { name: 'Bring back' }).click();
+  await selectAll.click();
+  await bar.getByRole('button', { name: 'Bring back' }).click();
   await expect(rows).toHaveCount(0);
+  // ✕ leaves selection mode; the Select button is back.
+  await page.getByRole('button', { name: 'Done selecting' }).click();
+  await expect(page.getByTestId('selection-top')).toBeHidden();
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
   await expect(rows).toHaveCount(3);
   await expect(rows.filter({ hasText: 'MRP ₹650.00' })).toHaveCount(1);
+});
+
+test('selecting on a long list: the top bar (Select all) and the action bar stay on screen while scrolling', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/products'); // every design: a long page
+  await page.getByTestId('select-products').click();
+  const viewport = page.viewportSize()!;
+  for (const to of ['bottom', 'middle'] as const) {
+    await page.evaluate((where) => window.scrollTo(0, where === 'bottom' ? document.documentElement.scrollHeight : document.documentElement.scrollHeight / 2), to);
+    // (polls: the bars slide in for a moment)
+    await expect.poll(async () => Math.round((await page.getByTestId('selection-top').boundingBox())!.y)).toBe(0);
+    // On a phone it sits on the bottom edge; on wider screens it floats 16 px above it.
+    const gap = viewport.width < 640 ? 0 : 16;
+    await expect.poll(async () => {
+      const bottom = (await page.getByTestId('selection-bar').boundingBox())!;
+      return Math.round(bottom.y + bottom.height);
+    }).toBe(viewport.height - gap);
+  }
+  await expect(page.getByRole('checkbox', { name: 'Select all', exact: true })).toBeInViewport();
+  // The phone's menu dock steps aside while selecting.
+  if (viewport.width < 640) await expect(page.getByRole('navigation', { name: 'Main' })).not.toBeInViewport();
 });
 
 test('Companies and All tags → Select: hide companies at once; print chosen tags', async ({ page }) => {
@@ -575,7 +613,7 @@ test('Companies and All tags → Select: hide companies at once; print chosen ta
   await page.getByRole('checkbox', { name: `Select ${a}` }).check();
   await page.getByRole('checkbox', { name: `Select ${b}` }).check();
   await page.getByTestId('selection-bar').getByRole('button', { name: 'Hide' }).click();
-  await expect(page.getByTestId('selection-bar').getByRole('status')).toHaveText('Done for 2 items.');
+  await expect(page.getByTestId('selection-toast')).toContainText('Done for 2 items.');
   await expect(page.getByTestId('supplier-list').getByRole('listitem').filter({ hasText: a })).toContainText('(inactive)');
   await page.goto('/admin/stock/new');
   await expect(companyBox(page).locator('optgroup[label="Previous companies"] option', { hasText: a })).toHaveCount(1);

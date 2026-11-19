@@ -431,15 +431,18 @@ test('Approvals → Select: approve two chosen sales at once, reject a third wit
   await boxes.nth(0).check();
   await mine.nth(1).click(); // a tap on the card ticks it too
   await expect(page.getByTestId('selected-count')).toHaveText('2 selected');
-  await page.getByRole('button', { name: '✓ Approve selected (2)' }).click();
-  await expect(page.getByTestId('selected-result')).toHaveText('2 approved.');
+  const bar = page.getByTestId('selection-bar');
+  await bar.getByRole('button', { name: 'Approve 2' }).click();
+  await expect(page.getByTestId('selection-toast')).toContainText('2 approved.');
   await expect(mine).toHaveCount(1);
 
   await page.getByRole('checkbox', { name: `Select Pick Kurta ${run}` }).check();
-  await page.getByRole('button', { name: 'Reject selected' }).click();
-  await page.getByTestId('selection-bar').getByRole('radio', { name: 'Wrong price' }).click();
-  await page.getByRole('button', { name: 'Reject 1' }).click();
-  await expect(page.getByTestId('selected-result')).toHaveText('1 rejected, 1 pcs back in stock.');
+  await bar.getByRole('button', { name: 'Reject' }).click();
+  const sheet = page.getByTestId('action-sheet');
+  await expect(sheet.getByRole('button', { name: 'Reject 1' })).toBeDisabled(); // a reason first
+  await sheet.getByRole('radio', { name: 'Wrong price' }).click();
+  await sheet.getByRole('button', { name: 'Reject 1' }).click();
+  await expect(page.getByTestId('selection-toast')).toContainText('1 rejected, 1 pcs back in stock.');
   await expect(mine).toHaveCount(0);
 });
 
