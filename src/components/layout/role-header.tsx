@@ -111,6 +111,8 @@ export function RoleHeader() {
         </Suspense>
       </div>
       <div aria-hidden className="zari opacity-90" />
+      {/* Owner's check mark (2026-11-19): a second, green line under the zari so the phone shows which build it runs. Temporary. */}
+      <div aria-hidden data-testid="build-mark" className="build-mark" />
     </header>
     {/* Outside <header>: its backdrop blur would make a fixed child stick to the header. */}
     <Suspense fallback={null}>

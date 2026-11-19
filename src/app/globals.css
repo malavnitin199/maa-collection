@@ -137,6 +137,13 @@
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10'%3E%3Crect width='20' height='1.2'/%3E%3Crect y='8.8' width='20' height='1.2'/%3E%3Cpath d='M10 2.4 13 5 10 7.6 7 5Z'/%3E%3Ccircle cx='0' cy='5' r='1.1'/%3E%3Ccircle cx='20' cy='5' r='1.1'/%3E%3C/svg%3E") repeat-x left center / 20px 10px;
 }
 
+/* Owner's check mark (2026-11-19, temporary): a second line under the zari in a colour no theme uses,
+   so a phone shows at a glance that it runs the deployed build. Remove when the owner says so. */
+.build-mark {
+  height: 4px;
+  background: #16a34a;
+}
+
 /* Bahi: Poppins for text and headings (no print display face), and a plain accent line. */
 [data-theme="bahi"] body {
   font-family: var(--font-poppins), var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
