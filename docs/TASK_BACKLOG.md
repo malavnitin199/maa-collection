@@ -8,7 +8,7 @@
 - [ ] **P0-01** Confirm store/location model: single shop vs multiple, storefront/godown; document store and location IDs. **Done:** representative inventory transfer/search workflow agreed.
 - [ ] **P0-02** Confirm GST invoice, receipt numbering, tax/rounding and gross vs net profit definitions. **Done:** sample real invoice approved; no ambiguous money calculations.
 - [ ] **P0-03** Confirm tender policy: manually recorded cash/UPI/card vs verified gateway; offline tender restrictions. **Done:** payment state diagram agreed.
-- [ ] **P0-04** Confirm offline oversell and conflict-resolution policy. **Done:** owner approves provisional-bill and discrepancy handling scenarios.
+- [x] **P0-04** Confirm offline oversell and conflict-resolution policy. **Done:** owner approves provisional-bill and discrepancy handling scenarios. *(2026-11-19, ADR-032: owner chose "let stock go below zero"; offline sales always recorded, checked in Approvals.)*
 - [ ] **P0-05** Confirm role permission/discount/return/adjustment limits. **Done:** capability matrix reviewed.
 - [ ] **P0-06** Confirm target Android/iPhone/desktop browsers, scanner and printer models/label sizes; obtain hardware for POC. **Done:** compatibility checklist recorded.
 - [ ] **P0-07** Agree MVP acceptance scenarios, priority, expected devices, daily transaction volume and rollout owner. **Done:** sample shop day walkthrough sign-off.
@@ -71,16 +71,16 @@
 
 ## P6 - Offline POS and synchronization reliability
 
-- [ ] **P6-01** Define stable offline operation schemas, client UUIDs, device/register identity and state machine. **Done:** `PENDING_SYNC`, `COMMITTED`, `NEEDS_REVIEW`, `REJECTED` documented.
-- [ ] **P6-02** Introduce Dexie schema for cached cashier-safe catalog, active cart, pending operations and sync results. **Done:** can reload while offline.
-- [ ] **P6-03** Enqueue operation durably before attempting remote checkout; do not delete on timeout. **Done:** crash/restart test passes.
-- [ ] **P6-04** Build idempotent server sync endpoint that validates session, actor, store and operation UUID. **Done:** same request sent N times posts once.
-- [ ] **P6-05** Support sync on app open, reconnect, focus, manual button and backoff; service-worker Background Sync only where supported. **Done:** browser matrix has fallback.
-- [ ] **P6-06** Implement provisional offline receipt and clear pending indicator. **Done:** customer is not told payment/stock is confirmed before server ack.
-- [ ] **P6-07** Handle stock conflicts with owner review queue and explicit resolutions. **Done:** competing offline sale cannot silently overwrite inventory.
-- [ ] **P6-08** Cache versions and updates safely during pending transactions; support storage quota problems. **Done:** SW update does not drop queued operations.
-- [ ] **P6-09** Handle shared-device logout/session changes without exposing or silently losing pending operations. **Done:** approved recovery flow tested.
-- [ ] **P6-10** Offline browser E2E: timeout, crash, restart, duplicate, conflicting devices and delayed UPI. **Done:** test matrix passes.
+- [ ] **P6-01** Define stable offline operation schemas, client UUIDs, device/register identity and state machine. **Done:** `PENDING_SYNC`, `COMMITTED`, `NEEDS_REVIEW`, `REJECTED` documented. *(v18: `QueuedSale` waiting → sent (removed) / problem (refused, reason kept); no device / register identity yet.)*
+- [x] **P6-02** Introduce Dexie schema for cached cashier-safe catalog, active cart, pending operations and sync results. **Done:** can reload while offline. *(v18: IndexedDB copy of the counter's items (no cost) + offline helper; the counter reloads offline. A small IndexedDB layer instead of Dexie.)*
+- [ ] **P6-03** Enqueue operation durably before attempting remote checkout; do not delete on timeout. **Done:** crash/restart test passes. *(v18: queued when the shop is unreachable or does not answer in 6/12 s, never deleted on a timeout; online sales are still sent first — no crash/restart test yet.)*
+- [x] **P6-04** Build idempotent server sync endpoint that validates session, actor, store and operation UUID. **Done:** same request sent N times posts once. *(v18: `POST /api/offline-sales`, same `recordSale` + `operationId`; recorder must be the session.)*
+- [ ] **P6-05** Support sync on app open, reconnect, focus, manual button and backoff; service-worker Background Sync only where supported. **Done:** browser matrix has fallback. *(v18: on app open, reconnect, every 30 s, Send now, one run across tabs; no Background Sync; one browser (Chromium) tested.)*
+- [x] **P6-06** Implement provisional offline receipt and clear pending indicator. **Done:** customer is not told payment/stock is confirmed before server ack. *(v18: "Saved on this phone" card, header strip with count, list; no printed receipt.)*
+- [x] **P6-07** Handle stock conflicts with owner review queue and explicit resolutions. **Done:** competing offline sale cannot silently overwrite inventory. *(v18: owner chose to record them; stock moves by append-only deltas (never overwritten) and may go below zero; every such sale is in Approvals with a "Made offline" mark.)*
+- [ ] **P6-08** Cache versions and updates safely during pending transactions; support storage quota problems. **Done:** SW update does not drop queued operations. *(v18: the helper never touches saved sales (IndexedDB); localStorage fallback when storage fails; no quota screen yet.)*
+- [x] **P6-09** Handle shared-device logout/session changes without exposing or silently losing pending operations. **Done:** approved recovery flow tested. *(v18: sales are sent only by the person who made them; logout warns and keeps them; saved counter page deleted at login and logout.)*
+- [ ] **P6-10** Offline browser E2E: timeout, crash, restart, duplicate, conflicting devices and delayed UPI. **Done:** test matrix passes. *(v18: offline sale, by hand, reload offline, QR link, below-zero stock, duplicate send (unit); not yet: crash, two devices, UPI.)*
 
 ## P7 - Owner dashboard, reporting and reorder intelligence
 
@@ -136,6 +136,8 @@
 - [x] **V2-10** Plan v15 (2026-11-16): **cleaner UI** — header of round symbols only, pictures and gentle motion, counter card led by price / size / stock, shorter Home. `docs/PLAN_V15_UI_CLEANUP.md`, ADR-025.
 - [x] **V2-11** Plan v16 (2026-11-17): **Bahi theme** (billing-app look, default; dye themes still selectable) — owner feedback pending. `docs/PLAN_V16_BAHI_THEME.md`, ADR-026.
 - [x] **V2-12** Plan v17 (2026-11-18/19): **Essential Home** (4 actions + today's sales); Add stock = **New item** + 2 other ways; New item and the product page in one **minimal layout** (name, category, size pills, For / Age tags, photo on the right; company, sale and purchase price; top tabs Details · Colours · Other details); **+ Add next item**; For / Age tags stored per design (migration 0008); forms clear after saving. `docs/PLAN_V17_ESSENTIAL_HOME_NEW_ITEM.md`, ADR-027.
+- [x] **V2-13** Plan v18 (2026-11-19): **selling without internet** (phone's copy of the items, sales saved on the phone and sent by themselves, offline helper) and a **bigger header**. `docs/PLAN_V18_OFFLINE_COUNTER.md`, ADR-032.
+- [ ] **V19** Plan v19 (approved 2026-11-19, ADR-033): category-first New item, Products, product page, company bills, salesperson profiles — tasks V19-00 … V19-08 in `docs/PLAN_V19_PRODUCT_MANAGEMENT.md`. **V19-00** (untangle: v18 committed + deployed alone, v19 code on branch `v19-sections`) — in progress 2026-11-19.
 
 ## Suggested next tasks
 
