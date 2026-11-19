@@ -101,12 +101,14 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 
 ### Selecting many (Products, Approvals, All tags, Companies)
 
-Tap **Select** above the list. Tick boxes appear; tap a card (or its box) to tick it; a dark bar at the bottom shows how many are chosen, **Select all** and **Clear**. Tap **Done** to stop.
-
-- **Products**: **Hide** (asks once; hidden items leave the counter and the lists, their sales stay — see *Show → Hidden items* and **Bring back**), **Rename** (one new name for all), **Company**, **Category**, **For / Age**, **Prices** (a new MRP and / or selling price for all; refused if a selling price would be above an MRP), **Print tags**.
-- **Approvals**: **✓ Approve selected** or **Reject selected** (one reason for all).
-- **All tags**: **Print n selected**.
-- **Companies**: **Hide** (they go to *Previous companies*) or **Bring back**.
+- **Start**: tap **Select** above the list — or **press and hold any card** for half a second (the phone gives a small buzz).
+- **Top bar** (dark, in place of the header): **✕** to stop, how many are chosen, and **All** — tap it to choose everything on the screen (tap again to clear). A dash means some are chosen.
+- **Tick**: tap anywhere on a card; a big round tick fills in and the card gets a coloured ring. A design card stands for all its items.
+- **Bottom bar** (the menu bar steps aside meanwhile): big buttons with icons. Each opens a sheet from the bottom with **Apply** / **Cancel**; a green message confirms what was done.
+  - **Products**: **Hide** (asks once; hidden items leave the counter and the lists, their sales stay — *Show → Hidden items* → **Bring back**), **Rename** (one new name for all), **Company**, **Category**, **For / Age**, **Prices** (a new MRP and / or selling price for all; refused if a selling price would be above an MRP), **Print tags**.
+  - **Approvals**: **Approve n** (green) or **Reject** (red; choose one reason for all).
+  - **All tags**: **Print n selected**.
+  - **Companies**: **Hide** (they go to *Previous companies*) or **Bring back**.
 
 ### The product page (Products → tap an item)
 

@@ -74,6 +74,20 @@ Owner: "the header is clumsy and congested — improve it with different shading
 | **Companies → Select** | Tick companies → **Hide** (they move to *Previous companies*) or **Bring back**. |
 | **Phone** | While selecting, the page leaves room under the list (and in scroll padding) for the bar, so the last items can scroll above it. |
 
+## Selection rebuilt like a phone app (owner follow-up, 2026-11-19)
+
+Owner: "the select is not working and not up to the mark — users can't select, there is no Select all, the icons are vague, the checkboxes are small and not interactive. Build it like a top senior React Native developer would."
+
+**The real bug:** the selection bars (with *Select all* and the actions) are `position: fixed`, but the page's slide-in animation kept a filled `transform` on the page wrapper, which made the page — not the screen — their frame. On a long list (the live shop) they sat at the top and bottom of the whole list, off-screen: tick boxes but no *Select all* and no actions. Short test lists hid it. Fixed with `animation-fill-mode: backwards` on `.page-in`; a test now scrolls a long list and checks both bars stay on screen.
+
+| Part | Now |
+|---|---|
+| **Start** | **Select** button (bold icon) or a **long-press** on any card (450 ms; right-click on a computer; the phone buzzes). The long-press never opens the card. |
+| **Top bar** | Dark, in place of the header: **✕**, "*n* selected" (or "Select items"), and an **All *n*** toggle with a tri-state tick (empty / dash / tick). |
+| **Cards** | A 32 px round tick that pops and draws its tick; chosen cards get a coloured ring and tint; tap anywhere on the card. Keyboard: Space / Enter on the tick; Escape leaves selection. |
+| **Bottom bar** | The menu dock steps aside; a dark sheet with a grabber and **icon tiles** (4 across on a phone): Hide (red), Rename, Company, Category, For / Age, Prices, Print tags — or Approve *n* (green) / Reject (red); disabled with a hint until something is chosen. |
+| **Actions** | Open a **bottom sheet** (a centred card on wider screens) titled "*Action* · *n* selected" with big Apply / Cancel; errors stay in the sheet; success shows a green message that fades. |
+
 ## Two fixes found on the way
 
 Next 16 (Cache Components) keeps a page alive after you leave it, with what was typed (React `<Activity>`):
