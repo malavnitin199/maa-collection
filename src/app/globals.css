@@ -236,6 +236,70 @@ html { scroll-padding-top: 4.75rem; }
 .art-twinkle { transform-box: fill-box; transform-origin: center; animation: art-twinkle 2.4s ease-in-out infinite; }
 .art-twinkle:nth-of-type(2) { animation-delay: 0.8s; }
 .art-twinkle:nth-of-type(3) { animation-delay: 1.6s; }
+/*
+ * Selecting many (plan v17). The round tick: an empty ring, then a filled
+ * circle whose tick draws itself (or a dash for "some"), with a small pop.
+ */
+.sel-check {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2.5px solid #94a3b8;
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.9), 0 2px 6px rgb(15 23 42 / 0.28);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.sel-check:active { transform: scale(0.9); }
+.sel-check:focus-visible { outline: 3px solid var(--b-400); outline-offset: 3px; }
+.sel-check svg { width: 1.3rem; height: 1.3rem; fill: none; stroke: #fff; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+.sel-check .sel-check-mark { stroke-dasharray: 20; stroke-dashoffset: 20; transition: stroke-dashoffset 0.24s ease 0.04s; }
+.sel-check .sel-check-dash { opacity: 0; transition: opacity 0.15s ease; }
+.sel-check[data-state="all"],
+.sel-check[data-state="some"] {
+  background: var(--b-600);
+  border-color: var(--b-600);
+  animation: sel-pop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+.sel-check[data-state="all"] .sel-check-mark { stroke-dashoffset: 0; }
+.sel-check[data-state="some"] .sel-check-dash { opacity: 1; }
+/* On the dark bars: a light ring, amber when on. */
+.sel-check-dark { width: 1.75rem; height: 1.75rem; background: transparent; border-color: rgb(255 255 255 / 0.7); box-shadow: none; }
+.sel-check-dark svg { stroke: #0f172a; }
+.sel-check-dark[data-state="all"],
+.sel-check-dark[data-state="some"] { background: #fbbf24; border-color: #fbbf24; }
+[data-mode="dark"] .sel-check { background: #18181b; border-color: #71717a; box-shadow: 0 0 0 3px rgb(24 24 27 / 0.9), 0 2px 6px rgb(0 0 0 / 0.5); }
+[data-mode="dark"] .sel-check[data-state="all"],
+[data-mode="dark"] .sel-check[data-state="some"] { background: var(--b-500); border-color: var(--b-500); }
+[data-mode="dark"] .sel-check-dark { background: transparent; box-shadow: none; }
+[data-mode="dark"] .sel-check-dark[data-state="all"],
+[data-mode="dark"] .sel-check-dark[data-state="some"] { background: #fbbf24; border-color: #fbbf24; }
+@keyframes sel-pop {
+  0% { transform: scale(0.75); }
+  60% { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+/* The bars slide in, the sheet rises, the message pops up. */
+@keyframes sel-down { from { transform: translateY(-100%); } to { transform: none; } }
+@keyframes sel-up { from { transform: translateY(100%); opacity: 0.6; } to { transform: none; opacity: 1; } }
+@keyframes sel-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.sel-top { animation: sel-down 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.sel-bottom { animation: sel-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.sel-sheet { animation: sel-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.sel-fade { animation: sel-fade-in 0.2s ease both; }
+.sel-toast { animation: sel-fade-in 0.2s ease both; }
+/* Native apps hide the tab bar in selection mode: the dock steps down out of the way. */
+nav[data-dock] { transition: transform 0.25s ease, opacity 0.2s ease; }
+html[data-selecting] nav[data-dock] { transform: translateY(160%); opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .sel-check, .sel-check .sel-check-mark, .sel-check .sel-check-dash, nav[data-dock] { transition: none; }
+  .sel-check[data-state="all"], .sel-check[data-state="some"], .sel-top, .sel-bottom, .sel-sheet, .sel-fade, .sel-toast { animation: none; }
+}
+
 /* Header (plan v17): a soft gradient in the theme's dye with a faint glow at the top right. */
 .header-band {
   background:

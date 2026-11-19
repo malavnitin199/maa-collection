@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { barButton, barDanger, useSelection } from '@/components/ui/selection';
-import { input, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { IconBuilding, IconEye, IconEyeOff, IconLayers, IconPeople, IconPriceTag, IconPrint, IconRename } from '@/components/ui/icons';
+import { ActionGrid, ActionSheet, ActionTile, sheetDanger, sheetPrimary, sheetSecondary, useSelection } from '@/components/ui/selection';
+import { input } from '@/components/ui/styles';
 import { TagChooser } from '@/features/catalog/item-parts';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
@@ -12,12 +13,13 @@ import { PRINT_MAX } from '@/lib/selection-limits';
 import { bulkProductsAction, setCompaniesActiveAction, type BulkProductInput } from '@/server/actions/admin';
 
 type Option = { id: string; name: string };
-type Panel = 'hide' | 'rename' | 'company' | 'category' | 'tags' | 'prices';
+type Sheet = 'hide' | 'rename' | 'company' | 'category' | 'tags' | 'prices';
 
+const fieldLabel = 'flex flex-col gap-1.5 text-sm font-semibold';
 
 /**
- * Products → Select (plan v17): what can be done to the chosen items. Each
- * action opens a small form in the bar; Apply changes them all at once.
+ * Products → Select (plan v17): what can be done to the chosen items. Each tile
+ * opens a bottom sheet; Apply changes them all at once and a short message says so.
  */
 export function ProductBulkActions({
   companies,
@@ -38,109 +40,133 @@ export function ProductBulkActions({
 }) {
   const t = useT();
   const router = useRouter();
-  const { selected, clear } = useSelection();
-  const [panel, setPanel] = useState<Panel | null>(null);
+  const { selected, clear, notify } = useSelection();
+  const [sheet, setSheet] = useState<Sheet | null>(null);
   const [name, setName] = useState('');
   const [supplierId, setSupplierId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [tags, setTags] = useState<ProductTags>({ forGender: null, ageGroup: null });
   const [mrp, setMrp] = useState('');
   const [price, setPrice] = useState('');
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [busy, startBusy] = useTransition();
-  const none = selected.length === 0;
+  const n = selected.length;
+  const none = n === 0;
 
   const run = (change: BulkProductInput) =>
     startBusy(async () => {
-      setMessage(null);
+      setError(null);
       const result = await bulkProductsAction(selected, change);
-      if (!result.ok) return setMessage({ ok: false, text: result.error });
-      setMessage({ ok: true, text: result.message });
-      setPanel(null);
+      if (!result.ok) {
+        // In a sheet: show it there; otherwise as a message.
+        if (sheet) return setError(result.error);
+        return notify('error', result.error);
+      }
+      setSheet(null);
+      notify('ok', result.message);
       clear();
       router.refresh();
     });
-
-  const open = (next: Panel) => {
-    setMessage(null);
-    setPanel(panel === next ? null : next);
+  const open = (next: Sheet) => {
+    setError(null);
+    setSheet(next);
   };
-  const actions: { id: Panel; label: MessageKey; show: boolean }[] = [
-    { id: 'rename', label: 'bulk.rename', show: !hiddenView && canCatalog },
-    { id: 'company', label: 'bulk.company', show: !hiddenView && canCatalog },
-    { id: 'category', label: 'bulk.category', show: !hiddenView && canCatalog },
-    { id: 'tags', label: 'bulk.tags', show: !hiddenView && canCatalog },
-    { id: 'prices', label: 'bulk.prices', show: !hiddenView && canPrices },
+  const close = () => setSheet(null);
+  const title = (action: MessageKey) => t('bulk.sheet', { action: t(action), n });
+
+  const tiles: { id: Sheet; label: MessageKey; icon: React.ReactNode; show: boolean }[] = [
+    { id: 'rename', label: 'bulk.rename', icon: <IconRename />, show: !hiddenView && canCatalog },
+    { id: 'company', label: 'bulk.company', icon: <IconBuilding />, show: !hiddenView && canCatalog },
+    { id: 'category', label: 'bulk.category', icon: <IconLayers />, show: !hiddenView && canCatalog },
+    { id: 'tags', label: 'bulk.tags', icon: <IconPeople />, show: !hiddenView && canCatalog },
+    { id: 'prices', label: 'bulk.prices', icon: <IconPriceTag />, show: !hiddenView && canPrices },
   ];
 
+  const apply = (
+    <button type="submit" disabled={busy} className={sheetPrimary}>
+      {busy ? t('common.saving') : t('bulk.apply')}
+    </button>
+  );
+  const cancel = (
+    <button type="button" onClick={close} className={sheetSecondary}>
+      {t('cat.company.cancel')}
+    </button>
+  );
+  const problem = error && (
+    <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-200">
+      {error}
+    </p>
+  );
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
+    <>
+      <ActionGrid>
         {canCatalog &&
           (hiddenView ? (
-            <button type="button" disabled={none || busy} onClick={() => run({ kind: 'show' })} className={barButton}>
-              {t('bulk.bringBack')}
-            </button>
+            <ActionTile icon={<IconEye />} label={t('bulk.bringBack')} disabled={none || busy} onClick={() => run({ kind: 'show' })} wide />
           ) : (
-            <button type="button" disabled={none || busy} onClick={() => open('hide')} className={barDanger}>
-              {t('bulk.hide')}
-            </button>
+            <ActionTile icon={<IconEyeOff />} label={t('bulk.hide')} tone="danger" disabled={none || busy} onClick={() => open('hide')} />
           ))}
-        {actions
-          .filter((a) => a.show)
-          .map((a) => (
-            <button key={a.id} type="button" aria-pressed={panel === a.id} disabled={none || busy} onClick={() => open(a.id)} className={`${barButton} ${panel === a.id ? 'bg-amber-400 text-slate-900 hover:bg-amber-300' : ''}`}>
-              {t(a.label)}
-            </button>
+        {tiles
+          .filter((tile) => tile.show)
+          .map((tile) => (
+            <ActionTile key={tile.id} icon={tile.icon} label={t(tile.label)} disabled={none || busy} onClick={() => open(tile.id)} />
           ))}
         {canPrint && !hiddenView && (
-          <button
-            type="button"
+          <ActionTile
+            icon={<IconPrint />}
+            label={t('bulk.print')}
             disabled={none || busy}
             onClick={() => {
-              if (selected.length > PRINT_MAX) return setMessage({ ok: false, text: t('bulk.printMax', { n: PRINT_MAX }) });
+              if (n > PRINT_MAX) return notify('error', t('bulk.printMax', { n: PRINT_MAX }));
               router.push(`/admin/labels/print?${new URLSearchParams({ items: selected.join(',') })}`);
             }}
-            className={barButton}
-          >
-            {t('bulk.print')}
-          </button>
+          />
         )}
-      </div>
+      </ActionGrid>
 
-      {panel && (
-        <div data-testid="bulk-panel" className="flex flex-col gap-3 rounded-2xl bg-white p-3 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
-          {panel === 'hide' && (
-            <>
-              <p className="text-sm">{t('bulk.hideConfirm', { n: selected.length })}</p>
-              <button type="button" disabled={busy} onClick={() => run({ kind: 'hide' })} className={`${barDanger} w-fit`}>
-                {t('bulk.hideYes', { n: selected.length })}
-              </button>
-            </>
-          )}
-          {panel === 'rename' && (
-            <form
-              className="flex gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                run({ kind: 'rename', name });
-              }}
-            >
-              <input required autoFocus aria-label={t('bulk.newName')} placeholder={t('bulk.newName')} value={name} onChange={(e) => setName(e.target.value)} className={`${input} w-full min-w-0`} />
-              <button type="submit" disabled={busy} className={primaryButton}>
-                {t('bulk.apply')}
-              </button>
-            </form>
-          )}
-          {panel === 'company' && (
-            <form
-              className="flex gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                run({ kind: 'company', supplierId });
-              }}
-            >
-              <select aria-label={t('bulk.company')} value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={`${input} w-full min-w-0`}>
+      {sheet === 'hide' && (
+        <ActionSheet title={title('bulk.hide')} onClose={close}>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('bulk.hideConfirm', { n })}</p>
+          {problem}
+          <button type="button" disabled={busy} onClick={() => run({ kind: 'hide' })} className={sheetDanger}>
+            <IconEyeOff className="h-5 w-5" />
+            {t('bulk.hideYes', { n })}
+          </button>
+          {cancel}
+        </ActionSheet>
+      )}
+      {sheet === 'rename' && (
+        <ActionSheet title={title('bulk.rename')} onClose={close}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run({ kind: 'rename', name });
+            }}
+          >
+            <label className={fieldLabel}>
+              {t('bulk.newName')}
+              <input required autoFocus value={name} onChange={(e) => setName(e.target.value)} className={`${input} text-lg`} />
+            </label>
+            {problem}
+            {apply}
+            {cancel}
+          </form>
+        </ActionSheet>
+      )}
+      {sheet === 'company' && (
+        <ActionSheet title={title('bulk.company')} onClose={close}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run({ kind: 'company', supplierId });
+            }}
+          >
+            <label className={fieldLabel}>
+              {t('bulk.company')}
+              <select autoFocus value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={`${input} text-lg`}>
                 <option value="">{t('cat.product.noCompany')}</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -148,20 +174,25 @@ export function ProductBulkActions({
                   </option>
                 ))}
               </select>
-              <button type="submit" disabled={busy} className={primaryButton}>
-                {t('bulk.apply')}
-              </button>
-            </form>
-          )}
-          {panel === 'category' && (
-            <form
-              className="flex gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                run({ kind: 'category', categoryId });
-              }}
-            >
-              <select required aria-label={t('bulk.category')} value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={`${input} w-full min-w-0`}>
+            </label>
+            {problem}
+            {apply}
+            {cancel}
+          </form>
+        </ActionSheet>
+      )}
+      {sheet === 'category' && (
+        <ActionSheet title={title('bulk.category')} onClose={close}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run({ kind: 'category', categoryId });
+            }}
+          >
+            <label className={fieldLabel}>
+              {t('bulk.category')}
+              <select required autoFocus value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={`${input} text-lg`}>
                 <option value="">{t('stk.chooseCategory')}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -169,48 +200,56 @@ export function ProductBulkActions({
                   </option>
                 ))}
               </select>
-              <button type="submit" disabled={busy} className={primaryButton}>
-                {t('bulk.apply')}
-              </button>
-            </form>
-          )}
-          {panel === 'tags' && (
-            <>
-              <TagChooser value={tags} onChange={setTags} />
-              <button type="button" disabled={busy} onClick={() => run({ kind: 'tags', forGender: tags.forGender ?? '', ageGroup: tags.ageGroup ?? '' })} className={`${primaryButton} w-fit`}>
-                {t('bulk.apply')}
-              </button>
-            </>
-          )}
-          {panel === 'prices' && (
-            <form
-              className="flex flex-col gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                run({ kind: 'prices', mrp, price });
-              }}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                <input inputMode="decimal" aria-label={t('bulk.newMrp')} placeholder={t('bulk.newMrp')} value={mrp} onChange={(e) => setMrp(e.target.value)} className={`${input} min-w-0`} />
-                <input inputMode="decimal" aria-label={t('bulk.newPrice')} placeholder={t('bulk.newPrice')} value={price} onChange={(e) => setPrice(e.target.value)} className={`${input} min-w-0`} />
-              </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('bulk.pricesHint')}</p>
-              <button type="submit" disabled={busy} className={`${primaryButton} w-fit`}>
-                {t('bulk.apply')}
-              </button>
-            </form>
-          )}
-          <button type="button" onClick={() => setPanel(null)} className={`${secondaryButton} w-fit text-xs`}>
-            {t('cat.company.cancel')}
-          </button>
-        </div>
+            </label>
+            {problem}
+            {apply}
+            {cancel}
+          </form>
+        </ActionSheet>
       )}
-      {message && (
-        <p role={message.ok ? 'status' : 'alert'} className={`text-sm ${message.ok ? 'text-amber-200' : 'text-red-300'}`}>
-          {message.text}
-        </p>
+      {sheet === 'tags' && (
+        <ActionSheet title={title('bulk.tags')} onClose={close}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run({ kind: 'tags', forGender: tags.forGender ?? '', ageGroup: tags.ageGroup ?? '' });
+            }}
+          >
+            <TagChooser value={tags} onChange={setTags} />
+            {problem}
+            {apply}
+            {cancel}
+          </form>
+        </ActionSheet>
       )}
-    </div>
+      {sheet === 'prices' && (
+        <ActionSheet title={title('bulk.prices')} onClose={close}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run({ kind: 'prices', mrp, price });
+            }}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <label className={fieldLabel}>
+                {t('bulk.newMrp')}
+                <input autoFocus inputMode="decimal" value={mrp} onChange={(e) => setMrp(e.target.value)} className={`${input} min-w-0 text-lg tabular-nums`} />
+              </label>
+              <label className={fieldLabel}>
+                {t('bulk.newPrice')}
+                <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className={`${input} min-w-0 text-lg tabular-nums`} />
+              </label>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('bulk.pricesHint')}</p>
+            {problem}
+            {apply}
+            {cancel}
+          </form>
+        </ActionSheet>
+      )}
+    </>
   );
 }
 
@@ -218,27 +257,20 @@ export function ProductBulkActions({
 export function PrintSelected() {
   const t = useT();
   const router = useRouter();
-  const { selected } = useSelection();
-  const [error, setError] = useState<string | null>(null);
+  const { selected, notify } = useSelection();
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        type="button"
+    <ActionGrid>
+      <ActionTile
+        icon={<IconPrint />}
+        label={t('bulk.printN', { n: selected.length })}
         disabled={selected.length === 0}
+        wide
         onClick={() => {
-          if (selected.length > PRINT_MAX) return setError(t('bulk.printMax', { n: PRINT_MAX }));
+          if (selected.length > PRINT_MAX) return notify('error', t('bulk.printMax', { n: PRINT_MAX }));
           router.push(`/admin/labels/print?${new URLSearchParams({ items: selected.join(',') })}`);
         }}
-        className={`${barButton} w-fit`}
-      >
-        {t('bulk.printN', { n: selected.length })}
-      </button>
-      {error && (
-        <p role="alert" className="text-sm text-red-300">
-          {error}
-        </p>
-      )}
-    </div>
+      />
+    </ActionGrid>
   );
 }
 
@@ -246,33 +278,20 @@ export function PrintSelected() {
 export function CompanyBulkActions() {
   const t = useT();
   const router = useRouter();
-  const { selected, clear } = useSelection();
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const { selected, clear, notify } = useSelection();
   const [busy, startBusy] = useTransition();
   const run = (active: boolean) =>
     startBusy(async () => {
       const result = await setCompaniesActiveAction(selected, active);
-      setMessage(result.ok ? { ok: true, text: result.message } : { ok: false, text: result.error });
-      if (result.ok) {
-        clear();
-        router.refresh();
-      }
+      if (!result.ok) return notify('error', result.error);
+      notify('ok', result.message);
+      clear();
+      router.refresh();
     });
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={selected.length === 0 || busy} onClick={() => run(false)} className={barDanger}>
-          {t('bulk.hide')}
-        </button>
-        <button type="button" disabled={selected.length === 0 || busy} onClick={() => run(true)} className={barButton}>
-          {t('bulk.bringBack')}
-        </button>
-      </div>
-      {message && (
-        <p role={message.ok ? 'status' : 'alert'} className={`text-sm ${message.ok ? 'text-amber-200' : 'text-red-300'}`}>
-          {message.text}
-        </p>
-      )}
-    </div>
+    <ActionGrid>
+      <ActionTile icon={<IconEyeOff />} label={t('bulk.hide')} tone="danger" disabled={selected.length === 0 || busy} onClick={() => run(false)} wide />
+      <ActionTile icon={<IconEye />} label={t('bulk.bringBack')} disabled={selected.length === 0 || busy} onClick={() => run(true)} wide />
+    </ActionGrid>
   );
 }

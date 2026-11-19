@@ -88,6 +88,11 @@ function vibrate(pattern: number | number[]): void {
   }
 }
 
+/** A short buzz for taps that change something (selecting an item, plan v17). Respects the phone's on/off setting. */
+export function haptic(pattern: number | number[] = 10): void {
+  if (soundEnabled()) vibrate(pattern);
+}
+
 export type Feedback = 'scan' | 'done' | 'error';
 
 /** Sound + vibration for a moment at the counter (respects the phone's on/off setting). */

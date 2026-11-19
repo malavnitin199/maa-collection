@@ -46,6 +46,25 @@ export const IconStop = ({ className }: IconProps) => base(<rect x="6.5" y="6.5"
 export const IconPrev = ({ className }: IconProps) => base(<><path d="M17.5 6v12L9 12l8.5-6Z" fill="currentColor" /><path d="M6.5 6v12" /></>, className);
 export const IconNext = ({ className }: IconProps) => base(<><path d="M6.5 6v12L15 12 6.5 6Z" fill="currentColor" /><path d="M17.5 6v12" /></>, className);
 export const IconChevron = ({ className }: IconProps) => base(<path d="m9.5 6 6 6-6 6" />, className);
+/** Selecting many (plan v17): bolder strokes so they read clearly on the dark bars. */
+const bold = (path: React.ReactNode, className = 'h-6 w-6') => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={className} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+    {path}
+  </svg>
+);
+export const IconSelect = ({ className }: IconProps) => bold(<><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" /><path d="m8 12.3 2.8 2.8L16.3 9.5" /></>, className);
+export const IconClose = ({ className }: IconProps) => bold(<path d="M6 6l12 12M18 6 6 18" />, className);
+export const IconEyeOff = ({ className }: IconProps) => bold(<><path d="M3.5 12S7 5.5 12 5.5c1.6 0 3 .5 4.2 1.2M20.5 12S17 18.5 12 18.5c-1.6 0-3-.5-4.2-1.2" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /><path d="m4 4 16 16" /></>, className);
+export const IconEye = ({ className }: IconProps) => bold(<><path d="M3.5 12S7 5.5 12 5.5 20.5 12 20.5 12 17 18.5 12 18.5 3.5 12 3.5 12Z" /><circle cx="12" cy="12" r="3" /></>, className);
+export const IconRename = ({ className }: IconProps) => bold(<><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z" /><path d="m13.5 8.5 3 3" /></>, className);
+export const IconBuilding = ({ className }: IconProps) => bold(<><path d="M4.5 20.5V6.5l7-3v17" /><path d="M11.5 9.5h8v11" /><path d="M3 20.5h18M7.5 9h1M7.5 12.5h1M7.5 16h1M14.5 13h2M14.5 16.5h2" /></>, className);
+export const IconLayers = ({ className }: IconProps) => bold(<><path d="m12 3.5 8.5 4.5-8.5 4.5L3.5 8 12 3.5Z" /><path d="m3.5 12 8.5 4.5 8.5-4.5" /><path d="m3.5 16 8.5 4.5 8.5-4.5" /></>, className);
+export const IconPeople = ({ className }: IconProps) => bold(<><circle cx="9" cy="8" r="3" /><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" /><circle cx="17" cy="9.5" r="2.3" /><path d="M15.5 14.6a4.5 4.5 0 0 1 5 4.9" /></>, className);
+export const IconPriceTag = ({ className }: IconProps) => bold(<><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.5 1.5 0 0 1 0 2.1l-6.4 6.4a1.5 1.5 0 0 1-2.1 0L3.5 12.2Z" /><circle cx="8" cy="8" r="1.6" /></>, className);
+export const IconPrint = ({ className }: IconProps) => bold(<><path d="M7 8.5V3.5h10v5" /><rect x="3.5" y="8.5" width="17" height="8" rx="2" /><path d="M7 14.5h10v6H7z" /></>, className);
+export const IconTick = ({ className }: IconProps) => bold(<path d="m4.5 12.5 5 5L19.5 7" />, className);
+export const IconReject = ({ className }: IconProps) => bold(<><circle cx="12" cy="12" r="8.5" /><path d="m6 6 12 12" /></>, className);
+
 /** ⋯ The header's menu (plan v17). */
 export const IconDots = ({ className }: IconProps) => base(<><circle cx="5.5" cy="12" r="1.6" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /><circle cx="18.5" cy="12" r="1.6" fill="currentColor" /></>, className);
 /** Back arrow for a screen's title bar (plan v17). */

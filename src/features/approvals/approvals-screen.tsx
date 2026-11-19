@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { AllDoneArt } from '@/components/ui/art';
-import { barButton, barDanger, SelectableItem, SelectionBar, SelectionProvider, SelectToggle, useSelection } from '@/components/ui/selection';
+import { ActionGrid, ActionSheet, ActionTile, SelectableItem, SelectionBar, SelectionProvider, SelectToggle, sheetDanger, sheetSecondary, useSelection } from '@/components/ui/selection';
+import { IconReject, IconTick } from '@/components/ui/icons';
 import { card, errorBox, input, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
 import { formatDate, type MessageKey } from '@/lib/i18n';
@@ -45,47 +46,57 @@ const DEAL_TAG: Record<Deal['kind'], string> = {
 function SelectedActions() {
   const t = useT();
   const router = useRouter();
-  const { selected, clear } = useSelection();
+  const { selected, clear, notify } = useSelection();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState<RejectReason | null>(null);
   const [note, setNote] = useState('');
-  const [message, setMessage] = useState<Message | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
   const [busy, startBusy] = useTransition();
+  const n = selected.length;
   const items = selected.map((key) => {
     const [kind, id] = key.split(':');
     return { kind: kind === 'exchange' ? ('exchange' as const) : ('sale' as const), id };
   });
   const decide = (decision: 'approve' | 'reject') =>
     startBusy(async () => {
-      setMessage(null);
+      setProblem(null);
       const result = await decideSelectedAction({ items, decision, reason: reason ?? undefined, note: note.trim() || undefined });
-      if (!result.ok) return setMessage({ kind: 'error', text: result.error });
+      if (!result.ok) {
+        if (rejecting) return setProblem(result.error);
+        return notify('error', result.error);
+      }
       const r = result.data;
       const parts: string[] = [];
       if (r.approved) parts.push(t('appr.sel.approved', { n: r.approved }));
       if (r.rejected) parts.push(r.stockReturned ? t('appr.sel.rejectedStock', { n: r.rejected, pcs: r.stockReturned }) : t('appr.sel.rejected', { n: r.rejected }));
       if (r.already) parts.push(t('appr.sel.already', { n: r.already }));
       if (r.failed.length) parts.push(t('appr.sel.failed', { n: r.failed.length, why: r.failed[0] }));
-      setMessage({ kind: r.failed.length ? 'error' : 'ok', text: parts.join(' ') });
+      notify(r.failed.length ? 'error' : 'ok', parts.join(' '));
       setRejecting(false);
       setReason(null);
       setNote('');
       clear();
       router.refresh();
     });
-  const none = selected.length === 0;
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={none || busy} onClick={() => decide('approve')} className={`${barButton} bg-emerald-600 ring-0 hover:bg-emerald-700`}>
-          {t('appr.sel.approve', { n: selected.length })}
-        </button>
-        <button type="button" disabled={none || busy} aria-pressed={rejecting} onClick={() => setRejecting((v) => !v)} className={barDanger}>
-          {t('appr.sel.reject')}
-        </button>
-      </div>
+    <>
+      <ActionGrid>
+        <ActionTile icon={<IconTick />} label={t('appr.sel.approveN', { n })} tone="success" disabled={n === 0 || busy} onClick={() => decide('approve')} wide />
+        <ActionTile
+          icon={<IconReject />}
+          label={t('appr.sel.rejectShort')}
+          tone="danger"
+          disabled={n === 0 || busy}
+          onClick={() => {
+            setProblem(null);
+            setRejecting(true);
+          }}
+          wide
+        />
+      </ActionGrid>
       {rejecting && (
-        <div className="flex flex-col gap-2 rounded-2xl bg-white p-3 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+        <ActionSheet title={t('bulk.sheet', { action: t('appr.sel.rejectShort'), n })} onClose={() => setRejecting(false)}>
+          <p className="text-sm font-semibold">{t('appr.reject.reason')}</p>
           <div role="radiogroup" aria-label={t('appr.reject.reason')} className="flex flex-wrap gap-2">
             {REJECT_REASONS.map((r) => (
               <button
@@ -94,24 +105,31 @@ function SelectedActions() {
                 role="radio"
                 aria-checked={reason === r}
                 onClick={() => setReason(r)}
-                className={`rounded-full border px-3 py-1 text-sm ${reason === r ? 'border-red-600 bg-red-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
+                className={`min-h-11 rounded-full border-2 px-4 text-sm font-semibold transition active:scale-95 ${reason === r ? 'border-red-600 bg-red-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
               >
                 {t(REASON_KEY[r])}
               </button>
             ))}
           </div>
-          <input aria-label={t('appr.reject.note')} placeholder={t('appr.reject.note')} value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} className={input} />
-          <button type="button" disabled={none || busy || !reason} onClick={() => decide('reject')} className={`${barDanger} w-fit`}>
-            {t('appr.sel.rejectN', { n: selected.length })}
+          <label className="flex flex-col gap-1.5 text-sm font-semibold">
+            {t('appr.reject.note')}
+            <input value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} className={`${input} text-base`} />
+          </label>
+          {problem && (
+            <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-200">
+              {problem}
+            </p>
+          )}
+          <button type="button" disabled={n === 0 || busy || !reason} onClick={() => decide('reject')} className={sheetDanger}>
+            <IconReject className="h-5 w-5" />
+            {t('appr.sel.rejectN', { n })}
           </button>
-        </div>
+          <button type="button" onClick={() => setRejecting(false)} className={sheetSecondary}>
+            {t('cat.company.cancel')}
+          </button>
+        </ActionSheet>
       )}
-      {message && (
-        <p role={message.kind === 'ok' ? 'status' : 'alert'} data-testid="selected-result" className={`text-sm ${message.kind === 'ok' ? 'text-amber-200' : 'text-red-300'}`}>
-          {message.text}
-        </p>
-      )}
-    </div>
+    </>
   );
 }
 

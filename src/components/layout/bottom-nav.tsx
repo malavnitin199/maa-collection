@@ -62,7 +62,7 @@ export function BottomNav({ role, catalogAccess = false }: { role: 'admin' | 'sa
   };
   const sellActive = isActive(pathname, SELL.href);
   return (
-    <nav aria-label={t('nav.main')} className="fixed inset-x-3 bottom-3 z-20 pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden">
+    <nav data-dock aria-label={t('nav.main')} className="fixed inset-x-3 bottom-3 z-20 pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden">
       <ul className="flex items-end rounded-[1.75rem] bg-surface/95 px-1.5 pt-1 pb-1 shadow-xl ring-1 shadow-brand-950/15 ring-black/5 backdrop-blur dark:ring-white/10">
         {others.slice(0, half).map(tab)}
         <li className="flex flex-1 justify-center">
