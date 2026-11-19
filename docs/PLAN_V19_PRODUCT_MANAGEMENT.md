@@ -203,11 +203,11 @@ Remaining checks on real data before V19-02: count categories, products with `ca
 - **Acceptance:** owner can create the full Men / Women / Boys / Girls tree with the brief's example types and sizes without a developer; no product row changed by the migration (row count and checksums equal before / after).
 
 ### V19-03 Category-first New item UX
-- **03a** Wizard review against the brief **and the owner's clarification of 2026-11-19 (§5.1)**: start screen *One item* / *Many items* (D-V19-6), section → type → details → sizes & pieces → review, names via `name_hi`, selection kept on back, progress, sticky Next, reduced motion, focus order, `aria-current`, 44 px targets, small-phone (360 px) layout.
+- **03a** ✅ done 2026-11-19 (see PROGRESS): new screen `/admin/stock/add` (hub tile *Add stock step by step*; the old form stays at `/admin/stock/new` until V19-04): start *One item / Many items* (D-V19-6), section → type → details → sizes & pieces → check and save (*Save & print tags*), names via `name_hi`, selection kept on back, progress bar + path chips, sticky Next, slide animation off under reduced motion, `aria-current`, 44 px targets. Server: pieces per size, stock date, empty colour / brand. Not yet: photo, 360 px / Hindi / dark browser tests (03e), review buttons (04a).
 - **03b** Step 4 speed: pieces per size (2 × M, 2 × L, 5 × XL), *All sizes*, tap a number pad for pieces, *Same for all*, long-press − / + repeat; total pieces and purchase total always visible.
 - **03c** No colour step in the wizard (owner, 2026-11-19); empty colour per D-V19-3 (`colourLabel()` helper used by tags, counter card, lists, approvals, CSV); brand per D-V19-5.
 - **03d** Inline **+ Add** for section / type / size / company (a new size is saved on the type's size list): permission checks on the server (exist), error states, duplicate names.
-- **03e** E2E: full flow at 360 × 780 and desktop, en + hi, light + dark; back navigation keeps input.
+- **03e** E2E: full flow at 360 × 780 and desktop, en + hi, light + dark; back navigation keeps input (desktop + Pixel 7 in English done in 03a).
 - **Acceptance:** new item from a cold start in ≤ 12 taps + typing name and two prices; every string in both languages; no new dependency.
 
 ### V19-04 Saving, review and labels

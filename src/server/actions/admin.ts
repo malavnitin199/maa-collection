@@ -13,7 +13,7 @@ import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/aut
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getLocale, getT } from '@/server/i18n';
 import { localName } from '@/lib/sections';
-import { createSection, moveSection, moveType, updateSection } from '@/server/services/sections';
+import { addTypeSize, createSection, createType, moveSection, moveType, updateSection } from '@/server/services/sections';
 import { DomainError } from '@/server/services/errors';
 import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
@@ -382,6 +382,48 @@ export async function moveTypeAction(categoryId: string, _prev: FormState, formD
   }
 }
 
+// ------------------------------- plan v19 (03a): "+ Add" on the New item steps
+
+export type SectionResult = { ok: true; section: { id: string; name: string; icon: string } } | { ok: false; error: string };
+export type TypeResult = { ok: true; type: { id: string; name: string; code: string; sizes: string[] } } | { ok: false; error: string };
+export type SizesResult = { ok: true; sizes: string[] } | { ok: false; error: string };
+
+/** New item → "+ Add" on "Who is it for?": a section (e.g. Kids) with a picture; it goes last. */
+export async function addSectionAction(input: { name: string; icon: string }): Promise<SectionResult> {
+  await requirePermission('catalog');
+  try {
+    const section = await createSection(await getDb(), STORE_ID, { name: String(input.name ?? ''), icon: String(input.icon ?? '') });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, section: { id: section.id, name: section.name, icon: section.icon } };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** New item → "+ Add" on "What is it?": a category under the chosen section, with its sizes. */
+export async function addTypeAction(input: { sectionId: string; name: string; sizes: string }): Promise<TypeResult> {
+  await requirePermission('catalog');
+  try {
+    const type = await createType(await getDb(), STORE_ID, { sectionId: String(input.sectionId ?? ''), name: String(input.name ?? ''), sizes: String(input.sizes ?? '') });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, type: { id: type.id, name: type.name, code: type.code, sizes: type.sizes } };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** New item → "+ Add size": the category keeps it for next time. */
+export async function addTypeSizeAction(categoryId: string, size: string): Promise<SizesResult> {
+  await requirePermission('catalog');
+  try {
+    const sizes = await addTypeSize(await getDb(), STORE_ID, String(categoryId), String(size ?? ''));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, sizes };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
 // ------------------------------------------------- new design (sizes × colours)
 
 export type DesignActionInput = {
@@ -398,7 +440,11 @@ export type DesignActionInput = {
   /** Sizes with their own MRP / selling / purchase price (all colours of that size). */
   sizeRates?: SizeRatesText[];
   quantityEach: string;
+  /** Plan v19: pieces of each size (size → whole number); sizes left out get `quantityEach`. */
+  quantities?: Record<string, string | number>;
   billNumber: string;
+  /** Plan v19: the bill's date, YYYY-MM-DD; empty = today. */
+  stockDate?: string;
   /** Plan v17 tags: '' = not set. */
   forGender?: string;
   ageGroup?: string;
@@ -420,6 +466,12 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
     };
     const qty = input.quantityEach.trim() || '0';
     if (!/^\d+$/.test(qty)) throw new DomainError('Pieces must be a whole number.', { key: 'act.err.piecesWhole' });
+    const quantities: Record<string, number> = {};
+    for (const [size, raw] of Object.entries(input.quantities ?? {})) {
+      const value = String(raw).trim() || '0';
+      if (!/^\d+$/.test(value)) throw new DomainError('Pieces must be a whole number.', { key: 'act.err.piecesWhole' });
+      quantities[String(size).slice(0, 20)] = Number(value);
+    }
     const mrpPaise = toPaise(input.mrp, 'MRP') as number;
     const result = await createDesign(await getDb(), STORE_ID, {
       operationId: String(input.operationId).slice(0, 100),
@@ -435,7 +487,9 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
       costPaise: can(admin, 'costs') ? toPaise(String(input.cost ?? ''), 'cost price', true) : null,
       sizeRates: sizeRatesInput(input.sizeRates, admin),
       quantityEach: Number(qty),
+      quantities,
       billNumber: input.billNumber,
+      stockDate: String(input.stockDate ?? ''),
       forGender: String(input.forGender ?? ''),
       ageGroup: String(input.ageGroup ?? ''),
       staffId: admin.id,

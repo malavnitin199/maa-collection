@@ -7,6 +7,7 @@ import { codeFromScan } from '@/lib/item-link';
 import { AGE_GROUPS, FOR_GENDERS, parseTag, type AgeGroup, type ForGender, type ProductTags } from '@/lib/product-tags';
 import { tagSizeRange } from '@/lib/size-lists';
 import { designSizesById, findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
+import { STORE_TIMEZONE } from '@/lib/app-config';
 import { DomainError, isUniqueViolation } from './errors';
 
 /** What salesman screens may see about a product: never the cost price. */
@@ -381,7 +382,11 @@ export type DesignInput = {
   sizeRates?: SizeRates[];
   /** Pieces received per size/colour combination (0 = add to catalogue only). */
   quantityEach: number;
+  /** Plan v19: pieces of each size (key: size, any letter case); sizes left out get `quantityEach`. */
+  quantities?: Record<string, number>;
   billNumber?: string | null;
+  /** Plan v19: the bill's (stock) date, YYYY-MM-DD; empty = the day it is entered. */
+  stockDate?: string | null;
   /** Who it is for (plan v17), the same on every size and colour; empty = not set. */
   forGender?: string | null;
   ageGroup?: string | null;
@@ -401,19 +406,26 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
 
   const name = input.name.trim();
+  // Plan v19 (D-V19-5): an empty brand stays empty (the old form sends the company's name itself).
   const brand = input.brand.trim();
   if (!name) throw new DomainError('Enter the design / product name.', { key: 'stk.err.designName' });
-  if (!brand) throw new DomainError('Enter the brand.', { key: 'stk.err.enter.brand' });
   const sizes = cleanList(input.sizes);
-  const colors = cleanList(input.colors);
+  // Plan v19 (D-V19-3): no colour given = one item per size with an empty colour, shown as nothing.
+  const given = cleanList(input.colors);
+  const colors = given.length > 0 ? given : [''];
   if (sizes.length === 0) throw new DomainError('Pick at least one size.', { key: 'stk.err.pickSize' });
-  if (colors.length === 0) throw new DomainError('Add at least one colour.', { key: 'stk.err.addColour' });
   if (sizes.length * colors.length > 60) throw new DomainError('Too many combinations at once (max 60). Split the entry.', { key: 'stk.err.tooManyCombos' });
   const rates = resolveSizeRates(sizes, input, input.sizeRates);
   const tags = resolveTags(input);
   if (!Number.isInteger(input.quantityEach) || input.quantityEach < 0 || input.quantityEach > 10_000) {
     throw new DomainError('Pieces per size/colour must be 0 or more.', { key: 'stk.err.piecesEach' });
   }
+  const quantities = new Map<string, number>();
+  for (const [size, pieces] of Object.entries(input.quantities ?? {})) {
+    if (!Number.isInteger(pieces) || pieces < 0 || pieces > 10_000) throw new DomainError('Pieces per size/colour must be 0 or more.', { key: 'stk.err.piecesEach' });
+    quantities.set(size.trim().toLowerCase(), pieces);
+  }
+  const stockDate = cleanStockDate(input.stockDate);
   const category = await resolveCategoryForNewItem(db, storeId, input.categoryId);
   await resolveSupplier(db, storeId, input.supplierId);
 
@@ -440,6 +452,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
     supplierId: input.supplierId,
     category,
     billNumber: input.billNumber,
+    stockDate,
     note: `New design: ${name}`,
     staffId: input.staffId,
     rows: colors.flatMap((color) =>
@@ -449,11 +462,28 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
         size,
         color,
         ...rates.get(size.toLowerCase())!,
-        quantity: input.quantityEach,
+        quantity: quantities.get(size.toLowerCase()) ?? input.quantityEach,
         ...tags,
       })),
     ),
   });
+}
+
+/** Plan v19: a stock date as typed (YYYY-MM-DD): a real day, from 2000 on, not after today in the shop. Empty = null. */
+export function cleanStockDate(raw: string | null | undefined, today: string = shopToday()): string | null {
+  const value = (raw ?? '').trim();
+  if (!value) return null;
+  const day = new Date(`${value}T00:00:00Z`);
+  // A day that does not exist (31 Feb) rolls over to another, so it no longer matches what was typed.
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === value;
+  if (!valid || value < '2000-01-01') throw new DomainError('Enter a valid stock date.', { key: 'ni.err.stockDate' });
+  if (value > today) throw new DomainError('The stock date cannot be after today.', { key: 'ni.err.stockDateFuture' });
+  return value;
+}
+
+/** Today's date in the shop's time zone (YYYY-MM-DD). */
+function shopToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: STORE_TIMEZONE }).format(new Date());
 }
 
 /** Checks the optional "for whom" tags (plan v17); unknown values are refused. */
@@ -517,6 +547,7 @@ async function insertNewProducts(
     supplierId: string | null;
     category: { id: string; name: string; code: string };
     billNumber?: string | null;
+    stockDate?: string | null;
     note: string;
     staffId: string;
     rows: NewProductRow[];
@@ -536,6 +567,7 @@ async function insertNewProducts(
             operationId: input.operationId,
             supplierId: input.supplierId,
             billNumber: input.billNumber?.trim() || null,
+            stockDate: input.stockDate ?? null,
             note: input.note,
             staffId: input.staffId,
           })

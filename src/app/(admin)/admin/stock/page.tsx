@@ -13,6 +13,8 @@ type Option = { href: string; Icon: (p: { className?: string }) => React.ReactNo
 const NEW_ITEM: Option = { href: '/admin/stock/new', Icon: IconStockAdd, title: 'stk.hub.item.title', hint: 'stk.hub.item.hint', needs: 'catalog' };
 
 const OTHER_WAYS: Option[] = [
+  // Plan v19 (03a): the step-by-step New item, here until it replaces the form above (V19-04).
+  { href: '/admin/stock/add', Icon: IconStockAdd, title: 'ni.hub.title', hint: 'ni.hub.hint', needs: 'catalog' },
   { href: '/admin/stock/receive', Icon: IconScan, title: 'stk.hub.receive.title', hint: 'stk.hub.receive.hint', needs: 'stock' },
   { href: '/admin/stock/old', Icon: IconTag, title: 'stk.hub.old.title', hint: 'stk.hub.old.hint', needs: 'catalog' },
 ];

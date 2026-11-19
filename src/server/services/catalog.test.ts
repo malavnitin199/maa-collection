@@ -155,7 +155,8 @@ describe('new design from a supplier (sizes × colours)', () => {
     const { xyz, kurta } = await setup();
     const base = { operationId: 'd', supplierId: xyz.id, categoryId: kurta.id, name: 'K', brand: 'B', sizes: ['M'], colors: ['Red'], mrpPaise: 1000, pricePaise: 1000, costPaise: null, quantityEach: 1, staffId: owner };
     await expect(createDesign(db, STORE_ID, { ...base, sizes: [] })).rejects.toThrow(/at least one size/);
-    await expect(createDesign(db, STORE_ID, { ...base, colors: [' '] })).rejects.toThrow(/at least one colour/);
+    // Plan v19 (D-V19-3): no colour given = one item per size with an empty colour.
+    expect((await createDesign(db, STORE_ID, { ...base, operationId: 'design-no-colour', colors: [' '] })).products.map((p) => p.color)).toEqual(base.sizes.map(() => ''));
     await expect(createDesign(db, STORE_ID, { ...base, pricePaise: 2000 })).rejects.toThrow(/above MRP/);
   });
 

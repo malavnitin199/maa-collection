@@ -354,3 +354,13 @@ html[data-selecting] nav[data-dock] { transform: translateY(160%); opacity: 0; p
 @media print {
   :root, [data-mode="dark"] { --background: #ffffff; --foreground: #000000; color-scheme: light; }
 }
+
+/* Plan v19: New item steps slide in from the side they come from. `backwards`, never a
+   filled transform: a transform left on an ancestor would trap fixed UI (see .page-in). */
+@keyframes step-in-next { from { opacity: 0; transform: translateX(28px); } }
+@keyframes step-in-back { from { opacity: 0; transform: translateX(-28px); } }
+.step-next { animation: step-in-next 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.step-back { animation: step-in-back 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .step-next, .step-back { animation: none; }
+}
