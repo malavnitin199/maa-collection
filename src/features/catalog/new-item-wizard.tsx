@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { IconBack, IconChevron } from '@/components/ui/icons';
 import { ActionSheet, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
-import { card, errorBox, input, muted, primaryButton } from '@/components/ui/styles';
+import { card, errorBox, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { feedback, haptic } from '@/features/feedback/sounds';
 import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
@@ -89,6 +89,14 @@ export function NewItemWizard({
   const [sheet, setSheet] = useState<'section' | 'type' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
+  // "Saved …" after Save / Save & add next (goes by itself).
+  const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
+  const toastId = useRef(0);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast((current) => (current?.id === toast.id ? null : current)), 4500);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
   // One id per entry: a retried Save never makes a second receipt.
   const operationId = useRef<string | null>(null);
 
@@ -155,10 +163,28 @@ export function NewItemWizard({
     operationId.current = crypto.randomUUID();
     go('review');
   };
-  const save = () => {
+  /** Clears what belongs to this item; the bill's section, company, number and date stay for the next one. */
+  const clearItem = () => {
+    operationId.current = null;
+    setTypeId('');
+    setSizes([]);
+    setPieces({});
+    setName('');
+    setMrp('');
+    setCost('');
+    setPrice('');
+    setBrand('');
+  };
+  /**
+   * Save (plan v19 04a): `print` → the tags page; `next` → the next item of the same bill
+   * ("What is it?", section / company / bill no. / date kept); `done` → the start, everything cleared.
+   * Next 16 keeps this screen alive, so the form clears itself (Activity rule).
+   */
+  const save = (after: 'print' | 'next' | 'done') => {
     if (!type || !section) return;
     operationId.current ??= crypto.randomUUID();
     const opId = operationId.current;
+    const savedName = name.trim();
     setError(null);
     startSaving(async () => {
       const result = await createDesignAction({
@@ -179,21 +205,30 @@ export function NewItemWizard({
       });
       if (!result.ok) return setError(result.error);
       feedback('done');
-      // Next 16 keeps this screen alive: the next item starts at "What is it?",
-      // same section, company, bill no. and stock date; everything else empty.
-      operationId.current = null;
-      setTypeId('');
-      setSizes([]);
-      setPieces({});
-      setName('');
-      setMrp('');
-      setCost('');
-      setPrice('');
-      setBrand('');
-      setReached(1);
+      clearItem();
       setDirection('next');
-      setStep('what');
-      router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}&mode=${mode}`);
+      if (after === 'print') {
+        setReached(1);
+        setStep('what');
+        router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}&mode=${mode}`);
+        return;
+      }
+      const skus = result.items.map((item) => item.sku);
+      const range = skus.length === 1 ? skus[0] : `${skus[0]} – ${skus[skus.length - 1]}`;
+      setToast({ id: ++toastId.current, text: t('ni.saved', { name: savedName, skus: range, pieces: pcs(totalPieces) }) });
+      if (after === 'next') {
+        setReached(1);
+        setStep('what');
+      } else {
+        setSectionId('');
+        setSupplierId('');
+        setSupplierName('');
+        setBillNumber('');
+        setStockDate('');
+        setReached(0);
+        setStep('start');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   };
 
@@ -213,6 +248,12 @@ export function NewItemWizard({
 
   return (
     <div className="flex flex-col gap-5">
+      {toast && (
+        <p key={toast.id} role="status" data-testid="saved-toast" className="sel-toast fixed top-24 left-1/2 z-50 flex w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-2xl">
+          <span aria-hidden className="text-base">✓</span>
+          {toast.text}
+        </p>
+      )}
       {/* Where you are: five steps, then what was chosen (tap a chip to go back to it). */}
       <div className="flex flex-col gap-3">
         {step !== 'start' && (
@@ -364,9 +405,17 @@ export function NewItemWizard({
                 {error}
               </p>
             )}
-            <button type="button" onClick={save} disabled={saving} className={`${primaryButton} min-h-12 w-full text-base`}>
+            <button type="button" onClick={() => save('print')} disabled={saving} className={`${primaryButton} min-h-12 w-full text-base`}>
               {saving ? t('common.saving') : t('ni.save.print')}
             </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => save('next')} disabled={saving} className={`${secondaryButton} min-h-12 text-base`}>
+                {t('ni.save.next')}
+              </button>
+              <button type="button" onClick={() => save('done')} disabled={saving} className={`${secondaryButton} min-h-12 text-base`}>
+                {t('ni.save.only')}
+              </button>
+            </div>
           </div>
         )}
       </div>

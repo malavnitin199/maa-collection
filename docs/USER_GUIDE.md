@@ -111,9 +111,12 @@ Good to know:
 2. **What is it?** — that section's categories (Jeans 28–36, Shirt M–XXL, Kurta …). **+ Add** makes a new category with its sizes.
 3. **Item details** — **Company** (or *+ New company…*), **Product name**, **Sale price (MRP) ₹**, **Purchase price ₹** per piece (only with the *Purchase price* right). Under **More**: counter price if lower, bill no., stock date, brand. **Next**.
 4. **Which sizes?** — tap the sizes that came; each gets **− pieces +** (type a number if you like): 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** adds one the category lacks and keeps it for next time. *One item* lets you pick one size. The bar at the bottom counts sizes and pieces. **Next**.
-5. **Check and save** — name, section › category, company, size × pieces, total pieces and items, MRP, purchase per piece and total. **Save & print tags** saves one item per size (its own barcode each) and opens the tags page.
+5. **Check and save** — name, section › category, company, size × pieces, total pieces and items, MRP, purchase per piece and total. Three ways to finish, each saving one item per size (its own barcode each):
+   - **Save & print tags** opens the tags page. There, **+ Add next item** starts the next product of the same bill (company, section, bill no., stock date kept) at *What is it?*.
+   - **Save & add next** shows *Saved <name>: first – last item code · pieces* and goes straight to *What is it?* of the same bill — the fastest way through a bill.
+   - **Save** shows the same message and returns to the start with everything cleared — done with this bill.
 
-On the tags page, **+ Add next item** starts the next product of the same bill: same company, section, bill no. and stock date, straight at *What is it?*. There is no colour step: a new item has no colour unless you add one on its product page later.
+There is no colour step: a new item has no colour unless you add one on its product page later.
 
 ### Selecting many (Products, Approvals, All tags, Companies)
 

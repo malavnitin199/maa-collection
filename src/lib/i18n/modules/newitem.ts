@@ -73,6 +73,9 @@ export const newItemEn = {
   'ni.review.bill': 'Bill {bill}',
   'ni.review.change': 'Change',
   'ni.save.print': 'Save & print tags',
+  'ni.save.next': 'Save & add next',
+  'ni.save.only': 'Save',
+  'ni.saved': 'Saved {name}: {skus} · {pieces}',
   'ni.err.stockDate': 'Enter a valid stock date.',
   'ni.err.stockDateFuture': 'The stock date cannot be after today.',
 } as const;
@@ -146,6 +149,9 @@ export const newItemHi: Record<keyof typeof newItemEn, string> = {
   'ni.review.bill': 'बिल {bill}',
   'ni.review.change': 'बदलें',
   'ni.save.print': 'सेव करें और टैग प्रिंट करें',
+  'ni.save.next': 'सेव करें और अगला जोड़ें',
+  'ni.save.only': 'सेव करें',
+  'ni.saved': '{name} सेव हुआ: {skus} · {pieces}',
   'ni.err.stockDate': 'स्टॉक की सही तारीख डालें।',
   'ni.err.stockDateFuture': 'स्टॉक की तारीख आज के बाद की नहीं हो सकती।',
 };

@@ -141,6 +141,62 @@ test('one item: a new category and a new size on the spot; one size only', async
   await expect(page.getByTestId('category-list').getByRole('listitem').filter({ hasText: `Shorts ${run}` }).getByTestId('category-sizes')).toHaveText('Sizes: 30 · 32 · 34');
 });
 
+test('save & add next keeps the bill (section, company, bill no.) and shows the SKUs; save clears everything; two saves = two receipts', async ({ page }) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: /^Many items/ }).click();
+  await page.getByRole('button', { name: 'Women', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurti/ }).click();
+  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Laxmi Fashion House' });
+  await page.getByLabel('Product name').fill(`Anarkali ${run}`);
+  await page.getByLabel('Sale price (MRP) ₹').fill('1899');
+  await page.getByText('More: counter price, bill no., stock date, brand').click();
+  await page.getByLabel('Bill no.').fill(`LF-${run}`);
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'All sizes' }).click();
+  await expect(page.getByTestId('size-summary')).toHaveText('4 sizes · 4 pcs');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await heading(page, 'Check and save');
+  await page.getByRole('button', { name: 'Save & add next' }).click();
+
+  // Saved, with the SKU range; the next item of the same bill starts at "What is it?".
+  const toast = page.getByTestId('saved-toast');
+  await expect(toast).toHaveText(new RegExp(`Saved Anarkali ${run}: MAA-KR-\\d{3} – MAA-KR-\\d{3} · 4 pcs`));
+  await heading(page, 'What is it?');
+  await expect(page.getByTestId('wizard-path')).toHaveText('Women');
+  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
+  await page.getByRole('button', { name: /^Saree/ }).click();
+  const details = page.getByTestId('details-form');
+  await expect(details.getByRole('combobox', { name: /^Company/ }).locator('option:checked')).toHaveText('Laxmi Fashion House');
+  await expect(details.getByLabel('Bill no.')).toHaveValue(`LF-${run}`);
+  await expect(details.getByLabel('Product name')).toHaveValue('');
+  await expect(details.getByLabel('Sale price (MRP) ₹')).toHaveValue('');
+  await details.getByLabel('Product name').fill(`Banarasi ${run}`);
+  await details.getByLabel('Sale price (MRP) ₹').fill('4500');
+  await details.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByTestId('size-summary')).toHaveText('1 size · 1 pc'); // Saree: Free
+  await page.getByRole('button', { name: 'One more of size Free' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+  // Save = done with this bill: toast, back to the start, nothing kept.
+  await expect(page.getByTestId('saved-toast')).toHaveText(new RegExp(`Saved Banarasi ${run}: MAA-SA-\\d{3} · 2 pcs`));
+  await heading(page, 'What are you adding?');
+  await page.getByRole('button', { name: /^Many items/ }).click();
+  await heading(page, 'Who is it for?'); // no section kept
+  await page.getByRole('button', { name: 'Women', exact: true }).click();
+  await page.getByRole('button', { name: /^Saree/ }).click();
+  await expect(page.getByTestId('details-form').getByRole('combobox', { name: /^Company/ }).locator('option:checked')).toHaveText('Choose a company…');
+  await expect(page.getByTestId('details-form').getByLabel('Bill no.')).toHaveValue('');
+
+  // Both items exist, under their own receipts (each save has its own operation id).
+  await page.goto(`/admin/products?q=${run}&show=items`);
+  const list = page.getByTestId('product-list').or(page.getByTestId('design-list'));
+  await expect(list).toContainText(`Anarkali ${run}`);
+  await expect(list).toContainText(`Banarasi ${run}`);
+  await expect(list.getByRole('listitem').filter({ hasText: `Anarkali ${run}` })).toHaveCount(4);
+});
+
 test('a salesman without the catalog right cannot open it', async ({ page, isMobile }) => {
   test.skip(isMobile, 'same rule on both');
   await login(page, 'Vishal', /\/pos$/);

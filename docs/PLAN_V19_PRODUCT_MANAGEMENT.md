@@ -211,8 +211,8 @@ Remaining checks on real data before V19-02: count categories, products with `ca
 - **Acceptance:** new item from a cold start in ≤ 12 taps + typing name and two prices; every string in both languages; no new dependency.
 
 ### V19-04 Saving, review and labels
-- **04a** Review step (name, path, company, sizes × pieces, total pieces, MRP, purchase, purchase total) with **Save / Save & add next / Save & print tags**; purchase figures only with `costs`.
-- **04b** After save: keep section, company, bill no., stock date; new `operationId`; Activity-safe reset; success toast with SKU range; failure keeps the form and explains. **Done early (2026-11-19, owner request):** the steps are `/admin/stock/new` (old form → `/admin/stock/form`, *Old form* tile), *+ Add next item* opens the steps with company / section / bill / date / mode kept, Categories has the one-time *Set up Men / Women / Boys / Girls* button. Still open: toast with SKU range.
+- **04a** ✅ done 2026-11-19 (see PROGRESS). Review step (name, path, company, sizes × pieces, total pieces, MRP, purchase, purchase total) with **Save / Save & add next / Save & print tags**; purchase figures only with `costs`; *Saved … SKU range · pieces* toast.
+- **04b** After save: keep section, company, bill no., stock date; new `operationId`; Activity-safe reset; success toast with SKU range; failure keeps the form and explains. **Done early (2026-11-19, owner request):** the steps are `/admin/stock/new` (old form → `/admin/stock/form`, *Old form* tile), *+ Add next item* opens the steps with company / section / bill / date / mode kept, Categories has the one-time *Set up Men / Women / Boys / Girls* button. Toast with SKU range done in 04a.
 - **04c** Tests: duplicate submit = one receipt (exists; extend to the wizard), repeated *Save & add next* never reuses an id, labels reprint changes no stock, tag never shows the company.
 - **04d** Guide story *New item* updated; user guide §; reference.
 - **04e** Release: backup, migrations 0010 + 0011 on Neon, deploy, live check with one real entry (owner present), rollback note.
