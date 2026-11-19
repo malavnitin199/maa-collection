@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   customType,
+  date,
   index,
   integer,
   pgTable,
@@ -63,13 +64,39 @@ export const suppliers = pgTable(
   (t) => [uniqueIndex('suppliers_store_name_uq').on(t.storeId, t.name)],
 );
 
-/** Shop-defined categories; `code` (2–3 letters) goes into generated SKUs. */
+/**
+ * Plan v19 (ADR-033): who an item is for — Men, Women, Boys, Girls, and any
+ * section the owner adds. Every item type (category) sits under one section;
+ * a new item needs both. `name_hi` = the Hindi name (null = show `name`).
+ */
+export const sections = pgTable(
+  'sections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    name: text('name').notNull(),
+    nameHi: text('name_hi'),
+    /** Picture key, one of `SECTION_ICONS` (src/lib/sections.ts). */
+    icon: text('icon').notNull().default('hanger'),
+    /** Shop order on the New item screen. */
+    sort: integer('sort').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sections_store_name_uq').on(t.storeId, t.name)],
+);
+
+/** Shop-defined categories (item types); `code` (2–3 letters) goes into generated SKUs. */
 export const categories = pgTable(
   'categories',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     storeId: text('store_id').notNull().references(() => stores.id),
+    /** Plan v19: the section (Men / Women / Boys / Girls …); null = not sorted yet (made before sections). */
+    sectionId: uuid('section_id').references(() => sections.id),
     name: text('name').notNull(),
+    /** Hindi name; null = show `name`. */
+    nameHi: text('name_hi'),
     code: text('code').notNull(),
     /** Sizes this category comes in, shop order (tags print them all; stock entry offers them first). */
     sizes: text('sizes').array().notNull().default(sql`'{}'::text[]`),
@@ -77,7 +104,8 @@ export const categories = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('categories_store_name_uq').on(t.storeId, t.name),
+    // Plan v19: the same name may sit under two sections (Boys › Jeans, Girls › Jeans).
+    uniqueIndex('categories_store_section_name_uq').on(t.storeId, t.sectionId, t.name),
     uniqueIndex('categories_store_code_uq').on(t.storeId, t.code),
   ],
 );
@@ -136,6 +164,8 @@ export const stockReceipts = pgTable(
     operationId: text('operation_id').notNull(),
     supplierId: uuid('supplier_id').references(() => suppliers.id),
     billNumber: text('bill_number'),
+    /** Plan v19: the day the stock (bill) is dated, as the owner gave it; null = the day it was entered. */
+    stockDate: date('stock_date', { mode: 'string' }),
     note: text('note'),
     staffId: uuid('staff_id').notNull().references(() => staff.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -311,6 +341,7 @@ export const productImages = pgTable(
 export type Staff = typeof staff.$inferSelect;
 export type Supplier = typeof suppliers.$inferSelect;
 export type Category = typeof categories.$inferSelect;
+export type Section = typeof sections.$inferSelect;
 export type StockReceipt = typeof stockReceipts.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Sale = typeof sales.$inferSelect;

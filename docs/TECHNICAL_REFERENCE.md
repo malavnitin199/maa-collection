@@ -218,10 +218,11 @@ All tables carry `store_id` (FK `stores.id`, currently the single store `maa-col
 | `stores` | `id` (text), `name`, `timezone`, `price_code_word`, `print_price_code` | One row today |
 | `staff` | `id`, `name`, `role` (`admin`/`salesman`), `permissions text[]`, `pin_hash`, `language` (`en`/`hi`, null = phone's choice), `active` | unique (store, name) |
 | `suppliers` | `name`, `contact_name`, `phone`, `gstin`, `notes`, `active` | unique (store, name) |
-| `categories` | `name`, `code` (2–3 letters), `sizes text[]` (shop order, owner-editable), `active` | unique (store, name), (store, code) |
+| `sections` | `name`, `name_hi`, `icon`, `sort`, `active` | Plan v19: who an item is for (Men / Women / Boys / Girls + the owner's). unique (store, name) |
+| `categories` | `section_id` (→ sections; null = *Needs sorting*), `name`, `name_hi`, `code` (2–3 letters), `sizes text[]` (shop order, owner-editable), `active` | unique (store, section_id, name), (store, code). A **new** item needs a category with an active section (`resolveCategoryForNewItem`) |
 | `products` | `sku`, `barcode`, `name`, `brand`, `category` (name snapshot), `category_id`, `supplier_id`, `size`, `color`, `mrp_paise`, `price_paise`, `cost_paise` (admin/costs only), `stock`, `active`, `created_by` | unique (store, sku), (store, barcode); `stock >= 0`; `0 < price ≤ mrp` |
 | `product_images` | `product_id`, `content_type`, `data bytea`, `url`, `byte_size`, `width`, `height`, `sort_order` | lowest `sort_order` = main photo |
-| `stock_receipts` | `operation_id`, `supplier_id` (nullable), `bill_number`, `note`, `staff_id` | unique (store, operation_id); one per delivery / restock / old-stock entry |
+| `stock_receipts` | `operation_id`, `supplier_id` (nullable), `bill_number`, `stock_date` (plan v19; null = the day entered), `note`, `staff_id` | unique (store, operation_id); one per delivery / restock / old-stock entry |
 | `stock_movements` | `product_id`, `quantity_change` (±), `reason` (`opening`/`stock_in`/`sale`/`exchange_return`/`exchange_issue`), `ref_id`, `staff_id`, `note` | `ref_id` → receipt / sale / exchange |
 | `sales` | `operation_id`, `product_id`, snapshots (`sku`, `product_name`, `size`, `color`, `mrp_paise`, `cost_paise`), `quantity`, `unit_price_paise`, `total_paise`, `sold_by`, `recorded_by` | unique (store, operation_id); `qty > 0`; `0 < price ≤ mrp` |
 | `exchanges` | `operation_id`, `original_sale_id`, returned product/qty/unit price (price paid), issued product snapshot/qty/unit price/mrp, `difference_paise`, `credited_to`, `recorded_by` | unique (store, operation_id); quantities > 0; issued price ≤ MRP |
@@ -237,6 +238,8 @@ All tables carry `store_id` (FK `stores.id`, currently the single store `maa-col
 | `0004_product_images.sql` | product_images |
 | `0006_staff_language.sql` | staff.language `text` (nullable) — each person's screen language |
 | `0005_category_sizes.sql` | categories.sizes `text[] default '{}'` + default lists for known codes (only where empty) + Ladies Jeans (LJ) / Gents Jeans (GJ), skipped if present |
+| `0007` … `0009` | approvals / manual sales (0007), product tags (0008), offline sales (0009: drop `products_stock_nonnegative`, `sales.offline_at`) |
+| `0010_sections.sql` | plan v19 (V19-02a): `sections`; `categories.section_id`, `categories.name_hi`; unique (store, section_id, name) **replaces** (store, name); `stock_receipts.stock_date`. **Data is set up separately** by `node scripts/backfill-sections.ts` (never from a page read) |
 
 ---
 
@@ -720,3 +723,17 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Below-zero counts | services | Every online decrement keeps its own guard (`gte(products.stock, qty)`: counter sale, exchange's new item, undoing an exchange). `clearAllStock` now resets every count that is not 0 (also below zero); its `pieces` counts only positive stock. |
 | Do not enable | `experimental.useOffline` (Next 16) | It keeps a failed Server Action pending in memory until the network returns instead of rejecting — the counter would never save the sale on the phone, and a closed app would lose it. The counter relies on the rejection (or its own timeout) to queue the sale. |
 | Tests | `src/server/services/offline-sales.test.ts`, `src/offline/offline.test.ts`, `e2e/offline.spec.ts` | E2E needs the built app for the helper test (it skips under `next dev`); `context.setOffline` also cuts the service worker off. Wait for the scan box focus before typing a scan. |
+
+## 29. Sections: Men / Women / Boys / Girls (plan v19, ADR-033) — V19-02a
+
+| Piece | Where | Notes |
+|---|---|---|
+| Values | `src/lib/sections.ts` | `DEFAULT_SECTIONS` (Men, Women, Boys, Girls with `nameHi`, icons), `STARTER_TYPES` per section (name, Hindi, usual code, sizes, other spellings), `SECTION_ICONS`, `typeKey`, `localName(row, locale)` (Hindi name when set), `typeLabel`. |
+| Service | `src/server/services/sections.ts` | `backfillSections(db, storeId, { dryRun })` — the **one-time** set-up: four sections; every existing category stays in *Needs sorting* (`section_id null`); a starter type is added only when no category in the shop has that name (any spelling in `also`); its usual code when free. Returns a report; a shop with sections is never changed. `listSections` (sections in `sort` order with types A–Z, plus `unsorted`), `unsortedCount`, `createSection` / `updateSection` (name, Hindi, picture, hide), `moveSection(id, 'up' \| 'down')`, `createType`, `addTypeSize`, `sectionOfType`. |
+| Categories | `src/server/services/catalog.ts` | `createCategory` / `updateCategory` take `sectionId` and `nameHi`; one name once per section (`assertFreeTypeName`); codes by `suggestSectionCode` — the type's own letters when free (`DU`), else section + type (`GJ`, `GJE`). `listCategories` adds `sectionName`, `sectionNameHi`, `nameHi`, ordered by section then name. |
+| New items | `src/server/services/products.ts` `resolveCategoryForNewItem` | Used by `createDesign`, `createProductsBatch` (Tag old stock) and `createProduct`: the category must be active **and** sit under an active section — errors `sec.err.needsSection` / `sec.err.hidden`. Editing, restocking or moving existing items still uses `resolveCategory` (a *Needs sorting* category keeps working for them). |
+| Script | `scripts/backfill-sections.ts` | `DATABASE_URL=… node scripts/backfill-sections.ts [--dry-run]` (Postgres or `pglite:<folder>`). Backup first. |
+| Seed | `src/db/seed.ts` | Dev / test data only: the four sections are created with the shop and every demo / sample category is placed (`SEED_SECTION`). The live shop is never sorted by a rule (D-V19-2). |
+| Words | `src/lib/i18n/modules/sections.ts` (`sec.*`) | Errors and *Needs sorting*. |
+| Tests | `src/server/services/sections.test.ts` (10) | Backfill on a live-shop shape (dry run, report, codes, Hindi), runs once, seed sorted, sections CRUD + reorder, types per section, codes, add size, **a new item needs both levels** on all three creation paths, hidden section refused, old items keep working. |
+| Not yet | screens | Categories screen (sections, *Needs sorting*, move) = V19-02b; New item steps = V19-03. **`main` now needs migration 0010 on Neon before its next deploy**, then the backfill script (planned for V19-04e, owner present). |

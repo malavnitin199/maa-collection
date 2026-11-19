@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
-import { categories, products, staff, stockMovements, stockReceipts, suppliers, type Product, type StockReceipt } from '@/db/schema';
+import { categories, products, sections, staff, stockMovements, stockReceipts, suppliers, type Product, type StockReceipt } from '@/db/schema';
 import { inStoreEan13, isValidEan13 } from '@/features/scanning/ean13';
 import type { MessageKey } from '@/lib/i18n';
 import { codeFromScan } from '@/lib/item-link';
@@ -244,6 +244,25 @@ async function resolveCategory(db: Db, storeId: string, categoryId: string) {
   return category;
 }
 
+/**
+ * Plan v19 (ADR-033): a NEW item needs both levels — its type must sit under a
+ * section (Men / Women / Boys / Girls …) that is not hidden. Editing or moving
+ * existing items uses `resolveCategory`: a category made before sections
+ * ("Needs sorting") keeps working for them.
+ */
+async function resolveCategoryForNewItem(db: Db, storeId: string, categoryId: string) {
+  const category = await resolveCategory(db, storeId, categoryId);
+  if (!category.sectionId) throw new DomainError('Sort this category under Men, Women, Boys or Girls first (Categories).', { key: 'sec.err.needsSection' });
+  const [section] = await db
+    .select({ id: sections.id, active: sections.active })
+    .from(sections)
+    .where(and(eq(sections.storeId, storeId), eq(sections.id, category.sectionId)))
+    .limit(1);
+  if (!section) throw new DomainError('Sort this category under Men, Women, Boys or Girls first (Categories).', { key: 'sec.err.needsSection' });
+  if (!section.active) throw new DomainError('This section is hidden. Bring it back in Categories first.', { key: 'sec.err.hidden' });
+  return category;
+}
+
 async function resolveSupplier(db: Db, storeId: string, supplierId: string) {
   const [supplier] = await db
     .select()
@@ -275,7 +294,7 @@ export async function createProduct(
   let category = input.category;
   let prefix = skuPrefix(input.category);
   if (input.categoryId) {
-    const row = await resolveCategory(db, storeId, input.categoryId);
+    const row = await resolveCategoryForNewItem(db, storeId, input.categoryId);
     category = row.name;
     prefix = skuPrefix(row.code);
   }
@@ -395,7 +414,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   if (!Number.isInteger(input.quantityEach) || input.quantityEach < 0 || input.quantityEach > 10_000) {
     throw new DomainError('Pieces per size/colour must be 0 or more.', { key: 'stk.err.piecesEach' });
   }
-  const category = await resolveCategory(db, storeId, input.categoryId);
+  const category = await resolveCategoryForNewItem(db, storeId, input.categoryId);
   await resolveSupplier(db, storeId, input.supplierId);
 
   const clash = await db
@@ -607,7 +626,7 @@ export async function createProductsBatch(
   const existing = await findReceiptByOperation(db, storeId, input.operationId);
   if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
 
-  const category = await resolveCategory(db, storeId, input.categoryId);
+  const category = await resolveCategoryForNewItem(db, storeId, input.categoryId);
   const supplier = input.supplierId ? await resolveSupplier(db, storeId, input.supplierId) : null;
   const brand = input.brand?.trim() || supplier?.name || 'Unbranded';
   const tags = resolveTags(input);

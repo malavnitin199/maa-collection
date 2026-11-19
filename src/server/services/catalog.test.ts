@@ -20,6 +20,7 @@ import {
 } from './catalog';
 import { bulkUpdateProducts, createDesign, findProductByCode, getReceiptForLabels, listDesignVariants, listProducts, productsByIds, receiveStock, setDesignTags, updateDesignRates } from './products';
 import { recordSale } from './sales';
+import { listSections } from './sections';
 import { listStaff } from './staff';
 
 let db: Db;
@@ -440,7 +441,9 @@ describe('product photos', () => {
 describe('tag old stock', () => {
   it('creates an item without a company, and lists my labels from today', async () => {
     const { createProductsBatch, getMyLabelsToday } = await import('./products');
-    const dupatta = await createCategory(db, STORE_ID, { name: 'Dupatta' });
+    // Plan v19: a new item needs a category under a section.
+    const women = (await listSections(db, STORE_ID)).sections.find((s) => s.name === 'Women')!;
+    const dupatta = await createCategory(db, STORE_ID, { name: 'Dupatta', sectionId: women.id });
     const result = await createProductsBatch(db, STORE_ID, {
       operationId: 'old-1', categoryId: dupatta.id, staffId: owner, note: 'Old stock',
       rows: [{ name: 'Phulkari Dupatta', color: 'Orange', mrpPaise: 89900, pricePaise: 79900, costPaise: null, quantity: 4 }],

@@ -3,8 +3,10 @@ import { DUMMY_CATALOG } from '../features/catalog/dummy-catalog.ts';
 import { STORE_ID, STORE_NAME, STORE_TIMEZONE } from '../lib/app-config.ts';
 import { hashPin, randomPin } from '../server/security/pin.ts';
 import type { Db } from './client.ts';
-import { categories, products, staff, stockMovements, stores, suppliers } from './schema/index.ts';
+import { categories, products, sections, staff, stockMovements, stores, suppliers } from './schema/index.ts';
 import { DEFAULT_CATEGORY_SIZES } from '../lib/size-lists.ts';
+import { DEFAULT_SECTIONS, type DefaultSectionKey } from '../lib/sections.ts';
+import { eq } from 'drizzle-orm';
 
 /** Owner's staff list (plan v2, D-ST-1). The admin can add more in the app. */
 export const SEED_STAFF = [
@@ -17,6 +19,37 @@ export const SEED_STAFF = [
 
 /** PIN for every seeded account in local dev and tests ONLY (never production). */
 export const DEV_PIN = '1234';
+
+/**
+ * Plan v19: which section each demo / sample category sits under. Dev and test
+ * data only — the live shop's categories are sorted by the owner (D-V19-2).
+ */
+const SEED_SECTION: Record<string, DefaultSectionKey> = {
+  'T-Shirt': 'men',
+  Kurta: 'men',
+  Jeans: 'men',
+  Shirt: 'men',
+  'Gents Jeans': 'men',
+  Saree: 'women',
+  Dress: 'women',
+  Kurti: 'women',
+  Lehenga: 'women',
+  Dupatta: 'women',
+  Leggings: 'women',
+  'Night Suit': 'women',
+  'Ladies Jeans': 'women',
+};
+
+/** The shop's sections by default key (empty when the shop has none yet). */
+async function sectionIds(db: Db): Promise<Partial<Record<DefaultSectionKey, string>>> {
+  const rows = await db.select({ id: sections.id, name: sections.name }).from(sections).where(eq(sections.storeId, STORE_ID));
+  const out: Partial<Record<DefaultSectionKey, string>> = {};
+  for (const d of DEFAULT_SECTIONS) {
+    const row = rows.find((r) => r.name === d.name);
+    if (row) out[d.key] = row.id;
+  }
+  return out;
+}
 
 const OPENING_STOCK: Record<string, number> = {
   'MAA-TS-001': 3,
@@ -55,6 +88,15 @@ export async function seedDemoData(
       )
       .returning();
     const owner = people.find((p) => p.role === 'admin');
+    // Plan v19: the four sections, then the demo categories under them.
+    const sectionRows = await tx
+      .insert(sections)
+      .values(DEFAULT_SECTIONS.map((s, i) => ({ storeId: STORE_ID, name: s.name, nameHi: s.nameHi, icon: s.icon, sort: i + 1 })))
+      .returning();
+    const sectionId = (name: string) => {
+      const key = SEED_SECTION[name];
+      return key ? (sectionRows.find((s) => s.name === DEFAULT_SECTIONS.find((d) => d.key === key)!.name)?.id ?? null) : null;
+    };
     const categoryNames = [...new Set(DUMMY_CATALOG.map((item) => item.category))];
     const categoryRows = await tx
       .insert(categories)
@@ -62,7 +104,7 @@ export async function seedDemoData(
         categoryNames.map((name) => {
           // Matches the demo SKUs: T-Shirt → TS, Kurta → KU, …
           const code = (name.toUpperCase().replace(/[^A-Z]/g, '') + 'XX').slice(0, 2);
-          return { storeId: STORE_ID, name, code, sizes: DEFAULT_CATEGORY_SIZES[code] ?? [] };
+          return { storeId: STORE_ID, name, code, sizes: DEFAULT_CATEGORY_SIZES[code] ?? [], sectionId: sectionId(name) };
         }),
       )
       .returning();
@@ -132,9 +174,10 @@ export async function addSampleCatalog(db: Db): Promise<{ suppliers: number; cat
     .values(SAMPLE_SUPPLIERS.map((s) => ({ storeId: STORE_ID, ...s })))
     .onConflictDoNothing()
     .returning({ id: suppliers.id });
+  const ids = await sectionIds(db);
   const addedCategories = await db
     .insert(categories)
-    .values(SAMPLE_CATEGORIES.map((c) => ({ storeId: STORE_ID, ...c, sizes: DEFAULT_CATEGORY_SIZES[c.code] ?? [] })))
+    .values(SAMPLE_CATEGORIES.map((c) => ({ storeId: STORE_ID, ...c, sizes: DEFAULT_CATEGORY_SIZES[c.code] ?? [], sectionId: (SEED_SECTION[c.name] && ids[SEED_SECTION[c.name]]) ?? null })))
     .onConflictDoNothing()
     .returning({ id: categories.id });
   return { suppliers: addedSuppliers.length, categories: addedCategories.length };
