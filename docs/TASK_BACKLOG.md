@@ -137,7 +137,7 @@
 - [x] **V2-11** Plan v16 (2026-11-17): **Bahi theme** (billing-app look, default; dye themes still selectable) — owner feedback pending. `docs/PLAN_V16_BAHI_THEME.md`, ADR-026.
 - [x] **V2-12** Plan v17 (2026-11-18/19): **Essential Home** (4 actions + today's sales); Add stock = **New item** + 2 other ways; New item and the product page in one **minimal layout** (name, category, size pills, For / Age tags, photo on the right; company, sale and purchase price; top tabs Details · Colours · Other details); **+ Add next item**; For / Age tags stored per design (migration 0008); forms clear after saving. `docs/PLAN_V17_ESSENTIAL_HOME_NEW_ITEM.md`, ADR-027.
 - [x] **V2-13** Plan v18 (2026-11-19): **selling without internet** (phone's copy of the items, sales saved on the phone and sent by themselves, offline helper) and a **bigger header**. `docs/PLAN_V18_OFFLINE_COUNTER.md`, ADR-032.
-- [ ] **V19** Plan v19 (approved 2026-11-19, ADR-033): category-first New item, Products, product page, company bills, salesperson profiles — tasks V19-00 … V19-08 in `docs/PLAN_V19_PRODUCT_MANAGEMENT.md`. **V19-00** (untangle: v18 committed + deployed alone, v19 code on branch `v19-sections`) — in progress 2026-11-19.
+- [ ] **V19** Plan v19 (approved 2026-11-19, ADR-033): category-first New item, Products, product page, company bills, salesperson profiles — tasks V19-00 … V19-08 in `docs/PLAN_V19_PRODUCT_MANAGEMENT.md`. **V19-00** (untangle: v18 committed + deployed alone, v19 code on branch `v19-sections`) — **done 2026-11-19**; next **V19-02a**.
 
 ## Suggested next tasks
 
