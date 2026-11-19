@@ -1,6 +1,6 @@
 # Plan v19 — Product management: category-first New item, Products, Companies, Salesperson profiles
 
-**Status: APPROVED by the owner on 2026-11-19 (ADR-033) — all recommendations in §7 taken (D-V19-1…5) and V19-00 approved. Each task still becomes DONE only when its acceptance criteria pass.**
+**Status: APPROVED by the owner on 2026-11-19 (ADR-033) — all recommendations in §7 taken (D-V19-1…5) and V19-00 approved; D-V19-6 confirmed 2026-11-19 (ADR-034). Done: V19-00, 02a, 02b, 02c. Next: V19-03a. Each task still becomes DONE only when its acceptance criteria pass.**
 
 Owner brief (2026-11-19): redesign the whole product-management experience, starting with **Product Addition** as a guided flow — *Who is it for?* → *What is it?* → *Sizes and pieces* → *Details* → *Review, save, print tags* — then the Products list and product page, then company bills and purchasing reports, then salesperson profiles. One functionality at a time; nothing is DONE until its acceptance criteria pass.
 
@@ -118,7 +118,7 @@ Step 5  Review                 Name · Men › Jeans · Company
                                [Save & print tags]  [Save & add next]  [Save]
 ```
 
-- *One item* = the same screens, but step 4 asks for one size and its pieces only (quick single entry). *Many items* = the full size grid and *Save & add next* for the next product of the same bill (open point **D-V19-6**, §7: this is the recommended meaning; the owner may mean something else).
+- *One item* = the same screens, but step 4 asks for one size and its pieces only (quick single entry). *Many items* = the full size grid and *Save & add next* for the next product of the same bill (**D-V19-6**, confirmed 2026-11-19, ADR-034).
 - Default sizes per type come from `categories.sizes` (jeans 28 / 30 / 32 / 34 / 36, shirts M / L / XL / XXL, …); the owner edits them in Categories (02b) or adds one inline in step 4 (03d).
 - One purchase price per piece for the whole product (all sizes), as today; a size's own price stays possible later on the product page (ADR-013).
 - Colour: **no colour step in the wizard** (owner, 2026-11-19); new items store an empty colour (D-V19-3) and colour stays editable on the product page.
@@ -179,7 +179,7 @@ Integer paise only (unchanged). All stock changes still go through `insertNewPro
 | **D-V19-3** | Item without a colour | (a) store empty, show nothing on tags / counter / lists · (b) keep showing **Assorted** (today) | (a) for new items; existing *Assorted* rows untouched |
 | **D-V19-4** | For / Age tags (ADR-027) now that sections exist | (a) retire the tag UI, keep the columns and show a legacy value read-only · (b) keep both | (a) |
 | **D-V19-5** | Brand left empty | (a) stays empty (counter shows no brand) · (b) company's name as today | (a) |
-| **D-V19-6** (open, 2026-11-19) | The start screen's two choices, *One item* vs *Many items*: what does each mean? | (a) same steps; *One item* asks for one size + pieces, *Many* shows the full size grid and *Save & add next* for the next product of the bill · (b) *Many* = several different products on one screen (old Quick add table) | (a) — one flow to learn, one set of tests; (b) brings back the all-at-once form the owner rejected. Not blocking 02b; needed before 03a |
+| **D-V19-6** | The start screen's two choices, *One item* vs *Many items*: what does each mean? | (a) same steps; *One item* asks for one size + pieces, *Many* shows the full size grid and *Save & add next* for the next product of the bill · (b) *Many* = several different products on one screen (old Quick add table) | (a) — **confirmed by the owner 2026-11-19 (ADR-034)** |
 
 Process approval needed too: **V19-00** (commit v18 alone, run 0009 on Neon, deploy v18, park v19 code on a branch) — see §8.
 
@@ -199,7 +199,7 @@ Remaining checks on real data before V19-02: count categories, products with `ca
 ### V19-02 Category foundation (data + owner tools)
 - **02a** ✅ done 2026-11-19 (see PROGRESS). Schema + backfill in **one** migration `0010_sections` (`name_hi` included, no 0011); explicit `backfillSections` + script; no lazy set-up; `createDesign` / `createProductsBatch` / `createProduct` require an active section. Refinements agreed in code: a starter type is never added when the shop already has a category with that name (any spelling), so sorting an existing type never collides; codes keep the type's own letters when free (DU), else section + type (GJ). Unit tests: both levels required on all three paths; same type name under two sections; duplicate within a section refused; rename / hide keeps items; legacy items still restock / move. **Migration 0010 must reach Neon before the next deploy of `main`** (planned with the backfill at 04e, owner present).
 - **02b** ✅ done 2026-11-19 (see PROGRESS). Categories screen: section **tiles on top** (picture, local name, count; `?s=` in the address), the chosen section's card (rename, Hindi name, picture tiles, **▲ / ▼**, *Shown in New item* = hide / bring back), its categories (Hindi name, code, sizes, counts, *Under* box), **Needs sorting** tile with *Move under… → Move*, *+ Add section*. `moveType` on the server. E2E desktop + phone (Hindi by `localName`, both dictionaries complete). Seed gained one unsorted category (*Dress Material*).
-- **02c** Docs: ADRs for D-V19-1…5, reference §29, user guide, PROGRESS.
+- **02c** ✅ done 2026-11-19: ADR-034 (clarified flow + D-V19-6), reference §29, user guide §4 *Categories* + owner checklist, project context, PROGRESS. No code change.
 - **Acceptance:** owner can create the full Men / Women / Boys / Girls tree with the brief's example types and sizes without a developer; no product row changed by the migration (row count and checksums equal before / after).
 
 ### V19-03 Category-first New item UX

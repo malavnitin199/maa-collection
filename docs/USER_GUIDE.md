@@ -148,6 +148,16 @@ Good to know:
 - **Tag old stock**: 1–4 photos, as before.
 - If a photo fails (e.g. weak signal), the items are still saved; the labels page says so — add it later on the item's page → Photos.
 
+### Categories: Men, Women, Boys, Girls (plan v19)
+
+**Menu → Categories.** The shop's items are sorted two ways: first **who it is for** (a *section*: **Men, Women, Boys, Girls** — you can add more, e.g. *Kids*), then **what it is** (a *category*: Jeans, Shirt, Kurti, Saree …). The New item screens will ask these two questions first.
+
+- **The tiles on top** are the sections, in your shop's order, each with its picture and how many categories it has. Tap one to see its categories. The first tile opens by itself.
+- **The section card**: ▲ / ▼ move it up or down in the order; **Edit section** → English name, **Hindi name** (shown when the phone is in Hindi), **picture**, and **Shown in New item** — untick it to hide a section (its categories and items stay; tick again to bring it back).
+- **+ Add category** adds one under the tile you are on (the **Under** box lets you pick another section). Give it a **Hindi name** too if you like. Tap a category → **Edit** for its name, code, sizes and section.
+- **+ Add section** at the bottom: name, Hindi name, picture.
+- **Needs sorting**: this tile appears only while some categories are under no section yet (your old categories after the update). On each row choose **Move under → Women** (for example) and tap **Move**; the row leaves the list and the tile disappears when everything is sorted. **Until a category is sorted, New item will not accept it** — it says *Sort this category under Men, Women, Boys or Girls first*. Sorting takes a couple of minutes once.
+
 ### Sizes of each category
 
 Each category has its sizes, set by the owner in **Categories** (tap a category → *Sizes*, or a preset: S–XXL, M–XXL, Ladies 26–32, Gents 28–36, Free). Starting lists: shirts, T-shirts, dresses, night suits S–XXL; kurtas and kurtis M–XXL; **Ladies Jeans** 26–32 and **Gents Jeans** 28–36 (separate categories); sarees and dupattas Free. When you add stock, **choose the category first** — its sizes are shown first (tap *Pick all* for every size); other sizes are under *More sizes*.
@@ -192,7 +202,7 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 
 ## 5. Owner set-up checklist
 
-1. **Companies** (Menu → Companies) and **categories** (Menu → Categories, each with a 2-letter code used in SKUs).
+1. **Companies** (Menu → Companies) and **categories** (Menu → Categories: sort each under **Men / Women / Boys / Girls** — empty the *Needs sorting* tile once — each category has a 2-letter code used in SKUs and its sizes).
 2. **Staff & permissions** (More → Staff & permissions): **Add a person** (name, role, PIN); **Set PIN** to change a PIN; tick extra rights per salesman; **Remove** someone who left (asks once — they can't log in any more, their past sales stay) and **Bring back** from *Removed staff* if needed.
 3. **Settings → Code price** (optional): a 10-letter word with no repeated letters. Labels then show the purchase price in letters, e.g. BLACKHORSE: ₹450 = **CKE**.
 4. Add stock (or let the catalog person tag old stock).
