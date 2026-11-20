@@ -51,7 +51,9 @@ Every box for words (product name, brand, company name, notes, category names…
 
 Spellings made from English letters are phonetic; for an exact Hindi spelling, speak it or use the Hindi keyboard.
 
-**Long forms start fresh.** New item, the old form and Tag old stock clear themselves when you come back to them later, so old half-typed details never linger. **↺ Start again** at the top clears the form right away (it asks once if something is typed).
+**Long forms start fresh — or ask.** New item, the old form and Tag old stock clear themselves when you come back to them later, so old half-typed details never linger. If you had already filled in three or more steps (name, price, sizes), the form asks instead: **Continue where I left off** or **Start a fresh collection / item**. **↺ Start again** at the top clears the form right away (it asks once if something is typed).
+
+**The Done ✓ card.** Whenever something is saved — a sale, a company, a category, new items, a tagged item, a payment — a card pops up with a green tick and the details (for a sale: pieces, price, who gets the credit, whether it is approved or waiting for the owner, stock left). If something could **not** be saved, the card is red with a cross and the reason. It closes by itself, or tap anywhere.
 
 ## 2. Who can do what
 

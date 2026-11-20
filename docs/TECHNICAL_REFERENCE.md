@@ -780,3 +780,13 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Form | `src/features/catalog/product-form.tsx` `Field` | `words` prop → `LangText` (name, brand, colour); numbers stay plain. |
 | Tests | `e2e/product-page.spec.ts` | Figures after a bill through the old form, the row, Sales empty, Purchases arrival + history, Hindi / English box in Other details, an empty period. |
 
+## 33. Done card and ask-or-reset on return (2026-11-20, ADR-038)
+
+| Part | Where | Notes |
+|---|---|---|
+| Card | `src/features/feedback/effects.tsx` `DoneOverlay(DoneInput & { onClose })` | `DoneInput = { kind?, title, amount?, detail?, lines?: { label, value }[], stay? }`. Portal to `document.body` (client only via `useSyncExternalStore`), `data-testid="done-overlay"`, `data-kind`, `done-lines` list, closes on timer / pointerdown / keydown. No `role="alert"` (the form's inline message is the alert). Styles in `feedback.css` (`fb-card`, `fb-shake` for errors). |
+| Hooks | same file | `useDone()` → `{ show(input), node, close }` (plays `feedback('done' \| 'error')`). `useFormDone(action, { notSaved, describe(formData, result) })` → `{ action, node }` for `useActionState` forms. |
+| Users | `setup-forms.tsx` (Supplier / Category / Section forms), `company-parts.tsx` (`usePaymentDone`), `company-picker.tsx`, `new-item-wizard.tsx` (saves, sheets; replaced the green toast — `saved-toast` is gone), `old-stock-form.tsx`, `created-done.tsx` (tags page, mounted with `open` state, no setState in effect), `pos-screen.tsx` (`saleLines`, `done.saleWaiting`, red card on a refused sale) | Numbers in lines are formatted on the client from what was typed or returned. |
+| Ask-or-reset | `src/features/forms/fresh-on-return.ts`, `resume-sheet.tsx` | `useFreshOnReturn(reset, { ask? })` → `{ asking, keep, fresh }`; `ResumeSheet({ asking, what: 'collection' \| 'item', onKeep, onFresh })` (`data-testid="resume-sheet"`). Rules: wizard `reached >= 2 && (name \|\| mrp \|\| sizes)`; old form `name && (mrp \|\| sizes)`; Tag old stock `name && mrp`. |
+| Tests | `e2e/done-card.spec.ts`, `e2e/typing.spec.ts` (resume rule), `e2e/new-item-wizard.spec.ts` (card instead of toast), `e2e/pos.spec.ts` / `offline.spec.ts` (unchanged: title + amount) | Close the card with `page.keyboard.press('Escape')`, never `click()` (it vanishes under the pointer). After a save inside a `<details>`, `goto` the page again before reopening the panel. |
+
