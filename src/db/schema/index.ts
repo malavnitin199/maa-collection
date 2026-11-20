@@ -77,6 +77,8 @@ export const supplierPayments = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     storeId: text('store_id').notNull().references(() => stores.id),
+    /** Idempotency key from the form: a double tap records one payment. */
+    operationId: text('operation_id').notNull(),
     supplierId: uuid('supplier_id').notNull().references(() => suppliers.id),
     billNumber: text('bill_number'),
     amountPaise: integer('amount_paise').notNull(),
@@ -86,7 +88,11 @@ export const supplierPayments = pgTable(
     staffId: uuid('staff_id').notNull().references(() => staff.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('supplier_payments_supplier_idx').on(t.supplierId, t.paidOn), check('supplier_payments_amount_positive', sql`${t.amountPaise} > 0`)],
+  (t) => [
+    uniqueIndex('supplier_payments_store_operation_uq').on(t.storeId, t.operationId),
+    index('supplier_payments_supplier_idx').on(t.supplierId, t.paidOn),
+    check('supplier_payments_amount_positive', sql`${t.amountPaise} > 0`),
+  ],
 );
 
 /**

@@ -38,9 +38,10 @@ export function plural(t: T, base: PluralBase, n: number, vars: Vars = {}): stri
 /** English translate function — the default for code that runs before a person's language is known. */
 export const tEnglish: T = makeT(en);
 
-type DateStyle = 'date' | 'dateTime' | 'dayMonth' | 'time' | 'dayTime';
+type DateStyle = 'date' | 'dateTime' | 'dayMonth' | 'time' | 'dayTime' | 'month';
 const DATE_OPTIONS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   date: { dateStyle: 'medium', timeZone: 'Asia/Kolkata' },
+  month: { month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' },
   dateTime: { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' },
   time: { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' },
   dayTime: { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' },

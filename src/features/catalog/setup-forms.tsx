@@ -45,6 +45,7 @@ export type SupplierValues = {
   phone: string | null;
   gstin: string | null;
   notes: string | null;
+  location?: string | null;
   active: boolean;
 };
 
@@ -66,6 +67,7 @@ export function SupplierForm({ action, initial, submitLabel }: { action: Action;
         autoCapitalize="characters"
         hint={t('cat.supf.gstinHint')}
       />
+      <Text label={t('cat.supf.location')} name="location" defaultValue={initial?.location} maxLength={80} />
       <Text label={t('cat.supf.notes')} name="notes" defaultValue={initial?.notes} placeholder={t('cat.supf.notesPlaceholder')} />
       {initial && (
         <label className="flex items-center gap-2 text-sm">

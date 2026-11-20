@@ -10,6 +10,9 @@ import { requirePermission } from '@/server/auth';
 import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listSuppliers } from '@/server/services/catalog';
+import { companySummaries } from '@/server/services/company';
+import { formatPaise } from '@/lib/money';
+import { can } from '@/lib/permissions';
 import { formatDate } from '@/lib/i18n';
 
 
@@ -26,9 +29,11 @@ async function AddSupplier() {
 }
 
 async function SupplierList() {
-  const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
+  const [me, t] = await Promise.all([requirePermission('catalog'), getT()]);
   const locale = await getLocale();
-  const rows = await listSuppliers(await requestDb(), STORE_ID);
+  const db = await requestDb();
+  const showMoney = can(me, 'costs');
+  const [rows, summaries] = await Promise.all([listSuppliers(db, STORE_ID), companySummaries(db, STORE_ID, { amounts: showMoney })]);
   if (rows.length === 0) {
     return <p className={`text-sm ${muted}`}>{t('cat.sup.none')}</p>;
   }
@@ -54,6 +59,13 @@ async function SupplierList() {
                 {t('cat.productsInStock', { products: s.productCount, pcs: s.stockUnits })}
                 {s.lastReceiptAt && ` · ${t('cat.sup.lastDelivery', { date: formatDate(locale, s.lastReceiptAt, 'date') })}`}
               </span>
+              {summaries.get(s.id) && (
+                <span className={`block text-xs ${summaries.get(s.id)!.duePaise ? 'text-amber-700 dark:text-amber-300' : muted}`}>
+                  {showMoney
+                    ? t('cat.sup.billsDues', { bills: summaries.get(s.id)!.bills, amount: formatPaise(summaries.get(s.id)!.duePaise ?? 0) })
+                    : t('cat.sup.bills', { bills: summaries.get(s.id)!.bills })}
+                </span>
+              )}
             </span>
             <span aria-hidden className={muted}>
               ›

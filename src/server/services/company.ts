@@ -4,7 +4,7 @@ import { categories, products, sections, staff, stockMovements, stockReceipts, s
 import { STORE_TIMEZONE } from '@/lib/app-config';
 import { inRange, type DayRange } from '@/lib/company-period';
 import { designKey } from '@/lib/design-groups';
-import { DomainError } from './errors';
+import { DomainError, isUniqueViolation } from './errors';
 import { cleanStockDate, shopToday } from './products';
 
 /**
@@ -257,6 +257,7 @@ export async function listPayments(db: Db, storeId: string, supplierId: string):
     .select({
       id: supplierPayments.id,
       storeId: supplierPayments.storeId,
+      operationId: supplierPayments.operationId,
       supplierId: supplierPayments.supplierId,
       billNumber: supplierPayments.billNumber,
       amountPaise: supplierPayments.amountPaise,
@@ -272,10 +273,14 @@ export async function listPayments(db: Db, storeId: string, supplierId: string):
     .orderBy(desc(supplierPayments.paidOn), desc(supplierPayments.createdAt));
 }
 
-export type PaymentInput = { supplierId: string; amountPaise: number; paidOn?: string | null; billNumber?: string | null; note?: string | null; staffId: string };
+export type PaymentInput = { operationId: string; supplierId: string; amountPaise: number; paidOn?: string | null; billNumber?: string | null; note?: string | null; staffId: string };
 
-/** Records money paid to a company. The day defaults to today (shop time). Up to ₹1 crore at a time. */
-export async function addPayment(db: Db, storeId: string, input: PaymentInput): Promise<SupplierPayment> {
+/**
+ * Records money paid to a company. The day defaults to today (shop time); up to
+ * ₹1 crore at a time. The same operation id again returns the first payment.
+ */
+export async function addPayment(db: Db, storeId: string, input: PaymentInput): Promise<SupplierPayment & { duplicate: boolean }> {
+  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
   if (!Number.isSafeInteger(input.amountPaise) || input.amountPaise <= 0 || input.amountPaise > 1_000_000_000) {
     throw new DomainError('Enter the amount paid (₹1 to ₹1 crore).', { key: 'cat.err.paymentAmount' });
   }
@@ -287,8 +292,22 @@ export async function addPayment(db: Db, storeId: string, input: PaymentInput): 
   }
   const billNumber = input.billNumber?.trim().slice(0, 40) || null;
   const note = input.note?.trim().slice(0, 200) || null;
-  const [created] = await db.insert(supplierPayments).values({ storeId, supplierId: input.supplierId, amountPaise: input.amountPaise, paidOn, billNumber, note, staffId: input.staffId }).returning();
-  return created;
+  try {
+    const [created] = await db
+      .insert(supplierPayments)
+      .values({ storeId, operationId: input.operationId, supplierId: input.supplierId, amountPaise: input.amountPaise, paidOn, billNumber, note, staffId: input.staffId })
+      .returning();
+    return { ...created, duplicate: false };
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    const [existing] = await db
+      .select()
+      .from(supplierPayments)
+      .where(and(eq(supplierPayments.storeId, storeId), eq(supplierPayments.operationId, input.operationId)))
+      .limit(1);
+    if (!existing) throw error;
+    return { ...existing, duplicate: true };
+  }
 }
 
 /** For the companies list: bills, pieces, purchases and dues of every company. */

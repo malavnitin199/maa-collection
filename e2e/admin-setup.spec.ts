@@ -527,6 +527,7 @@ test('company box: add a company on the spot, the same name is reused, a hidden 
   // Hide it: Suppliers → the company → untick Active.
   await page.goto('/admin/suppliers');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(fresh) }).click();
+  await page.getByRole('tab', { name: 'Details', exact: true }).click(); // company page tabs (company accounts, 2026-11-20)
   await page.getByText('Edit supplier details').click();
   await page.getByLabel(/^Active/).uncheck();
   await page.getByRole('button', { name: 'Save changes' }).click();

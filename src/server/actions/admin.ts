@@ -14,6 +14,7 @@ import type { MessageKey } from '@/lib/i18n';
 import { errorText, getLocale, getT } from '@/server/i18n';
 import { localName } from '@/lib/sections';
 import { addTypeSize, backfillSections, createSection, createType, moveSection, moveType, updateSection } from '@/server/services/sections';
+import { addPayment } from '@/server/services/company';
 import { DomainError } from '@/server/services/errors';
 import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
@@ -229,7 +230,29 @@ function supplierInput(formData: FormData): SupplierInput {
     phone: text(formData, 'phone'),
     gstin: text(formData, 'gstin'),
     notes: text(formData, 'notes'),
+    location: text(formData, 'location'),
   };
+}
+
+/** Company accounts (2026-11-20): money paid to a company, by people with the purchase-price right. */
+export async function addSupplierPaymentAction(supplierId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await requirePermission('costs');
+  try {
+    const amountPaise = money(formData, 'amount', 'purchase price');
+    await addPayment(await getDb(), STORE_ID, {
+      operationId: text(formData, 'operationId'),
+      supplierId,
+      amountPaise: amountPaise ?? 0,
+      paidOn: text(formData, 'paidOn') || null,
+      billNumber: text(formData, 'billNumber') || null,
+      note: text(formData, 'note') || null,
+      staffId: me.id,
+    });
+    revalidatePath('/admin', 'layout');
+    return { message: (await getT())('cat.acc.pay.saved') };
+  } catch (error) {
+    return failure(error);
+  }
 }
 
 export async function createSupplierAction(_prev: FormState, formData: FormData): Promise<FormState> {

@@ -1,5 +1,5 @@
 {
-  "id": "0570d2a0-2cf7-46a8-b7e3-c80c53f055e8",
+  "id": "1028c726-d4bc-4c45-8cd5-1d1cb61af78a",
   "prevId": "9ba2b176-e501-4426-bc8d-b86a34fe586b",
   "version": "7",
   "dialect": "postgresql",
@@ -1845,6 +1845,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "operation_id": {
+          "name": "operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "supplier_id": {
           "name": "supplier_id",
           "type": "uuid",
@@ -1890,6 +1896,27 @@
         }
       },
       "indexes": {
+        "supplier_payments_store_operation_uq": {
+          "name": "supplier_payments_store_operation_uq",
+          "columns": [
+            {
+              "expression": "store_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "operation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "supplier_payments_supplier_idx": {
           "name": "supplier_payments_supplier_idx",
           "columns": [

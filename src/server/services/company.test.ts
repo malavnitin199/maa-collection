@@ -76,9 +76,9 @@ describe('companyReport', () => {
   it('payments naming a bill close it; others sit on the account; dues = purchases − payments', async () => {
     await createDesign(db, STORE_ID, design({ billNumber: 'INV-1', stockDate: '2026-11-02' })); // ₹2000
     await createDesign(db, STORE_ID, design({ billNumber: 'INV-2', name: 'Anarkali', stockDate: '2026-11-05' })); // ₹2000
-    await addPayment(db, STORE_ID, { supplierId, amountPaise: 150000, billNumber: 'inv-1', paidOn: '2026-11-06', staffId: owner });
-    await addPayment(db, STORE_ID, { supplierId, amountPaise: 50000, billNumber: 'INV-1', paidOn: '2026-11-07', staffId: owner });
-    await addPayment(db, STORE_ID, { supplierId, amountPaise: 30000, paidOn: '2026-11-08', note: 'advance', staffId: owner });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 150000, billNumber: 'inv-1', paidOn: '2026-11-06', staffId: owner });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 50000, billNumber: 'INV-1', paidOn: '2026-11-07', staffId: owner });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 30000, paidOn: '2026-11-08', note: 'advance', staffId: owner });
 
     const r = await companyReport(db, STORE_ID, supplierId, { amounts: true });
     expect(r.bills.map((b) => [b.billNumber, b.status, b.paidPaise, b.duePaise])).toEqual([
@@ -97,7 +97,7 @@ describe('companyReport', () => {
   it('the period limits bills and payments by day; dues stay all-time', async () => {
     await createDesign(db, STORE_ID, design({ billNumber: 'OLD', stockDate: '2026-09-15' }));
     await createDesign(db, STORE_ID, design({ billNumber: 'NEW', name: 'Anarkali', stockDate: '2026-11-15' }));
-    await addPayment(db, STORE_ID, { supplierId, amountPaise: 100000, billNumber: 'OLD', paidOn: '2026-09-20', staffId: owner });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 100000, billNumber: 'OLD', paidOn: '2026-09-20', staffId: owner });
 
     const period = companyPeriod({ period: 'custom', from: '2026-11-01', to: '2026-11-30' }, '2026-11-20');
     const r = await companyReport(db, STORE_ID, supplierId, { amounts: true, period });
@@ -120,7 +120,7 @@ describe('companyReport', () => {
 
   it('hides every amount from people without the purchase-price right', async () => {
     await createDesign(db, STORE_ID, design({ billNumber: 'B1' }));
-    await addPayment(db, STORE_ID, { supplierId, amountPaise: 1000, staffId: owner });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 1000, staffId: owner });
     const r = await companyReport(db, STORE_ID, supplierId, { amounts: false });
     expect(r.totals.amountPaise).toBeNull();
     expect(r.totals.paidPaise).toBeNull();
@@ -133,12 +133,16 @@ describe('companyReport', () => {
 
 describe('addPayment', () => {
   it('refuses a bad amount or a future day; defaults the day to today and trims the bill number', async () => {
-    await expect(addPayment(db, STORE_ID, { supplierId, amountPaise: 0, staffId: owner })).rejects.toThrow(/amount/);
-    await expect(addPayment(db, STORE_ID, { supplierId, amountPaise: 12.5, staffId: owner })).rejects.toThrow(/amount/);
-    await expect(addPayment(db, STORE_ID, { supplierId, amountPaise: 100, paidOn: '2999-01-01', staffId: owner })).rejects.toThrow(/date/);
-    const made = await addPayment(db, STORE_ID, { supplierId, amountPaise: 100, billNumber: '  inv-9 ', staffId: owner });
+    await expect(addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 0, staffId: owner })).rejects.toThrow(/amount/);
+    await expect(addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 12.5, staffId: owner })).rejects.toThrow(/amount/);
+    await expect(addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 100, paidOn: '2999-01-01', staffId: owner })).rejects.toThrow(/date/);
+    const made = await addPayment(db, STORE_ID, { operationId: 'pay-once', supplierId, amountPaise: 100, billNumber: '  inv-9 ', staffId: owner });
     expect(made.paidOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(made.billNumber).toBe('inv-9');
+    // The same tap again (retried request): one payment, the first one back.
+    const again = await addPayment(db, STORE_ID, { operationId: 'pay-once', supplierId, amountPaise: 100, staffId: owner });
+    expect(again).toMatchObject({ id: made.id, duplicate: true });
+    expect((await companyReport(db, STORE_ID, supplierId, { amounts: true })).payments).toHaveLength(1);
   });
 });
 
@@ -150,7 +154,7 @@ describe('company location and the list', () => {
     expect((await listSuppliers(db, STORE_ID)).find((s) => s.id === supplierId)!.location).toBeNull();
 
     await createDesign(db, STORE_ID, design({ billNumber: 'B1' }));
-    await addPayment(db, STORE_ID, { supplierId, amountPaise: 50000, staffId: owner });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 50000, staffId: owner });
     const summary = (await companySummaries(db, STORE_ID, { amounts: true })).get(supplierId)!;
     expect(summary).toMatchObject({ bills: 1, pieces: 4, amountPaise: 200000, duePaise: 150000 });
     expect((await companySummaries(db, STORE_ID, { amounts: false })).get(supplierId)!.duePaise).toBeNull();
