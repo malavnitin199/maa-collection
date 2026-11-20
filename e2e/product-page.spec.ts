@@ -50,10 +50,12 @@ test('product page: figures, period, Sales and Purchases tabs, Hindi / English b
   await expect(page.getByTestId('product-profit')).toHaveText('₹0.00');
   await expect(figures).toContainText(`bill P-${run}`);
   // One row: company, prices, the two actions.
-  await expect(page.getByRole('link', { name: 'Shree Ganesh Textiles' })).toBeVisible();
-  await expect(page.getByText('MRP ₹1,299.00')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Print label' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Restock' })).toBeVisible();
+  const row = page.getByTestId('product-must-haves');
+  await expect(row.getByRole('link', { name: 'Shree Ganesh Textiles' })).toBeVisible();
+  await expect(row).toContainText('MRP ₹1,299.00');
+  await expect(row).toContainText('Purchase ₹400.00');
+  await expect(row.getByRole('button', { name: 'Print label' })).toBeVisible();
+  await expect(row.getByRole('link', { name: 'Restock' })).toBeVisible();
 
   // Tabs.
   await expect(page.getByRole('tab', { name: 'Details', exact: true })).toHaveAttribute('aria-selected', 'true');

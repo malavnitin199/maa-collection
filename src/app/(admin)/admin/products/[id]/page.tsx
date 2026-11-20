@@ -437,7 +437,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
       </div>
 
       {/* The must-haves in one row: company, prices, the two actions. */}
-      <section className={`${card} flex flex-col gap-3 print:hidden`}>
+      <section data-testid="product-must-haves" className={`${card} flex flex-col gap-3 print:hidden`}>
         <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
           {supplier ? (
             <Link href={`/admin/suppliers/${supplier.id}`} className={`${link} truncate font-semibold`}>
