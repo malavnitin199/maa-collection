@@ -11,6 +11,7 @@ import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { DoneOverlay } from '@/features/feedback/effects';
 import { feedback } from '@/features/feedback/sounds';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
+import { LangText } from '@/features/i18n/lang-text';
 import { useOnline } from '@/features/offline/hooks';
 import { formatWhen } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
@@ -337,7 +338,7 @@ export function PosScreen({
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('sell.byHand.name')}
-              <input value={handName} maxLength={80} placeholder={t('sell.byHand.namePlaceholder')} onChange={(e) => setHandName(e.target.value)} className={input} autoFocus />
+              <LangText value={handName} maxLength={80} placeholder={t('sell.byHand.namePlaceholder')} onValueChange={setHandName} autoFocus />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('sell.byHand.size')}

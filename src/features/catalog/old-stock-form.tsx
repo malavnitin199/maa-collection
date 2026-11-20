@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { LangText } from '@/features/i18n/lang-text';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { checkTagBarcodeAction, editTaggedItemAction, tagOldStockAction, type OldStockResult, type TagLookup } from '@/server/actions/admin';
 import { useT } from '@/features/i18n/i18n-provider';
@@ -326,7 +327,7 @@ export function OldStockForm({
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t('stk.old.productName')}
-          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('stk.old.namePlaceholder')} className={input} />
+          <LangText required value={name} onValueChange={setName} placeholder={t('stk.old.namePlaceholder')} />
         </label>
         <TagChooser
           value={tags}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { input, secondaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
+import { LangText } from '@/features/i18n/lang-text';
 import { addCompanyAction, restoreCompanyAction, type CompanyResult } from '@/server/actions/admin';
 
 type Company = { id: string; name: string };
@@ -104,11 +105,12 @@ export function CompanyPicker({
       {name && <input type="hidden" name={name} value={value} />}
       {adding && (
         <div className="flex gap-2">
-          <input
+          <LangText
             autoFocus
             aria-label={t('cat.company.newName')}
             value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+            onValueChange={setNewName}
+            className="min-w-0 flex-1"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -117,7 +119,6 @@ export function CompanyPicker({
               if (e.key === 'Escape') setAdding(false);
             }}
             placeholder={t('cat.company.newName')}
-            className={`w-full min-w-0 ${input}`}
           />
           <button type="button" onClick={add} disabled={busy || !newName.trim()} className={`${secondaryButton} shrink-0`}>
             {busy ? t('cat.company.adding') : t('cat.company.add')}

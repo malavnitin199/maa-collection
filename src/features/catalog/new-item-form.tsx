@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
+import { LangText } from '@/features/i18n/lang-text';
 import { GarmentArt } from '@/components/ui/art';
 import { Pill } from '@/components/ui/pill';
 import { card, errorBox, input, link, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
@@ -509,7 +510,7 @@ export function NewItemForm({
     <div className={`${card} flex flex-col gap-3`}>
       <label className={fieldLabel}>
         {t('stk.brand')}
-        <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={supplierName} className={input} />
+        <LangText value={brand} onValueChange={setBrand} placeholder={supplierName} />
       </label>
       <p className={`text-xs ${muted}`}>
         {t('stk.item.missing')}{' '}
@@ -537,13 +538,13 @@ export function NewItemForm({
       <section className={`${card} flex flex-col gap-3`}>
         <div className="flex items-start gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <input
+            <LangText
               required
               aria-label={t('stk.item.name')}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onValueChange={setName}
               placeholder={t('stk.item.name')}
-              className="w-full min-w-0 border-0 border-b-2 border-zinc-200 bg-transparent px-0 py-1 text-lg font-semibold placeholder:font-normal placeholder:text-zinc-400 focus:border-brand-600 focus:outline-none dark:border-zinc-700"
+              inputClassName="w-full min-w-0 flex-1 border-0 border-b-2 border-zinc-200 bg-transparent px-0 py-1 text-lg font-semibold placeholder:font-normal placeholder:text-zinc-400 focus:border-brand-600 focus:outline-none dark:border-zinc-700"
             />
             <select
               required

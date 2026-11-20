@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { LangText } from '@/features/i18n/lang-text';
 import { IconBack, IconChevron } from '@/components/ui/icons';
 import { ActionSheet, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
 import { card, errorBox, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
@@ -445,7 +446,7 @@ export function NewItemWizard({
           />
           <label className={field}>
             {t('stk.item.name')}
-            <input required value={name} onChange={(e) => setName(e.target.value)} maxLength={120} autoComplete="off" className={`${input} text-lg`} />
+            <LangText required value={name} onValueChange={setName} maxLength={120} autoComplete="off" inputClassName={`${input} min-w-0 flex-1 text-lg`} />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className={field}>
@@ -477,7 +478,7 @@ export function NewItemWizard({
               </label>
               <label className={field}>
                 {t('ni.brand')}
-                <input value={brand} onChange={(e) => setBrand(e.target.value)} maxLength={60} className={input} />
+                <LangText value={brand} onValueChange={setBrand} maxLength={60} />
               </label>
             </div>
           </details>
@@ -677,7 +678,7 @@ function AddSectionSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (
       >
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
           {t('ni.addSection.name')}
-          <input required autoFocus maxLength={30} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('ni.addSection.placeholder')} className={`${input} text-lg`} />
+          <LangText required autoFocus maxLength={30} value={name} onValueChange={setName} placeholder={t('ni.addSection.placeholder')} inputClassName={`${input} min-w-0 flex-1 text-lg`} />
         </label>
         <div role="radiogroup" aria-label={t('ni.addSection.picture')} className="grid grid-cols-5 gap-2">
           {SECTION_ICONS.map((key) => (
@@ -732,7 +733,7 @@ function AddTypeSheet({ section, onClose, onAdded }: { section: { id: string; na
       >
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
           {t('ni.addType.name')}
-          <input required autoFocus maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('ni.addType.placeholder')} className={`${input} text-lg`} />
+          <LangText required autoFocus maxLength={40} value={name} onValueChange={setName} placeholder={t('ni.addType.placeholder')} inputClassName={`${input} min-w-0 flex-1 text-lg`} />
         </label>
         <div role="group" aria-label={t('cat.sizes.presets')} className="flex flex-wrap gap-2">
           {SIZE_PRESETS.map((preset) => (

@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { errorBox, input, muted, okBox, primaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
+import { LangText } from '@/features/i18n/lang-text';
 import type { MessageKey } from '@/lib/i18n';
 import { SECTION_ICONS, type SectionIcon } from '@/lib/sections';
 import { SIZE_PRESETS } from '@/lib/size-lists';
@@ -20,19 +21,25 @@ function Feedback({ state }: { state: FormState }) {
   return null;
 }
 
+/** A text field. Words (names, notes) can be typed in Hindi or English (`LangText`); `plain` keeps a simple box (codes, numbers). */
 function Text({
   label,
   name,
   defaultValue,
   required,
   hint,
+  plain,
   ...rest
-}: { label: string; name: string; defaultValue?: string | null; required?: boolean; hint?: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'defaultValue'>) {
+}: { label: string; name: string; defaultValue?: string | null; required?: boolean; hint?: string; plain?: boolean } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'defaultValue' | 'onChange' | 'value'>) {
   return (
     <div className="flex flex-col gap-1">
       <label className="flex flex-col gap-1 text-sm font-medium">
         {label}
-        <input name={name} defaultValue={defaultValue ?? ''} required={required} className={input} {...rest} />
+        {plain || (rest.type && rest.type !== 'text') ? (
+          <input name={name} defaultValue={defaultValue ?? ''} required={required} className={input} {...rest} />
+        ) : (
+          <LangText name={name} defaultValue={defaultValue} required={required} force={rest.lang === 'hi' ? 'hi' : undefined} {...rest} />
+        )}
       </label>
       {hint && <span className={`text-xs ${muted}`}>{hint}</span>}
     </div>
@@ -62,6 +69,7 @@ export function SupplierForm({ action, initial, submitLabel }: { action: Action;
       <Text
         label={t('cat.supf.gstin')}
         name="gstin"
+        plain
         defaultValue={initial?.gstin}
         maxLength={15}
         autoCapitalize="characters"

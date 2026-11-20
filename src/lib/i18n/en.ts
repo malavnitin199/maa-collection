@@ -8,6 +8,7 @@ import { approvalsEn } from './modules/approvals.ts';
 import { offlineEn } from './modules/offline.ts';
 import { sectionsEn } from './modules/sections.ts';
 import { newItemEn } from './modules/newitem.ts';
+import { typingEn } from './modules/typing.ts';
 import { catalogEn } from './modules/catalog.ts';
 import { helpEn } from './modules/help.ts';
 import { ownerEn } from './modules/owner.ts';
@@ -303,7 +304,7 @@ const base = {
 } as const;
 
 /** All English text: the salesman screens above, plus the owner/catalog areas (one module each). */
-export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn, ...approvalsEn, ...offlineEn, ...sectionsEn, ...newItemEn } as const;
+export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn, ...approvalsEn, ...offlineEn, ...sectionsEn, ...newItemEn, ...typingEn } as const;
 
 export type MessageKey = keyof typeof en;
 export type Messages = Record<MessageKey, string>;
