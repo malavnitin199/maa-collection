@@ -51,3 +51,16 @@ test('New item: type a name in Hindi from English letters, change it back, the c
   await page.getByRole('button', { name: 'Type in English' }).first().click();
   await expect(company).toHaveAttribute('lang', 'en');
 });
+
+test('a microphone sits next to name boxes where the browser can listen; it says when nothing was heard', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'speech recognition is a Chromium feature');
+  await loginOwner(page);
+  await page.goto('/admin/suppliers');
+  await page.getByText('+ Add supplier').click();
+  const row = page.getByLabel('Company name').locator('..');
+  const mic = row.getByRole('button', { name: 'Speak to fill' });
+  await expect(mic).toBeVisible();
+  // No microphone in a test browser: the box explains instead of failing quietly.
+  await mic.click();
+  await expect(row.getByRole('alert').or(page.getByRole('button', { name: 'Listening… tap to stop' }))).toBeVisible();
+});

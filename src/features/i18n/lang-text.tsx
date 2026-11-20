@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore, type InputHTMLAttributes } from 'react';
 import { input as inputStyle } from '@/components/ui/styles';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
+import { SpeakButton } from '@/features/i18n/speak-button';
 import { convertLastWord, convertTrailingWord, toEnglish, toHindi } from '@/lib/transliterate';
 
 export type Script = 'en' | 'hi';
@@ -51,8 +52,8 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'defaultValue
   inputClassName?: string;
   /** Always this script (a Hindi-name field), no toggle. */
   force?: Script;
-  /** Extra buttons after the script ones (the microphone). */
-  extra?: React.ReactNode;
+  /** No microphone (a short code). */
+  noVoice?: boolean;
   testId?: string;
 };
 
@@ -61,10 +62,11 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'defaultValue
  * **अ / A** switches the script for every field on this phone: in Hindi, each
  * word typed in English letters becomes Devanagari when a space follows it
  * (the phone's Hindi keyboard works too). **⇄** changes what is already typed
- * to the other script. Works as a plain input (`name`, `defaultValue`) or
- * controlled (`value`, `onValueChange`).
+ * to the other script. The **microphone** fills the box by voice in that
+ * script. Works as a plain input (`name`, `defaultValue`) or controlled
+ * (`value`, `onValueChange`).
  */
-export function LangText({ value, defaultValue, onValueChange, inputClassName, className, force, extra, testId, onBlur, ...rest }: Props) {
+export function LangText({ value, defaultValue, onValueChange, inputClassName, className, force, noVoice, testId, onBlur, ...rest }: Props) {
   const t = useT();
   const [pref, setPref] = useTypingScript();
   const script = force ?? pref;
@@ -81,7 +83,7 @@ export function LangText({ value, defaultValue, onValueChange, inputClassName, c
     if (!force) setPref(other);
   };
   return (
-    <div className={`flex items-stretch gap-1 ${className ?? ''}`}>
+    <div className={`flex flex-wrap items-stretch gap-1 ${className ?? ''}`}>
       <input
         {...rest}
         value={text}
@@ -107,7 +109,7 @@ export function LangText({ value, defaultValue, onValueChange, inputClassName, c
           ⇄
         </button>
       )}
-      {extra}
+      {!noVoice && <SpeakButton script={script} text={text} onText={update} />}
     </div>
   );
 }
