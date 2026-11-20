@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
+import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
+import { StartOver } from '@/features/forms/start-over';
 import { LangText } from '@/features/i18n/lang-text';
 import { GarmentArt } from '@/components/ui/art';
 import { Pill } from '@/components/ui/pill';
@@ -241,6 +243,22 @@ export function NewItemForm({
     setSizeOwn({});
     setProgress(null);
   }
+
+  /** The whole form back to how it opened (company / category from the address kept). */
+  function startOver() {
+    clearItem();
+    setError(null);
+    setTags({ forGender: null, ageGroup: null });
+    setSupplierId(initialSupplierId ?? '');
+    setCategoryId(initialCategoryId ?? '');
+    const company = suppliers.find((s) => s.id === initialSupplierId)?.name ?? '';
+    setSupplierName(company);
+    setBrand(company);
+    window.scrollTo({ top: 0 });
+  }
+  // Coming back to this page later starts a fresh entry (owner's feedback 2026-11-20).
+  useFreshOnReturn(startOver);
+  const dirty = Boolean(name.trim() || mrp.trim() || sizes.length || colors.length || photo);
 
   function save() {
     setError(null);
@@ -534,6 +552,9 @@ export function NewItemForm({
       onChange={touched}
       className="flex flex-col gap-4"
     >
+      <div className="flex justify-end">
+        <StartOver onStartOver={startOver} dirty={dirty} />
+      </div>
       {/* Header: name, category and sizes on the left, the photo on the right; "for whom" tags below. */}
       <section className={`${card} flex flex-col gap-3`}>
         <div className="flex items-start gap-3">

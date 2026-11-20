@@ -64,3 +64,39 @@ test('a microphone sits next to name boxes where the browser can listen; it says
   await mic.click();
   await expect(row.getByRole('alert').or(page.getByRole('button', { name: 'Listening… tap to stop' }))).toBeVisible();
 });
+
+test('New item starts fresh when you come back to it, and "Start again" clears it on the spot', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: /^Many items/ }).click();
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurta/ }).click();
+  await page.getByLabel('Product name').fill('Half typed');
+
+  // Away through the app (the page stays alive) and back with the phone's back button: a fresh start.
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
+  await expect(page.getByRole('heading', { level: 2, name: 'What are you adding?' })).toBeVisible();
+
+  // Start again: asks once when something is typed, then everything is cleared.
+  await page.getByRole('button', { name: /^Many items/ }).click();
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurta/ }).click();
+  await page.getByLabel('Product name').fill('Half typed again');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByTestId('start-over').click();
+  await expect(page.getByRole('heading', { level: 2, name: 'What are you adding?' })).toBeVisible();
+  await page.getByRole('button', { name: /^Many items/ }).click();
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurta/ }).click();
+  await expect(page.getByLabel('Product name')).toHaveValue('');
+
+  // The earlier form too.
+  await page.goto('/admin/stock/form');
+  await page.getByLabel('Product name').fill('Old form half typed');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByTestId('start-over').click();
+  await expect(page.getByLabel('Product name')).toHaveValue('');
+});

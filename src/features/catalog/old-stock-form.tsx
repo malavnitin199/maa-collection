@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
+import { StartOver } from '@/features/forms/start-over';
 import { LangText } from '@/features/i18n/lang-text';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { checkTagBarcodeAction, editTaggedItemAction, tagOldStockAction, type OldStockResult, type TagLookup } from '@/server/actions/admin';
@@ -160,6 +162,19 @@ export function OldStockForm({
     // Category, company, size and For / Age stay: old stock is usually tagged shelf by shelf.
   }
 
+  /** Everything back to empty — also the category, company, size and tags that `nextItem` keeps. */
+  function startOver() {
+    nextItem();
+    setCategoryId('');
+    setSupplierId('');
+    setSize('');
+    setTags({ forGender: null, ageGroup: null });
+    setError(null);
+    window.scrollTo({ top: 0 });
+  }
+  // Coming back to this page later starts a fresh entry (owner's feedback 2026-11-20).
+  useFreshOnReturn(startOver);
+
   if (saved && !editing) {
     return (
       <div className="flex flex-col gap-4">
@@ -277,6 +292,9 @@ export function OldStockForm({
       onChange={touched}
       className="flex flex-col gap-4"
     >
+      <div className="flex justify-end">
+        <StartOver onStartOver={startOver} dirty={Boolean(name.trim() || mrp.trim() || photos.length)} />
+      </div>
       {count > 0 && !editing && (
         <p className={`text-sm ${muted}`}>
           {t('stk.old.soFar', { n: count })}{' '}

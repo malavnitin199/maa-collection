@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
+import { StartOver } from '@/features/forms/start-over';
 import { LangText } from '@/features/i18n/lang-text';
 import { IconBack, IconChevron } from '@/components/ui/icons';
 import { ActionSheet, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
@@ -176,6 +178,25 @@ export function NewItemWizard({
     setPrice('');
     setBrand('');
   };
+  /** Everything back to the first screen (what the address asked for stays: company, section, bill, date, mode). */
+  const startOver = () => {
+    clearItem();
+    setError(null);
+    setSheet(null);
+    setMode(initial.mode ?? 'many');
+    setSectionId(startSection);
+    setSupplierId(initial.supplierId ?? '');
+    setSupplierName(suppliers.find((s) => s.id === initial.supplierId)?.name ?? '');
+    setBillNumber(initial.billNumber ?? '');
+    setStockDate(initial.stockDate ?? '');
+    setReached(startSection ? 1 : 0);
+    setDirection('back');
+    setStep(startSection ? 'what' : 'start');
+    window.scrollTo({ top: 0 });
+  };
+  // Coming back to this page later starts a fresh entry (owner's feedback 2026-11-20).
+  useFreshOnReturn(startOver);
+  const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || typeId);
   /**
    * Save (plan v19 04a): `print` → the tags page; `next` → the next item of the same bill
    * ("What is it?", section / company / bill no. / date kept); `done` → the start, everything cleared.
@@ -257,6 +278,11 @@ export function NewItemWizard({
       )}
       {/* Where you are: five steps, then what was chosen (tap a chip to go back to it). */}
       <div className="flex flex-col gap-3">
+        {(step !== 'start' || dirty) && (
+          <div className="flex justify-end">
+            <StartOver onStartOver={startOver} dirty={dirty} />
+          </div>
+        )}
         {step !== 'start' && (
           <ol aria-label={t('ni.steps')} className="grid grid-cols-5 gap-1.5">
             {FLOW.map((s, i) => (
