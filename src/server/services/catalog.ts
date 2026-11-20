@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, productImages, products, sections, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
 import { cleanSizeList, MAX_SIZES } from '@/lib/size-lists';
+import { STORE_TIMEZONE } from '@/lib/app-config';
 import { DomainError, isUniqueViolation } from './errors';
 
 const int = (expression: ReturnType<typeof sql>) => sql<number>`${expression}`.mapWith(Number);
@@ -170,7 +171,21 @@ export async function updateCategory(
 
 // ----------------------------------------------------------------- suppliers
 
-export type SupplierInput = { name: string; contactName: string; phone: string; gstin: string; notes: string; location?: string };
+export type SupplierInput = { name: string; contactName: string; phone: string; gstin: string; notes: string; location?: string; workingSince?: string };
+
+/**
+ * "Working since" (companies overview, 2026-11-20): a real calendar day, from
+ * 1990 up to today in shop time; empty = not given. The owner may backdate it.
+ */
+export function cleanWorkingSince(raw: string | null | undefined): string | null {
+  const value = (raw ?? '').trim();
+  if (!value) return null;
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: STORE_TIMEZONE }).format(new Date());
+  const day = new Date(`${value}T00:00:00Z`);
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === value;
+  if (!valid || value < '1990-01-01' || value > today) throw new DomainError('Enter the day you started with this company (not after today).', { key: 'cat.err.workingSince' });
+  return value;
+}
 
 function cleanSupplier(input: SupplierInput) {
   const name = input.name.trim();
@@ -186,6 +201,7 @@ function cleanSupplier(input: SupplierInput) {
     gstin: gstin || null,
     notes: input.notes.trim() || null,
     location: (input.location ?? '').trim().slice(0, 80) || null,
+    workingSince: cleanWorkingSince(input.workingSince),
   };
 }
 

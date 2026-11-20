@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
-import { categories, products, sections, staff, stockMovements, stockReceipts, supplierPayments, type SupplierPayment } from '@/db/schema';
+import { categories, products, sections, staff, stockMovements, stockReceipts, supplierPayments, suppliers, type SupplierPayment } from '@/db/schema';
 import { STORE_TIMEZONE } from '@/lib/app-config';
 import { inRange, type DayRange } from '@/lib/company-period';
 import { designKey } from '@/lib/design-groups';
@@ -79,7 +79,33 @@ export type CompanyReport = {
   types: CompanyTypeRow[];
   payments: CompanyPaymentRow[];
 };
-export type CompanySummary = { bills: number; pieces: number; amountPaise: number | null; duePaise: number | null; lastDate: string | null };
+export type CompanySummary = {
+  bills: number;
+  openBills: number;
+  pieces: number;
+  /** Distinct designs (name + MRP) the company has here — the owner's "collections". */
+  collections: number;
+  amountPaise: number | null;
+  paidPaise: number | null;
+  duePaise: number | null;
+  firstDate: string | null;
+  lastDate: string | null;
+};
+/** One line of the companies overview on Home (2026-11-20). */
+export type CompanyOverviewRow = CompanySummary & {
+  id: string;
+  name: string;
+  location: string | null;
+  active: boolean;
+  /** The day the shop started with this company, as the owner gave it (may be before the app). */
+  workingSince: string | null;
+  /** The day it was added here (shop time, YYYY-MM-DD). */
+  addedOn: string;
+};
+export type CompaniesOverview = {
+  totals: { companies: number; bills: number; openBills: number; collections: number; pieces: number; purchasesPaise: number | null; duePaise: number | null };
+  rows: CompanyOverviewRow[];
+};
 
 const tz = sql.raw(`'${STORE_TIMEZONE.replace(/'/g, "''")}'`);
 const int = (expression: ReturnType<typeof sql>) => sql<number>`${expression}`.mapWith(Number);
@@ -310,47 +336,111 @@ export async function addPayment(db: Db, storeId: string, input: PaymentInput): 
   }
 }
 
-/** For the companies list: bills, pieces, purchases and dues of every company. */
+/**
+ * For the companies list and the Home overview: bills (open = its amount is
+ * more than the payments naming its number), pieces, collections, purchases,
+ * paid and dues of every company that has a bill, a payment or a product.
+ */
 export async function companySummaries(db: Db, storeId: string, { amounts }: { amounts: boolean }): Promise<Map<string, CompanySummary>> {
-  const [billRows, pieceRows, paidRows] = await Promise.all([
+  const dayExpr = sql`coalesce(${stockReceipts.stockDate}::text, to_char(${stockReceipts.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD'))`;
+  const keyExpr = sql`coalesce('no:' || lower(nullif(trim(${stockReceipts.billNumber}), '')), 'r:' || ${stockReceipts.id}::text)`;
+  const [billRows, paidRows, designRows] = await Promise.all([
+    // One row per bill (number, any letter case; a delivery without one is its own bill).
     db
       .select({
         supplierId: stockReceipts.supplierId,
-        bills: int(sql`count(distinct coalesce('no:' || lower(nullif(trim(${stockReceipts.billNumber}), '')), 'r:' || ${stockReceipts.id}::text))`),
-        lastDate: sql<string | null>`max(coalesce(${stockReceipts.stockDate}::text, to_char(${stockReceipts.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')))`,
-      })
-      .from(stockReceipts)
-      .where(and(eq(stockReceipts.storeId, storeId), isNotNull(stockReceipts.supplierId)))
-      .groupBy(stockReceipts.supplierId),
-    db
-      .select({
-        supplierId: stockReceipts.supplierId,
+        key: sql<string>`${keyExpr}`,
         pieces: int(sql`coalesce(sum(${stockMovements.quantityChange}), 0)`),
         amount: int(sql`coalesce(sum(${stockMovements.quantityChange} * coalesce(${stockMovements.unitCostPaise}, ${products.costPaise}, 0)), 0)`),
+        firstDate: sql<string>`min(${dayExpr})`,
+        lastDate: sql<string>`max(${dayExpr})`,
       })
       .from(stockReceipts)
-      .innerJoin(stockMovements, and(eq(stockMovements.refId, stockReceipts.id), inArray(stockMovements.reason, [...ARRIVALS])))
-      .innerJoin(products, eq(products.id, stockMovements.productId))
+      .leftJoin(stockMovements, and(eq(stockMovements.refId, stockReceipts.id), inArray(stockMovements.reason, [...ARRIVALS])))
+      .leftJoin(products, eq(products.id, stockMovements.productId))
       .where(and(eq(stockReceipts.storeId, storeId), isNotNull(stockReceipts.supplierId)))
-      .groupBy(stockReceipts.supplierId),
+      .groupBy(stockReceipts.supplierId, keyExpr),
     db
-      .select({ supplierId: supplierPayments.supplierId, paid: int(sql`coalesce(sum(${supplierPayments.amountPaise}), 0)`) })
+      .select({
+        supplierId: supplierPayments.supplierId,
+        billNumber: sql<string | null>`lower(nullif(trim(${supplierPayments.billNumber}), ''))`,
+        paid: int(sql`coalesce(sum(${supplierPayments.amountPaise}), 0)`),
+      })
       .from(supplierPayments)
       .where(eq(supplierPayments.storeId, storeId))
-      .groupBy(supplierPayments.supplierId),
+      .groupBy(supplierPayments.supplierId, sql`lower(nullif(trim(${supplierPayments.billNumber}), ''))`),
+    // Collections = distinct name + MRP per company, the same key as `designKey` (spaces squeezed, any letter case).
+    db
+      .select({
+        supplierId: products.supplierId,
+        designs: int(sql`count(distinct regexp_replace(lower(trim(${products.name})), '\\s+', ' ', 'g') || '~' || ${products.mrpPaise}::text)`),
+      })
+      .from(products)
+      .where(and(eq(products.storeId, storeId), isNotNull(products.supplierId)))
+      .groupBy(products.supplierId),
   ]);
   const out = new Map<string, CompanySummary>();
-  for (const row of billRows) {
-    const piece = pieceRows.find((p) => p.supplierId === row.supplierId);
-    const paid = paidRows.find((p) => p.supplierId === row.supplierId)?.paid ?? 0;
-    const amount = piece?.amount ?? 0;
-    out.set(row.supplierId!, {
-      bills: row.bills,
-      lastDate: row.lastDate,
-      pieces: piece?.pieces ?? 0,
+  const ids = new Set([...billRows, ...paidRows, ...designRows].map((r) => r.supplierId!));
+  for (const id of ids) {
+    const bills = billRows.filter((b) => b.supplierId === id);
+    const payments = paidRows.filter((p) => p.supplierId === id);
+    const paidFor = (key: string) => payments.find((p) => p.billNumber !== null && `no:${p.billNumber}` === key)?.paid ?? 0;
+    const amount = bills.reduce((n, b) => n + b.amount, 0);
+    const paid = payments.reduce((n, p) => n + p.paid, 0);
+    out.set(id, {
+      bills: bills.length,
+      openBills: bills.filter((b) => b.amount > 0 && b.amount > paidFor(b.key)).length,
+      pieces: bills.reduce((n, b) => n + b.pieces, 0),
+      collections: designRows.find((d) => d.supplierId === id)?.designs ?? 0,
+      firstDate: bills.length ? bills.map((b) => b.firstDate).sort()[0] : null,
+      lastDate: bills.length ? bills.map((b) => b.lastDate).sort().at(-1)! : null,
       amountPaise: amounts ? amount : null,
+      paidPaise: amounts ? paid : null,
       duePaise: amounts ? Math.max(0, amount - paid) : null,
     });
   }
   return out;
+}
+
+const EMPTY_SUMMARY: CompanySummary = { bills: 0, openBills: 0, pieces: 0, collections: 0, amountPaise: 0, paidPaise: 0, duePaise: 0, firstDate: null, lastDate: null };
+
+/**
+ * The companies overview on Home (owner's feedback 2026-11-20): every company
+ * with its location, working-since and added-on days, bills, collections,
+ * pieces, spend and dues, plus the totals. Companies with a recent bill come
+ * first, then the rest by name; hidden companies last.
+ */
+export async function companiesOverview(db: Db, storeId: string, { amounts }: { amounts: boolean }): Promise<CompaniesOverview> {
+  const [companies, summaries] = await Promise.all([
+    db
+      .select({
+        id: suppliers.id,
+        name: suppliers.name,
+        location: suppliers.location,
+        active: suppliers.active,
+        workingSince: suppliers.workingSince,
+        addedOn: sql<string>`to_char(${suppliers.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')`,
+      })
+      .from(suppliers)
+      .where(eq(suppliers.storeId, storeId)),
+    companySummaries(db, storeId, { amounts }),
+  ]);
+  const hide = (value: number) => (amounts ? value : null);
+  const blank = { ...EMPTY_SUMMARY, amountPaise: hide(0), paidPaise: hide(0), duePaise: hide(0) };
+  const rows: CompanyOverviewRow[] = companies
+    .map((company) => ({ ...company, ...(summaries.get(company.id) ?? blank) }))
+    .sort((a, b) => Number(b.active) - Number(a.active) || (b.lastDate ?? '').localeCompare(a.lastDate ?? '') || a.name.localeCompare(b.name));
+  const sum = (pick: (row: CompanyOverviewRow) => number | null) => rows.reduce((n, row) => n + (pick(row) ?? 0), 0);
+  return {
+    totals: {
+      companies: rows.length,
+      bills: sum((r) => r.bills),
+      openBills: sum((r) => r.openBills),
+      collections: sum((r) => r.collections),
+      pieces: sum((r) => r.pieces),
+      purchasesPaise: hide(sum((r) => r.amountPaise)),
+      duePaise: hide(sum((r) => r.duePaise)),
+    },
+    rows,
+  };
 }

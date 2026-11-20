@@ -311,7 +311,6 @@ export const catalogEn = {
   'cat.acc.typePieces': 'pcs',
   'cat.acc.typeAmount': 'purchase',
   'cat.acc.contact': 'Contact',
-  'cat.acc.noDetails': 'No contact details saved.',
   'cat.err.paymentAmount': 'Enter the amount paid (₹1 to ₹1 crore).',
   'cat.err.paymentDate': 'Enter a valid payment date (not after today).',
 
@@ -392,6 +391,15 @@ export const catalogEn = {
   'cat.err.gstin': 'GSTIN must be 15 letters/digits.',
   'cat.err.supplierExists': 'A supplier with that name already exists.',
   'cat.err.supplierNotFound': 'Supplier not found.',
+  // Companies overview (2026-11-20)
+  'cat.supf.since': 'Working since (optional; an earlier date is fine)',
+  'cat.err.workingSince': 'Enter the day you started with this company (not after today).',
+  'cat.acc.workingSince': 'Working since',
+  'cat.acc.addedOn': 'Added on',
+  'cat.acc.newest100': 'Newest 100 bills shown.',
+  'cat.pager.range': '{from}–{to} of {total}',
+  'cat.pager.prev': 'Previous',
+  'cat.pager.next': 'Next',
 } as const;
 
 export const catalogHi: Record<keyof typeof catalogEn, string> = {
@@ -702,7 +710,6 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.acc.typePieces': 'पीस',
   'cat.acc.typeAmount': 'खरीद',
   'cat.acc.contact': 'संपर्क',
-  'cat.acc.noDetails': 'कोई संपर्क जानकारी सेव नहीं।',
   'cat.err.paymentAmount': 'चुकाई रकम डालें (₹1 से ₹1 करोड़ तक)।',
   'cat.err.paymentDate': 'भुगतान की सही तारीख़ डालें (आज के बाद की नहीं)।',
 
@@ -783,4 +790,12 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.err.gstin': 'GSTIN 15 अक्षर/अंक का होना चाहिए।',
   'cat.err.supplierExists': 'इस नाम का सप्लायर पहले से है।',
   'cat.err.supplierNotFound': 'सप्लायर नहीं मिला।',
+  'cat.supf.since': 'कब से काम कर रहे हैं (ज़रूरी नहीं; पुरानी तारीख भी चलेगी)',
+  'cat.err.workingSince': 'इस कंपनी से काम शुरू करने का दिन डालें (आज के बाद का नहीं)।',
+  'cat.acc.workingSince': 'कब से',
+  'cat.acc.addedOn': 'यहाँ जोड़ी',
+  'cat.acc.newest100': 'सबसे नए 100 बिल दिख रहे हैं।',
+  'cat.pager.range': '{total} में से {from}–{to}',
+  'cat.pager.prev': 'पिछले',
+  'cat.pager.next': 'अगले',
 };

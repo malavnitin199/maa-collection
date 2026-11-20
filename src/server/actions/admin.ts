@@ -231,6 +231,7 @@ function supplierInput(formData: FormData): SupplierInput {
     gstin: text(formData, 'gstin'),
     notes: text(formData, 'notes'),
     location: text(formData, 'location'),
+    workingSince: text(formData, 'workingSince'),
   };
 }
 

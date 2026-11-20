@@ -4,6 +4,8 @@ import { test, expect, type Page } from '@playwright/test';
  * Company accounts (owner's feedback 2026-11-20): the company page shows the
  * figures on top (bills, purchases, dues, pieces, collections), a period, and
  * tabs Bills · Payments · Products · By type · Details; a payment closes a bill.
+ * Companies overview (2026-11-20): Home lists every company with its working-
+ * since day, bills · collections · pieces, spend and dues.
  */
 const PIN = '1234';
 const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
@@ -26,6 +28,7 @@ test('company page: figures, bills by number, a payment closes the bill, dues, l
   await page.getByText('+ Add supplier').click();
   await page.getByLabel('Company name').fill(name);
   await page.getByLabel(/^Location/).fill('Surat');
+  await page.getByLabel(/^Working since/).fill('2019-04-01'); // backdated: before the app existed
   await page.getByRole('button', { name: 'Add supplier' }).click();
   await expect(page.getByRole('status')).toContainText('added');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(name) }).click();
@@ -64,6 +67,14 @@ test('company page: figures, bills by number, a payment closes the bill, dues, l
   await expect(page.getByTestId('company-dues')).toHaveText('₹2,400.00');
   await expect(page.getByTestId('company-pieces')).toHaveText('6');
   await expect(page.getByTestId('company-collections')).toHaveText('1');
+  // Details: the owner's working-since day and the day it was added here are two different things.
+  await page.getByRole('tab', { name: 'Details', exact: true }).click();
+  const details = page.getByRole('tabpanel', { name: 'Details' });
+  await expect(details).toContainText('Working since');
+  await expect(details).toContainText('1 Apr 2019');
+  await expect(details).toContainText('Added on');
+  await expect(details).not.toContainText('Added on 1 Apr 2019');
+  await page.getByRole('tab', { name: 'Bills', exact: true }).click();
   const bill = page.getByTestId('company-bills').locator('li').first();
   await expect(bill).toContainText(`bill INV-${run}`);
   await expect(bill).toContainText('2 items · 6 pcs · purchase ₹2,400.00');
@@ -105,4 +116,18 @@ test('company page: figures, bills by number, a payment closes the bill, dues, l
   // The companies list shows bills and dues.
   await page.goto('/admin/suppliers');
   await expect(page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(name) })).toContainText('1 bills · dues ₹0.00');
+
+  // Home → Companies overview under Today: totals and this company's line (most recent bill first).
+  await page.goto('/admin/dashboard');
+  const home = page.getByTestId('home-companies');
+  await expect(home.getByRole('heading', { name: 'Companies' })).toBeVisible();
+  expect(Number(await page.getByTestId('home-companies-count').innerText())).toBeGreaterThanOrEqual(1);
+  expect(Number(await page.getByTestId('home-bills-count').innerText())).toBeGreaterThanOrEqual(1);
+  const line = page.getByTestId('home-company-rows').getByRole('link', { name: new RegExp(name) });
+  await expect(line).toContainText('Surat · since 1 Apr 2019');
+  await expect(line).toContainText('1 bills · 1 collections · 6 pcs');
+  await expect(line).toContainText('spent ₹2,400.00');
+  await expect(line).toContainText('due ₹0.00');
+  await line.click();
+  await expect(page).toHaveURL(companyUrl);
 });

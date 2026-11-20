@@ -54,6 +54,8 @@ export type SupplierValues = {
   gstin: string | null;
   notes: string | null;
   location?: string | null;
+  /** YYYY-MM-DD, the day the shop started with the company (companies overview, 2026-11-20). */
+  workingSince?: string | null;
   active: boolean;
 };
 
@@ -69,6 +71,7 @@ export function SupplierForm({ action, initial, submitLabel }: { action: Action;
         { label: t('done.line.contact'), value: field(fd, 'contactName') },
         { label: t('done.line.phone'), value: field(fd, 'phone') },
         { label: t('done.line.location'), value: field(fd, 'location') },
+        { label: t('done.line.since'), value: field(fd, 'workingSince') },
       ].filter((line) => line.value),
     }),
   });
@@ -90,7 +93,11 @@ export function SupplierForm({ action, initial, submitLabel }: { action: Action;
         autoCapitalize="characters"
         hint={t('cat.supf.gstinHint')}
       />
-      <Text label={t('cat.supf.location')} name="location" defaultValue={initial?.location} maxLength={80} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Text label={t('cat.supf.location')} name="location" defaultValue={initial?.location} maxLength={80} />
+        {/* Separate from the day it was added here: the owner may backdate it to when buying from this company began. */}
+        <Text label={t('cat.supf.since')} name="workingSince" type="date" min="1990-01-01" defaultValue={initial?.workingSince} />
+      </div>
       <Text label={t('cat.supf.notes')} name="notes" defaultValue={initial?.notes} placeholder={t('cat.supf.notesPlaceholder')} />
       {initial && (
         <label className="flex items-center gap-2 text-sm">

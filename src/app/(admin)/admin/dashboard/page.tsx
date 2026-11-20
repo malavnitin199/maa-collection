@@ -11,14 +11,16 @@ import { requireAdmin } from '@/server/auth';
 import { getT } from '@/server/i18n';
 import { pendingCount } from '@/server/services/approvals';
 import { shopToday } from '@/server/services/reports';
+import { CompaniesOverview } from './companies';
 
 /**
  * Owner's Home (plan v17): only the essentials — four actions and today's sales.
  * Month, profit, exchanges and sales per person are on Reports; every entry on
- * Activity; out-of-stock items on Needs attention.
+ * Activity; out-of-stock items on Needs attention. Under Today, the companies
+ * overview (owner's feedback 2026-11-20).
  */
 async function Dashboard() {
-  await requireAdmin();
+  const me = await requireAdmin();
   const t = await getT();
   const db = await requestDb();
   const [today, pending] = await Promise.all([shopToday(db, STORE_ID), pendingCount(db, STORE_ID)]);
@@ -65,6 +67,10 @@ async function Dashboard() {
           />
         </div>
       </section>
+
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
+        <CompaniesOverview me={me} />
+      </Suspense>
     </main>
   );
 }

@@ -19,7 +19,7 @@ import { formatDate } from '@/lib/i18n';
 async function AddSupplier() {
   const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
   return (
-    <details className={card}>
+    <details id="add" className={card}>
         <summary className="cursor-pointer font-medium text-brand-700 dark:text-brand-400">{t('cat.sup.addOpen')}</summary>
         <div className="mt-3">
           <SupplierForm action={createSupplierAction} submitLabel={t('cat.sup.add')} />

@@ -60,6 +60,12 @@ export const suppliers = pgTable(
     notes: text('notes'),
     /** Where the company is (city / market), as the owner types it — e.g. "Surat" (company accounts, 2026-11-20). */
     location: text('location'),
+    /**
+     * The day the shop started buying from this company, as the owner gives it
+     * (may be years before the app). Separate from `created_at`, the day it was
+     * added here (companies overview, 2026-11-20). Null = not given.
+     */
+    workingSince: date('working_since', { mode: 'string' }),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

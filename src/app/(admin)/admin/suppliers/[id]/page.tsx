@@ -6,6 +6,7 @@ import { MarkPaidForm, PaymentForm } from '@/features/catalog/company-parts';
 import { ItemTabs } from '@/features/catalog/item-parts';
 import { SupplierForm } from '@/features/catalog/setup-forms';
 import { StatTile } from '@/features/reports/widgets';
+import { Paged } from '@/components/ui/paged';
 import { STORE_ID } from '@/lib/app-config';
 import { COMPANY_PERIODS, companyPeriod, type CompanyPeriodKey } from '@/lib/company-period';
 import { groupDesigns } from '@/lib/design-groups';
@@ -30,6 +31,8 @@ const PERIOD_KEY: Record<CompanyPeriodKey, MessageKey> = {
   year: 'cat.acc.period.year',
   custom: 'cat.acc.period.custom',
 };
+/** The owner's cap (2026-11-20): a company's page lists its newest 100 bills, ten at a time. */
+const MAX_BILLS = 100;
 const STATUS_TONE: Record<BillStatus, string> = {
   open: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
   closed: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
@@ -77,8 +80,10 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
       {report.bills.length === 0 ? (
         <p className={`text-sm ${muted}`}>{t('cat.acc.noBills')}</p>
       ) : (
-        <ul data-testid="company-bills" className="flex flex-col gap-2">
-          {report.bills.map((bill) => (
+        <Paged
+          testId="company-bills"
+          className="flex flex-col gap-2"
+          items={report.bills.slice(0, MAX_BILLS).map((bill) => (
             <li key={bill.key} className={`${card} flex flex-col gap-2 py-3 text-sm`}>
               <div className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
@@ -126,8 +131,9 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
               </div>
             </li>
           ))}
-        </ul>
+        />
       )}
+      {report.bills.length > MAX_BILLS && <p className={`text-xs ${muted}`}>{t('cat.acc.newest100')}</p>}
       {report.months.length > 1 && (
         <section className="flex flex-col gap-1">
           <h3 className={sectionTitle}>{t('cat.acc.months')}</h3>
@@ -246,6 +252,8 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
           [t('cat.supf.contact'), supplier.contactName],
           [t('cat.supf.phone'), supplier.phone],
           [t('cat.supf.location'), supplier.location],
+          [t('cat.acc.workingSince'), supplier.workingSince ? day(supplier.workingSince) : null],
+          [t('cat.acc.addedOn'), formatDate(locale, supplier.createdAt, 'date')],
           [t('cat.supf.gstin'), supplier.gstin],
           [t('cat.supf.notes'), supplier.notes],
         ]
@@ -257,9 +265,6 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
             </div>
           ))}
       </dl>
-      {!supplier.contactName && !supplier.phone && !supplier.location && !supplier.gstin && !supplier.notes && (
-        <p className={`text-sm ${muted}`}>{t('cat.acc.noDetails')}</p>
-      )}
       <details className={card}>
         <summary className="cursor-pointer font-medium">{t('cat.sup.edit')}</summary>
         <div className="mt-3">

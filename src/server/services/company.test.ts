@@ -4,7 +4,7 @@ import { createPgliteDb, type Db } from '@/db/client';
 import { STORE_ID } from '@/lib/app-config';
 import { companyPeriod } from '@/lib/company-period';
 import { createSupplier, listCategories, listSuppliers, updateSupplier } from './catalog';
-import { addPayment, billKey, companyReport, companySummaries } from './company';
+import { addPayment, billKey, companiesOverview, companyReport, companySummaries } from './company';
 import { createDesign, listProducts, receiveStock, updateDesignRates } from './products';
 import { listStaff } from './staff';
 
@@ -156,8 +156,55 @@ describe('company location and the list', () => {
     await createDesign(db, STORE_ID, design({ billNumber: 'B1' }));
     await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 50000, staffId: owner });
     const summary = (await companySummaries(db, STORE_ID, { amounts: true })).get(supplierId)!;
-    expect(summary).toMatchObject({ bills: 1, pieces: 4, amountPaise: 200000, duePaise: 150000 });
+    expect(summary).toMatchObject({ bills: 1, openBills: 1, pieces: 4, collections: 1, amountPaise: 200000, paidPaise: 50000, duePaise: 150000 });
     expect((await companySummaries(db, STORE_ID, { amounts: false })).get(supplierId)!.duePaise).toBeNull();
     expect((await listProducts(db, STORE_ID, { supplierId })).length).toBe(2);
+  });
+
+  it('working since: a backdated day, separate from the day the company was added; refused when not a day or after today', async () => {
+    const since = { name: 'Surat Silks', contactName: '', phone: '', gstin: '', notes: '', active: true };
+    await updateSupplier(db, STORE_ID, supplierId, { ...since, workingSince: '2019-04-01' });
+    const supplier = (await listSuppliers(db, STORE_ID)).find((s) => s.id === supplierId)!;
+    expect(supplier.workingSince).toBe('2019-04-01');
+    expect(supplier.createdAt.getFullYear()).toBeGreaterThanOrEqual(2026);
+    await expect(updateSupplier(db, STORE_ID, supplierId, { ...since, workingSince: '2019-02-30' })).rejects.toMatchObject({ key: 'cat.err.workingSince' });
+    await expect(updateSupplier(db, STORE_ID, supplierId, { ...since, workingSince: '2999-01-01' })).rejects.toMatchObject({ key: 'cat.err.workingSince' });
+    await expect(updateSupplier(db, STORE_ID, supplierId, { ...since, workingSince: '1980-01-01' })).rejects.toMatchObject({ key: 'cat.err.workingSince' });
+    await updateSupplier(db, STORE_ID, supplierId, { ...since, workingSince: ' ' });
+    expect((await listSuppliers(db, STORE_ID)).find((s) => s.id === supplierId)!.workingSince).toBeNull();
+    // On create too.
+    const other = await createSupplier(db, STORE_ID, { ...since, name: 'Mumbai Mills', workingSince: '2024-12-31' });
+    expect(other.workingSince).toBe('2024-12-31');
+  });
+});
+
+describe('companiesOverview', () => {
+  it('totals and one line per company: collections map to the company chosen when the item was made; open bills; recent first', async () => {
+    const mills = await createSupplier(db, STORE_ID, { name: 'Mumbai Mills', contactName: '', phone: '', gstin: '', notes: '', workingSince: '2015-06-01' });
+    // Surat Silks: two bills (one paid), two collections; Mumbai Mills: one bill of jeans; the demo companies have their seed data.
+    await createDesign(db, STORE_ID, design({ billNumber: 'S1', stockDate: '2026-11-01' }));
+    await createDesign(db, STORE_ID, design({ billNumber: 'S2', name: 'Anarkali', mrpPaise: 249900, costPaise: 100000, quantityEach: 1, stockDate: '2026-11-15' }));
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, billNumber: 's1', amountPaise: 200000, staffId: owner });
+    await createDesign(db, STORE_ID, design({ supplierId: mills.id, billNumber: 'M1', categoryId: jeansId, name: 'Slim Jeans', mrpPaise: 199900, costPaise: 70000, quantityEach: 1, stockDate: '2026-11-10' }));
+
+    const overview = await companiesOverview(db, STORE_ID, { amounts: true });
+    const surat = overview.rows.find((r) => r.id === supplierId)!;
+    expect(surat).toMatchObject({ name: 'Surat Silks', location: 'Surat', workingSince: null, bills: 2, openBills: 1, collections: 2, pieces: 6, amountPaise: 400000, paidPaise: 200000, duePaise: 200000, firstDate: '2026-11-01', lastDate: '2026-11-15' });
+    expect(surat.addedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const mumbai = overview.rows.find((r) => r.id === mills.id)!;
+    expect(mumbai).toMatchObject({ workingSince: '2015-06-01', bills: 1, openBills: 1, collections: 1, pieces: 2, amountPaise: 140000, duePaise: 140000 });
+    // Most recent bill first.
+    expect(overview.rows.indexOf(surat)).toBeLessThan(overview.rows.indexOf(mumbai));
+    expect(overview.totals.companies).toBe(overview.rows.length);
+    expect(overview.totals.bills).toBe(overview.rows.reduce((n, r) => n + r.bills, 0));
+    expect(overview.totals.openBills).toBe(overview.rows.reduce((n, r) => n + r.openBills, 0));
+    expect(overview.totals.collections).toBe(overview.rows.reduce((n, r) => n + r.collections, 0));
+    expect(overview.totals.purchasesPaise).toBe(overview.rows.reduce((n, r) => n + (r.amountPaise ?? 0), 0));
+    expect(overview.totals.duePaise).toBe(overview.rows.reduce((n, r) => n + (r.duePaise ?? 0), 0));
+    // A company with nothing yet still has a line.
+    const empty = await createSupplier(db, STORE_ID, { name: 'New Co', contactName: '', phone: '', gstin: '', notes: '' });
+    const again = await companiesOverview(db, STORE_ID, { amounts: false });
+    expect(again.rows.find((r) => r.id === empty.id)).toMatchObject({ bills: 0, collections: 0, amountPaise: null, duePaise: null });
+    expect(again.totals.purchasesPaise).toBeNull();
   });
 });
