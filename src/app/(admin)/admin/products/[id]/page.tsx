@@ -3,12 +3,14 @@ import { notFound } from 'next/navigation';
 import { Fragment, Suspense } from 'react';
 import { GarmentArt } from '@/components/ui/art';
 import { Pill } from '@/components/ui/pill';
-import { card, link, muted, okBox, sectionTitle } from '@/components/ui/styles';
+import { card, link, muted, okBox, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { DesignTagsForm, ItemTabs } from '@/features/catalog/item-parts';
 import { PrintButton } from '@/features/catalog/print-button';
 import { ProductForm } from '@/features/catalog/product-form';
 import { DesignRatesForm, StockInForm } from '@/features/catalog/small-forms';
+import { StatTile } from '@/features/reports/widgets';
+import { COMPANY_PERIODS, companyPeriod, type CompanyPeriodKey } from '@/lib/company-period';
 import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
 import { stockInAction, updateDesignRatesAction, updateDesignTagsAction, updateProductAction } from '@/server/actions/admin';
@@ -23,12 +25,27 @@ import { requireAnyPermission } from '@/server/auth';
 import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
-import { getProduct, listDesignVariants, listMovements } from '@/server/services/products';
+import { getProduct, listDesignVariants, listMovements, shopToday } from '@/server/services/products';
+import { productReport } from '@/server/services/product-report';
 import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
 import { imageSrc, listProductImages } from '@/server/services/images';
 import { PhotoManager } from '@/features/catalog/photo-manager';
 import { formatDate } from '@/lib/i18n';
 
+type Search = { created?: string; period?: string; from?: string; to?: string };
+const PERIOD_KEY: Record<CompanyPeriodKey, MessageKey> = {
+  all: 'cat.acc.period.all',
+  month: 'cat.acc.period.month',
+  '30d': 'cat.acc.period.30d',
+  year: 'cat.acc.period.year',
+  custom: 'cat.acc.period.custom',
+};
+const STATUS_KEY = { approved: 'cat.prod.sales.approved', waiting: 'cat.prod.sales.waiting', rejected: 'cat.prod.sales.rejected' } as const;
+const STATUS_TONE = {
+  approved: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
+  waiting: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
+  rejected: 'bg-zinc-100 text-zinc-600 line-through dark:bg-zinc-800 dark:text-zinc-300',
+} as const;
 const REASONS: Record<string, MessageKey> = {
   opening: 'cat.reason.opening',
   stock_in: 'cat.reason.stockIn',
@@ -43,27 +60,20 @@ const withParts = (text: string, part: (name: string) => React.ReactNode) =>
   text.split(/\{(\w+)\}/).map((piece, i) => (i % 2 ? <Fragment key={i}>{part(piece)}</Fragment> : piece));
 const stockTone = (n: number) => (n <= 0 ? 'text-red-600 dark:text-red-400' : n <= LOW_STOCK_THRESHOLD ? 'text-amber-600' : '');
 
-/** One price on the main card: small label, the amount below. */
-function Price({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-xl bg-brand-50/60 px-2 py-2 text-center dark:bg-zinc-900">
-      <p className={`truncate text-xs ${muted}`}>{label}</p>
-      <p className="truncate font-semibold tabular-nums">{value}</p>
-    </div>
-  );
-}
-
 /**
- * The product page (plan v17, owner's layout): a header with the name and small
- * tags (sizes, category, who it is for) on the left and the photo on the right;
- * the must-haves (company, sale price, purchase price, pieces); then top tabs —
- * Details (tag, rates, receive, history), Colours (every colour × size with its
- * pieces, photos) and Other details (tags, edit). Same actions as before.
+ * The product page (plan v17 layout; figures and tabs from the owner's feedback
+ * 2026-11-20, like the company page): a header with the name and small tags on
+ * the left and the photo on the right; the design's figures for a period (in
+ * stock, sold, came in, profit, last sale, last arrival); one compact row with
+ * the company, the prices and the two actions; then top tabs — Details (tag,
+ * rates, receive), Colours (every colour × size with its pieces, photos), Sales,
+ * Purchases (arrivals, stock history) and Other details (tags, edit).
  */
-async function ProductDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
+async function ProductDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Search> }) {
   const [me, t] = await Promise.all([requireAnyPermission(['catalog', 'prices', 'stock']), getT()]);
   const locale = await getLocale();
-  const [{ id }, { created }] = await Promise.all([params, searchParams]);
+  const [{ id }, search] = await Promise.all([params, searchParams]);
+  const { created } = search;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = await requestDb();
   const product = await getProduct(db, STORE_ID, id);
@@ -80,6 +90,12 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const supplier = supplierRows.find((s) => s.id === product.supplierId);
   // Today's rates as a default + each size's own; purchase prices only with the "costs" right.
   const showCost = can(me, 'costs');
+  const today = shopToday();
+  const period = companyPeriod(search, today);
+  const report = await productReport(db, STORE_ID, variants.map((v) => v.id), { amounts: showCost, period });
+  const day = (value: string) => formatDate(locale, `${value}T00:00:00+05:30`, 'date');
+  const periodHref = (key: CompanyPeriodKey) =>
+    key === 'custom' ? `/admin/products/${id}?period=custom&from=${today.slice(0, 7)}-01&to=${today}` : `/admin/products/${id}?period=${key}`;
   const rates = splitDesignRates(
     variants.map((v) => ({ size: v.size, mrpPaise: v.mrpPaise, pricePaise: v.pricePaise, costPaise: showCost ? v.costPaise : null })),
   );
@@ -129,28 +145,6 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
         </section>
       )}
 
-      <section className="flex flex-col gap-2 print:hidden">
-        <h2 className={sectionTitle}>{t('cat.product.history')}</h2>
-        <ul data-testid="stock-history" className="flex flex-col gap-1 text-sm">
-          {movements.map((m) => (
-            <li key={m.id} className="flex justify-between gap-2 border-b border-zinc-100 py-1 dark:border-zinc-900">
-              <span>
-                {REASONS[m.reason] ? t(REASONS[m.reason]) : m.reason}
-                {m.supplierName && ` · ${m.supplierName}`}
-                {m.billNumber && ` · ${t('cat.bill', { number: m.billNumber })}`}
-                <span className={`block text-xs ${muted}`}>
-                  {formatDate(locale, m.createdAt, 'dateTime')}
-                  {m.staffName && ` · ${m.staffName}`}
-                  {m.note && ` · ${m.note}`}
-                </span>
-              </span>
-              <span className={`font-medium tabular-nums ${m.quantityChange < 0 ? 'text-red-600 dark:text-red-400' : 'text-brand-700'}`}>
-                {m.quantityChange > 0 ? `+${m.quantityChange}` : m.quantityChange}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
     </div>
   );
 
@@ -206,6 +200,103 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
       <section className={`${card} flex flex-col gap-3`}>
         <h2 className={sectionTitle}>{t('cat.product.photos')}</h2>
         <PhotoManager productId={product.id} photos={photos.map((p) => ({ id: p.id, src: imageSrc(p) }))} canEdit={can(me, 'catalog')} />
+      </section>
+    </div>
+  );
+
+  const salesTab = (
+    <div className="flex flex-col gap-3 print:hidden">
+      {report.sales.length === 0 ? (
+        <p className={`text-sm ${muted}`}>{t('cat.prod.sales.none')}</p>
+      ) : (
+        <ul data-testid="product-sales" className="flex flex-col text-sm">
+          {report.sales.map((sale) => (
+            <li key={sale.id} className="flex items-center justify-between gap-3 border-b border-zinc-100 py-2 dark:border-zinc-900">
+              <span className="min-w-0">
+                <span className="font-medium">
+                  {formatDate(locale, sale.createdAt, 'dateTime')} · {sale.size}
+                  {sale.color && ` · ${sale.color}`}
+                </span>
+                <span className={`block text-xs ${muted}`}>
+                  {t('own.pcs', { n: sale.quantity })} × {formatPaise(sale.unitPricePaise)} · {t('cat.byName', { name: sale.soldByName })}
+                  {sale.offline && ` · ${t('cat.prod.sales.offline')}`}
+                  {sale.profitPaise !== null && ` · ${t(sale.profitPaise < 0 ? 'cat.prod.sales.loss' : 'cat.prod.sales.profit', { amount: formatPaise(Math.abs(sale.profitPaise)) })}`}
+                </span>
+              </span>
+              <span className="flex shrink-0 flex-col items-end gap-1">
+                <span className="font-semibold tabular-nums">{formatPaise(sale.totalPaise)}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_TONE[sale.status]}`}>{t(STATUS_KEY[sale.status])}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
+  const purchasesTab = (
+    <div className="flex flex-col gap-4 print:hidden">
+      <section className="flex flex-col gap-2">
+        <h2 className={sectionTitle}>{t('cat.prod.arr.title')}</h2>
+        {report.arrivals.length === 0 ? (
+          <p className={`text-sm ${muted}`}>{t('cat.prod.arr.none')}</p>
+        ) : (
+          <ul data-testid="product-arrivals" className="flex flex-col text-sm">
+            {report.arrivals.map((a) => (
+              <li key={a.key} className="flex items-center justify-between gap-3 border-b border-zinc-100 py-2 dark:border-zinc-900">
+                <span className="min-w-0">
+                  <span className="font-medium">
+                    {day(a.day)}
+                    {a.billNumber && ` · ${t('cat.bill', { number: a.billNumber })}`}
+                  </span>
+                  <span className={`block text-xs ${muted}`}>
+                    {t(a.reason === 'opening' ? 'cat.prod.arr.opening' : 'cat.prod.arr.stockIn')}
+                    {a.supplierId && a.supplierName && (
+                      <>
+                        {' · '}
+                        <Link href={`/admin/suppliers/${a.supplierId}`} className={link}>
+                          {a.supplierName}
+                        </Link>
+                      </>
+                    )}
+                    {a.staffName && ` · ${t('cat.byName', { name: a.staffName })}`}
+                  </span>
+                </span>
+                <span className="shrink-0 text-right tabular-nums">
+                  <span className="block font-semibold">{t('own.pcs', { n: a.pieces })}</span>
+                  {a.amountPaise !== null && (
+                    <span className={`block text-xs ${muted}`}>
+                      {formatPaise(a.amountPaise)}
+                      {a.estimated && ` ${t('cat.acc.estimatedMark')}`}
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="flex flex-col gap-2 print:hidden">
+        <h2 className={sectionTitle}>{t('cat.product.history')}</h2>
+        <ul data-testid="stock-history" className="flex flex-col gap-1 text-sm">
+          {movements.map((m) => (
+            <li key={m.id} className="flex justify-between gap-2 border-b border-zinc-100 py-1 dark:border-zinc-900">
+              <span>
+                {REASONS[m.reason] ? t(REASONS[m.reason]) : m.reason}
+                {m.supplierName && ` · ${m.supplierName}`}
+                {m.billNumber && ` · ${t('cat.bill', { number: m.billNumber })}`}
+                <span className={`block text-xs ${muted}`}>
+                  {formatDate(locale, m.createdAt, 'dateTime')}
+                  {m.staffName && ` · ${m.staffName}`}
+                  {m.note && ` · ${m.note}`}
+                </span>
+              </span>
+              <span className={`font-medium tabular-nums ${m.quantityChange < 0 ? 'text-red-600 dark:text-red-400' : 'text-brand-700'}`}>
+                {m.quantityChange > 0 ? `+${m.quantityChange}` : m.quantityChange}
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );
@@ -291,10 +382,63 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
         </div>
       </section>
 
-      {/* The must-haves: company, sale price, purchase price, pieces. */}
+      {/* The design's figures for a period (owner's feedback 2026-11-20, like the company page). */}
+      <nav aria-label={t('own.period')} className="flex flex-wrap gap-2 text-sm print:hidden">
+        {COMPANY_PERIODS.map((key) => (
+          <Link
+            key={key}
+            href={periodHref(key)}
+            aria-current={key === period.key ? 'page' : undefined}
+            className={`rounded-full border px-3 py-1 ${key === period.key ? 'border-brand-600 bg-brand-600 text-white' : 'border-zinc-300 dark:border-zinc-700'}`}
+          >
+            {t(PERIOD_KEY[key])}
+          </Link>
+        ))}
+      </nav>
+      {period.key === 'custom' && (
+        <form method="get" className="flex flex-wrap items-end gap-2 text-sm print:hidden">
+          <input type="hidden" name="period" value="custom" />
+          <label className="flex flex-col gap-1 font-medium">
+            {t('cat.acc.from')}
+            <input type="date" name="from" defaultValue={period.from ?? ''} max={today} className="rounded-lg border border-zinc-300 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900" />
+          </label>
+          <label className="flex flex-col gap-1 font-medium">
+            {t('cat.acc.to')}
+            <input type="date" name="to" defaultValue={period.to ?? ''} max={today} className="rounded-lg border border-zinc-300 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900" />
+          </label>
+          <button type="submit" className={`${secondaryButton} py-1.5`}>
+            {t('cat.acc.show')}
+          </button>
+        </form>
+      )}
+      <div data-testid="product-figures" className="grid grid-cols-2 gap-3 print:hidden sm:grid-cols-3">
+        <StatTile label={t('cat.prod.fig.stock')} value={String(totalPieces)} sub={t('cat.prod.fig.stockSub', { items: variants.length, n: product.stock })} testId="product-stock" />
+        <StatTile
+          label={t('cat.prod.fig.sold')}
+          value={String(report.totals.soldPieces)}
+          sub={report.totals.waiting ? t('cat.prod.fig.waiting', { n: report.totals.waiting }) : t('cat.prod.fig.soldSub', { amount: formatPaise(report.totals.revenuePaise), count: report.totals.soldCount })}
+          testId="product-sold"
+        />
+        <StatTile
+          label={t('cat.prod.fig.bought')}
+          value={String(report.totals.boughtPieces)}
+          sub={report.totals.purchasePaise !== null ? `${t('cat.prod.fig.boughtSub', { amount: formatPaise(report.totals.purchasePaise) })}${report.totals.estimated ? ` ${t('cat.acc.estimatedMark')}` : ''}` : undefined}
+          testId="product-bought"
+        />
+        {showCost && (
+          <StatTile label={t('cat.prod.fig.profit')} value={formatPaise(report.totals.profitPaise ?? 0)} sub={report.totals.profitPartial ? t('cat.prod.fig.profitPartial') : undefined} testId="product-profit" />
+        )}
+        <StatTile label={t('cat.prod.fig.lastSale')} value={report.lastSale ? day(report.lastSale.day) : '—'} sub={report.lastSale ? t('cat.byName', { name: report.lastSale.soldByName }) : t('cat.prod.fig.none')} />
+        <StatTile
+          label={t('cat.prod.fig.lastArrival')}
+          value={report.lastArrival ? day(report.lastArrival.day) : '—'}
+          sub={report.lastArrival ? [report.lastArrival.supplierName, report.lastArrival.billNumber && t('cat.bill', { number: report.lastArrival.billNumber })].filter(Boolean).join(' · ') || undefined : t('cat.prod.fig.none')}
+        />
+      </div>
+
+      {/* The must-haves in one row: company, prices, the two actions. */}
       <section className={`${card} flex flex-col gap-3 print:hidden`}>
-        <p className="flex items-center justify-between gap-2 text-sm">
-          <span className={muted}>{t('cat.product.company')}</span>
+        <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
           {supplier ? (
             <Link href={`/admin/suppliers/${supplier.id}`} className={`${link} truncate font-semibold`}>
               {supplier.name}
@@ -302,27 +446,30 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
           ) : (
             <span className={muted}>{t('cat.product.noCompany')}</span>
           )}
-        </p>
-        <div className={`grid gap-2 ${showCost && product.costPaise !== null ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          <Price label="MRP" value={formatPaise(product.mrpPaise)} />
-          <Price label={t('cat.product.selling')} value={formatPaise(product.pricePaise)} />
-          {showCost && product.costPaise !== null && <Price label={t('cat.product.purchaseShort')} value={formatPaise(product.costPaise)} />}
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p data-testid="product-stock" className={`text-lg font-semibold ${stockTone(product.stock)}`}>
-            {t('cat.product.inStock', { n: product.stock })}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <PrintButton label={t('cat.product.printLabel')} />
-            {can(me, 'stock') && (
-              <Link
-                href={`/admin/stock/receive${supplier ? `?supplier=${supplier.id}` : ''}`}
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
-              >
-                {t('cat.product.restock')}
-              </Link>
+          <span className="flex flex-wrap gap-x-3 tabular-nums">
+            <span>
+              <span className={muted}>MRP </span>
+              <span className="font-semibold">{formatPaise(product.mrpPaise)}</span>
+            </span>
+            <span>
+              <span className={muted}>{t('cat.product.selling')} </span>
+              <span className="font-semibold">{formatPaise(product.pricePaise)}</span>
+            </span>
+            {showCost && product.costPaise !== null && (
+              <span>
+                <span className={muted}>{t('cat.product.purchaseShort')} </span>
+                <span className="font-semibold">{formatPaise(product.costPaise)}</span>
+              </span>
             )}
-          </div>
+          </span>
+        </p>
+        <div className="flex gap-2">
+          <PrintButton label={t('cat.product.printLabel')} />
+          {can(me, 'stock') && (
+            <Link href={`/admin/stock/receive${supplier ? `?supplier=${supplier.id}` : ''}`} className={`${secondaryButton} py-2`}>
+              {t('cat.product.restock')}
+            </Link>
+          )}
         </div>
       </section>
 
@@ -331,6 +478,8 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
         tabs={[
           { id: 'details', label: t('cat.tab.details'), content: details, print: true },
           { id: 'colours', label: t('cat.tab.colours'), content: colours, tone: 'amber' },
+          { id: 'sales', label: t('cat.tab.sales'), content: salesTab, tone: 'sky' },
+          { id: 'purchases', label: t('cat.tab.purchases'), content: purchasesTab, tone: 'amber' },
           { id: 'other', label: t('cat.tab.other'), content: other, tone: 'slate' },
         ]}
       />
@@ -342,7 +491,7 @@ export default async function ProductPage(props: PageProps<'/admin/products/[id]
   const t = await getT();
   return (
     <Suspense fallback={<p className="text-sm text-zinc-500">{t('cat.product.loading')}</p>}>
-      <ProductDetail params={props.params} searchParams={props.searchParams as Promise<{ created?: string }>} />
+      <ProductDetail params={props.params} searchParams={props.searchParams as Promise<Search>} />
     </Suspense>
   );
 }

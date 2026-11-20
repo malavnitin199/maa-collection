@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { errorBox, input, muted, okBox, primaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
+import { LangText } from '@/features/i18n/lang-text';
 import type { ProductTags } from '@/lib/product-tags';
 import type { FormState } from '@/server/actions/admin';
 import { CompanyPicker } from './company-picker';
@@ -33,25 +34,25 @@ type Props = {
   showCost?: boolean;
 };
 
-function Field({ label, name, defaultValue, hint, inputMode, required = true }: {
+function Field({ label, name, defaultValue, hint, inputMode, required = true, words = false }: {
   label: string;
   name: string;
   defaultValue?: string;
   hint?: string;
   inputMode?: 'decimal' | 'numeric';
   required?: boolean;
+  /** Words (a name, a colour): typed in Hindi or English, or spoken. */
+  words?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
       <label className="flex flex-col gap-1 text-sm font-medium">
         {label}
-        <input
-          name={name}
-          defaultValue={defaultValue}
-          inputMode={inputMode}
-          required={required}
-            className={input}
-        />
+        {words ? (
+          <LangText name={name} defaultValue={defaultValue} required={required} />
+        ) : (
+          <input name={name} defaultValue={defaultValue} inputMode={inputMode} required={required} className={input} />
+        )}
       </label>
       {hint && <span className={`text-xs ${muted}`}>{hint}</span>}
     </div>
@@ -69,8 +70,8 @@ export function ProductForm({ action, mode, initial, categories, suppliers, prev
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label={t('cat.form.name')} name="name" defaultValue={initial?.name} />
-        <Field label={t('item.brand')} name="brand" defaultValue={initial?.brand} />
+        <Field label={t('cat.form.name')} name="name" defaultValue={initial?.name} words />
+        <Field label={t('item.brand')} name="brand" defaultValue={initial?.brand} words />
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t('item.category')}
           <select name="categoryId" required defaultValue={initial?.categoryId ?? ''} className={input}>
@@ -114,7 +115,7 @@ export function ProductForm({ action, mode, initial, categories, suppliers, prev
         )}
         <div className="grid grid-cols-2 gap-4">
           <Field label={t('cat.form.size')} name="size" defaultValue={initial?.size} />
-          <Field label={t('cat.form.colour')} name="color" defaultValue={initial?.color} />
+          <Field label={t('cat.form.colour')} name="color" defaultValue={initial?.color} words />
         </div>
         <Field label={t('cat.mrpRupees')} name="mrp" inputMode="decimal" defaultValue={initial?.mrp} />
         <Field
