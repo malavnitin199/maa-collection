@@ -65,32 +65,52 @@ test('a microphone sits next to name boxes where the browser can listen; it says
   await expect(row.getByRole('alert').or(page.getByRole('button', { name: 'Listening… tap to stop' }))).toBeVisible();
 });
 
-test('New item starts fresh when you come back to it, and "Start again" clears it on the spot', async ({ page }) => {
+test('New item: back after one or two steps starts fresh; after three it asks to continue or start a fresh collection; "Start again" clears on the spot', async ({ page }) => {
   await loginOwner(page);
+  const start = () => expect(page.getByRole('heading', { level: 2, name: 'What are you adding?' })).toBeVisible();
+  const away = async () => {
+    await page.getByRole('link', { name: /^(Home|Dashboard)$/ }).first().click(); // the dock on a phone, the side menu on a desktop
+    await expect(page).toHaveURL(/\/admin\/dashboard$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/admin\/stock\/new$/);
+  };
+  const toDetails = async () => {
+    await page.getByRole('button', { name: /^Many items/ }).click();
+    await page.getByRole('button', { name: 'Men', exact: true }).click();
+    await page.getByRole('button', { name: /^Kurta/ }).click();
+  };
+
+  // Two steps (who, what) and nothing typed: a fresh start, no question.
   await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
-  await page.getByLabel('Product name').fill('Half typed');
+  await away();
+  await start();
+  await expect(page.getByTestId('resume-sheet')).toHaveCount(0);
 
-  // Away through the app (the page stays alive) and back with the phone's back button: a fresh start.
-  await page.getByRole('link', { name: /^(Home|Dashboard)$/ }).first().click(); // the dock on a phone, the side menu on a desktop
-  await expect(page).toHaveURL(/\/admin\/dashboard$/);
-  await page.goBack();
-  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'What are you adding?' })).toBeVisible();
+  // Three steps with details typed: the question — continue keeps everything.
+  await toDetails();
+  await page.getByLabel('Product name').fill('Half typed');
+  await away();
+  const sheet = page.getByTestId('resume-sheet');
+  await expect(sheet).toContainText('You were in the middle of this');
+  await sheet.getByRole('button', { name: 'Continue where I left off' }).click();
+  await expect(page.getByLabel('Product name')).toHaveValue('Half typed');
+
+  // The same question answered with a fresh collection: back to the start, empty.
+  await away();
+  await sheet.getByRole('button', { name: 'Start a fresh collection' }).click();
+  await start();
+  await toDetails();
+  await expect(page.getByLabel('Product name')).toHaveValue('');
 
   // Start again: asks once when something is typed, then everything is cleared.
-  await page.getByRole('button', { name: /^Many items/ }).click();
-  await page.getByRole('button', { name: 'Men', exact: true }).click();
-  await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByLabel('Product name').fill('Half typed again');
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByTestId('start-over').click();
-  await expect(page.getByRole('heading', { level: 2, name: 'What are you adding?' })).toBeVisible();
-  await page.getByRole('button', { name: /^Many items/ }).click();
-  await page.getByRole('button', { name: 'Men', exact: true }).click();
-  await page.getByRole('button', { name: /^Kurta/ }).click();
+  await start();
+  await toDetails();
   await expect(page.getByLabel('Product name')).toHaveValue('');
 
   // The earlier form too.

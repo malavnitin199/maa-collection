@@ -15,6 +15,11 @@ export const typingEn = {
   'type.startOver': 'Start again',
   'type.startOverAsk': 'Clear everything typed here and start again?',
   'type.cleared': 'Cleared. Start a new entry.',
+  'type.resume.title': 'You were in the middle of this',
+  'type.resume.text': 'Continue with the details from before, or start a fresh one?',
+  'type.resume.keep': 'Continue where I left off',
+  'type.resume.fresh.collection': 'Start a fresh collection',
+  'type.resume.fresh.item': 'Start a fresh item',
 } as const;
 
 export const typingHi: Record<keyof typeof typingEn, string> = {
@@ -30,4 +35,9 @@ export const typingHi: Record<keyof typeof typingEn, string> = {
   'type.startOver': 'फिर से शुरू करें',
   'type.startOverAsk': 'यहाँ लिखा सब हटाकर फिर से शुरू करें?',
   'type.cleared': 'हट गया। नई एंट्री शुरू करें।',
+  'type.resume.title': 'आप यह बीच में छोड़कर गए थे',
+  'type.resume.text': 'पहले की जानकारी के साथ आगे बढ़ें, या नया शुरू करें?',
+  'type.resume.keep': 'जहाँ छोड़ा था वहीं से',
+  'type.resume.fresh.collection': 'नया कलेक्शन शुरू करें',
+  'type.resume.fresh.item': 'नया आइटम शुरू करें',
 };

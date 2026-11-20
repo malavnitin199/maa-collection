@@ -3,6 +3,9 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
+import { ResumeSheet } from '@/features/forms/resume-sheet';
+import { useDone } from '@/features/feedback/effects';
+import { formatPaise } from '@/lib/money';
 import { StartOver } from '@/features/forms/start-over';
 import { LangText } from '@/features/i18n/lang-text';
 import { card, errorBox, input, link, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
@@ -64,6 +67,7 @@ export function OldStockForm({
   const [count, setCount] = useState(0);
   const [busy, startTransition] = useTransition();
   const [preparing, setPreparing] = useState(false);
+  const done = useDone();
   // Same id until something changes: a double tap saves once.
   const operationId = useRef<string | null>(null);
   const touched = () => {
@@ -136,7 +140,20 @@ export function OldStockForm({
     }
     startTransition(async () => {
       const result = await tagOldStockAction(form);
-      if (!result.ok) return setError(result.error);
+      if (!result.ok) {
+        done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
+        return setError(result.error);
+      }
+      done.show({
+        title: t('done.tagged'),
+        lines: [
+          { label: t('done.line.item'), value: result.product.name },
+          { label: t('done.line.size'), value: result.product.size },
+          { label: t('done.line.colour'), value: result.product.color },
+          { label: t('done.line.mrp'), value: formatPaise(result.product.mrpPaise) },
+          { label: t('done.line.barcode'), value: result.product.barcode },
+        ].filter((line) => line.value),
+      });
       setSaved(result);
       setUpdated(false);
       setCount((n) => n + 1);
@@ -172,8 +189,8 @@ export function OldStockForm({
     setError(null);
     window.scrollTo({ top: 0 });
   }
-  // Coming back to this page later starts a fresh entry (owner's feedback 2026-11-20).
-  useFreshOnReturn(startOver);
+  // Coming back to this page later starts a fresh entry — or asks when the item is mostly filled in (owner's rule, 2026-11-20).
+  const resume = useFreshOnReturn(startOver, { ask: () => Boolean(name.trim() && mrp.trim()) });
 
   if (saved && !editing) {
     return (
@@ -295,6 +312,8 @@ export function OldStockForm({
       <div className="flex justify-end">
         <StartOver onStartOver={startOver} dirty={Boolean(name.trim() || mrp.trim() || photos.length)} />
       </div>
+      {done.node}
+      <ResumeSheet asking={resume.asking} what="item" onKeep={resume.keep} onFresh={resume.fresh} />
       {count > 0 && !editing && (
         <p className={`text-sm ${muted}`}>
           {t('stk.old.soFar', { n: count })}{' '}

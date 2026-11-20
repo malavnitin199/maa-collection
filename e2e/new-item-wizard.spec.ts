@@ -160,8 +160,12 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await page.getByRole('button', { name: 'Save & add next' }).click();
 
   // Saved, with the SKU range; the next item of the same bill starts at "What is it?".
-  const toast = page.getByTestId('saved-toast');
-  await expect(toast).toHaveText(new RegExp(`Saved Anarkali ${run}: MAA-KR-\\d{3} – MAA-KR-\\d{3} · 4 pcs`));
+  const toast = page.getByTestId('done-overlay'); // the done card (owner's feedback 2026-11-20): title, the summary line, the details
+  await expect(toast).toContainText('4 items saved');
+  await expect(toast).toContainText(new RegExp(`Saved Anarkali ${run}: MAA-KR-\\d{3} – MAA-KR-\\d{3} · 4 pcs`));
+  await expect(toast.getByTestId('done-lines')).toContainText('Pieces4 pcs');
+  await page.keyboard.press('Escape'); // any key or tap closes it
+  await expect(toast).toBeHidden();
   await heading(page, 'What is it?');
   await expect(page.getByTestId('wizard-path')).toHaveText('Women');
   await expect(page).toHaveURL(/\/admin\/stock\/new$/);
@@ -180,7 +184,9 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
 
   // Save = done with this bill: toast, back to the start, nothing kept.
-  await expect(page.getByTestId('saved-toast')).toHaveText(new RegExp(`Saved Banarasi ${run}: MAA-SA-\\d{3} · 2 pcs`));
+  await expect(page.getByTestId('done-overlay')).toContainText(new RegExp(`Saved Banarasi ${run}: MAA-SA-\\d{3} · 2 pcs`));
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('done-overlay')).toBeHidden();
   await heading(page, 'What are you adding?');
   await page.getByRole('button', { name: /^Many items/ }).click();
   await heading(page, 'Who is it for?'); // no section kept

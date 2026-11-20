@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
+import { ResumeSheet } from '@/features/forms/resume-sheet';
+import { useDone } from '@/features/feedback/effects';
 import { StartOver } from '@/features/forms/start-over';
 import { LangText } from '@/features/i18n/lang-text';
 import { IconBack, IconChevron } from '@/components/ui/icons';
 import { ActionSheet, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
 import { card, errorBox, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
-import { feedback, haptic } from '@/features/feedback/sounds';
+import { haptic } from '@/features/feedback/sounds';
 import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import type { MessageKey } from '@/lib/i18n';
@@ -93,13 +95,7 @@ export function NewItemWizard({
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   // "Saved …" after Save / Save & add next (goes by itself).
-  const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
-  const toastId = useRef(0);
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast((current) => (current?.id === toast.id ? null : current)), 4500);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
+  const done = useDone();
   // One id per entry: a retried Save never makes a second receipt.
   const operationId = useRef<string | null>(null);
 
@@ -194,9 +190,9 @@ export function NewItemWizard({
     setStep(startSection ? 'what' : 'start');
     window.scrollTo({ top: 0 });
   };
-  // Coming back to this page later starts a fresh entry (owner's feedback 2026-11-20).
-  useFreshOnReturn(startOver);
   const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || typeId);
+  // Coming back to this page later starts a fresh entry — or asks, once three or more steps are filled (owner's rule, 2026-11-20).
+  const resume = useFreshOnReturn(startOver, { ask: () => reached >= 2 && Boolean(name.trim() || mrp.trim() || sizes.length) });
   /**
    * Save (plan v19 04a): `print` → the tags page; `next` → the next item of the same bill
    * ("What is it?", section / company / bill no. / date kept); `done` → the start, everything cleared.
@@ -225,8 +221,20 @@ export function NewItemWizard({
         billNumber,
         stockDate,
       });
-      if (!result.ok) return setError(result.error);
-      feedback('done');
+      if (!result.ok) {
+        done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
+        return setError(result.error);
+      }
+      const skus = result.items.map((item) => item.sku);
+      const range = skus.length === 1 ? skus[0] : `${skus[0]} – ${skus[skus.length - 1]}`;
+      const savedLines = [
+        { label: t('done.line.item'), value: savedName },
+        { label: t('done.line.type'), value: [section?.name, type?.name].filter(Boolean).join(' › ') },
+        { label: t('done.line.company'), value: supplierName },
+        { label: t('done.line.skus'), value: range },
+        { label: t('done.line.pieces'), value: pcs(totalPieces) },
+        { label: t('done.line.purchase'), value: costPaise !== null ? formatPaise(costPaise * totalPieces) : '' },
+      ].filter((line) => line.value);
       clearItem();
       setDirection('next');
       if (after === 'print') {
@@ -235,9 +243,11 @@ export function NewItemWizard({
         router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}&mode=${mode}`);
         return;
       }
-      const skus = result.items.map((item) => item.sku);
-      const range = skus.length === 1 ? skus[0] : `${skus[0]} – ${skus[skus.length - 1]}`;
-      setToast({ id: ++toastId.current, text: t('ni.saved', { name: savedName, skus: range, pieces: pcs(totalPieces) }) });
+      done.show({
+        title: t(result.items.length === 1 ? 'done.itemSaved' : 'done.itemsSaved', { n: result.items.length }),
+        detail: t('ni.saved', { name: savedName, skus: range, pieces: pcs(totalPieces) }),
+        lines: savedLines,
+      });
       if (after === 'next') {
         setReached(1);
         setStep('what');
@@ -270,12 +280,8 @@ export function NewItemWizard({
 
   return (
     <div className="flex flex-col gap-5">
-      {toast && (
-        <p key={toast.id} role="status" data-testid="saved-toast" className="sel-toast fixed top-24 left-1/2 z-50 flex w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-2xl">
-          <span aria-hidden className="text-base">✓</span>
-          {toast.text}
-        </p>
-      )}
+      {done.node}
+      <ResumeSheet asking={resume.asking} what="collection" onKeep={resume.keep} onFresh={resume.fresh} />
       {/* Where you are: five steps, then what was chosen (tap a chip to go back to it). */}
       <div className="flex flex-col gap-3">
         {(step !== 'start' || dirty) && (
@@ -537,6 +543,7 @@ export function NewItemWizard({
           onAdded={(added) => {
             setList((current) => [...current, { ...added, types: [] }]);
             setSheet(null);
+            done.show({ title: t('done.sectionAdded'), lines: [{ label: t('done.line.name'), value: added.name }] });
             pickSection(added.id);
           }}
         />
@@ -548,6 +555,7 @@ export function NewItemWizard({
           onAdded={(added) => {
             addToList(section.id, (s) => ({ ...s, types: [...s.types, added].sort((a, b) => a.name.localeCompare(b.name)) }));
             setSheet(null);
+            done.show({ title: t('done.categoryAdded'), lines: [{ label: t('done.line.name'), value: added.name }, { label: t('done.line.section'), value: section.name }, { label: t('done.line.sizes'), value: added.sizes.join(', ') }].filter((line) => line.value) });
             pickType(added);
           }}
         />

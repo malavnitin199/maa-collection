@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
+import { ResumeSheet } from '@/features/forms/resume-sheet';
 import { StartOver } from '@/features/forms/start-over';
 import { LangText } from '@/features/i18n/lang-text';
 import { GarmentArt } from '@/components/ui/art';
@@ -256,9 +257,9 @@ export function NewItemForm({
     setBrand(company);
     window.scrollTo({ top: 0 });
   }
-  // Coming back to this page later starts a fresh entry (owner's feedback 2026-11-20).
-  useFreshOnReturn(startOver);
   const dirty = Boolean(name.trim() || mrp.trim() || sizes.length || colors.length || photo);
+  // Coming back to this page later starts a fresh entry — or asks when name, price and sizes are already in (owner's rule, 2026-11-20).
+  const resume = useFreshOnReturn(startOver, { ask: () => Boolean(name.trim() && (mrp.trim() || sizes.length)) });
 
   function save() {
     setError(null);
@@ -555,6 +556,7 @@ export function NewItemForm({
       <div className="flex justify-end">
         <StartOver onStartOver={startOver} dirty={dirty} />
       </div>
+      <ResumeSheet asking={resume.asking} what="collection" onKeep={resume.keep} onFresh={resume.fresh} />
       {/* Header: name, category and sizes on the left, the photo on the right; "for whom" tags below. */}
       <section className={`${card} flex flex-col gap-3`}>
         <div className="flex items-start gap-3">
