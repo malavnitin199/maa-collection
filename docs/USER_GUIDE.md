@@ -138,6 +138,18 @@ There is no colour step: a new item has no colour unless you add one on its prod
 - **Other details** tab: change **For / Age** for the whole design (**Save tags**), and **Edit this item**.
 - Every way of adding an item (**New item**, **Tag old stock**, **More → Add a single product**) lets you tap **For** and **Age** while adding; change them later here.
 
+### A company's page (Suppliers → tap a company)
+
+The figures on top, for the period you pick (**All time · This month · Last 30 days · This year · Dates…**): **Bills** (how many are still open and how many paid), **Purchases**, **Dues now** (what you still owe, all time), **Pieces** (and items), **Collections** (designs bought) and the **Last bill**. Purchases and dues show only to people with the *Purchase price* right. Below: **+ New item** and **Receive more**, then tabs:
+
+- **Bills** — every bill (deliveries with the same bill no. are one bill), newest first: date, bill no., items · pieces · purchase, and **Due ₹…** / **Paid**. Open a bill's items, print its tags, or tap **Mark paid** when you have paid it in full. *(est.)* means the purchase price was not recorded on the day of that delivery, so today's price is used.
+- **Payments** — **Record a payment**: amount, day, **for bill no.** (pick the bill; or *Running account* for an advance / a lump sum), note. A bill shows *Paid* once the payments against its number cover it. Dues = all purchases − all payments.
+- **Products** — the company's collections with sizes, MRP and pieces in stock; **View all** and **Company tags**.
+- **By type** — what you bought from them by section › category.
+- **Details** — contact, phone, **location**, GSTIN, notes; **Edit supplier details**.
+
+The Suppliers list shows each company's bills and dues too.
+
 ### Other ways to add stock
 
 - **More pieces of an existing item** (needs *Stock*): scan each piece. Scanning the same tag again adds one more.

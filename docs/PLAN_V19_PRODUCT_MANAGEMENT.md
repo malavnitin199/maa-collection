@@ -222,6 +222,7 @@ Remaining checks on real data before V19-02: count categories, products with `ca
 `products.design_id` (+ backfill), section / type chip filters with URL state, search, stock filters, combined cards by design id, product page tabs (Overview · Sizes & colours · Sales · Purchases · Other), bounded loading (page size 60 designs). Bulk actions, hide / restore, print unchanged.
 
 ### V19-06 Company bills and purchasing reports
+**Built in part on 2026-11-20 from the owner's feedback (ADR-035, see PROGRESS):** `unit_cost_paise` snapshot, bills by number + date with a period, company page figures + tabs (Bills · Payments · Products · By type · Details), payments and dues (`supplier_payments`), company location, list with bills / dues. Left: reports by section + type over custom dates beyond the page's *By type*, a typed bill total (D-V19-7).
 `stock_movements.unit_cost_paise` snapshot (new receipts), estimated flag for old rows, bills by number + date, company list with bills / value / pieces / SKUs / last purchase, company page Overview · Bills · Products · Reports (daily / monthly / by section + type / custom dates). The uncommitted `company.ts` must be re-based on the snapshot; until then its amounts are labelled *estimated from today's purchase price*.
 
 ### V19-07 Salesperson profiles

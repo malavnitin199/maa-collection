@@ -76,3 +76,10 @@ Evidence (shop walkthrough, printer model, sample invoice):
 | D-V19-4 | For / Age tags (ADR-027) once sections exist: retire the tag UI and keep the data read-only (recommended), or keep both? | **Retire the tag UI**; keep the columns; show a legacy value read-only |
 | D-V19-5 | Brand left empty: stays empty (recommended) or the company's name as today? | **Stays empty** |
 | D-V19-6 | New item start screen has two choices, *One item* and *Many items*: same steps for both (*One item* = one size + pieces; *Many items* = the full size grid and *Save & add next*), or *Many items* = several different products on one screen (old Quick add table)? | **Same steps for both** — *One item* asks one size + its pieces; *Many items* shows the size grid and *Save & add next* (owner, 2026-11-19, ADR-034) |
+
+## Company accounts (2026-11-20) — built on the owner's feedback; one assumption to confirm
+
+| ID | Question | Assumption in the code (ADR-035) |
+|---|---|---|
+| D-V19-7 | A bill's amount: always worked out from purchase price × pieces (recorded on the day of arrival), or also typed from the paper bill (so freight / discount / GST lines match the company's bill)? "Closed bill" = paid in full through payments naming that bill no. — right? | **Worked out from purchase prices**; a bill is **closed when payments naming its bill no. cover the amount**; payments without a bill no. count toward dues only. A typed bill total would be a small addition (`stock_receipts` is append-only, so it would be a separate table). |
+
