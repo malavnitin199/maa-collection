@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { errorBox, input, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useOperationId } from '@/features/catalog/small-forms';
+import { useFormDone } from '@/features/feedback/effects';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { FormState } from '@/server/actions/admin';
 
@@ -20,15 +21,36 @@ function Feedback({ state }: { state: FormState }) {
  * account) and a note. Same operation id until the form is edited (one payment
  * per tap).
  */
+const field = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
+
+/** The done card's lines for a payment: amount, which bill (or the running account), the day, the note. */
+function usePaymentDone(action: Action) {
+  const t = useT();
+  return useFormDone(action, {
+    notSaved: t('done.notSaved'),
+    describe: (fd) => ({
+      title: t('done.paymentSaved'),
+      amount: `₹${field(fd, 'amount')}`,
+      lines: [
+        { label: t('done.line.bill'), value: field(fd, 'billNumber') || t('done.line.account') },
+        { label: t('done.line.day'), value: field(fd, 'paidOn') },
+        { label: t('done.line.note'), value: field(fd, 'note') },
+      ].filter((line) => line.value),
+    }),
+  });
+}
+
 export function PaymentForm({ action, openBills, today }: { action: Action; openBills: { number: string; dueRupees: string }[]; today: string }) {
   const t = useT();
   const op = useOperationId();
+  const done = usePaymentDone(action);
   const [state, formAction, pending] = useActionState((prev: FormState, formData: FormData) => {
     op.stamp(formData);
-    return action(prev, formData);
+    return done.action(prev, formData);
   }, {});
   return (
     <form action={formAction} onChange={op.reset} className="flex flex-col gap-3" data-testid="payment-form">
+      {done.node}
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t('cat.acc.pay.amount')}
@@ -66,12 +88,14 @@ export function PaymentForm({ action, openBills, today }: { action: Action; open
 export function MarkPaidForm({ action, billNumber, dueRupees, today }: { action: Action; billNumber: string; dueRupees: string; today: string }) {
   const t = useT();
   const op = useOperationId();
+  const done = usePaymentDone(action);
   const [state, formAction, pending] = useActionState((prev: FormState, formData: FormData) => {
     op.stamp(formData);
-    return action(prev, formData);
+    return done.action(prev, formData);
   }, {});
   return (
     <form action={formAction} className="flex items-center gap-2">
+      {done.node}
       <input type="hidden" name="amount" value={dueRupees} />
       <input type="hidden" name="paidOn" value={today} />
       <input type="hidden" name="billNumber" value={billNumber} />

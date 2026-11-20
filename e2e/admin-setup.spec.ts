@@ -43,7 +43,7 @@ test('owner adds a supplier and a category; both show up with details', async ({
   await page.getByText('+ Add supplier').click();
   await page.getByLabel('Company name').fill(`XYZ Textiles ${run}`);
   await page.getByRole('button', { name: 'Add supplier' }).click();
-  await expect(page.getByText('A supplier with that name already exists.')).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'A supplier with that name already exists.' })).toBeVisible(); // the inline message (the red done card says it too)
 
   await page.goto('/admin/categories');
   const addCategory = page.locator('details', { hasText: '+ Add category' });

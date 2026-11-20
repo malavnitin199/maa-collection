@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { input, secondaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
 import { LangText } from '@/features/i18n/lang-text';
+import { useDone } from '@/features/feedback/effects';
 import { addCompanyAction, restoreCompanyAction, type CompanyResult } from '@/server/actions/admin';
 
 type Company = { id: string; name: string };
@@ -45,10 +46,15 @@ export function CompanyPicker({
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, startBusy] = useTransition();
+  const done = useDone();
 
   const use = (result: CompanyResult) => {
-    if (!result.ok) return setError(result.error);
+    if (!result.ok) {
+      done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
+      return setError(result.error);
+    }
     const company = result.company;
+    if (adding) done.show({ title: t('done.companyAdded'), lines: [{ label: t('done.line.name'), value: company.name }] });
     setCompanies((list) => (list.some((c) => c.id === company.id) ? list : [...list, company].sort((a, b) => a.name.localeCompare(b.name))));
     setPrevious((list) => list.filter((c) => c.id !== company.id));
     setAdding(false);
@@ -65,6 +71,7 @@ export function CompanyPicker({
 
   return (
     <div className="flex flex-col gap-2">
+      {done.node}
       <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
         {label}
         <select

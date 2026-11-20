@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react';
 import { errorBox, input, muted, okBox, primaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
 import { LangText } from '@/features/i18n/lang-text';
+import { useFormDone } from '@/features/feedback/effects';
 import type { MessageKey } from '@/lib/i18n';
 import { SECTION_ICONS, type SectionIcon } from '@/lib/sections';
 import { SIZE_PRESETS } from '@/lib/size-lists';
@@ -58,9 +59,23 @@ export type SupplierValues = {
 
 export function SupplierForm({ action, initial, submitLabel }: { action: Action; initial?: SupplierValues; submitLabel: string }) {
   const t = useT();
-  const [state, formAction, pending] = useActionState(action, {});
+  const field = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
+  const done = useFormDone(action, {
+    notSaved: t('done.notSaved'),
+    describe: (fd) => ({
+      title: t(initial ? 'done.companySaved' : 'done.companyAdded'),
+      lines: [
+        { label: t('done.line.name'), value: field(fd, 'name') },
+        { label: t('done.line.contact'), value: field(fd, 'contactName') },
+        { label: t('done.line.phone'), value: field(fd, 'phone') },
+        { label: t('done.line.location'), value: field(fd, 'location') },
+      ].filter((line) => line.value),
+    }),
+  });
+  const [state, formAction, pending] = useActionState(done.action, {});
   return (
     <form action={formAction} className="flex flex-col gap-3">
+      {done.node}
       <Text label={t('cat.supf.companyName')} name="name" required defaultValue={initial?.name} placeholder={t('cat.supf.companyPlaceholder')} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Text label={t('cat.supf.contact')} name="contactName" defaultValue={initial?.contactName} />
@@ -139,10 +154,25 @@ export function CategoryForm({
   defaultSectionId?: string | null;
 }) {
   const t = useT();
-  const [state, formAction, pending] = useActionState(action, {});
+  const field = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
+  const done = useFormDone(action, {
+    notSaved: t('done.notSaved'),
+    describe: (fd) => ({
+      title: t(initial ? 'done.saved' : 'done.categoryAdded'),
+      lines: [
+        { label: t('done.line.name'), value: field(fd, 'name') },
+        { label: t('done.line.hindi'), value: field(fd, 'nameHi') },
+        { label: t('done.line.section'), value: sections?.find((s) => s.id === field(fd, 'sectionId'))?.name ?? '' },
+        { label: t('done.line.code'), value: field(fd, 'code').toUpperCase() },
+        { label: t('done.line.sizes'), value: field(fd, 'sizes') },
+      ].filter((line) => line.value),
+    }),
+  });
+  const [state, formAction, pending] = useActionState(done.action, {});
   const sectionId = initial ? (initial.sectionId ?? '') : (defaultSectionId ?? '');
   return (
     <form action={formAction} className="flex flex-col gap-3">
+      {done.node}
       <div className="grid grid-cols-[1fr_6rem] gap-3">
         <Text label={t('cat.catf.name')} name="name" required defaultValue={initial?.name} placeholder={t('cat.catf.namePlaceholder')} />
         <Text
@@ -228,9 +258,21 @@ export function SectionForm({
   submitLabel: string;
 }) {
   const t = useT();
-  const [state, formAction, pending] = useActionState(action, {});
+  const field = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
+  const done = useFormDone(action, {
+    notSaved: t('done.notSaved'),
+    describe: (fd) => ({
+      title: t(initial ? 'done.saved' : 'done.sectionAdded'),
+      lines: [
+        { label: t('done.line.name'), value: field(fd, 'name') },
+        { label: t('done.line.hindi'), value: field(fd, 'nameHi') },
+      ].filter((line) => line.value),
+    }),
+  });
+  const [state, formAction, pending] = useActionState(done.action, {});
   return (
     <form action={formAction} className="flex flex-col gap-3">
+      {done.node}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Text label={t('sec.name')} name="name" required defaultValue={initial?.name} maxLength={30} />
         <Text label={t('sec.nameHi')} name="nameHi" defaultValue={initial?.nameHi} lang="hi" maxLength={40} />

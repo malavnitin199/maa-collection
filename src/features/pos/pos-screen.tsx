@@ -8,7 +8,7 @@ import { card, errorBox, input, muted, okBox, primaryButton, secondaryButton } f
 import { rupeesToPaise, saleTotalPaise, validateSaleDraft } from '@/features/inventory/inventory';
 import { ScanInput } from '@/features/scanning/scan-input';
 import { FirstTimeTip } from '@/components/layout/first-time-tip';
-import { DoneOverlay } from '@/features/feedback/effects';
+import { DoneOverlay, type DoneInput } from '@/features/feedback/effects';
 import { feedback } from '@/features/feedback/sounds';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
 import { LangText } from '@/features/i18n/lang-text';
@@ -67,8 +67,16 @@ export function PosScreen({
   );
   // Last scan result for the tick / shake, and the "Sale done" card.
   const [scanResult, setScanResult] = useState<{ kind: 'ok' | 'error'; id: number } | null>(null);
-  const [done, setDone] = useState<{ title: string; amount: string; detail: string } | null>(null);
+  const [done, setDone] = useState<DoneInput | null>(null);
   const closeDone = useCallback(() => setDone(null), []);
+  /** The done card's details for a sale (owner's feedback 2026-11-20): pieces, price, who gets the credit, status, stock left. */
+  const saleLines = (qty: number, price: number, credited: string, status: 'approved' | 'waiting' | 'phone', left?: number) => [
+    { label: t('done.line.pieces'), value: String(qty) },
+    { label: t('done.line.price'), value: formatPaise(price) },
+    { label: t('done.line.creditedTo'), value: credited },
+    { label: t('done.line.status'), value: t(status === 'waiting' ? 'done.status.waiting' : status === 'phone' ? 'done.status.phone' : 'done.status.approved') },
+    ...(left === undefined ? [] : [{ label: t('done.line.left'), value: String(left) }]),
+  ];
   const signal = (kind: 'ok' | 'error') => {
     feedback(kind === 'ok' ? 'scan' : 'error');
     setScanResult((last) => ({ kind, id: (last?.id ?? 0) + 1 }));
@@ -202,13 +210,19 @@ export function PosScreen({
           markReachable();
           if (!result.ok) {
             feedback('error');
+            setDone({ kind: 'error', title: t('done.notSaved'), detail: result.error });
             return setMessage({ kind: 'error', text: result.error });
           }
           const note = result.data.status === 'waiting' ? ` ${t('sell.sentToOwner')}` : '';
           setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'sell.doneMine' : 'sell.doneOther', { ...values, left: result.data.stockLeft }) + note });
-          // Payment-app style: chime + "Sale done" card with the amount.
+          // Payment-app style: chime + "Sale done" card with the amount and the details.
           feedback('done');
-          setDone({ title: t('done.sale'), amount, detail: item });
+          setDone({
+            title: t(result.data.status === 'waiting' ? 'done.saleWaiting' : 'done.sale'),
+            amount,
+            detail: item,
+            lines: saleLines(quantity, unitPricePaise, creditedName, result.data.status === 'waiting' ? 'waiting' : 'approved', result.data.stockLeft),
+          });
           setPending(null);
           void setPhoneStock(product.id, () => result.data.stockLeft);
           return;
@@ -224,7 +238,7 @@ export function PosScreen({
       if (!saved) return;
       setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'off.saved.mine' : 'off.saved.other', values) });
       feedback('done');
-      setDone({ title: t('off.saved.title'), amount, detail: t('off.saved.detail', { item }) });
+      setDone({ title: t('off.saved.title'), amount, detail: t('off.saved.detail', { item }), lines: saleLines(quantity, unitPricePaise, creditedName, 'phone') });
       setPending(null);
     });
   }
@@ -264,12 +278,18 @@ export function PosScreen({
           markReachable();
           if (!result.ok) {
             feedback('error');
+            setDone({ kind: 'error', title: t('done.notSaved'), detail: result.error });
             return setMessage({ kind: 'error', text: result.error });
           }
           const note = result.data.status === 'waiting' ? ` ${t('sell.sentToOwner')}` : '';
           setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'sell.byHand.doneMine' : 'sell.byHand.doneOther', values) + note });
           feedback('done');
-          setDone({ title: t('done.sale'), amount, detail: item });
+          setDone({
+            title: t(result.data.status === 'waiting' ? 'done.saleWaiting' : 'done.sale'),
+            amount,
+            detail: item,
+            lines: saleLines(quantity, unitPricePaise, creditedName, result.data.status === 'waiting' ? 'waiting' : 'approved'),
+          });
           setHand(null);
           return;
         } catch {
@@ -280,7 +300,7 @@ export function PosScreen({
       if (!saved) return;
       setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'off.saved.handMine' : 'off.saved.handOther', values) });
       feedback('done');
-      setDone({ title: t('off.saved.title'), amount, detail: t('off.saved.detail', { item }) });
+      setDone({ title: t('off.saved.title'), amount, detail: t('off.saved.detail', { item }), lines: saleLines(quantity, unitPricePaise, creditedName, 'phone') });
       setHand(null);
     });
   }

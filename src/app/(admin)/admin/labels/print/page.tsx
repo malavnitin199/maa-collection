@@ -5,6 +5,7 @@ import { errorBox, link, muted, okBox, secondaryButton } from '@/components/ui/s
 import { StickerLabel } from '@/features/catalog/barcode-label';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { PrintButton } from '@/features/catalog/print-button';
+import { CreatedDone } from '@/features/catalog/created-done';
 import { STORE_ID, STORE_TIMEZONE } from '@/lib/app-config';
 import type { MessageKey, T } from '@/lib/i18n';
 import { itemLink } from '@/lib/item-link';
@@ -259,6 +260,15 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
         )}
         {params.created && (
           <div className="flex flex-col gap-2">
+            <CreatedDone
+              title={t(params.created === '1' ? 'done.itemSaved' : 'done.itemsSaved', { n: params.created })}
+              lines={[
+                { label: t('done.line.item'), value: receipt.lines[0]?.name ?? '' },
+                { label: t('done.line.company'), value: receipt.supplierName ?? '' },
+                { label: t('done.line.bill'), value: receipt.billNumber ?? '' },
+                { label: t('done.line.pieces'), value: String(receipt.lines.reduce((n, l) => n + Math.max(l.quantity, 0), 0)) },
+              ].filter((line) => line.value)}
+            />
             <p role="status" className={okBox}>
               {t(params.created === '1' ? 'stk.labels.created.one' : 'stk.labels.created.other', { n: params.created })}
             </p>
