@@ -170,7 +170,7 @@ export async function updateCategory(
 
 // ----------------------------------------------------------------- suppliers
 
-export type SupplierInput = { name: string; contactName: string; phone: string; gstin: string; notes: string };
+export type SupplierInput = { name: string; contactName: string; phone: string; gstin: string; notes: string; location?: string };
 
 function cleanSupplier(input: SupplierInput) {
   const name = input.name.trim();
@@ -185,6 +185,7 @@ function cleanSupplier(input: SupplierInput) {
     phone: phone || null,
     gstin: gstin || null,
     notes: input.notes.trim() || null,
+    location: (input.location ?? '').trim().slice(0, 80) || null,
   };
 }
 

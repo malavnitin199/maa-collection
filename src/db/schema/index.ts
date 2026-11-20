@@ -58,10 +58,35 @@ export const suppliers = pgTable(
     phone: text('phone'),
     gstin: text('gstin'),
     notes: text('notes'),
+    /** Where the company is (city / market), as the owner types it — e.g. "Surat" (company accounts, 2026-11-20). */
+    location: text('location'),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('suppliers_store_name_uq').on(t.storeId, t.name)],
+);
+
+/**
+ * Money paid to a company (company accounts, 2026-11-20). Append-only, like
+ * stock_receipts. A payment may name the bill it is for (`bill_number`, matched
+ * to deliveries by number, any letter case); without one it goes to the
+ * company's running account. Dues = purchases − payments.
+ */
+export const supplierPayments = pgTable(
+  'supplier_payments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    supplierId: uuid('supplier_id').notNull().references(() => suppliers.id),
+    billNumber: text('bill_number'),
+    amountPaise: integer('amount_paise').notNull(),
+    /** The day the money was paid, as the owner gave it. */
+    paidOn: date('paid_on', { mode: 'string' }).notNull(),
+    note: text('note'),
+    staffId: uuid('staff_id').notNull().references(() => staff.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('supplier_payments_supplier_idx').on(t.supplierId, t.paidOn), check('supplier_payments_amount_positive', sql`${t.amountPaise} > 0`)],
 );
 
 /**
@@ -191,6 +216,12 @@ export const stockMovements = pgTable(
     refId: uuid('ref_id'),
     staffId: uuid('staff_id').references(() => staff.id),
     note: text('note'),
+    /**
+     * Purchase price per piece when the stock arrived (plan v19 V19-06), so a
+     * company's bills keep their amount even if the item's price changes later.
+     * Null on rows from before 2026-11-20: their amount is estimated from today's price.
+     */
+    unitCostPaise: integer('unit_cost_paise'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('stock_movements_product_idx').on(t.productId, t.createdAt)],
@@ -343,6 +374,7 @@ export type Supplier = typeof suppliers.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Section = typeof sections.$inferSelect;
 export type StockReceipt = typeof stockReceipts.$inferSelect;
+export type SupplierPayment = typeof supplierPayments.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Sale = typeof sales.$inferSelect;
 export type Exchange = typeof exchanges.$inferSelect;

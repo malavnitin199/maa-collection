@@ -344,6 +344,7 @@ export async function createProduct(
             quantityChange: input.openingStock,
             reason: 'opening',
             staffId: input.createdBy,
+            unitCostPaise: input.costPaise ?? null,
           });
         }
         return created;
@@ -482,7 +483,7 @@ export function cleanStockDate(raw: string | null | undefined, today: string = s
 }
 
 /** Today's date in the shop's time zone (YYYY-MM-DD). */
-function shopToday(): string {
+export function shopToday(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: STORE_TIMEZONE }).format(new Date());
 }
 
@@ -605,6 +606,8 @@ async function insertNewProducts(
             reason: 'opening' as const,
             refId: receipt.id,
             staffId: input.staffId,
+            // Company accounts: the purchase price on the day, kept with the delivery.
+            unitCostPaise: input.rows[i].costPaise ?? null,
           })),
         );
         return { receipt, products: created, duplicate: false };
@@ -892,7 +895,7 @@ export async function receiveStock(
         updated.push(row);
       }
       await tx.insert(stockMovements).values(
-        lines.map((line) => ({
+        lines.map((line, i) => ({
           storeId,
           productId: line.productId,
           quantityChange: line.quantity,
@@ -900,6 +903,8 @@ export async function receiveStock(
           refId: receipt.id,
           staffId: input.staffId,
           note: input.note?.trim() || null,
+          // Company accounts: the item's purchase price on the day, kept with the delivery.
+          unitCostPaise: updated[i].costPaise,
         })),
       );
       return { receipt, products: updated, duplicate: false };
