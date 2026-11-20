@@ -81,5 +81,6 @@ Evidence (shop walkthrough, printer model, sample invoice):
 
 | ID | Question | Assumption in the code (ADR-035) |
 |---|---|---|
+| D-V19-8 | Returns to a company (GR): a money record only (pieces, amount, bill no., date), or also take the returned pieces out of stock? | **Also reduce stock** (owner, 2026-11-20): pick the items and quantities returned; the amount comes from their purchase price; dues go down by it. Not built yet — the companies overview shipped first (ADR-039). |
 | D-V19-7 | A bill's amount: always worked out from purchase price × pieces (recorded on the day of arrival), or also typed from the paper bill (so freight / discount / GST lines match the company's bill)? "Closed bill" = paid in full through payments naming that bill no. — right? | **Worked out from purchase prices**; a bill is **closed when payments naming its bill no. cover the amount**; payments without a bill no. count toward dues only. A typed bill total would be a small addition (`stock_receipts` is append-only, so it would be a separate table). |
 

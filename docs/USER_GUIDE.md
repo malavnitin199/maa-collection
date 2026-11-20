@@ -155,15 +155,21 @@ There is no colour step: a new item has no colour unless you add one on its prod
 - **Other details** tab: change **For / Age** for the whole design (**Save tags**), and **Edit this item**.
 - Every way of adding an item (**New item**, **Tag old stock**, **More → Add a single product**) lets you tap **For** and **Age** while adding; change them later here.
 
+### Companies on Home
+
+Under **Today** on Home: **Companies** — how many companies, **Bills** (and how many are still open), **Collections** (and pieces bought), **Total spend** and **Dues now**; then every company, ten at a time (**Previous / Next**): its location and **since** when you have been buying from it (or the day it was added here), *bills · collections · pcs*, what you have **spent** and what is **due**. Companies with the newest bill come first; hidden ones last. Tap a company to open its page; **All companies** opens the list, **+ Add company** the add form.
+
+When you add or edit a company, give **Working since** — the day you started buying from them, even years ago. It is separate from the day the company was added in the app; both show under **Details**. Company name is required; location and the date are optional.
+
 ### A company's page (Suppliers → tap a company)
 
 The figures on top, for the period you pick (**All time · This month · Last 30 days · This year · Dates…**): **Bills** (how many are still open and how many paid), **Purchases**, **Dues now** (what you still owe, all time), **Pieces** (and items), **Collections** (designs bought) and the **Last bill**. Purchases and dues show only to people with the *Purchase price* right. Below: **+ New item** and **Receive more**, then tabs:
 
-- **Bills** — every bill (deliveries with the same bill no. are one bill), newest first: date, bill no., items · pieces · purchase, and **Due ₹…** / **Paid**. Open a bill's items, print its tags, or tap **Mark paid** when you have paid it in full. *(est.)* means the purchase price was not recorded on the day of that delivery, so today's price is used.
+- **Bills** — every bill (deliveries with the same bill no. are one bill), newest first, **ten at a time** (Previous / Next; the newest 100): date, bill no., items · pieces · purchase, and **Due ₹…** / **Paid**. Open a bill's items, print its tags, or tap **Mark paid** when you have paid it in full. *(est.)* means the purchase price was not recorded on the day of that delivery, so today's price is used.
 - **Payments** — **Record a payment**: amount, day, **for bill no.** (pick the bill; or *Running account* for an advance / a lump sum), note. A bill shows *Paid* once the payments against its number cover it. Dues = all purchases − all payments.
 - **Products** — the company's collections with sizes, MRP and pieces in stock; **View all** and **Company tags**.
 - **By type** — what you bought from them by section › category.
-- **Details** — contact, phone, **location**, GSTIN, notes; **Edit supplier details**.
+- **Details** — contact, phone, **location**, **Working since**, **Added on**, GSTIN, notes; **Edit supplier details**.
 
 The Suppliers list shows each company's bills and dues too.
 
