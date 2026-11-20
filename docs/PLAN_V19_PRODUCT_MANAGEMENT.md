@@ -219,6 +219,7 @@ Remaining checks on real data before V19-02: count categories, products with `ca
 - **Acceptance:** owner enters a real bill end to end on their phone and prints tags; Approvals, counter scan and offline lookup of the new item work.
 
 ### V19-05 Products list and product page
+**Product page part built on 2026-11-20 from the owner's feedback (ADR-037, see PROGRESS):** figures for a period + tabs Details · Colours · Sales · Purchases · Other details (`product-report.ts`). Left: `products.design_id`, the Products list filters / search / bounded loading.
 `products.design_id` (+ backfill), section / type chip filters with URL state, search, stock filters, combined cards by design id, product page tabs (Overview · Sizes & colours · Sales · Purchases · Other), bounded loading (page size 60 designs). Bulk actions, hide / restore, print unchanged.
 
 ### V19-06 Company bills and purchasing reports

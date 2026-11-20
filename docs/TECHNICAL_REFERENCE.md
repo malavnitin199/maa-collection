@@ -771,3 +771,12 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Words | `src/lib/i18n/modules/typing.ts` (`type.*`) | en + hi. |
 | Tests | `e2e/typing.spec.ts` (3 × desktop + phone) | Hindi from English letters, ⇄ back, phone-wide choice; microphone + message; fresh on return + Start again (New item and the old form). |
 
+## 32. Product page: figures, Sales and Purchases tabs (2026-11-20, ADR-037; plan v19 V19-05 in part)
+
+| Part | Where | Notes |
+|---|---|---|
+| Service | `src/server/services/product-report.ts` | `productReport(db, storeId, productIds, { amounts, period })`. Sales: `sales` × `staff` (sold_by) with `saleStatus`; totals from **approved** rows only; `profitPaise` per sale = total − sale's own `cost_paise` × qty (null when no cost); `offline` from `offline_at`. Arrivals: `stock_movements` (`opening` / `stock_in`, qty > 0) grouped by `ref_id` (receipt) or the movement itself; amount = qty × `coalesce(unit_cost_paise, products.cost_paise)`, `estimated` when a line has no snapshot. `period` = `DayRange` from `src/lib/company-period.ts` (sale day in shop time; arrival day = stock date else entry day). `lastSale` = newest approved sale (any period); `lastArrival` = newest arrival (any period). Tests `product-report.test.ts`. |
+| Page | `src/app/(admin)/admin/products/[id]/page.tsx` | `Search = { created, period, from, to }`; period chips + From / To form as on the company page; `StatTile`s (`product-stock`, `product-sold`, `product-bought`, `product-profit`); row `product-must-haves`; `ItemTabs` ids `details` · `colours` · `sales` · `purchases` · `other`. `stock-history` list now lives in the Purchases tab. |
+| Form | `src/features/catalog/product-form.tsx` `Field` | `words` prop → `LangText` (name, brand, colour); numbers stay plain. |
+| Tests | `e2e/product-page.spec.ts` | Figures after a bill through the old form, the row, Sales empty, Purchases arrival + history, Hindi / English box in Other details, an empty period. |
+

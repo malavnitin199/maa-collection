@@ -143,6 +143,9 @@ There is no colour step: a new item has no colour unless you add one on its prod
 
 ### The product page (Products → tap an item)
 
+**On top (2026-11-20):** the design's figures for the period you pick (All time · This month · Last 30 days · This year · Dates…): **In stock** (every size and colour; *this one* = the item you opened), **Sold** (approved sales; or how many are still waiting for the owner), **Came in** (pieces, and the purchase value for people with that right), **Profit** (owner), **Last sale**, **Last arrival**. Then one row with the company, MRP, selling (and purchase) price, **Print label** and **Restock**. Tabs: **Details** (tag, rates, receive), **Colours**, **Sales** (every sale of this design with its status), **Purchases** (every delivery, then the stock history), **Other details** (tags, edit — the name, brand and colour boxes type Hindi or English and take voice).
+
+
 - **Top**: name, colour · size · brand, small tags (the design's sizes, category, For, Age) and the main photo on the right.
 - **Must-haves**: company, MRP, selling and purchase price, **pieces in stock**, **Print label**, **Restock**.
 - **Details** tab: the hang tag, **Rates for the whole design** (change the default or one size → **Apply**; past sales keep their prices), receive more pieces, and the stock history.
