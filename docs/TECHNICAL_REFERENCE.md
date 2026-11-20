@@ -759,3 +759,15 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Tests | `src/server/services/company.test.ts` (8), `e2e/company.spec.ts` (desktop + phone) | See PROGRESS 2026-11-20. The old company e2e (hide a company) now opens the **Details** tab first. |
 | Rules | | Payments are append-only (no edit / delete): a mistake needs a correcting entry (not in the UI yet). Bill amounts are never typed; they come from purchase prices (open question D-V19-7). |
 
+## 31. Typing in Hindi or English, voice, fresh forms (2026-11-20, ADR-036)
+
+| Part | Where | Notes |
+|---|---|---|
+| Transliteration | `src/lib/transliterate.ts` | `toHindi(text)` (word list → letter rules; keeps digits, marks, Devanagari, 1–4 capital letters), `toEnglish(text)`, `convertLastWord(text)` (last English word + a following space / mark → Devanagari), `convertTrailingWord(text)` (blur), `hasDevanagari`. Pure; tests `transliterate.test.ts`. Add shop words to `WORD_LIST` (lower-case English → Hindi; the first Hindi spelling wins for the way back). |
+| Box | `src/features/i18n/lang-text.tsx` `LangText` | Props of an `<input>` minus `value` / `onChange` / `defaultValue`, plus `value` + `onValueChange` (controlled) or `name` + `defaultValue` (plain form field), `inputClassName`, `force: 'hi'` (Hindi-name fields, no toggle), `noVoice`, `testId`. Renders input + अ/A + ⇄ (when text) + `SpeakButton`. `useTypingScript()` = the phone-wide script (`localStorage` `maa-type-lang`, falls back to the person's language). `scriptButton` style shared with the mic. |
+| Voice | `src/features/i18n/speech-input.ts`, `speak-button.tsx` | `useSpeechInput({ lang, onFinal, onInterim })` → `{ listening, error, start, stop }`; `speechInputSupported()`. `SpeakButton({ script, text, onText })` joins the phrase after the current text. Errors `denied` / `nothing` / `failed` → `type.micDenied` / `type.noSpeech` / `type.micError`. |
+| Fresh forms | `src/features/forms/fresh-on-return.ts`, `start-over.tsx` | `useFreshOnReturn(reset)`: second effect run (Activity re-show) or `pageshow.persisted` → `reset()`. `StartOver({ onStartOver, dirty })` chip. Used in `new-item-wizard.tsx` (`startOver`), `new-item-form.tsx` (`startOver`), `old-stock-form.tsx` (`startOver`, after `nextItem`). React Strict Mode runs the effect twice on mount in dev: a harmless reset of an empty form. |
+| Where the box is used | New item steps (name, brand, add-section / add-type sheets), `/admin/stock/form` (name, brand), Tag old stock (name), `setup-forms.tsx` `Text` (every text field unless `plain` or a non-text `type`; `lang="hi"` → forced Hindi), `company-picker.tsx` (*+ New company…*), `pos-screen.tsx` (*Enter by hand* name) | Numbers, sizes, codes, phone, GSTIN stay plain. |
+| Words | `src/lib/i18n/modules/typing.ts` (`type.*`) | en + hi. |
+| Tests | `e2e/typing.spec.ts` (3 × desktop + phone) | Hindi from English letters, ⇄ back, phone-wide choice; microphone + message; fresh on return + Start again (New item and the old form). |
+

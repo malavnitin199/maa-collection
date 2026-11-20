@@ -41,6 +41,18 @@ Live app: https://maa-collection-pi.vercel.app
 - At the end: **Got it ✓** ticks the lesson. In **Sell an item** you can also try a **practice sale** — nothing is saved.
 - Hearing nothing? Turn the volume up. For Hindi, the phone needs its Hindi voice: Settings → Text-to-speech → Google → install Hindi (most Android phones have it already).
 
+## 1d. Typing in Hindi or English, and by voice
+
+Every box for words (product name, brand, company name, notes, category names…) has three small buttons:
+
+- **अ / A** — which script this phone types in. In Hindi, type a word in English letters and press space: it turns into Hindi (chikan kurta → चिकन कुर्ता). Your phone's Hindi keyboard works as well. The choice stays for every box on this phone.
+- **⇄** — change what is already in the box to the other script (Hindi ↔ English letters).
+- **Microphone** — tap, say the words (in the language the box is set to), and they appear in the box after what is there. If the phone asks, allow the microphone for this site. Not every browser can listen; the button hides when it can't.
+
+Spellings made from English letters are phonetic; for an exact Hindi spelling, speak it or use the Hindi keyboard.
+
+**Long forms start fresh.** New item, the old form and Tag old stock clear themselves when you come back to them later, so old half-typed details never linger. **↺ Start again** at the top clears the form right away (it asks once if something is typed).
+
 ## 2. Who can do what
 
 | Person | Can do |

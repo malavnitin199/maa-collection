@@ -74,7 +74,7 @@ test('New item starts fresh when you come back to it, and "Start again" clears i
   await page.getByLabel('Product name').fill('Half typed');
 
   // Away through the app (the page stays alive) and back with the phone's back button: a fresh start.
-  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await page.getByRole('link', { name: /^(Home|Dashboard)$/ }).first().click(); // the dock on a phone, the side menu on a desktop
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/admin\/stock\/new$/);
