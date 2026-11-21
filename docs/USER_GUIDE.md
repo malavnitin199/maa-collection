@@ -172,6 +172,15 @@ Home has one small **Companies** line under Today (how many companies, bills, du
 
 When you add or edit a company, give **Working since** — the day you started buying from them, even years ago. It is separate from the day the company was added in the app; both show under **Details**. Company name is required; location and the date are optional.
 
+### Bills (Home → Bills)
+
+A **collection** is what you add in New item (one save, e.g. Jeans in 6 sizes) or Receive stock — it is **not** a bill. A **bill** is the company's paper bill, entered here. Home has one **Bills** line (how many, how many open, what is due); tap it.
+
+- **Bills** lists every bill, newest bill date first, ten at a time: date, bill no., companies, how many collections, total and **Due ₹…** / **Paid**.
+- **+ New bill** — one card: **Bill no.** (optional), **Bill date** (can be earlier; the day you enter it is kept separately), the **company** (choose one, or *+ New company…*) and the **Bill amount ₹** from the paper. **Add another company** if one bill covers several: each gets its own amount, and the total is their sum. Below, the **collections waiting for a bill** — the chosen companies' ones (tick *Show every company's collections* for all) with name, date, sizes, pieces and value. Tick the ones on this bill: it shows *n collections · pcs · value*, and *Bill − collections = difference* (freight, GST, discount). **Save bill**.
+- **A bill's page**: each company's amount and **due**, with **Mark paid**; the collections on it (**Take off** one, or **+ Add collections**); **Edit bill** (number, date, companies, amounts — a company with payments on this bill stays); **Delete bill** (asks first; not when it has payments; its collections go back to waiting).
+- **Dues** of a company = all its bill amounts − all its payments. A payment can name one of its bills (*For bill no.*), or go to the running account.
+
 ### A company's page (Suppliers → tap a company)
 
 The figures on top, for the period you pick (**All time · This month · Last 30 days · This year · Dates…**): **Bills** (how many are still open and how many paid), **Purchases**, **Dues now** (what you still owe, all time), **Pieces** (and items), **Collections** (designs bought) and the **Last bill**. Purchases and dues show only to people with the *Purchase price* right. Below: **+ New item** and **Receive more**, then tabs:
