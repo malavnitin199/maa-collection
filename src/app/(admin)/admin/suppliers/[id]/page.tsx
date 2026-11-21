@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { card, link, muted, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { MarkPaidForm, PaymentForm } from '@/features/catalog/company-parts';
+import { DeleteCompanyButton } from '@/features/catalog/bulk-actions';
 import { ItemTabs } from '@/features/catalog/item-parts';
 import { SupplierForm } from '@/features/catalog/setup-forms';
 import { StatTile } from '@/features/reports/widgets';
@@ -407,6 +408,8 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
           { id: 'details', label: t('cat.acc.tab.details'), content: detailsTab, tone: 'slate' },
         ]}
       />
+      {/* Owner only (ADR-051): delete the company; its items and stock entries stay. */}
+      {me.role === 'admin' && <DeleteCompanyButton id={supplier.id} />}
     </main>
   );
 }

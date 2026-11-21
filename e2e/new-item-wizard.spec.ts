@@ -29,9 +29,9 @@ test('many items: who → what → details & sizes (one card) → check → save
   await heading(page, 'What are you adding?');
   await page.getByRole('button', { name: /^Many items/ }).click();
 
-  await heading(page, 'Who is it for?');
+  await heading(page, 'Which collection?');
   await expect(page.getByText('Step 1 of 4')).toBeVisible();
-  const who = page.getByRole('group', { name: 'Who is it for?' }).getByRole('button');
+  const who = page.getByRole('group', { name: 'Which collection?' }).getByRole('button');
   await expect(who.nth(0)).toHaveText('Men'); // then Women, Boys, Girls, any the owner added, and Add last
   await expect(who.nth(3)).toHaveText('Girls');
   await expect(who.last()).toHaveText('+Add');
@@ -49,7 +49,7 @@ test('many items: who → what → details & sizes (one card) → check → save
   await expect(card.getByRole('button', { name: 'Size M', exact: true })).toBeVisible();
   const next = page.getByRole('button', { name: 'Next' });
   await expect(next).toBeDisabled();
-  await expect(page.getByTestId('size-summary')).toHaveText('Choose the company and type the MRP');
+  await expect(page.getByTestId('size-summary')).toHaveText('Type the MRP');
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await page.getByLabel('Sale price (MRP) ₹').fill('1299');
@@ -216,10 +216,10 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await expect(page.getByTestId('done-overlay')).toBeHidden();
   await heading(page, 'What are you adding?');
   await page.getByRole('button', { name: /^Many items/ }).click();
-  await heading(page, 'Who is it for?'); // no section kept
+  await heading(page, 'Which collection?'); // no section kept
   await page.getByRole('button', { name: 'Women', exact: true }).click();
   await page.getByRole('button', { name: /^Saree/ }).click();
-  await expect(page.getByTestId('details-form').getByRole('combobox', { name: /^Company/ })).toHaveText('Choose a company…');
+  await expect(page.getByTestId('details-form').getByRole('combobox', { name: /^Company/ })).toHaveText('No company (optional)');
   await expect(page.getByTestId('details-form').getByLabel('Bill no.')).toHaveValue('');
 
   // Both items exist, under their own receipts (each save has its own operation id).
@@ -268,7 +268,7 @@ test('compact top, short company list, Next inside the card, and the phone back 
   await page.goBack();
   await heading(page, 'What is it?');
   await page.goBack();
-  await heading(page, 'Who is it for?');
+  await heading(page, 'Which collection?');
   await page.goBack();
   await heading(page, 'What are you adding?');
   await page.goBack();

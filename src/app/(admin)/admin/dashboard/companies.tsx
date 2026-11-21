@@ -9,6 +9,8 @@ import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { billsSummary } from '@/server/services/bills';
 import { companiesOverview } from '@/server/services/company';
+import { collectionsOverview } from '@/server/services/sections';
+import { CollectionsPanel } from '@/features/catalog/collections-panel';
 
 /**
  * Home's Companies line (owner's feedback 2026-11-21): one small row under
@@ -63,5 +65,12 @@ export async function BillsLine() {
       </span>
     </Link>
   );
+}
+
+/** Home → Collections (owner, 2026-11-22, ADR-051): names to edit, items in each, Delete when empty. */
+export async function CollectionsLine() {
+  const rows = await collectionsOverview(await requestDb(), STORE_ID);
+  if (rows.length === 0) return null;
+  return <CollectionsPanel rows={rows} />;
 }
 

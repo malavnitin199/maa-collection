@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createPgliteDb, type Db } from '@/db/client';
 import { STORE_ID } from '@/lib/app-config';
 import { companyPeriod } from '@/lib/company-period';
-import { createSupplier, deleteUnusedSuppliers, listCategories, listSuppliers, updateSupplier } from './catalog';
-import { createBill } from './bills';
+import { createSupplier, listCategories, listSuppliers, updateSupplier } from './catalog';
+import { createBill, getBill } from './bills';
+import { deleteCompanies } from './delete-companies';
 import { addPayment, companiesOverview, companyReport, companySummaries } from './company';
 import { createDesign, listProducts, receiveStock, updateDesignRates } from './products';
 import { listStaff } from './staff';
@@ -239,29 +240,34 @@ describe('companiesOverview', () => {
   });
 });
 
-describe('deleteUnusedSuppliers', () => {
-  it('removes companies with nothing linked; keeps one with items, bills or payments and reports its counts', async () => {
+describe('deleteCompanies (ADR-051)', () => {
+  it('any company goes from lists and boxes; its items stay with no company; its bills and payments stay as they are, with its name', async () => {
     const blank = { contactName: '', phone: '', gstin: '', notes: '' };
     const empty = await createSupplier(db, STORE_ID, { ...blank, name: 'Empty Co' });
-    const paidOnly = await createSupplier(db, STORE_ID, { ...blank, name: 'Advance Co' });
-    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId: paidOnly.id, amountPaise: 1000, staffId: owner });
-    const billOnly = await createSupplier(db, STORE_ID, { ...blank, name: 'Billed Co' });
-    const billed = await createDesign(db, STORE_ID, design({ supplierId: billOnly.id, name: 'Billed Kurta' }));
-    await bill([billed.receipt.id], { companies: [billOnly.id] });
-    await createDesign(db, STORE_ID, design()); // Surat Silks: 2 items, 1 collection
+    const billedCo = await createSupplier(db, STORE_ID, { ...blank, name: 'Billed Co' });
+    const billed = await createDesign(db, STORE_ID, design({ supplierId: billedCo.id, name: 'Billed Kurta' }));
+    const made = await bill([billed.receipt.id], { companies: [billedCo.id] });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId: billedCo.id, amountPaise: 1000, billId: made.id, staffId: owner });
+    const before = (await getBill(db, STORE_ID, made.id))!;
 
-    const result = await deleteUnusedSuppliers(db, STORE_ID, [empty.id, paidOnly.id, billOnly.id, supplierId, empty.id]);
-    expect(result.deleted).toEqual([empty.id]);
-    expect(result.kept.sort((a, b) => a.name.localeCompare(b.name))).toEqual([
-      { name: 'Advance Co', items: 0, collections: 0, bills: 0, payments: 1 },
-      { name: 'Billed Co', items: 2, collections: 1, bills: 1, payments: 0 },
-      { name: 'Surat Silks', items: 2, collections: 1, bills: 0, payments: 0 },
-    ]);
+    const result = await deleteCompanies(db, STORE_ID, [empty.id, billedCo.id, empty.id]);
+    expect(result.deleted.sort()).toEqual([empty.id, billedCo.id].sort());
+    expect(result.unlinked).toEqual({ items: 2 });
+
+    // Gone from the lists and the company box; the same name can be added again.
     const left = (await listSuppliers(db, STORE_ID)).map((s) => s.id);
-    expect(left).not.toContain(empty.id);
-    expect(left).toContain(paidOnly.id);
+    expect(left).not.toContain(billedCo.id);
     expect(left).toContain(supplierId);
-    expect(await deleteUnusedSuppliers(db, STORE_ID, [])).toEqual({ deleted: [], kept: [] });
+    expect((await companiesOverview(db, STORE_ID, { amounts: true })).rows.some((r) => r.id === billedCo.id)).toBe(false);
+    expect((await createSupplier(db, STORE_ID, { ...blank, name: 'Billed Co' })).id).not.toBe(billedCo.id);
+    // Items stay, with no company.
+    const items = (await listProducts(db, STORE_ID, { search: 'Billed Kurta' })).filter((p) => p.name === 'Billed Kurta');
+    expect(items.map((p) => p.supplierId)).toEqual([null, null]);
+    // The bill is exactly as it was: same company name, amount, payment, stock entry.
+    const after = (await getBill(db, STORE_ID, made.id))!;
+    expect(after.companies).toEqual([{ ...before.companies[0], deleted: true }]);
+    expect([after.totalPaise, after.paidPaise, after.collections]).toEqual([before.totalPaise, before.paidPaise, before.collections]);
+    expect(await deleteCompanies(db, STORE_ID, [])).toMatchObject({ deleted: [] });
   });
 });
 

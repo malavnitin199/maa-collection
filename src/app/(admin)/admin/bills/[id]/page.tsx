@@ -67,9 +67,15 @@ async function BillDetail({ id }: { id: string }) {
             {bill.companies.map((c) => (
               <tr key={c.supplierId} className="border-t border-zinc-100 align-top dark:border-zinc-900">
                 <td className="py-2">
-                  <Link href={`/admin/suppliers/${c.supplierId}`} className={link}>
-                    {c.name}
-                  </Link>
+                  {c.deleted ? (
+                    <span>
+                      {c.name} <span className={`text-xs ${muted}`}>{t('bills.companyDeleted')}</span>
+                    </span>
+                  ) : (
+                    <Link href={`/admin/suppliers/${c.supplierId}`} className={link}>
+                      {c.name}
+                    </Link>
+                  )}
                   {c.paidPaise > 0 && <span className={`block text-xs ${muted}`}>{t('bills.paid', { amount: formatPaise(c.paidPaise) })}</span>}
                 </td>
                 <td className="py-2 text-right">{formatPaise(c.amountPaise)}</td>

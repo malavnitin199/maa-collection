@@ -128,8 +128,8 @@ export function NewItemWizard({
   const packMrpPaise = boxed && packMrp.trim() ? rupeesToPaise(packMrp) : null;
   const pricePaise = price.trim() ? rupeesToPaise(price) : null;
   // The name is optional (owner, 2026-11-21): a blank one becomes "<category> <number>" on save.
+  // The company is optional (owner, 2026-11-22, ADR-051).
   const detailsOk =
-    Boolean(supplierId) &&
     mrpPaise !== null &&
     (!cost.trim() || typedCost !== null) &&
     (!price.trim() || pricePaise !== null) &&
@@ -564,7 +564,6 @@ export function NewItemWizard({
               companies={suppliers}
               previous={previousSuppliers}
               value={supplierId}
-              required
               emptyLabel={t('ni.chooseCompany')}
               onChange={(id, companyName) => {
                 setSupplierId(id);

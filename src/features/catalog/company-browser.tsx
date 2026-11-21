@@ -28,9 +28,9 @@ function needles(query: string): string[] {
  * The Companies page list (owner's feedback 2026-11-21): a search box with the
  * microphone (name, location, contact or phone; English or Hindi), a Location
  * dropdown, the figures folded away under *Summary*, and short rows ten at a
- * time. Select (hide / bring back) works as before.
+ * time. Select → Delete for the owner (ADR-051).
  */
-export function CompanyBrowser({ rows, totals, showMoney }: { rows: BrowserRow[]; totals: CompaniesOverview['totals']; showMoney: boolean }) {
+export function CompanyBrowser({ rows, totals, showMoney, canDelete = false }: { rows: BrowserRow[]; totals: CompaniesOverview['totals']; showMoney: boolean; canDelete?: boolean }) {
   const t = useT();
   const [script] = useTypingScript();
   const [query, setQuery] = useState('');
@@ -107,7 +107,8 @@ export function CompanyBrowser({ rows, totals, showMoney }: { rows: BrowserRow[]
                 {t('cat.find.count', { n: shown.length, total: rows.length })}
               </span>
             )}
-            <SelectToggle testId="select-companies" />
+            {/* Select is for Delete, which only the owner may do (ADR-051). */}
+            {canDelete && <SelectToggle testId="select-companies" />}
           </span>
         </div>
         {summary && (
@@ -129,35 +130,46 @@ export function CompanyBrowser({ rows, totals, showMoney }: { rows: BrowserRow[]
             key={`${query}\u0000${place}`}
             testId="supplier-list"
             className="flex flex-col gap-1.5"
-            items={shown.map((s) => (
-              <li key={s.id}>
-                <SelectableItem ids={[s.id]} label={s.name} gutter>
-                  <Link href={`/admin/suppliers/${s.id}`} className={`${card} flex items-center justify-between gap-3 px-3.5 py-2.5 active:bg-zinc-50 dark:active:bg-zinc-900`}>
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium">
-                        {s.name}
-                        {!s.active && <span className={`ml-1 text-xs font-normal ${muted}`}>{t('cat.inactiveParen')}</span>}
-                      </span>
-                      {(s.location || s.contactName || s.phone) && (
-                        <span className={`block truncate text-xs ${muted}`}>{[s.location, s.contactName, s.phone].filter(Boolean).join(' · ')}</span>
-                      )}
+            items={shown.map((s) => {
+              const row = (
+                <Link href={`/admin/suppliers/${s.id}`} className={`${card} flex items-center justify-between gap-3 px-3.5 py-2.5 active:bg-zinc-50 dark:active:bg-zinc-900`}>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">
+                      {s.name}
+                      {!s.active && <span className={`ml-1 text-xs font-normal ${muted}`}>{t('cat.inactiveParen')}</span>}
                     </span>
-                    <span className="shrink-0 text-right text-xs tabular-nums">
-                      <span className={`block ${s.duePaise ? 'font-semibold text-amber-700 dark:text-amber-300' : muted}`}>
-                        {showMoney ? t('cat.sup.billsDues', { bills: s.bills, amount: money(s.duePaise) }) : t('cat.sup.bills', { bills: s.bills })}
-                      </span>
-                      <span className={`block ${muted}`}>{t('cat.find.collections', { n: s.collections })}</span>
+                    {(s.location || s.contactName || s.phone) && (
+                      <span className={`block truncate text-xs ${muted}`}>{[s.location, s.contactName, s.phone].filter(Boolean).join(' · ')}</span>
+                    )}
+                  </span>
+                  <span className="shrink-0 text-right text-xs tabular-nums">
+                    <span className={`block ${s.duePaise ? 'font-semibold text-amber-700 dark:text-amber-300' : muted}`}>
+                      {showMoney ? t('cat.sup.billsDues', { bills: s.bills, amount: money(s.duePaise) }) : t('cat.sup.bills', { bills: s.bills })}
                     </span>
-                  </Link>
-                </SelectableItem>
-              </li>
-            ))}
+                    <span className={`block ${muted}`}>{t('cat.find.collections', { n: s.collections })}</span>
+                  </span>
+                </Link>
+              );
+              return (
+                <li key={s.id}>
+                  {canDelete ? (
+                    <SelectableItem ids={[s.id]} label={s.name} gutter>
+                      {row}
+                    </SelectableItem>
+                  ) : (
+                    row
+                  )}
+                </li>
+              );
+            })}
           />
         )}
       </div>
-      <SelectionBar>
-        <CompanyBulkActions />
-      </SelectionBar>
+      {canDelete && (
+        <SelectionBar>
+          <CompanyBulkActions />
+        </SelectionBar>
+      )}
     </SelectionProvider>
   );
 }

@@ -519,7 +519,6 @@ export function NewItemForm({
           companies={suppliers}
           previous={previousSuppliers}
           value={supplierId}
-          required
           disabled={saving}
           emptyLabel={t('stk.item.chooseCompany')}
           onChange={(id, companyName) => {

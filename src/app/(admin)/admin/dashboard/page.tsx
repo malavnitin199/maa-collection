@@ -11,7 +11,7 @@ import { requireAdmin } from '@/server/auth';
 import { getT } from '@/server/i18n';
 import { pendingCount } from '@/server/services/approvals';
 import { shopToday } from '@/server/services/reports';
-import { BillsLine, CompaniesOverview } from './companies';
+import { BillsLine, CollectionsLine, CompaniesOverview } from './companies';
 
 /**
  * Owner's Home (plan v17): only the essentials — four actions and today's sales.
@@ -70,6 +70,7 @@ async function Dashboard() {
 
       <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <div className="flex flex-col gap-2">
+          <CollectionsLine />
           <CompaniesOverview me={me} />
           <BillsLine />
         </div>

@@ -68,8 +68,14 @@ export const suppliers = pgTable(
     workingSince: date('working_since', { mode: 'string' }),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Deleted by the owner (2026-11-22, ADR-051): gone from every list and company box, its
+     * items unlinked; the row stays so bills, payments and stock entries keep its name.
+     */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
-  (t) => [uniqueIndex('suppliers_store_name_uq').on(t.storeId, t.name)],
+  // A deleted company's name can be used again by a new one.
+  (t) => [uniqueIndex('suppliers_store_name_uq').on(t.storeId, t.name).where(sql`${t.deletedAt} IS NULL`)],
 );
 
 /**

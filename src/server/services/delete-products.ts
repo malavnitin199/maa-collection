@@ -1,7 +1,6 @@
 import { and, eq, inArray, or } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { billCollections, exchanges, products, sales, stockMovements, stockReceipts } from '@/db/schema';
-import { recompute } from './bills';
 import { dropImagesOf } from './images';
 
 export type DeleteProductsResult = {
@@ -17,8 +16,9 @@ export type DeleteProductsResult = {
  *   is emptied and they are marked `item_deleted` (totals and profit stay right);
  * - the item's stock entries and photos go (a shared photo is handed to the items
  *   still using it);
- * - a delivery (collection) left with nothing is removed, and taken off its bill;
- *   every bill that had the items' collections is worked out again;
+ * - bills are never changed (owner, 2026-11-22): a bill once made keeps its
+ *   amounts; a stock entry on a bill stays even when empty; an empty one on no
+ *   bill is removed;
  * - an item named in an exchange is kept (and reported) — the exchange needs it.
  */
 export async function deleteProducts(db: Db, storeId: string, ids: string[]): Promise<DeleteProductsResult> {
@@ -50,27 +50,21 @@ export async function deleteProducts(db: Db, storeId: string, ids: string[]): Pr
     const receipts = refIds.length
       ? (await tx.select({ id: stockReceipts.id }).from(stockReceipts).where(and(eq(stockReceipts.storeId, storeId), inArray(stockReceipts.id, refIds)))).map((r) => r.id)
       : [];
-    const billIds = receipts.length
-      ? [...new Set((await tx.select({ billId: billCollections.billId }).from(billCollections).where(inArray(billCollections.receiptId, receipts))).map((b) => b.billId))]
-      : [];
 
     await tx.update(sales).set({ productId: null, itemDeleted: true }).where(and(eq(sales.storeId, storeId), inArray(sales.productId, goneIds)));
     await tx.delete(stockMovements).where(and(eq(stockMovements.storeId, storeId), inArray(stockMovements.productId, goneIds)));
     await dropImagesOf(tx, storeId, goneIds);
     await tx.delete(products).where(and(eq(products.storeId, storeId), inArray(products.id, goneIds)));
 
-    // A delivery with nothing left in it goes, and leaves its bill.
+    // A stock entry with nothing left goes — unless it is on a bill (bills stay as they are).
     if (receipts.length) {
       const stillUsed = new Set(
         (await tx.selectDistinct({ id: stockMovements.refId }).from(stockMovements).where(inArray(stockMovements.refId, receipts))).map((r) => r.id),
       );
-      const empty = receipts.filter((id) => !stillUsed.has(id));
-      if (empty.length) {
-        await tx.delete(billCollections).where(inArray(billCollections.receiptId, empty));
-        await tx.delete(stockReceipts).where(and(eq(stockReceipts.storeId, storeId), inArray(stockReceipts.id, empty)));
-      }
+      const onBills = new Set((await tx.select({ id: billCollections.receiptId }).from(billCollections).where(inArray(billCollections.receiptId, receipts))).map((r) => r.id));
+      const empty = receipts.filter((id) => !stillUsed.has(id) && !onBills.has(id));
+      if (empty.length) await tx.delete(stockReceipts).where(and(eq(stockReceipts.storeId, storeId), inArray(stockReceipts.id, empty)));
     }
-    for (const billId of billIds) await recompute(tx, storeId, billId);
     return { deleted: gone, kept: rows.filter((r) => keep.has(r.id)) };
   });
 }

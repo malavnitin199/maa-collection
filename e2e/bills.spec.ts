@@ -41,9 +41,9 @@ test('a bill with two companies and two collections; take one off and add it bac
   const b = `Bill Co B ${run}`;
   for (const company of [a, b]) {
     await page.goto('/admin/suppliers');
-    await page.getByText('+ Add supplier').click();
+    await page.getByText('+ Add company').click();
     await page.getByLabel('Company name').fill(company);
-    await page.getByRole('button', { name: 'Add supplier' }).click();
+    await page.getByRole('button', { name: 'Add company' }).click();
     await expect(page.getByRole('status')).toContainText(`${company} added.`);
   }
   await addCollection(page, a, `Jeans One ${run}`);
@@ -55,7 +55,7 @@ test('a bill with two companies and two collections; take one off and add it bac
   await page.getByTestId('home-bills').click();
   await page.getByRole('link', { name: '+ New bill' }).click();
   const form = page.getByTestId('bill-form');
-  await expect(form.getByText('Choose a company to see its collections.')).toBeVisible();
+  await expect(form.getByText('Choose a company to see its stock entries.')).toBeVisible();
   await expect(form.getByLabel(/amount/i)).toHaveCount(0);
   for (const company of [a, b]) {
     await form.getByRole('combobox', { name: /^(Company|Add another company)/ }).click();
@@ -69,7 +69,7 @@ test('a bill with two companies and two collections; take one off and add it bac
   await expect(groups.nth(1)).toContainText(`Jeans Two ${run}`);
   for (const name of [`Jeans One ${run}`, `Jeans Two ${run}`]) await form.getByRole('checkbox', { name }).click();
   // 4 sizes × 1 pc × ₹300 each = ₹1,200 a company; ₹2,400 the bill.
-  await expect(form.getByTestId('bill-company').nth(0)).toContainText('1 collections ticked · ₹1,200.00');
+  await expect(form.getByTestId('bill-company').nth(0)).toContainText('1 stock entries ticked · ₹1,200.00');
   await expect(form.getByTestId('bill-total')).toHaveText('₹2,400.00');
 
   // Step 2: the bill laid out like the paper — party, bill no., date, S.N · goods · qty · rate · amount, total.
@@ -103,7 +103,7 @@ test('a bill with two companies and two collections; take one off and add it bac
   await page.getByRole('button', { name: `Take Jeans Two ${run} off this bill` }).click();
   await expect(page.getByTestId('bill-collection-list').locator('li')).toHaveCount(1);
   await expect(page.getByTestId('bill-detail-total')).toHaveText('₹1,200.00'); // the amount follows the collections
-  await page.getByRole('button', { name: '+ Add collections' }).click();
+  await page.getByRole('button', { name: '+ Add stock entries' }).click();
   await page.getByTestId('add-collections').getByRole('checkbox', { name: `Jeans Two ${run}` }).click();
   await page.getByRole('button', { name: 'Add 1 to this bill' }).click();
   await page.keyboard.press('Escape');
@@ -147,7 +147,7 @@ test('a company added from New bill: it is chosen, the "added" card shows, and N
   await page.keyboard.press('Escape');
   await expect(form.getByTestId('bill-company')).toHaveText([new RegExp(`^1${fresh}`)]);
   // Nothing of a new company waits for a bill: say so, and offer New item from it (company already chosen there).
-  await expect(form.getByTestId('company-collections-empty')).toContainText('No collections of this company are waiting for a bill.');
+  await expect(form.getByTestId('company-collections-empty')).toContainText('No stock entries of this company are waiting for a bill.');
   await expect(form.getByRole('button', { name: 'Next: check bill' })).toBeDisabled();
   await form.getByRole('link', { name: `+ New item from ${fresh}` }).click();
   await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=/);

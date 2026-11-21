@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
-import { billCompanies, categories, productImages, products, sections, staff, stockMovements, stockReceipts, supplierPayments, suppliers, type Category, type Supplier } from '@/db/schema';
+import { categories, productImages, products, sections, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
 import { cleanSizeList, MAX_SIZES } from '@/lib/size-lists';
 import { STORE_TIMEZONE } from '@/lib/app-config';
 import { DomainError, isUniqueViolation } from './errors';
@@ -216,7 +216,7 @@ export async function listSuppliers(db: Db, storeId: string, { activeOnly = fals
       lastReceiptAt: sql<Date | null>`(select max(${stockReceipts.createdAt}) from ${stockReceipts} where ${stockReceipts.supplierId} = ${suppliers.id})`,
     })
     .from(suppliers)
-    .where(and(eq(suppliers.storeId, storeId), activeOnly ? eq(suppliers.active, true) : undefined))
+    .where(and(eq(suppliers.storeId, storeId), isNull(suppliers.deletedAt), activeOnly ? eq(suppliers.active, true) : undefined))
     .orderBy(asc(suppliers.name));
   return rows.map((r) => ({
     ...r.supplier,
@@ -227,7 +227,8 @@ export async function listSuppliers(db: Db, storeId: string, { activeOnly = fals
 }
 
 export async function getSupplier(db: Db, storeId: string, id: string): Promise<Supplier | null> {
-  const [row] = await db.select().from(suppliers).where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, id))).limit(1);
+  // A deleted company has no page (ADR-051); bills still show its name.
+  const [row] = await db.select().from(suppliers).where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, id), isNull(suppliers.deletedAt))).limit(1);
   return row ?? null;
 }
 
@@ -236,7 +237,7 @@ export async function createSupplier(db: Db, storeId: string, input: SupplierInp
     const [created] = await db.insert(suppliers).values({ storeId, ...cleanSupplier(input) }).returning();
     return created;
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError('A supplier with that name already exists.', { key: 'cat.err.supplierExists' });
+    if (isUniqueViolation(error)) throw new DomainError('A company with that name already exists.', { key: 'cat.err.supplierExists' });
     throw error;
   }
 }
@@ -253,10 +254,10 @@ export async function updateSupplier(
       .set({ ...cleanSupplier(input), active: input.active })
       .where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, id)))
       .returning();
-    if (!updated) throw new DomainError('Supplier not found.', { key: 'cat.err.supplierNotFound' });
+    if (!updated) throw new DomainError('Company not found.', { key: 'cat.err.supplierNotFound' });
     return updated;
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError('A supplier with that name already exists.', { key: 'cat.err.supplierExists' });
+    if (isUniqueViolation(error)) throw new DomainError('A company with that name already exists.', { key: 'cat.err.supplierExists' });
     throw error;
   }
 }
@@ -271,7 +272,7 @@ export async function addOrRestoreSupplier(db: Db, storeId: string, rawName: str
   const [same] = await db
     .select()
     .from(suppliers)
-    .where(and(eq(suppliers.storeId, storeId), sql`lower(${suppliers.name}) = lower(${name})`))
+    .where(and(eq(suppliers.storeId, storeId), isNull(suppliers.deletedAt), sql`lower(${suppliers.name}) = lower(${name})`))
     .limit(1);
   if (same) {
     if (same.active) return { supplier: same, status: 'existing' };
@@ -293,46 +294,6 @@ export async function setSuppliersActive(db: Db, storeId: string, ids: readonly 
   return changed.length;
 }
 
-export type CompanyDeleteResult = { deleted: string[]; kept: { name: string; items: number; collections: number; bills: number; payments: number }[] };
-
-/**
- * Companies → Select → Delete (owner's feedback 2026-11-21, after a confirmation):
- * a company with nothing linked — no items, collections, bills or payments — is removed
- * for good. One with any of those is kept as it is (its purchase history and
- * dues depend on it) and reported with its counts.
- */
-export async function deleteUnusedSuppliers(db: Db, storeId: string, ids: readonly string[]): Promise<CompanyDeleteResult> {
-  const unique = [...new Set(ids)];
-  if (unique.length === 0) return { deleted: [], kept: [] };
-  return db.transaction(async (tx) => {
-    const count = (table: typeof products | typeof stockReceipts | typeof supplierPayments) =>
-      tx
-        .select({ id: table.supplierId, n: sql<number>`count(*)`.mapWith(Number) })
-        .from(table)
-        .where(and(eq(table.storeId, storeId), inArray(table.supplierId, unique)))
-        .groupBy(table.supplierId);
-    const onBills = await tx
-      .select({ id: billCompanies.supplierId, n: sql<number>`count(*)`.mapWith(Number) })
-      .from(billCompanies)
-      .where(inArray(billCompanies.supplierId, unique))
-      .groupBy(billCompanies.supplierId);
-    const rows = await tx
-      .select({ id: suppliers.id, name: suppliers.name })
-      .from(suppliers)
-      .where(and(eq(suppliers.storeId, storeId), inArray(suppliers.id, unique)));
-    const items = await count(products);
-    const deliveries = await count(stockReceipts);
-    const payments = await count(supplierPayments);
-    const of = (list: { id: string | null; n: number }[], id: string) => list.find((r) => r.id === id)?.n ?? 0;
-    const kept = rows
-      .map((r) => ({ name: r.name, id: r.id, items: of(items, r.id), collections: of(deliveries, r.id), bills: of(onBills, r.id), payments: of(payments, r.id) }))
-      .filter((r) => r.items + r.collections + r.bills + r.payments > 0);
-    const free = rows.filter((r) => !kept.some((k) => k.id === r.id)).map((r) => r.id);
-    if (free.length) await tx.delete(suppliers).where(and(eq(suppliers.storeId, storeId), inArray(suppliers.id, free)));
-    return { deleted: free, kept: kept.map(({ name, items: i, collections: c, bills: b, payments: p }) => ({ name, items: i, collections: c, bills: b, payments: p })) };
-  });
-}
-
 /** Brings a hidden ("previous") company back into the lists. Its details are kept. */
 export async function restoreSupplier(db: Db, storeId: string, id: string): Promise<Supplier> {
   const [restored] = await db
@@ -340,7 +301,7 @@ export async function restoreSupplier(db: Db, storeId: string, id: string): Prom
     .set({ active: true })
     .where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, id)))
     .returning();
-  if (!restored) throw new DomainError('Supplier not found.', { key: 'cat.err.supplierNotFound' });
+  if (!restored) throw new DomainError('Company not found.', { key: 'cat.err.supplierNotFound' });
   return restored;
 }
 

@@ -38,7 +38,7 @@ test('product page: figures, period, Sales and Purchases tabs, Hindi / English b
   await page.getByRole('button', { name: 'Size L' }).click();
   await page.getByRole('tab', { name: 'Details', exact: true }).click();
   await page.getByLabel('Pieces each').fill('3');
-  await page.getByLabel('Supplier bill no. (optional)').fill(`P-${run}`);
+  await page.getByLabel('Company bill no. (optional)').fill(`P-${run}`);
   await page.getByRole('button', { name: 'Save 2 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   await page.getByTestId('receipt-lines').getByRole('link').first().click();

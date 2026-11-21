@@ -292,42 +292,93 @@ export function PrintSelected() {
 }
 
 /** Companies → Select (plan v17): hide the chosen companies (they move to "Previous companies") or bring them back. */
+/** The confirmation before companies are deleted (ADR-051): what stays, what goes, then a red "Yes, delete". */
+function DeleteCompaniesSheet({ ids, onClose, onDone }: { ids: string[]; onClose: () => void; onDone: (result: { ok: boolean; message: string }) => void }) {
+  const t = useT();
+  const [busy, startBusy] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const n = ids.length;
+  const remove = () =>
+    startBusy(async () => {
+      setError(null);
+      const result = await deleteCompaniesAction(ids);
+      if (!result.ok) return setError(result.error);
+      onDone({ ok: result.deleted > 0, message: result.message });
+    });
+  return (
+    <ActionSheet title={t(n === 1 ? 'bulk.deleteAsk.one' : 'bulk.deleteAsk.other', { n })} onClose={onClose}>
+      <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('bulk.deleteNote')}</p>
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-200">
+          {error}
+        </p>
+      )}
+      <button type="button" data-testid="confirm-delete" disabled={busy} onClick={remove} className={sheetDanger}>
+        <IconTrash className="h-5 w-5" />
+        {busy ? t('common.saving') : t(n === 1 ? 'bulk.deleteYes.one' : 'bulk.deleteYes.other', { n })}
+      </button>
+      <button type="button" onClick={onClose} className={sheetSecondary}>
+        {t('common.cancel')}
+      </button>
+    </ActionSheet>
+  );
+}
+
 /**
- * Companies → Select (owner's feedback 2026-11-21): Delete only, after a confirmation.
- * Companies with items, bills or payments are kept (their history depends on them) and named in the message.
+ * Companies → Select → Delete (owner only, ADR-051), after a confirmation: any company;
+ * its items and stock entries stay with no company.
  */
 export function CompanyBulkActions() {
   const t = useT();
   const router = useRouter();
   const { selected, clear, notify } = useSelection();
-  const [busy, startBusy] = useTransition();
   const [confirm, setConfirm] = useState(false);
-  const n = selected.length;
-  const remove = () =>
-    startBusy(async () => {
-      const result = await deleteCompaniesAction(selected);
-      setConfirm(false);
-      if (!result.ok) return notify('error', result.error);
-      notify(result.deleted > 0 ? 'ok' : 'error', result.message);
-      clear();
-      router.refresh();
-    });
   return (
     <>
       <ActionGrid>
-        <ActionTile icon={<IconTrash />} label={t('bulk.delete')} tone="danger" disabled={n === 0 || busy} onClick={() => setConfirm(true)} wide />
+        <ActionTile icon={<IconTrash />} label={t('bulk.delete')} tone="danger" disabled={selected.length === 0} onClick={() => setConfirm(true)} wide />
       </ActionGrid>
       {confirm && (
-        <ActionSheet title={t(n === 1 ? 'bulk.deleteAsk.one' : 'bulk.deleteAsk.other', { n })} onClose={() => setConfirm(false)}>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('bulk.deleteNote')}</p>
-          <button type="button" data-testid="confirm-delete" disabled={busy} onClick={remove} className={sheetDanger}>
-            <IconTrash className="h-5 w-5" />
-            {busy ? t('common.saving') : t(n === 1 ? 'bulk.deleteYes.one' : 'bulk.deleteYes.other', { n })}
-          </button>
-          <button type="button" onClick={() => setConfirm(false)} className={sheetSecondary}>
-            {t('common.cancel')}
-          </button>
-        </ActionSheet>
+        <DeleteCompaniesSheet
+          ids={selected}
+          onClose={() => setConfirm(false)}
+          onDone={(result) => {
+            setConfirm(false);
+            notify(result.ok ? 'ok' : 'error', result.message);
+            clear();
+            router.refresh();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+/** A company's page (owner only): Delete this company → the confirmation → back to Companies with the result. */
+export function DeleteCompanyButton({ id }: { id: string }) {
+  const t = useT();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="delete-company"
+        onClick={() => setOpen(true)}
+        className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl border border-red-300 px-4 text-sm font-semibold text-red-700 transition hover:bg-red-50 active:scale-[0.98] dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+      >
+        <IconTrash className="h-4 w-4" />
+        {t('bulk.deleteThis')}
+      </button>
+      {open && (
+        <DeleteCompaniesSheet
+          ids={[id]}
+          onClose={() => setOpen(false)}
+          onDone={(result) => {
+            setOpen(false);
+            router.replace(`/admin/suppliers?${new URLSearchParams({ deleted: result.message })}`);
+          }}
+        />
       )}
     </>
   );

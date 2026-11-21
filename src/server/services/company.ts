@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { billCollections, billCompanies, bills, categories, products, sections, staff, stockMovements, stockReceipts, supplierPayments, suppliers, type SupplierPayment } from '@/db/schema';
 import { listBills } from './bills';
@@ -467,7 +467,7 @@ export async function companiesOverview(db: Db, storeId: string, { amounts }: { 
         createdAt: suppliers.createdAt,
       })
       .from(suppliers)
-      .where(eq(suppliers.storeId, storeId)),
+      .where(and(eq(suppliers.storeId, storeId), isNull(suppliers.deletedAt))),
     companySummaries(db, storeId, { amounts }),
   ]);
   const hide = (value: number) => (amounts ? value : null);

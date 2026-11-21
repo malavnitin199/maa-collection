@@ -23,11 +23,11 @@ test('done card: a company with its details, a duplicate shows the red card; a c
 
   // A company.
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`Done Mills ${run}`);
   await page.getByLabel(/^Phone/).fill('98765 00000');
   await page.getByLabel(/^Location/).fill('Surat');
-  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await page.getByRole('button', { name: 'Add company' }).click();
   await expect(card).toContainText('Company added');
   await expect(card.getByTestId('done-lines')).toContainText(`NameDone Mills ${run}`);
   await expect(card.getByTestId('done-lines')).toContainText('Phone98765 00000');
@@ -38,12 +38,12 @@ test('done card: a company with its details, a duplicate shows the red card; a c
 
   // The same name again: the red card, clearly different.
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`Done Mills ${run}`);
-  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await page.getByRole('button', { name: 'Add company' }).click();
   await expect(card).toHaveAttribute('data-kind', 'error');
   await expect(card).toContainText('Not saved');
-  await expect(card).toContainText('A supplier with that name already exists.');
+  await expect(card).toContainText('A company with that name already exists.');
   await page.keyboard.press('Escape');
   await expect(card).toBeHidden();
 

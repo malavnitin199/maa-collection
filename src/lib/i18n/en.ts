@@ -47,7 +47,7 @@ const base = {
   'nav.dashboard': 'Dashboard',
   'nav.products': 'Products',
   'nav.addStock': '+ Add stock',
-  'nav.suppliers': 'Suppliers',
+  'nav.suppliers': 'Companies',
   'nav.categories': 'Categories',
   'nav.staff': 'Staff',
   'nav.reports': 'Reports',

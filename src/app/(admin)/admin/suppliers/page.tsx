@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { card, muted } from '@/components/ui/styles';
+import { card, muted, okBox } from '@/components/ui/styles';
 import { CompanyBrowser } from '@/features/catalog/company-browser';
 import { SupplierForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
@@ -13,7 +13,7 @@ import { companiesOverview } from '@/server/services/company';
 /**
  * Companies (owner's feedback 2026-11-21): the list first — search (with the
  * microphone), a Location dropdown and short rows ten at a time; the figures
- * fold away under *Summary*; *+ Add supplier* is a small chip that opens the
+ * fold away under *Summary*; *+ Add company* is a small chip that opens the
  * form. Each row opens the company's page with everything else.
  */
 async function Companies() {
@@ -24,6 +24,7 @@ async function Companies() {
   return (
     <CompanyBrowser
       showMoney={showMoney}
+      canDelete={me.role === 'admin'}
       totals={totals}
       rows={rows.map(({ id, name, location, contactName, phone, active, bills, openBills, collections, amountPaise, duePaise }) => ({
         id, name, location, contactName, phone, active, bills, openBills, collections, amountPaise, duePaise,
@@ -32,10 +33,17 @@ async function Companies() {
   );
 }
 
-export default async function SuppliersPage() {
+export default async function SuppliersPage(props: PageProps<'/admin/suppliers'>) {
   const t = await getT();
+  const { deleted } = (await props.searchParams) as { deleted?: string };
   return (
     <main className="flex flex-col gap-3">
+      {/* After Delete on a company's page (ADR-051): what happened. */}
+      {typeof deleted === 'string' && deleted && (
+        <p role="status" data-testid="deleted-note" className={okBox}>
+          {deleted.slice(0, 300)}
+        </p>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t('nav.suppliers')}</h1>
         {/* Small until opened; then the form takes the full width below the title. */}

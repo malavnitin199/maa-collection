@@ -62,20 +62,21 @@ describe('deleteProducts', () => {
     expect(after.byCategory.reduce((n, r) => n + r.revenuePaise, 0)).toBe(after.totals.revenuePaise);
   });
 
-  it('a delivery left empty goes and leaves its bill; the bill amount follows what is left', async () => {
+  it('bills are never changed: a bill keeps its amount and its stock entries, even when their items are deleted', async () => {
     const kept = await design('Stay Kurta');
     const gone = await design('Bye Kurta');
+    const loose = await design('Loose Kurta');
     const { id } = await createBill(db, STORE_ID, { operationId: `b-${Math.random()}`, billDate: '2026-11-10', companies: [company], receiptIds: [kept.receipt.id, gone.receipt.id], staffId: owner });
-    expect((await getBill(db, STORE_ID, id))!.totalPaise).toBe(480000); // 2 × (2 sizes × 3 × ₹400)
+    const before = (await getBill(db, STORE_ID, id))!;
+    expect(before.totalPaise).toBe(480000); // 2 × (2 sizes × 3 × ₹400)
 
-    // One size of "Stay": its delivery still has L, so it stays on the bill at half its value.
-    await deleteProducts(db, STORE_ID, [kept.products[0].id]);
-    // All of "Bye": its delivery is empty, so it leaves the bill and is removed.
-    await deleteProducts(db, STORE_ID, gone.products.map((p) => p.id));
-    const bill = (await getBill(db, STORE_ID, id))!;
-    expect(bill.totalPaise).toBe(120000);
-    expect(bill.list.map((c) => c.receiptId)).toEqual([kept.receipt.id]);
-    expect(await db.select().from(stockReceipts).where(eq(stockReceipts.id, gone.receipt.id))).toHaveLength(0);
+    await deleteProducts(db, STORE_ID, [kept.products[0].id, ...gone.products.map((p) => p.id), ...loose.products.map((p) => p.id)]);
+    const after = (await getBill(db, STORE_ID, id))!;
+    expect(after.totalPaise).toBe(480000);
+    expect(after.companies).toEqual(before.companies);
+    // The emptied entry on the bill stays; the emptied one on no bill goes.
+    expect(await db.select().from(stockReceipts).where(eq(stockReceipts.id, gone.receipt.id))).toHaveLength(1);
+    expect(await db.select().from(stockReceipts).where(eq(stockReceipts.id, loose.receipt.id))).toHaveLength(0);
   });
 
   it('a photo shared by sizes is handed to the size still there', async () => {

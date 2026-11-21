@@ -11,6 +11,7 @@ import { addCompanyAction, restoreCompanyAction, type CompanyResult } from '@/se
 type Company = { id: string; name: string };
 
 const NEW = '__new';
+const NONE = '__none';
 const PREVIOUS = 'previous:';
 
 /**
@@ -85,6 +86,8 @@ export function CompanyPicker({
         placeholder={emptyLabel}
         searchPlaceholder={t('cat.company.search')}
         options={[
+          // Optional box (ADR-051): a chosen company can be cleared again.
+          ...(!required && value ? [{ value: NONE, label: t('cat.form.noSupplier') }] : []),
           ...companies.filter((c) => !exclude.includes(c.id)).map((c) => ({ value: c.id, label: c.name })),
           ...previous.filter((c) => !exclude.includes(c.id)).map((c) => ({ value: `${PREVIOUS}${c.id}`, label: c.name, group: t('cat.company.previous') })),
           { value: NEW, label: t('cat.company.new'), tone: 'action' as const },
@@ -92,6 +95,10 @@ export function CompanyPicker({
         onChange={(choice) => {
           setError(null);
           if (choice === NEW) return setAdding(true);
+          if (choice === NONE) {
+            setAdding(false);
+            return onChange('', '');
+          }
           if (choice.startsWith(PREVIOUS)) {
             const id = choice.slice(PREVIOUS.length);
             return startBusy(async () => use(await restoreCompanyAction(id)));

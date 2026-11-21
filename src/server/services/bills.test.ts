@@ -89,7 +89,7 @@ describe('createBill', () => {
     expect(bill).toMatchObject({ billNumber: 'SS-101', billDate: '2026-11-10', totalPaise: 1440000, paidPaise: 0, duePaise: 1440000, status: 'open', collections: 3, pieces: 36, valuePaise: 1440000 });
     expect(bill.createdOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(bill.list.map((c) => c.names[0]).sort()).toEqual(['Jeans A', 'Jeans B', 'Jeans C']);
-    expect(bill.companies).toEqual([{ supplierId: surat, name: 'Surat Silks', amountPaise: 1440000, paidPaise: 0, duePaise: 1440000 }]);
+    expect(bill.companies).toEqual([{ supplierId: surat, name: 'Surat Silks', deleted: false, amountPaise: 1440000, paidPaise: 0, duePaise: 1440000 }]);
   });
 
   it('several companies: each part is its own collections’ value; the total is their sum; payments close a part', async () => {

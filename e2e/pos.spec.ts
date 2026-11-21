@@ -419,7 +419,7 @@ test('owner and catalog screens in Hindi: Home dashboard, products, stock entry,
   // Home: the owner's own words (Today / net sales / the four actions) are Hindi; no English labels left.
   const main = page.locator('main');
   await expect(main.getByRole('heading', { name: 'आज', exact: true })).toBeVisible();
-  for (const english of ['Net revenue', 'Net sales', 'New stock', 'Suppliers', 'Reports', 'Approvals', 'Units sold']) {
+  for (const english of ['Net revenue', 'Net sales', 'New stock', 'Suppliers', 'Companies', 'Reports', 'Approvals', 'Units sold']) {
     await expect(main.getByText(english, { exact: false })).toHaveCount(0);
   }
   // Products, stock entry and reports pages open in Hindi.

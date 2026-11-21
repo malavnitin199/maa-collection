@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, like, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, products, sections, staff, stockMovements, stockReceipts, suppliers, type Product, type StockReceipt } from '@/db/schema';
 import { inStoreEan13, isValidEan13 } from '@/features/scanning/ean13';
@@ -267,14 +267,14 @@ async function resolveCategory(db: Db, storeId: string, categoryId: string) {
  */
 async function resolveCategoryForNewItem(db: Db, storeId: string, categoryId: string) {
   const category = await resolveCategory(db, storeId, categoryId);
-  if (!category.sectionId) throw new DomainError('Sort this category under Men, Women, Boys or Girls first (Categories).', { key: 'sec.err.needsSection' });
+  if (!category.sectionId) throw new DomainError('Put this category under a collection first (Categories).', { key: 'sec.err.needsSection' });
   const [section] = await db
     .select({ id: sections.id, active: sections.active })
     .from(sections)
     .where(and(eq(sections.storeId, storeId), eq(sections.id, category.sectionId)))
     .limit(1);
-  if (!section) throw new DomainError('Sort this category under Men, Women, Boys or Girls first (Categories).', { key: 'sec.err.needsSection' });
-  if (!section.active) throw new DomainError('This section is hidden. Bring it back in Categories first.', { key: 'sec.err.hidden' });
+  if (!section) throw new DomainError('Put this category under a collection first (Categories).', { key: 'sec.err.needsSection' });
+  if (!section.active) throw new DomainError('This collection is hidden. Bring it back in Categories first.', { key: 'sec.err.hidden' });
   return category;
 }
 
@@ -282,9 +282,9 @@ async function resolveSupplier(db: Db, storeId: string, supplierId: string) {
   const [supplier] = await db
     .select()
     .from(suppliers)
-    .where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, supplierId), eq(suppliers.active, true)))
+    .where(and(eq(suppliers.storeId, storeId), eq(suppliers.id, supplierId), eq(suppliers.active, true), isNull(suppliers.deletedAt)))
     .limit(1);
-  if (!supplier) throw new DomainError('Choose an active supplier.', { key: 'stk.err.activeSupplier' });
+  if (!supplier) throw new DomainError('Choose an active company.', { key: 'stk.err.activeSupplier' });
   return supplier;
 }
 
@@ -382,7 +382,8 @@ function cleanList(values: string[]): string[] {
 
 export type DesignInput = {
   operationId: string;
-  supplierId: string;
+  /** Optional (owner, 2026-11-22, ADR-051): empty = no company. */
+  supplierId: string | null;
   categoryId: string;
   name: string;
   brand: string;
@@ -449,7 +450,8 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   }
   const stockDate = cleanStockDate(input.stockDate);
   const category = await resolveCategoryForNewItem(db, storeId, input.categoryId);
-  await resolveSupplier(db, storeId, input.supplierId);
+  const supplierId = input.supplierId?.trim() || null;
+  if (supplierId) await resolveSupplier(db, storeId, supplierId);
   // Owner's feedback 2026-11-21: the name is optional. A blank one becomes the category and the
   // number of the first SKU it gets ("Pajama 013" ↔ MAA-PJ-013), so the name and the tag line up.
   if (!name) name = await defaultDesignName(db, storeId, category);
@@ -474,7 +476,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
 
   return insertNewProducts(db, storeId, {
     operationId: input.operationId,
-    supplierId: input.supplierId,
+    supplierId,
     category,
     billNumber: input.billNumber,
     stockDate,

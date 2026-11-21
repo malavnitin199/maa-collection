@@ -276,3 +276,64 @@ export async function sectionOfType(db: Db, storeId: string, categoryId: string 
     .limit(1);
   return row?.sectionId ?? null;
 }
+
+export type CollectionRow = { id: string; name: string; active: boolean; categories: number; items: number; pieces: number };
+
+/**
+ * Home → Collections (owner, 2026-11-22, ADR-051): every collection (Men, Women, …)
+ * in shop order with its categories, items and pieces in stock.
+ */
+export async function collectionsOverview(db: Db, storeId: string): Promise<CollectionRow[]> {
+  const rows = await db
+    .select({
+      id: sections.id,
+      name: sections.name,
+      active: sections.active,
+      categories: int(sql`count(distinct ${categories.id})`),
+      items: int(sql`count(${products.id})`),
+      pieces: int(sql`coalesce(sum(greatest(${products.stock}, 0)), 0)`),
+    })
+    .from(sections)
+    .leftJoin(categories, eq(categories.sectionId, sections.id))
+    .leftJoin(products, eq(products.categoryId, categories.id))
+    .where(eq(sections.storeId, storeId))
+    .groupBy(sections.id)
+    .orderBy(asc(sections.sort), asc(sections.name));
+  return rows;
+}
+
+/** Home → Collections: a new name (the Hindi name, picture and hidden state stay). */
+export async function renameSection(db: Db, storeId: string, id: string, rawName: string): Promise<Section> {
+  const name = cleanSectionName(rawName);
+  await assertFreeSectionName(db, storeId, name, id);
+  try {
+    const [updated] = await db.update(sections).set({ name }).where(and(eq(sections.storeId, storeId), eq(sections.id, id))).returning();
+    if (!updated) throw new DomainError('Choose a collection.', { key: 'sec.err.sectionNotFound' });
+    return updated;
+  } catch (error) {
+    if (isUniqueViolation(error)) throw new DomainError('That name is already in the list.', { key: 'sec.err.exists' });
+    throw error;
+  }
+}
+
+/**
+ * Home → Collections → Delete (owner, 2026-11-22, ADR-051): a collection is the
+ * one field every item must have, so it can go only once none of its items is
+ * left (delete or move them first). Its empty categories go with it.
+ */
+export async function deleteSection(db: Db, storeId: string, id: string): Promise<{ name: string; categories: number }> {
+  return db.transaction(async (raw) => {
+    const tx = raw as unknown as Db;
+    const [section] = await tx.select().from(sections).where(and(eq(sections.storeId, storeId), eq(sections.id, id))).limit(1);
+    if (!section) throw new DomainError('Choose a collection.', { key: 'sec.err.sectionNotFound' });
+    const [{ items }] = await tx
+      .select({ items: int(sql`count(${products.id})`) })
+      .from(categories)
+      .innerJoin(products, eq(products.categoryId, categories.id))
+      .where(eq(categories.sectionId, id));
+    if (items > 0) throw new DomainError(`${section.name} still has ${items} items. Delete them first.`, { key: 'sec.err.hasItems', vars: { name: section.name, n: items } });
+    const gone = await tx.delete(categories).where(and(eq(categories.storeId, storeId), eq(categories.sectionId, id))).returning({ id: categories.id });
+    await tx.delete(sections).where(eq(sections.id, id));
+    return { name: section.name, categories: gone.length };
+  });
+}

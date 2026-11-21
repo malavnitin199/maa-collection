@@ -10,14 +10,15 @@ import { codeFromScan } from '@/lib/item-link';
 import { sizeFieldName, type SizeRates } from '@/lib/size-prices';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
+import { deleteCompanies } from '@/server/services/delete-companies';
 import { deleteProducts } from '@/server/services/delete-products';
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getLocale, getT } from '@/server/i18n';
 import { localName } from '@/lib/sections';
-import { addTypeSize, backfillSections, createSection, createType, moveSection, moveType, updateSection } from '@/server/services/sections';
+import { addTypeSize, backfillSections, createSection, createType, deleteSection, moveSection, moveType, renameSection, updateSection } from '@/server/services/sections';
 import { addPayment } from '@/server/services/company';
 import { DomainError } from '@/server/services/errors';
-import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, deleteUnusedSuppliers,
+import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier,
   setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   clearAllStock,
@@ -271,16 +272,18 @@ export async function createSupplierAction(_prev: FormState, formData: FormData)
 
 /** Companies → Select → Delete (2026-11-21): removes the chosen companies that have nothing linked; reports the rest. */
 export async function deleteCompaniesAction(ids: string[]): Promise<{ ok: true; deleted: number; message: string } | { ok: false; error: string }> {
-  await requirePermission('catalog');
+  // Owner's feedback 2026-11-22 (ADR-051): any company, after a confirmation; its items and stock entries stay.
+  // Owner only. Bills and payments are not touched (they keep its name).
+  await requireAdmin();
   try {
     const list = (Array.isArray(ids) ? ids : []).map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500);
-    const result = await deleteUnusedSuppliers(await getDb(), STORE_ID, list);
+    const result = await deleteCompanies(await getDb(), STORE_ID, list);
     revalidatePath('/admin', 'layout');
     const t = await getT();
-    const parts = [];
-    if (result.deleted.length) parts.push(t(result.deleted.length === 1 ? 'bulk.deleted.one' : 'bulk.deleted.other', { n: result.deleted.length }));
-    for (const k of result.kept) parts.push(t('bulk.cantDelete', { name: k.name, items: k.items, collections: k.collections, bills: k.bills, payments: k.payments }));
-    return { ok: true, deleted: result.deleted.length, message: parts.join(' ') };
+    const n = result.deleted.length;
+    const parts = [t(n === 1 ? 'bulk.deleted.one' : 'bulk.deleted.other', { n })];
+    if (result.unlinked.items) parts.push(t('bulk.deletedUnlinked', { items: result.unlinked.items }));
+    return { ok: true, deleted: n, message: parts.join(' ') };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
@@ -559,7 +562,8 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
     const mrpPaise = toPaise(input.mrp, 'MRP') as number;
     const result = await createDesign(await getDb(), STORE_ID, {
       operationId: String(input.operationId).slice(0, 100),
-      supplierId: String(input.supplierId),
+      // Optional (ADR-051): empty = no company.
+      supplierId: String(input.supplierId ?? '').trim() || null,
       categoryId: String(input.categoryId),
       name: String(input.name),
       brand: String(input.brand),
@@ -934,3 +938,30 @@ export async function checkTagBarcodeAction(code: string): Promise<TagLookup> {
   }
   return isValidEan13(value) ? { status: 'new', barcode: value } : { status: 'invalid', code: value };
 }
+
+// ------------------------------------------------------------------ Home → Collections (ADR-051)
+
+/** Home → Collections: rename one (owner only). */
+export async function renameCollectionAction(id: string, name: string): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
+  await requireAdmin();
+  try {
+    const updated = await renameSection(await getDb(), STORE_ID, String(id), String(name ?? ''));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, name: updated.name };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** Home → Collections: delete one with no items left (owner only). */
+export async function deleteCollectionAction(id: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  await requireAdmin();
+  try {
+    const result = await deleteSection(await getDb(), STORE_ID, String(id));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, message: (await getT())('col.deleted', { name: result.name }) };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+

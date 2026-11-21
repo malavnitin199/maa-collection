@@ -42,7 +42,7 @@ test('New item: type a name in Hindi from English letters, change it back, the c
   // The choice is for the whole phone: the brand box (under More) follows it.
   await page.getByRole('button', { name: 'Type in Hindi' }).first().click();
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   const company = page.getByLabel('Company name');
   await expect(company).toHaveAttribute('lang', 'hi');
   await company.pressSequentially('surat silks ');
@@ -56,7 +56,7 @@ test('a microphone sits next to name boxes where the browser can listen; it says
   test.skip(browserName !== 'chromium', 'speech recognition is a Chromium feature');
   await loginOwner(page);
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   const row = page.getByLabel('Company name').locator('..');
   const mic = row.getByRole('button', { name: 'Speak to fill' });
   await expect(mic).toBeVisible();
@@ -100,7 +100,7 @@ test('New item: back after one or two steps starts fresh; after three it asks to
 
   // The same question answered with a fresh collection: back to the start, empty.
   await away();
-  await sheet.getByRole('button', { name: 'Start a fresh collection' }).click();
+  await sheet.getByRole('button', { name: 'Start a fresh entry' }).click();
   await start();
   await toDetails();
   await expect(page.getByLabel('Product name')).toHaveValue('');

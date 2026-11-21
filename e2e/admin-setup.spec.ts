@@ -33,11 +33,11 @@ test('owner adds a supplier and a category; both show up with details', async ({
   await loginOwner(page);
 
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`XYZ Textiles ${run}`);
   await page.getByLabel('Contact person (optional)').fill('Ramesh');
   await page.getByLabel('Phone (optional)').fill('98765 43210');
-  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await page.getByRole('button', { name: 'Add company' }).click();
   await expect(page.getByRole('status')).toContainText(`XYZ Textiles ${run} added.`);
   const supplierCard = page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(`XYZ Textiles ${run}`) });
   await expect(supplierCard).toContainText('Ramesh · 98765 43210');
@@ -47,10 +47,10 @@ test('owner adds a supplier and a category; both show up with details', async ({
 
   // Duplicate supplier is refused.
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`XYZ Textiles ${run}`);
-  await page.getByRole('button', { name: 'Add supplier' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'A supplier with that name already exists.' })).toBeVisible(); // the inline message (the red done card says it too)
+  await page.getByRole('button', { name: 'Add company' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'A company with that name already exists.' })).toBeVisible(); // the inline message (the red done card says it too)
 
   await page.goto('/admin/categories');
   const addCategory = page.locator('details', { hasText: '+ Add category' });
@@ -87,9 +87,9 @@ test('owner enters a new design from a supplier in sizes, prints labels; salesma
   await loginOwner(page);
   // Supplier for this run.
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`Design Co ${run}`);
-  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await page.getByRole('button', { name: 'Add company' }).click();
   await expect(page.getByRole('status')).toContainText('added');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(`Design Co ${run}`) }).click();
   await page.getByRole('link', { name: `+ New item from Design Co ${run}` }).click();
@@ -119,7 +119,7 @@ test('owner enters a new design from a supplier in sizes, prints labels; salesma
   await tab(page, 'Details');
   await page.getByLabel('Pieces each').fill('2');
   await page.getByLabel('Counter price, if lower (₹)').fill('1399');
-  await page.getByLabel('Supplier bill no. (optional)').fill('INV-42');
+  await page.getByLabel('Company bill no. (optional)').fill('INV-42');
   await expect(page.getByTestId('design-preview')).toHaveText('2 items · 4 pcs · purchase ₹3,200.00');
   await page.getByRole('button', { name: 'Save 2 items' }).click();
 
@@ -348,11 +348,11 @@ test('categories by section (plan v19): tiles; the owner\'s own section with a H
   await expect(head).toContainText('महिला');
 
   // The owner's own section (e.g. Kids) goes last, with its picture.
-  await page.getByText('+ Add section').click();
-  const addSection = page.locator('details', { hasText: '+ Add section' });
-  await addSection.getByLabel('Section name').fill(`Kids ${run}`);
+  await page.getByText('+ Add collection').click();
+  const addSection = page.locator('details', { hasText: '+ Add collection' });
+  await addSection.getByLabel('Collection name').fill(`Kids ${run}`);
   await addSection.locator('label').filter({ hasText: 'Baby' }).click();
-  await addSection.getByRole('button', { name: 'Add section' }).click();
+  await addSection.getByRole('button', { name: 'Add collection' }).click();
   await expect(addSection.getByRole('status')).toContainText(`Kids ${run} added.`);
   await expect(tiles.getByRole('link').filter({ hasNotText: 'Needs sorting' }).last()).toContainText(`Kids ${run}`); // Needs sorting stays last
   await tiles.getByRole('link', { name: `Kids ${run}` }).click();
@@ -361,11 +361,11 @@ test('categories by section (plan v19): tiles; the owner\'s own section with a H
   await expect(page.getByText('No categories here yet.')).toBeVisible();
 
   // Rename, Hindi name and picture.
-  await head.getByText('Edit section').click();
-  await head.getByLabel('Section name').fill(`Junior ${run}`);
+  await head.getByText('Edit collection').click();
+  await head.getByLabel('Collection name').fill(`Junior ${run}`);
   await head.getByLabel('Hindi name').fill('जूनियर');
   await head.locator('label').filter({ hasText: 'Family' }).click();
-  await head.getByRole('button', { name: 'Save section' }).click();
+  await head.getByRole('button', { name: 'Save collection' }).click();
   await expect(head.getByRole('status')).toContainText('Saved');
   await expect(tiles.getByRole('link', { name: `Junior ${run}` })).toBeVisible();
   await expect(head).toContainText('जूनियर');
@@ -381,11 +381,11 @@ test('categories by section (plan v19): tiles; the owner\'s own section with a H
 
   // Hide it and bring it back (nothing deleted).
   await head.getByLabel('Shown in New item').uncheck();
-  await head.getByRole('button', { name: 'Save section' }).click();
+  await head.getByRole('button', { name: 'Save collection' }).click();
   await expect(tiles.getByRole('link', { name: `Junior ${run}` })).toContainText('(Hidden)');
   await expect(head).toContainText('Hidden');
   await head.getByLabel('Shown in New item').check();
-  await head.getByRole('button', { name: 'Save section' }).click();
+  await head.getByRole('button', { name: 'Save collection' }).click();
   await expect(tiles.getByRole('link', { name: `Junior ${run}` })).not.toContainText('Hidden');
 
   // A category with a Hindi name lands under it.
@@ -399,9 +399,9 @@ test('categories by section (plan v19): tiles; the owner\'s own section with a H
   await expect(head).toContainText('1 category');
 
   // The same section name again is refused (the add form is still open from before).
-  if (!(await addSection.getByLabel('Section name').isVisible())) await page.getByText('+ Add section').click();
-  await addSection.getByLabel('Section name').fill(`Junior ${run}`);
-  await addSection.getByRole('button', { name: 'Add section' }).click();
+  if (!(await addSection.getByLabel('Collection name').isVisible())) await page.getByText('+ Add collection').click();
+  await addSection.getByLabel('Collection name').fill(`Junior ${run}`);
+  await addSection.getByRole('button', { name: 'Add collection' }).click();
   await expect(addSection.getByRole('alert')).toContainText('That name is already in the list.');
 });
 
@@ -418,7 +418,7 @@ test('plan v19: New item refuses a category that is not sorted under a section y
   await purchasePrice(page).fill('500');
   await page.getByLabel('Pieces', { exact: true }).fill('2');
   await page.getByRole('button', { name: 'Save 1 item' }).click();
-  await expect(page.getByText('Sort this category under Men, Women, Boys or Girls first (Categories).')).toBeVisible();
+  await expect(page.getByText('Put this category under a collection first (Categories).')).toBeVisible();
   await expect(page).toHaveURL(/\/admin\/stock\/form$/);
 });
 
@@ -520,11 +520,11 @@ test('company box: add a company on the spot, the same name is reused, a hidden 
   await expect(page.getByRole('listbox').getByRole('option', { name: fresh, exact: true })).toHaveCount(1);
   await page.keyboard.press('Escape');
 
-  // Hide it: Suppliers → the company → untick Active.
+  // Hide it: Companies → the company → untick Active.
   await page.goto('/admin/suppliers');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(fresh) }).click();
   await page.getByRole('tab', { name: 'Details', exact: true }).click(); // company page tabs (company accounts, 2026-11-20)
-  await page.getByText('Edit supplier details').click();
+  await page.getByText('Edit company details').click();
   await page.getByLabel(/^Active/).uncheck();
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('status')).toBeVisible();
@@ -542,7 +542,7 @@ test('company box: add a company on the spot, the same name is reused, a hidden 
   await page.keyboard.press('Escape');
   // A normal company again everywhere.
   await page.goto('/admin/products/new');
-  const single = page.getByRole('combobox', { name: /^Supplier/ });
+  const single = page.getByRole('combobox', { name: /^Company/ });
   await single.click();
   const again = page.getByRole('listbox').getByRole('option', { name: fresh, exact: true });
   await expect(again).toHaveCount(1);
@@ -724,9 +724,9 @@ test('Companies and All tags → Select: delete companies after a confirmation; 
   const b = `Sel Co B ${run}`;
   for (const company of [a, b]) {
     await page.goto('/admin/suppliers');
-    await page.getByText('+ Add supplier').click();
+    await page.getByText('+ Add company').click();
     await page.getByLabel('Company name').fill(company);
-    await page.getByRole('button', { name: 'Add supplier' }).click();
+    await page.getByRole('button', { name: 'Add company' }).click();
     await expect(page.getByRole('status')).toContainText(`${company} added.`);
   }
   await page.goto('/admin/suppliers');
@@ -751,7 +751,7 @@ test('Companies and All tags → Select: delete companies after a confirmation; 
   await expect(page.getByTestId('selection-toast')).toContainText('2 companies deleted.');
   await page.getByTestId('company-search').fill(`Sel Co`);
   await expect(page.getByTestId('supplier-list').getByText(a, { exact: true })).toHaveCount(0);
-  // A company with items, bills or payments is kept with the reason (unit test: deleteUnusedSuppliers).
+  // Any company can go; its items stay with no company (e2e/companies-collections.spec.ts, unit test: deleteCompanies).
 
   // All tags: tick two tags and print only those.
   await page.goto('/admin/labels?q=MAA-TS-00&show=tags');
@@ -786,7 +786,7 @@ test('owner restocks existing items by scanning each piece and by name search', 
   await page.getByRole('button', { name: 'One more Classic Crew Tee L' }).click();
   await expect(page.getByLabel('Pieces of Classic Crew Tee L')).toHaveValue('2');
 
-  await page.getByLabel('Supplier bill no. (optional)').fill('RS-1');
+  await page.getByLabel('Company bill no. (optional)').fill('RS-1');
   await page.getByRole('button', { name: 'Receive 5 pieces and print labels' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode/ })).toHaveCount(5);
@@ -795,7 +795,7 @@ test('owner restocks existing items by scanning each piece and by name search', 
   await page.goBack();
   await expect(page).toHaveURL(/\/admin\/stock\/receive$/);
   await expect(page.getByTestId('restock-lines').getByRole('listitem')).toHaveCount(0);
-  await expect(page.getByLabel('Supplier bill no. (optional)')).toHaveValue('');
+  await expect(page.getByLabel('Company bill no. (optional)')).toHaveValue('');
 
   // Stock went up by exactly 3.
   await page.goto('/admin/products?q=MAA-SH-001&show=items');
@@ -911,9 +911,9 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
   await loginOwner(page);
   const company = `Tag Lib Co ${run}`;
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(company);
-  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await page.getByRole('button', { name: 'Add company' }).click();
   await expect(page.getByRole('status')).toContainText(`${company} added.`);
 
   // One bill from that company, entered as two items: a saree with 2 pieces and one with none left.
@@ -924,7 +924,7 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
   await salePrice(page).fill('2000');
   await purchasePrice(page).fill('1200');
   await page.getByLabel('Pieces', { exact: true }).fill('2');
-  await page.getByLabel('Supplier bill no. (optional)').fill(`B-${run}`);
+  await page.getByLabel('Company bill no. (optional)').fill(`B-${run}`);
   await page.getByRole('button', { name: 'Save 1 item' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   // The second item of the bill through the earlier form again (this test is about All tags).
@@ -935,7 +935,7 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
   await salePrice(page).fill('1500');
   await purchasePrice(page).fill('900');
   await page.getByLabel('Pieces', { exact: true }).fill('0');
-  await page.getByLabel('Supplier bill no. (optional)').fill(`B-${run}`);
+  await page.getByLabel('Company bill no. (optional)').fill(`B-${run}`);
   await page.getByRole('button', { name: 'Save 1 item' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
@@ -1013,9 +1013,9 @@ test('combined view: one card per design (name + company + MRP) on Products and 
   const company = `Combo Co ${run}`;
   const name = `Combo Kurta ${run}`;
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(company);
-  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await page.getByRole('button', { name: 'Add company' }).click();
   await expect(page.getByRole('status')).toContainText(`${company} added.`);
 
   // One design in 4 sizes = 4 items, 2 pieces each (no colours outside the product page since 2026-11-22).

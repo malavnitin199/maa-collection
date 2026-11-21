@@ -50,7 +50,8 @@ export type Collection = {
  */
 export type BillLine = { name: string; sizes: string[]; pieces: number; qty: number; pack: number | null; ratePaise: number; amountPaise: number };
 
-export type BillCompany = { supplierId: string; name: string; amountPaise: number; paidPaise: number; duePaise: number };
+/** `deleted`: the company was deleted (ADR-051); the bill keeps its name and amounts. */
+export type BillCompany = { supplierId: string; name: string; deleted: boolean; amountPaise: number; paidPaise: number; duePaise: number };
 export type BillRow = {
   id: string;
   billNumber: string | null;
@@ -350,7 +351,7 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
   const billIds = billRows.map((b) => b.id);
   const [parts, paid, links] = await Promise.all([
     db
-      .select({ billId: billCompanies.billId, supplierId: billCompanies.supplierId, name: suppliers.name, amountPaise: billCompanies.amountPaise })
+      .select({ billId: billCompanies.billId, supplierId: billCompanies.supplierId, name: suppliers.name, deletedAt: suppliers.deletedAt, amountPaise: billCompanies.amountPaise })
       .from(billCompanies)
       .innerJoin(suppliers, eq(suppliers.id, billCompanies.supplierId))
       .where(inArray(billCompanies.billId, billIds)),
@@ -367,7 +368,7 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
       .filter((p) => p.billId === b.id)
       .map((p) => {
         const paidPaise = paid.find((x) => x.billId === b.id && x.supplierId === p.supplierId)?.paid ?? 0;
-        return { supplierId: p.supplierId, name: p.name, amountPaise: p.amountPaise, paidPaise, duePaise: Math.max(0, p.amountPaise - paidPaise) };
+        return { supplierId: p.supplierId, name: p.name, deleted: p.deletedAt !== null, amountPaise: p.amountPaise, paidPaise, duePaise: Math.max(0, p.amountPaise - paidPaise) };
       })
       .sort((a, c) => a.name.localeCompare(c.name));
     const mine = collections.filter((c) => links.some((l) => l.billId === b.id && l.receiptId === c.receiptId));

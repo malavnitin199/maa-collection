@@ -27,11 +27,11 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
 
   // A company with a location.
   await page.goto('/admin/suppliers');
-  await page.getByText('+ Add supplier').click();
+  await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(name);
   await page.getByLabel(/^Location/).fill('Surat');
   await page.getByLabel(/^Working since/).fill('2019-04-01'); // backdated: before the app existed
-  await page.getByRole('button', { name: 'Add supplier' }).click();
+  await page.getByRole('button', { name: 'Add company' }).click();
   await expect(page.getByRole('status')).toContainText('added');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(name) }).click();
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
@@ -56,7 +56,7 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await page.getByRole('button', { name: 'Size L' }).click();
   await page.getByRole('tab', { name: 'Details', exact: true }).click();
   await page.getByLabel('Pieces each').fill('3');
-  await page.getByLabel('Supplier bill no. (optional)').fill(`INV-${run}`);
+  await page.getByLabel('Company bill no. (optional)').fill(`INV-${run}`);
   await page.getByRole('button', { name: 'Save 2 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
@@ -75,7 +75,7 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await expect(details).toContainText('1 Apr 2019');
   await expect(details).toContainText('Added on');
   await expect(details).not.toContainText('Added on 1 Apr 2019');
-  await page.getByRole('tab', { name: 'Collections', exact: true }).click();
+  await page.getByRole('tab', { name: 'Stock entries', exact: true }).click();
   const delivery = page.getByTestId('company-collections-list').locator('li').first();
   await expect(delivery).toContainText(`ref INV-${run}`);
   await expect(delivery).toContainText('2 items · 6 pcs · purchase ₹2,400.00');
@@ -93,7 +93,7 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await billForm.getByRole('checkbox', { name: `Chikan Kurta ${run}` }).click();
   await expect(billForm.getByRole('checkbox', { name: `Chikan Kurta ${run}` })).toHaveAttribute('aria-checked', 'true');
   await expect(billForm.getByTestId('bill-total')).toHaveText('₹2,400.00');
-  await expect(billForm.getByTestId('bill-company')).toContainText('1 collections ticked · ₹2,400.00');
+  await expect(billForm.getByTestId('bill-company')).toContainText('1 stock entries ticked · ₹2,400.00');
   await billForm.getByRole('button', { name: 'Next: check bill' }).click();
   await billForm.getByLabel('Bill no. (optional)').fill(`INV-${run}`);
   await billForm.getByRole('button', { name: 'Save bill' }).click();
@@ -110,7 +110,7 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   const bill = page.getByTestId('company-bills').locator('li').first();
   await expect(bill).toContainText(`bill INV-${run}`);
   await expect(bill).toContainText('Due ₹2,400.00');
-  await page.getByRole('tab', { name: 'Collections', exact: true }).click();
+  await page.getByRole('tab', { name: 'Stock entries', exact: true }).click();
   await expect(delivery).toContainText('on a bill');
 
   // Part payment against the bill from the Payments tab; then Mark paid closes it.

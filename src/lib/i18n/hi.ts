@@ -46,7 +46,7 @@ const base = {
   'nav.dashboard': 'डैशबोर्ड',
   'nav.products': 'प्रोडक्ट',
   'nav.addStock': '+ स्टॉक जोड़ें',
-  'nav.suppliers': 'सप्लायर',
+  'nav.suppliers': 'कंपनियाँ',
   'nav.categories': 'कैटेगरी',
   'nav.staff': 'स्टाफ़',
   'nav.reports': 'रिपोर्ट',
