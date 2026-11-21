@@ -53,6 +53,7 @@ export function offlineSaleBody(sale: QueuedSale) {
     manual: sale.manual,
     quantity: sale.quantity,
     unitPricePaise: sale.unitPricePaise,
+    totalPaise: sale.totalPaise,
     soldBy: sale.soldBy,
     recordedBy: sale.recordedBy,
     madeAt: sale.madeAt,

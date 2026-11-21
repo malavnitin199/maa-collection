@@ -5,12 +5,41 @@ import { muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { formatPaise } from '@/lib/money';
+import { boxPaise, boxSale, packOf } from '@/lib/packs';
 import type { CounterProduct } from '@/server/services/products';
 import { StaffSelect, type StaffOption } from './staff-select';
 
 /** One item on the counter's bill (several items, owner's feedback 2026-11-21). Saved as its own sale. */
-export type BillLine = { key: string; product: CounterProduct; qty: number; priceText: string; operationId: string; fromPhone?: string; error?: string };
+export type BillLine = {
+  key: string;
+  product: CounterProduct;
+  /** Pieces, or whole boxes when `box` (box packs, ADR-047). */
+  qty: number;
+  /** The typed price: per piece, or per box when `box`. */
+  priceText: string;
+  operationId: string;
+  fromPhone?: string;
+  error?: string;
+  box?: boolean;
+};
 export type PriceMode = 'scan' | 'end';
+
+/** Pieces in one unit of the line: the box size when sold by the box, else 1. */
+export function lineUnit(line: Pick<BillLine, 'product' | 'box'>): number {
+  return (line.box && packOf(line.product.packSize)) || 1;
+}
+
+/** The line's MRP for one unit: a whole box's when sold by the box. */
+export function lineMrp(line: Pick<BillLine, 'product' | 'box'>): number {
+  const unit = lineUnit(line);
+  return unit > 1 ? boxPaise(line.product.mrpPaise, unit, line.product.packMrpPaise) : line.product.mrpPaise;
+}
+
+/** What one line records as a sale: pieces, piece price and (for boxes) the exact box total. */
+export function lineSale(line: BillLine, price: number): { quantity: number; unitPricePaise: number; totalPaise?: number } {
+  const unit = lineUnit(line);
+  return unit > 1 ? boxSale(line.qty, unit, price) : { quantity: line.qty, unitPricePaise: price };
+}
 
 export function linePrice(line: BillLine): number | null {
   const paise = rupeesToPaise(line.priceText);
@@ -54,6 +83,7 @@ export function BillPanel({
   onMode,
   onPrice,
   onQty,
+  onUnit,
   onScanMore,
   onClear,
   onSave,
@@ -68,6 +98,8 @@ export function BillPanel({
   onMode: (mode: PriceMode) => void;
   onPrice: (key: string, text: string) => void;
   onQty: (key: string, qty: number) => void;
+  /** Box items: sell this line by the piece or by the box. */
+  onUnit: (key: string, box: boolean) => void;
   onScanMore: () => void;
   onClear: () => void;
   onSave: () => void;
@@ -81,7 +113,7 @@ export function BillPanel({
   const table = useRef<HTMLTableElement>(null);
   const total = billTotal(lines);
   const missing = lines.filter((l) => linePrice(l) === null).length;
-  const pieces = lines.reduce((n, l) => n + l.qty, 0);
+  const pieces = lines.reduce((n, l) => n + l.qty * lineUnit(l), 0);
   const prices = () => [...(table.current?.querySelectorAll<HTMLInputElement>('input[data-price]') ?? [])];
   const firstEmpty = (after = -1) => prices().find((box, i) => i > after && !rupeesToPaise(box.value));
 
@@ -136,7 +168,28 @@ export function BillPanel({
                       <button type="button" aria-label={t('bill.more', { name: line.product.name })} onClick={() => onQty(line.key, line.qty + 1)} className="h-7 w-7 rounded-full bg-white text-base leading-none font-bold shadow-sm ring-1 ring-zinc-200 active:scale-90 dark:bg-zinc-800 dark:ring-zinc-700">
                         +
                       </button>
+                      {packOf(line.product.packSize) && (
+                        <span role="radiogroup" aria-label={t('pack.lineUnit', { name: line.product.name })} className="ml-1 inline-flex rounded-full bg-white p-0.5 text-[11px] font-bold ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
+                          {[false, true].map((box) => (
+                            <button
+                              key={String(box)}
+                              type="button"
+                              role="radio"
+                              aria-checked={Boolean(line.box) === box}
+                              onClick={() => onUnit(line.key, box)}
+                              className={`rounded-full px-2 py-0.5 ${Boolean(line.box) === box ? 'bg-brand-600 text-white' : muted}`}
+                            >
+                              {box ? t('pack.unitBox') : t('pack.unitPcs')}
+                            </button>
+                          ))}
+                        </span>
+                      )}
                     </span>
+                    {line.box && (
+                      <span data-testid="bill-box-pieces" className={`mt-0.5 block text-[11px] ${muted}`}>
+                        {t('pack.lineBoxes', { boxes: t(line.qty === 1 ? 'pack.boxes.one' : 'pack.boxes.other', { n: line.qty }), pieces: line.qty * lineUnit(line) })}
+                      </span>
+                    )}
                     {line.error && (
                       <span role="alert" className="mt-1 block text-xs font-medium text-red-600 dark:text-red-400">
                         {line.error}
@@ -144,7 +197,7 @@ export function BillPanel({
                     )}
                   </td>
                   <td className="bg-brand-50/50 px-1 py-1.5 text-right text-xs tabular-nums dark:bg-zinc-900/70">
-                    <span className={`${price !== null && price < line.product.mrpPaise ? 'line-through' : ''} ${muted}`}>{formatPaise(line.product.mrpPaise)}</span>
+                    <span className={`${price !== null && price < lineMrp(line) ? 'line-through' : ''} ${muted}`}>{formatPaise(lineMrp(line))}</span>
                   </td>
                   <td className="rounded-r-2xl bg-brand-50/50 py-1.5 pr-1.5 text-right dark:bg-zinc-900/70">
                     <input
@@ -154,7 +207,7 @@ export function BillPanel({
                       enterKeyHint={i === lines.length - 1 ? 'done' : 'next'}
                       aria-label={t('bill.priceFor', { name: `${line.product.name} ${line.product.size}` })}
                       aria-invalid={Boolean(line.error)}
-                      placeholder={String(line.product.pricePaise / 100)}
+                      placeholder={String((line.box ? lineMrp(line) : line.product.pricePaise) / 100)}
                       value={line.priceText}
                       onChange={(e) => onPrice(line.key, e.target.value.replace(/[^\d.]/g, ''))}
                       onKeyDown={(e) => {
@@ -216,7 +269,7 @@ export function CameraBillFooter({ line, lines, mode, onPrice, onDone }: { line:
               {line.product.name} <span className="font-normal text-white/70">×{line.qty}</span>
             </span>
             <span className="block text-xs text-white/70">
-              {[line.product.size, line.product.color].filter(Boolean).join(' · ')} · {t('bill.colMrp')} {formatPaise(line.product.mrpPaise)}
+              {[line.product.size, line.product.color].filter(Boolean).join(' · ')} · {t('bill.colMrp')} {formatPaise(lineMrp(line))}
             </span>
           </span>
           {mode === 'scan' && (
@@ -225,7 +278,7 @@ export function CameraBillFooter({ line, lines, mode, onPrice, onDone }: { line:
               inputMode="decimal"
               enterKeyHint="done"
               aria-label={t('bill.priceFor', { name: `${line.product.name} ${line.product.size}` })}
-              placeholder={String(line.product.pricePaise / 100)}
+              placeholder={String((line.box ? lineMrp(line) : line.product.pricePaise) / 100)}
               value={line.priceText}
               onChange={(e) => onPrice(line.key, e.target.value.replace(/[^\d.]/g, ''))}
               onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}

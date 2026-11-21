@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { billCollections, billCompanies, bills, products, stockMovements, stockReceipts, supplierPayments, suppliers } from '@/db/schema';
 import { STORE_TIMEZONE } from '@/lib/app-config';
+import { packOf } from '@/lib/packs';
 import { sortSizes } from '@/lib/size-prices';
 import { DomainError, isUniqueViolation } from './errors';
 import { cleanStockDate, shopToday } from './products';
@@ -42,8 +43,12 @@ export type Collection = {
   lines: BillLine[];
 };
 
-/** One line of a bill: description, sizes, quantity (pieces), rate (purchase price per piece), amount. */
-export type BillLine = { name: string; sizes: string[]; pieces: number; ratePaise: number; amountPaise: number };
+/**
+ * One line of a bill: description, sizes, pieces, the quantity as the paper writes it
+ * (pieces; boxes for box packs), the rate for that quantity (per piece; per box for
+ * box packs, ADR-047) and the amount.
+ */
+export type BillLine = { name: string; sizes: string[]; pieces: number; qty: number; pack: number | null; ratePaise: number; amountPaise: number };
 
 export type BillCompany = { supplierId: string; name: string; amountPaise: number; paidPaise: number; duePaise: number };
 export type BillRow = {
@@ -86,6 +91,8 @@ export async function listCollections(
       pieces: stockMovements.quantityChange,
       unitCost: sql<number | null>`coalesce(${stockMovements.unitCostPaise}, ${products.costPaise})`,
       snapshot: stockMovements.unitCostPaise,
+      packSize: products.packSize,
+      packCost: products.packCostPaise,
     })
     .from(stockReceipts)
     .leftJoin(suppliers, eq(suppliers.id, stockReceipts.supplierId))
@@ -129,13 +136,17 @@ export async function listCollections(
     if (!c.names.includes(row.name)) c.names.push(row.name);
     if (!c.sizes.includes(row.size)) c.sizes.push(row.size);
     c.pieces += pieces;
-    const rate = Number(row.unitCost ?? 0);
-    c.valuePaise += pieces * rate;
-    let line = c.lines.find((l) => l.name === row.name && l.ratePaise === rate);
-    if (!line) c.lines.push((line = { name: row.name, sizes: [], pieces: 0, ratePaise: rate, amountPaise: 0 }));
+    // Box packs (ADR-047): the paper bill writes boxes at a box rate; the box price typed at New item is exact.
+    const pack = packOf(row.packSize);
+    const rate = pack ? (row.packCost ?? Number(row.unitCost ?? 0) * pack) : Number(row.unitCost ?? 0);
+    const amount = pack ? Math.round((pieces * rate) / pack) : pieces * rate;
+    c.valuePaise += amount;
+    let line = c.lines.find((l) => l.name === row.name && l.ratePaise === rate && l.pack === pack);
+    if (!line) c.lines.push((line = { name: row.name, sizes: [], pieces: 0, qty: 0, pack, ratePaise: rate, amountPaise: 0 }));
     if (!line.sizes.includes(row.size)) line.sizes.push(row.size);
     line.pieces += pieces;
-    line.amountPaise += pieces * rate;
+    line.qty = pack ? line.pieces / pack : line.pieces;
+    line.amountPaise += amount;
     if (row.snapshot === null && row.unitCost !== null) c.estimated = true;
   }
   return [...byId.values()]

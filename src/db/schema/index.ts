@@ -175,6 +175,16 @@ export const products = pgTable(
     forGender: text('for_gender'),
     /** adult | child; null = not set. */
     ageGroup: text('age_group'),
+    /**
+     * Box packs (owner, 2026-11-21, ADR-047): pieces in one box (null = sold loose). Stock,
+     * MRP, price and cost stay per piece; one tag is printed per box; the counter sells
+     * pieces or whole boxes.
+     */
+    packSize: integer('pack_size'),
+    /** Selling price of a whole box (null = MRP × pieces in the box). */
+    packMrpPaise: integer('pack_mrp_paise'),
+    /** Admin-only. Purchase price of a whole box as on the company's bill (cost_paise = this ÷ pack_size). */
+    packCostPaise: integer('pack_cost_paise'),
     createdBy: uuid('created_by').references(() => staff.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -187,6 +197,8 @@ export const products = pgTable(
     check('products_price_le_mrp', sql`${t.pricePaise} > 0 AND ${t.pricePaise} <= ${t.mrpPaise}`),
     check('products_for_gender_valid', sql`${t.forGender} IS NULL OR ${t.forGender} IN ('girls', 'boys', 'both')`),
     check('products_age_group_valid', sql`${t.ageGroup} IS NULL OR ${t.ageGroup} IN ('adult', 'child')`),
+    check('products_pack_valid', sql`${t.packSize} IS NULL OR (${t.packSize} BETWEEN 2 AND 1000)`),
+    check('products_pack_prices_positive', sql`(${t.packMrpPaise} IS NULL OR ${t.packMrpPaise} > 0) AND (${t.packCostPaise} IS NULL OR ${t.packCostPaise} >= 0)`),
   ],
 );
 

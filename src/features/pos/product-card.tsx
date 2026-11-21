@@ -5,6 +5,7 @@ import { card, muted } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
 import { LOW_STOCK_THRESHOLD } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
+import { boxPaise, packOf } from '@/lib/packs';
 import type { CounterProduct } from '@/server/services/products';
 
 /** Pieces in stock as a coloured badge: plenty (theme), few (amber), none (red). */
@@ -42,6 +43,11 @@ export function ProductDetails({ product }: { product: CounterProduct }) {
           <p className={`text-sm ${muted}`}>
             {t('item.mrp')} <span className="tabular-nums">{formatPaise(product.mrpPaise)}</span>
           </p>
+          {packOf(product.packSize) && (
+            <p data-testid="item-pack" className="mt-1 inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+              {t('pack.label', { n: product.packSize! })} · {formatPaise(boxPaise(product.mrpPaise, product.packSize!, product.packMrpPaise))}
+            </p>
+          )}
         </div>
         <StockBadge stock={product.stock} />
       </div>

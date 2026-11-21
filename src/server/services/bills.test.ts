@@ -58,7 +58,7 @@ describe('collections', () => {
     expect(mine).toMatchObject({ supplierName: 'Surat Silks', names: ['Slim Jeans'], items: 6, pieces: 12, valuePaise: 480000, billId: null });
     expect(mine.sizes).toEqual(['28', '30', '32', '34', '36', '38']);
     // As the paper bill: one line per name and rate, qty × rate = amount.
-    expect(mine.lines).toEqual([{ name: 'Slim Jeans', sizes: ['28', '30', '32', '34', '36', '38'], pieces: 12, ratePaise: 40000, amountPaise: 480000 }]);
+    expect(mine.lines).toEqual([{ name: 'Slim Jeans', sizes: ['28', '30', '32', '34', '36', '38'], pieces: 12, qty: 12, pack: null, ratePaise: 40000, amountPaise: 480000 }]);
     await createBill(db, STORE_ID, base([jeans.receipt.id]));
     expect((await listCollections(db, STORE_ID, { unbilled: true })).some((c) => c.receiptId === jeans.receipt.id)).toBe(false);
   });

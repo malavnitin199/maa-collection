@@ -155,6 +155,6 @@ describe('the phone’s copy of the counter (plan v18)', () => {
     expect(items).toHaveLength(7);
     expect(items.map((i) => i.id)).not.toContain(tee.id);
     for (const item of items) expect(Object.keys(item)).not.toContain('costPaise');
-    expect(Object.keys(items[0]).sort()).toEqual(['barcode', 'brand', 'category', 'color', 'id', 'mrpPaise', 'name', 'pricePaise', 'size', 'sku', 'stock']);
+    expect(Object.keys(items[0]).sort()).toEqual(['barcode', 'brand', 'category', 'color', 'id', 'mrpPaise', 'name', 'packMrpPaise', 'packSize', 'pricePaise', 'size', 'sku', 'stock']);
   });
 });

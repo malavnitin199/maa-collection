@@ -1,7 +1,8 @@
 import { ean13Svg, isValidEan13 } from '@/features/scanning/ean13';
 import { formatPaise } from '@/lib/money';
+import { packOf } from '@/lib/packs';
 
-type LabelProduct = { sku: string; barcode: string; name: string; size: string; color: string; mrpPaise: number };
+type LabelProduct = { sku: string; barcode: string; name: string; size: string; color: string; mrpPaise: number; packSize?: number | null };
 
 /**
  * Label-printer sticker, exactly 50 × 25 mm: name, size/colour, MRP, barcode
@@ -27,7 +28,7 @@ export function StickerLabel({ product, priceCode = null }: { product: LabelProd
       )}
       <div className="flex justify-between gap-1 font-mono text-[5.5pt] leading-tight text-zinc-600">
         <span className="truncate">
-          {product.size} · {product.color} · {product.sku}
+          {[product.size, product.color, packOf(product.packSize) ? `Box of ${product.packSize}` : '', product.sku].filter(Boolean).join(' · ')}
         </span>
         {priceCode && <span data-testid="price-code">{priceCode}</span>}
       </div>

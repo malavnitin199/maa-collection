@@ -87,7 +87,7 @@ describe('sending sales saved on the phone (plan v18)', () => {
 
   it('sends what the shop needs and nothing more', () => {
     const body = offlineSaleBody(sale('a', '2026-11-19T10:00:00.000Z'));
-    expect(Object.keys(body).sort()).toEqual(['madeAt', 'manual', 'mrpPaise', 'operationId', 'productId', 'quantity', 'recordedBy', 'soldBy', 'unitPricePaise']);
+    expect(Object.keys(body).sort()).toEqual(['madeAt', 'manual', 'mrpPaise', 'operationId', 'productId', 'quantity', 'recordedBy', 'soldBy', 'totalPaise', 'unitPricePaise']);
   });
 });
 

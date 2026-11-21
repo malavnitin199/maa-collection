@@ -19,6 +19,8 @@ export type QueuedSale = {
   manual?: { name: string; size?: string };
   quantity: number;
   unitPricePaise: number;
+  /** Whole boxes at a box price (ADR-047); absent = quantity × unit price. */
+  totalPaise?: number;
   soldBy: string;
   soldByName: string;
   /** For the list on the phone. */

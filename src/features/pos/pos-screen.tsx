@@ -15,6 +15,7 @@ import { LangText } from '@/features/i18n/lang-text';
 import { useOnline } from '@/features/offline/hooks';
 import { formatWhen } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
+import { boxPaise, boxSale, packOf } from '@/lib/packs';
 import { findOnPhone, phoneCatalogue, setPhoneStock } from '@/offline/catalogue';
 import { keepForOffline, offlineHelperEnabled } from '@/offline/helper';
 import { isOnline, markReachable, markUnreachable, withTimeout } from '@/offline/network';
@@ -22,7 +23,7 @@ import { queueSale } from '@/offline/outbox';
 import type { QueuedSale } from '@/offline/types';
 import { lookupProductAction, recordSaleAction } from '@/server/actions/pos';
 import type { CounterProduct } from '@/server/services/products';
-import { BillPanel, CameraBillFooter, linePrice, type BillLine, type PriceMode } from './bill';
+import { BillPanel, CameraBillFooter, lineMrp, linePrice, lineSale, lineUnit, type BillLine, type PriceMode } from './bill';
 import { ProductCard } from './product-card';
 import { StaffSelect, type StaffOption } from './staff-select';
 
@@ -58,6 +59,8 @@ export function PosScreen({
   );
   const [qtyText, setQtyText] = useState('1');
   const [priceText, setPriceText] = useState('');
+  // Box packs (ADR-047): a scanned box tag sells pieces (1, 2, …) or whole boxes at a box price.
+  const [byBox, setByBox] = useState(false);
   const [creditTo, setCreditTo] = useState(me.id);
   // "Enter by hand" (plan v12): the tag would not scan, so the salesman types the item.
   const [hand, setHand] = useState<{ operationId: string } | null>(null);
@@ -113,7 +116,8 @@ export function PosScreen({
     const lines = bill ?? [];
     const same = lines.find((line) => line.product.id === product.id);
     const qty = (same?.qty ?? 0) + 1;
-    if (!fromPhone && qty > product.stock) {
+    // Sold by the box: one more scan is one more box.
+    if (!fromPhone && qty * (same ? lineUnit(same) : 1) > product.stock) {
       signal('error');
       return setMessage({ kind: 'error', text: product.stock <= 0 ? outOfStock(product) : t('error.onlyLeft', { n: product.stock }) });
     }
@@ -154,11 +158,24 @@ export function PosScreen({
       setBill(rest.length ? rest : null);
       return;
     }
-    if (!line.fromPhone && qty > line.product.stock) {
+    if (!line.fromPhone && qty * lineUnit(line) > line.product.stock) {
       feedback('error');
       return setBill(bill.map((l) => (l.key === key ? { ...l, error: t('error.onlyLeft', { n: line.product.stock }) } : l)));
     }
     setBill(bill.map((l) => (l.key === key ? { ...l, qty, error: undefined } : l)));
+  }
+
+  /** A box item's line: by the piece or by the box (one of the new unit; its price typed again). */
+  function setLineUnit(key: string, box: boolean) {
+    if (!bill) return;
+    const line = bill.find((l) => l.key === key);
+    if (!line || Boolean(line.box) === box) return;
+    const next = { ...line, box, qty: 1, priceText: '', error: undefined };
+    if (!line.fromPhone && lineUnit(next) > line.product.stock) {
+      feedback('error');
+      return setBill(bill.map((l) => (l.key === key ? { ...l, error: t('error.onlyLeft', { n: line.product.stock }) } : l)));
+    }
+    setBill(bill.map((l) => (l.key === key ? next : l)));
   }
 
   function clearBill() {
@@ -170,11 +187,13 @@ export function PosScreen({
   }
 
   /** One bill line → its own sale: the shop first, the phone when there is no internet (same as one item). */
-  async function sendSale(line: BillLine, unitPricePaise: number): Promise<{ ok: true; status: 'approved' | 'waiting' | 'phone' } | { ok: false; error: string }> {
-    const { product, operationId, qty: quantity } = line;
+  async function sendSale(line: BillLine, price: number): Promise<{ ok: true; status: 'approved' | 'waiting' | 'phone' } | { ok: false; error: string }> {
+    const { product, operationId } = line;
+    // Pieces, piece price and, for whole boxes, the exact box total.
+    const { quantity, unitPricePaise, totalPaise } = lineSale(line, price);
     if (isOnline()) {
       try {
-        const result = await withTimeout(recordSaleAction({ operationId, productId: product.id, quantity, unitPricePaise, soldBy: creditTo }), SALE_WAIT_MS);
+        const result = await withTimeout(recordSaleAction({ operationId, productId: product.id, quantity, unitPricePaise, totalPaise, soldBy: creditTo }), SALE_WAIT_MS);
         markReachable();
         if (!result.ok) return { ok: false, error: result.error };
         void setPhoneStock(product.id, () => result.data.stockLeft);
@@ -185,7 +204,7 @@ export function PosScreen({
     }
     const saved = await saveOnPhone(
       { productId: product.id, mrpPaise: product.mrpPaise, name: product.name, size: product.size, color: product.color },
-      { operationId, quantity, unitPricePaise },
+      { operationId, quantity, unitPricePaise, totalPaise },
     );
     return saved ? { ok: true, status: 'phone' } : { ok: false, error: t('off.cannotSave') };
   }
@@ -197,7 +216,12 @@ export function PosScreen({
     const checked = bill.map((line) => {
       const price = linePrice(line);
       const limits = { stock: line.fromPhone ? Number.MAX_SAFE_INTEGER : line.product.stock, mrpPaise: line.product.mrpPaise };
-      const problem = price === null ? t('error.salePrice') : validateSaleDraft({ quantity: line.qty, unitPricePaise: price }, limits, t);
+      const problem =
+        price === null
+          ? t('error.salePrice')
+          : line.box && price > lineMrp(line)
+            ? t('pack.err.boxPrice')
+            : validateSaleDraft({ quantity: lineSale(line, price).quantity, unitPricePaise: lineSale(line, price).unitPricePaise }, limits, t);
       if (problem) bad = true;
       return { ...line, error: problem ?? undefined };
     });
@@ -233,7 +257,10 @@ export function PosScreen({
         title: t(status === 'waiting' ? 'done.billWaiting' : status === 'phone' ? 'off.saved.title' : 'done.billSaved'),
         amount: formatPaise(total),
         lines: [
-          ...saved.map((s) => ({ label: `${s.line.qty} × ${s.line.product.name} ${s.line.product.size}`.trim(), value: formatPaise(s.price * s.line.qty) })),
+          ...saved.map((s) => ({
+            label: `${s.line.box ? t(s.line.qty === 1 ? 'pack.boxes.one' : 'pack.boxes.other', { n: s.line.qty }) : s.line.qty} × ${s.line.product.name} ${s.line.product.size}`.trim(),
+            value: formatPaise(s.price * s.line.qty),
+          })),
           { label: t('done.line.creditedTo'), value: creditedName },
           { label: t('done.line.status'), value: t(status === 'waiting' ? 'done.status.waiting' : status === 'phone' ? 'done.status.phone' : 'done.status.approved') },
         ],
@@ -301,7 +328,7 @@ export function PosScreen({
    * sent by itself later (same operation id, so never twice). Returns false if
    * the phone could not store it.
    */
-  async function saveOnPhone(item: PhoneItem, sale: { operationId: string; quantity: number; unitPricePaise: number }): Promise<boolean> {
+  async function saveOnPhone(item: PhoneItem, sale: { operationId: string; quantity: number; unitPricePaise: number; totalPaise?: number }): Promise<boolean> {
     const queued: QueuedSale = {
       ...item,
       ...sale,
@@ -333,17 +360,35 @@ export function PosScreen({
     }
     setQtyText('1');
     setPriceText((product.pricePaise / 100).toString());
+    setByBox(false);
     setCreditTo(me.id);
     setMessage(null);
     setPending({ ...pending, step: 'sell' });
   }
 
+  /** Pieces ↔ whole boxes: the quantity and the price box switch to boxes and the box price. */
+  function chooseByBox(next: boolean) {
+    if (!pending) return;
+    const pack = packOf(pending.product.packSize);
+    if (!pack) return;
+    setByBox(next);
+    setQtyText('1');
+    setPriceText(((next ? boxPaise(pending.product.mrpPaise, pack, pending.product.packMrpPaise) : pending.product.pricePaise) / 100).toString());
+  }
+
   function handleRecordSale() {
     if (!pending) return;
     const { product, operationId, fromPhone } = pending;
-    const quantity = /^\d+$/.test(qtyText.trim()) ? Number(qtyText.trim()) : NaN;
-    const unitPricePaise = rupeesToPaise(priceText);
-    if (unitPricePaise === null) return setMessage({ kind: 'error', text: t('error.salePrice') });
+    const typedQty = /^\d+$/.test(qtyText.trim()) ? Number(qtyText.trim()) : NaN;
+    const typedPrice = rupeesToPaise(priceText);
+    if (typedPrice === null) return setMessage({ kind: 'error', text: t('error.salePrice') });
+    const pack = byBox ? packOf(product.packSize) : null;
+    if (pack && typedPrice > boxPaise(product.mrpPaise, pack, product.packMrpPaise)) return setMessage({ kind: 'error', text: t('pack.err.boxPrice') });
+    // Whole boxes: pieces = boxes × box size; the box total stays exact.
+    const box = pack && Number.isInteger(typedQty) && typedQty > 0 ? boxSale(typedQty, pack, typedPrice) : null;
+    const quantity = box ? box.quantity : typedQty;
+    const unitPricePaise = box ? box.unitPricePaise : typedPrice;
+    const totalPaise = box?.totalPaise;
     // From the phone's copy only quantity and price are checked (its count may be behind).
     const limits = { stock: fromPhone ? Number.MAX_SAFE_INTEGER : product.stock, mrpPaise: product.mrpPaise };
     const problem = validateSaleDraft({ quantity, unitPricePaise }, limits, t);
@@ -351,12 +396,12 @@ export function PosScreen({
     const creditedName = staff.find((s) => s.id === creditTo)?.name ?? me.name;
     const values = { qty: quantity, name: product.name, size: product.size, color: product.color, price: formatPaise(unitPricePaise), me: me.name, other: creditedName };
     const item = `${quantity} × ${product.name} (${product.size}, ${product.color})`;
-    const amount = formatPaise(saleTotalPaise(quantity, unitPricePaise));
+    const amount = formatPaise(totalPaise ?? saleTotalPaise(quantity, unitPricePaise));
 
     startTransition(async () => {
       if (isOnline()) {
         try {
-          const result = await withTimeout(recordSaleAction({ operationId, productId: product.id, quantity, unitPricePaise, soldBy: creditTo }), SALE_WAIT_MS);
+          const result = await withTimeout(recordSaleAction({ operationId, productId: product.id, quantity, unitPricePaise, totalPaise, soldBy: creditTo }), SALE_WAIT_MS);
           markReachable();
           if (!result.ok) {
             feedback('error');
@@ -383,7 +428,7 @@ export function PosScreen({
       }
       const saved = await saveOnPhone(
         { productId: product.id, mrpPaise: product.mrpPaise, name: product.name, size: product.size, color: product.color },
-        { operationId, quantity, unitPricePaise },
+        { operationId, quantity, unitPricePaise, totalPaise },
       );
       if (!saved) return;
       setMessage({ kind: 'ok', text: t(creditTo === me.id ? 'off.saved.mine' : 'off.saved.other', values) });
@@ -522,6 +567,7 @@ export function PosScreen({
           onMode={setPriceMode}
           onPrice={setLinePrice}
           onQty={setLineQty}
+          onUnit={setLineUnit}
           onScanMore={() => setCameraOpen(true)}
           onClear={clearBill}
           onSave={saveBill}
@@ -596,9 +642,32 @@ export function PosScreen({
               {pending.product.sku} · {pending.product.size} · {pending.product.color}
             </span>
           </h2>
-          <p className={`mt-1 text-sm ${muted}`}>
-            {t('sell.stockLine', { stock: pending.product.stock, mrp: formatPaise(pending.product.mrpPaise) })}
+          <p data-testid="sell-stock" className={`mt-1 text-sm ${muted}`}>
+            {packOf(pending.product.packSize)
+              ? t('pack.stockLine', {
+                  n: pending.product.packSize!,
+                  stock: pending.product.stock,
+                  mrp: formatPaise(pending.product.mrpPaise),
+                  box: formatPaise(boxPaise(pending.product.mrpPaise, pending.product.packSize!, pending.product.packMrpPaise)),
+                })
+              : t('sell.stockLine', { stock: pending.product.stock, mrp: formatPaise(pending.product.mrpPaise) })}
           </p>
+          {packOf(pending.product.packSize) && (
+            <div role="radiogroup" aria-label={t('pack.sellAs')} className="mt-3 inline-flex rounded-full bg-zinc-100 p-0.5 text-sm font-semibold dark:bg-zinc-800">
+              {[false, true].map((box) => (
+                <button
+                  key={String(box)}
+                  type="button"
+                  role="radio"
+                  aria-checked={byBox === box}
+                  onClick={() => chooseByBox(box)}
+                  className={`rounded-full px-4 py-1.5 transition ${byBox === box ? 'bg-brand-600 text-white shadow' : 'text-zinc-600 dark:text-zinc-300'}`}
+                >
+                  {box ? t('pack.sellBoxes') : t('pack.sellPieces')}
+                </button>
+              ))}
+            </div>
+          )}
           {pending.fromPhone && (
             <PhoneCopyNote
               text={pending.product.stock <= 0 ? t('off.noneLeft') : t('off.fromPhone', { time: formatWhen(locale, pending.fromPhone) })}
@@ -606,25 +675,29 @@ export function PosScreen({
           )}
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('sell.quantity')}
+              {byBox ? t('pack.boxesQty') : t('sell.quantity')}
               <input
                 type="number"
                 min={1}
-                max={pending.fromPhone ? undefined : pending.product.stock}
+                max={pending.fromPhone ? undefined : byBox && pending.product.packSize ? Math.floor(pending.product.stock / pending.product.packSize) : pending.product.stock}
                 value={qtyText}
                 onChange={(e) => setQtyText(e.target.value)}
                 className={input}
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('sell.price')}
+              {byBox ? t('pack.boxPrice') : t('sell.price')}
               <input inputMode="decimal" value={priceText} onChange={(e) => setPriceText(e.target.value)} className={input} />
-              <span className={`text-xs font-normal ${muted}`}>{t('sell.priceHint')}</span>
+              <span className={`text-xs font-normal ${muted}`}>
+                {byBox && pending.product.packSize
+                  ? t('pack.boxPriceHint', { amount: formatPaise(boxPaise(pending.product.mrpPaise, pending.product.packSize, pending.product.packMrpPaise)) })
+                  : t('sell.priceHint')}
+              </span>
             </label>
             <StaffSelect label={t('sell.creditTo')} staff={staff} meId={me.id} value={creditTo} onChange={setCreditTo} />
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-lg font-semibold">{t('sell.total', { total: pendingTotal !== null ? formatPaise(pendingTotal) : '—' })}</p>
+            <p data-testid="sell-total" className="text-lg font-semibold">{t('sell.total', { total: pendingTotal !== null ? formatPaise(pendingTotal) : '—' })}</p>
             <div className="flex gap-2">
               <button type="button" onClick={() => setPending(null)} className={secondaryButton}>
                 {t('common.cancel')}

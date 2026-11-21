@@ -22,6 +22,7 @@ import { groupNote, groupTitle } from '@/features/tag-library/group-title';
 import { formatDate } from '@/lib/i18n';
 import { designKey } from '@/lib/design-groups';
 import { formatPaise } from '@/lib/money';
+import { tagsFor } from '@/lib/packs';
 import { groupTags, parseTagParams, tagFilter, tagLibraryHref, TAG_PRINT_MAX } from '@/lib/tag-library';
 
 type Search = {
@@ -94,7 +95,8 @@ function LabelSheet({ lines, params, data, t }: { lines: ReceiptLabelLine[]; par
   const tagPrinter = params.format === 'tag';
   const pieces = lines.reduce((n, l) => n + Math.max(l.quantity, 0), 0);
   const labels = lines.flatMap((line, n) =>
-    Array.from({ length: onePerItem ? 1 : Math.max(line.quantity, 0) }, (_, i) => ({ key: `${line.id}-${n}-${i}`, line })),
+    // Box packs (ADR-047): one tag per box, not per piece.
+    Array.from({ length: onePerItem ? 1 : tagsFor(Math.max(line.quantity, 0), line.packSize) }, (_, i) => ({ key: `${line.id}-${n}-${i}`, line })),
   );
   return (
     <>
@@ -292,7 +294,10 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
               <Link href={`/admin/products/${line.id}`} className={link}>
                 {[line.name, line.color, line.size].filter(Boolean).join(' · ')}
               </Link>
-              <span className="tabular-nums">{t('stk.labels.pcs', { n: line.quantity })}</span>
+              <span className="tabular-nums">
+                {t('stk.labels.pcs', { n: line.quantity })}
+                {line.packSize ? ` · ${t(tagsFor(line.quantity, line.packSize) === 1 ? 'pack.boxes.one' : 'pack.boxes.other', { n: tagsFor(line.quantity, line.packSize) })}` : ''}
+              </span>
             </li>
           ))}
         </ul>

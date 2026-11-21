@@ -507,6 +507,8 @@ export type DesignActionInput = {
   /** Plan v17 tags: '' = not set. */
   forGender?: string;
   ageGroup?: string;
+  /** Box packs (ADR-047): pieces in a box, whole-box MRP and purchase price ('' = not given). */
+  pack?: { size: string | number; mrp?: string; cost?: string } | null;
 };
 
 /** `items`: the saved items (in entry order) so photos can be attached right after. */
@@ -551,6 +553,13 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
       stockDate: String(input.stockDate ?? ''),
       forGender: String(input.forGender ?? ''),
       ageGroup: String(input.ageGroup ?? ''),
+      pack: input.pack
+        ? {
+            size: /^\d+$/.test(String(input.pack.size).trim()) ? Number(String(input.pack.size).trim()) : NaN,
+            mrpPaise: toPaise(String(input.pack.mrp ?? ''), 'MRP', true),
+            costPaise: can(admin, 'costs') ? toPaise(String(input.pack.cost ?? ''), 'cost price', true) : null,
+          }
+        : null,
       staffId: admin.id,
     });
     revalidatePath('/admin', 'layout');

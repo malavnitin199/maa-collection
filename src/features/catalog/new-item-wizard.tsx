@@ -16,6 +16,7 @@ import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import type { MessageKey } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
+import { PACK_CHOICES, packOf, perPiecePaise } from '@/lib/packs';
 import { SECTION_ICONS, type SectionIcon } from '@/lib/sections';
 import { cleanSizeList, MAX_SIZES, orderSizes, SIZE_CHOICES, SIZE_RANGES } from '@/lib/size-lists';
 import { sameSize } from '@/lib/size-prices';
@@ -91,6 +92,11 @@ export function NewItemWizard({
   const [brand, setBrand] = useState('');
   const [sizes, setSizes] = useState<string[]>([]);
   const [pieces, setPieces] = useState<Record<string, number>>({});
+  // Box packs (owner, 2026-11-21, ADR-047): the item comes in boxes of N pieces; counts below are boxes then.
+  const [boxed, setBoxed] = useState(false);
+  const [packText, setPackText] = useState('12');
+  const [packMrp, setPackMrp] = useState('');
+  const [costAs, setCostAs] = useState<'piece' | 'box'>('piece');
   const [reached, setReached] = useState(startSection ? 1 : 0);
   const [sheet, setSheet] = useState<'section' | 'type' | null>(null);
   // Just added on this step (a section or a category): shown chosen with a glow; tap it to go on.
@@ -109,16 +115,30 @@ export function NewItemWizard({
   const offered = type ? [...type.sizes, ...sizes.filter((s) => !type.sizes.some((x) => sameSize(x, s)))] : [];
   const ordered = offered.filter((size) => sizes.some((s) => sameSize(s, size)));
   const count = (size: string) => pieces[size] ?? 1;
-  const totalPieces = ordered.reduce((n, size) => n + count(size), 0);
+  const pack = boxed ? packOf(/^\d+$/.test(packText.trim()) ? Number(packText.trim()) : NaN) : null;
+  // With boxes, each size's count is boxes; stock is kept in pieces.
+  const piecesOf = (size: string) => count(size) * (pack ?? 1);
+  const totalBoxes = ordered.reduce((n, size) => n + count(size), 0);
+  const totalPieces = ordered.reduce((n, size) => n + piecesOf(size), 0);
   const mrpPaise = rupeesToPaise(mrp);
-  const costPaise = showCost && cost.trim() ? rupeesToPaise(cost) : null;
+  const typedCost = showCost && cost.trim() ? rupeesToPaise(cost) : null;
+  const boxCost = boxed && costAs === 'box' ? typedCost : null;
+  // Always per piece (a box price ÷ pieces in the box, to the paisa).
+  const costPaise = boxCost !== null && pack ? perPiecePaise(boxCost, pack) : boxed && costAs === 'box' ? null : typedCost;
+  const packMrpPaise = boxed && packMrp.trim() ? rupeesToPaise(packMrp) : null;
   const pricePaise = price.trim() ? rupeesToPaise(price) : null;
   // The name is optional (owner, 2026-11-21): a blank one becomes "<category> <number>" on save.
-  const detailsOk = Boolean(supplierId) && mrpPaise !== null && (!cost.trim() || costPaise !== null) && (!price.trim() || pricePaise !== null);
+  const detailsOk =
+    Boolean(supplierId) &&
+    mrpPaise !== null &&
+    (!cost.trim() || typedCost !== null) &&
+    (!price.trim() || pricePaise !== null) &&
+    (!boxed || (pack !== null && (!packMrp.trim() || (packMrpPaise !== null && mrpPaise !== null && packMrpPaise <= mrpPaise * pack))));
+  const boxesText = (n: number) => t(n === 1 ? 'pack.boxes.one' : 'pack.boxes.other', { n });
   const pcs = (n: number) => t(n === 1 ? 'stk.item.pcs.one' : 'stk.item.pcs.other', { n });
   const sizesOk = ordered.length > 0 && totalPieces > 0;
   const shownName = name.trim() || (type ? t('ni.name.auto', { type: type.name }) : '');
-  const sizeLine = ordered.map((size) => `${size} × ${count(size)}`).join(' · ');
+  const sizeLine = [pack ? t('pack.label', { n: pack }) : '', ordered.map((size) => `${size} × ${count(size)}`).join(' · ')].filter(Boolean).join(' · ');
 
   const go = (next: Step) => {
     const index = next === 'start' ? -1 : FLOW.indexOf(next);
@@ -219,6 +239,10 @@ export function NewItemWizard({
     setCost('');
     setPrice('');
     setBrand('');
+    setBoxed(false);
+    setPackText('12');
+    setPackMrp('');
+    setCostAs('piece');
   };
   /** Everything back to the first screen (what the address asked for stays: company, section, bill, date, mode). */
   const startOver = () => {
@@ -261,11 +285,13 @@ export function NewItemWizard({
         colors: [],
         mrp,
         price,
-        cost,
+        // A box purchase price goes with the box; the piece's cost is worked out from it.
+        cost: boxed && costAs === 'box' ? '' : cost,
         quantityEach: '1',
-        quantities: Object.fromEntries(ordered.map((size) => [size, count(size)])),
+        quantities: Object.fromEntries(ordered.map((size) => [size, piecesOf(size)])),
         billNumber,
         stockDate,
+        pack: boxed && pack ? { size: pack, mrp: packMrp, cost: costAs === 'box' ? cost : '' } : null,
       });
       if (!result.ok) {
         done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
@@ -280,7 +306,8 @@ export function NewItemWizard({
         { label: t('done.line.company'), value: supplierName },
         { label: t('done.line.skus'), value: range },
         { label: t('done.line.pieces'), value: pcs(totalPieces) },
-        { label: t('done.line.purchase'), value: costPaise !== null ? formatPaise(costPaise * totalPieces) : '' },
+        { label: t('pack.box'), value: pack ? t('pack.review', { n: pack, boxes: boxesText(totalBoxes), pieces: pcs(totalPieces) }) : '' },
+        { label: t('done.line.purchase'), value: boxCost !== null ? formatPaise(boxCost * totalBoxes) : costPaise !== null ? formatPaise(costPaise * totalPieces) : '' },
       ].filter((line) => line.value);
       clearItem();
       setDirection('next');
@@ -474,20 +501,24 @@ export function NewItemWizard({
               <ul data-testid="review-sizes" className="flex flex-wrap gap-2">
                 {ordered.map((size) => (
                   <li key={size} className="rounded-xl bg-brand-50 px-3 py-1.5 text-sm font-semibold text-brand-900 ring-1 ring-brand-100 dark:bg-brand-950 dark:text-brand-100 dark:ring-brand-900">
-                    {size} × {count(size)}
+                    {size} × {pack ? boxesText(count(size)) : count(size)}
                   </li>
                 ))}
               </ul>
               <p data-testid="review-total" className="font-semibold">
+                {pack ? t('pack.review', { n: pack, boxes: boxesText(totalBoxes), pieces: pcs(totalPieces) }) + ' · ' : ''}
                 {t('ni.review.pieces', { pieces: pcs(totalPieces), items: t(ordered.length === 1 ? 'ni.review.items.one' : 'ni.review.items.other', { n: ordered.length }) })}
               </p>
               <p className="text-sm">
                 {mrpPaise !== null && t('ni.review.mrp', { amount: formatPaise(mrpPaise) })}
                 {pricePaise !== null && ` · ${t('ni.review.price', { amount: formatPaise(pricePaise) })}`}
+                {pack && packMrpPaise !== null && ` · ${t('pack.review.mrp', { amount: formatPaise(packMrpPaise) })}`}
               </p>
               {showCost && costPaise !== null && (
                 <p data-testid="review-cost" className="text-sm">
-                  {t('ni.review.cost', { amount: formatPaise(costPaise), total: formatPaise(costPaise * totalPieces) })}
+                  {pack && boxCost !== null
+                    ? t('pack.review.cost', { box: formatPaise(boxCost), piece: formatPaise(costPaise), total: formatPaise(boxCost * totalBoxes) })
+                    : t('ni.review.cost', { amount: formatPaise(costPaise), total: formatPaise(costPaise * totalPieces) })}
                 </p>
               )}
               {(billNumber || stockDate || brand) && (
@@ -551,17 +582,92 @@ export function NewItemWizard({
                 inputClassName={`${input} min-w-0 flex-1 text-lg`}
               />
             </label>
+            {/* Box packs (owner, 2026-11-21): loose pieces, or boxes of N (sandos: 10 or 12 a box). */}
+            <div data-testid="pack-choice" className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">{t('pack.soldAs')}</span>
+                <Segmented
+                  label={t('pack.soldAs')}
+                  value={boxed ? 'box' : 'pieces'}
+                  options={[
+                    { value: 'pieces', label: t('pack.pieces') },
+                    { value: 'box', label: t('pack.box') },
+                  ]}
+                  onChange={(v) => setBoxed(v === 'box')}
+                />
+              </div>
+              {boxed && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className={`mr-1 text-xs ${muted}`}>{t('pack.size')}</span>
+                  {PACK_CHOICES.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      aria-pressed={pack === n}
+                      aria-label={t('pack.sizeOf', { n })}
+                      onClick={() => setPackText(String(n))}
+                      className={`min-h-9 min-w-10 rounded-xl px-2.5 text-sm font-bold tabular-nums transition active:scale-95 ${
+                        pack === n ? 'bg-brand-600 text-white shadow-sm' : 'bg-surface ring-1 ring-zinc-300 dark:ring-zinc-700'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <input
+                    inputMode="numeric"
+                    aria-label={t('pack.sizeOther')}
+                    aria-invalid={pack === null}
+                    value={packText}
+                    onChange={(e) => setPackText(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    className={`${input} h-9 w-16 py-1 text-center text-sm font-bold tabular-nums aria-invalid:border-red-500`}
+                  />
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <label className={field}>
-                {t('ni.mrp')}
+                {boxed ? t('pack.mrpPiece') : t('ni.mrp')}
                 <input required inputMode="decimal" value={mrp} onChange={(e) => setMrp(e.target.value)} className={`${input} text-lg tabular-nums`} />
               </label>
-              {showCost && (
+              {boxed && (
+                <label className={field}>
+                  {t('pack.mrpBox')}
+                  <input inputMode="decimal" value={packMrp} onChange={(e) => setPackMrp(e.target.value)} className={`${input} text-lg tabular-nums`} />
+                  {mrpPaise !== null && pack && <span className={`text-xs ${muted}`}>{t('pack.mrpBoxHint', { amount: formatPaise(mrpPaise * pack) })}</span>}
+                </label>
+              )}
+              {showCost && !boxed && (
                 <label className={field}>
                   {t('ni.cost')}
                   <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} className={`${input} text-lg tabular-nums`} />
                   <span className={`text-xs ${muted}`}>{t('ni.perPiece')}</span>
                 </label>
+              )}
+              {showCost && boxed && (
+                // A full row: the label with the Per piece | Whole box switch beside it, then the box.
+                <div className="col-span-2 flex flex-col gap-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="ni-cost" className="text-sm font-medium">
+                      {costAs === 'box' ? t('pack.costBox') : t('ni.cost')}
+                    </label>
+                    <Segmented
+                      label={t('pack.costAs')}
+                      small
+                      value={costAs}
+                      options={[
+                        { value: 'piece', label: t('pack.costPerPiece') },
+                        { value: 'box', label: t('pack.costPerBox') },
+                      ]}
+                      onChange={(v) => setCostAs(v as 'piece' | 'box')}
+                    />
+                  </div>
+                  <input id="ni-cost" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} className={`${input} text-lg tabular-nums`} />
+                  {costAs === 'box' && costPaise !== null && (
+                    <span data-testid="pack-cost-each" className={`text-xs ${muted}`}>
+                      {t('pack.costEach', { amount: formatPaise(costPaise) })}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             {type && (
@@ -569,6 +675,7 @@ export function NewItemWizard({
                 <SizeStep
                   type={type}
                   single={mode === 'one'}
+                  boxes={pack}
                   offered={offered}
                   sizes={sizes}
                   pieces={pieces}
@@ -607,7 +714,10 @@ export function NewItemWizard({
                   ? t('ni.panel.needDetails')
                   : ordered.length === 0
                     ? t(mode === 'one' ? 'ni.sizes.pickSingle' : 'ni.sizes.pickOne')
-                    : t('ni.sizes.summary', { sizes: t(ordered.length === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: ordered.length }), pieces: pcs(totalPieces) })}
+                    : t('ni.sizes.summary', {
+                        sizes: t(ordered.length === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: ordered.length }),
+                        pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces),
+                      })}
               </p>
               <button type="submit" disabled={!detailsOk || !sizesOk} className={nextButton}>
                 {t('ni.next')}
@@ -652,6 +762,26 @@ export function NewItemWizard({
   );
 }
 
+/** A small two-way switch (Pieces | Box, Per piece | Whole box). */
+function Segmented({ label, value, options, onChange, small = false }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; small?: boolean }) {
+  return (
+    <span role="radiogroup" aria-label={label} className="inline-flex rounded-full bg-zinc-100 p-0.5 text-xs font-semibold dark:bg-zinc-800">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          aria-checked={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={`rounded-full whitespace-nowrap transition ${small ? 'px-2.5 py-1' : 'px-3.5 py-1.5 text-sm'} ${value === o.value ? 'bg-brand-600 text-white shadow' : 'text-zinc-600 dark:text-zinc-300'}`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 function NewBadge() {
   const t = useT();
   return <span className="absolute top-2 right-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white shadow">{t('ni.new')}</span>;
@@ -676,6 +806,7 @@ function AddTile({ label, onClick }: { label: string; onClick: () => void }) {
 function SizeStep({
   type,
   single,
+  boxes = null,
   offered,
   sizes,
   pieces,
@@ -686,6 +817,8 @@ function SizeStep({
 }: {
   type: WizardType;
   single: boolean;
+  /** Box packs: the counts are boxes of this many pieces. */
+  boxes?: number | null;
   offered: string[];
   sizes: string[];
   pieces: Record<string, number>;
@@ -746,6 +879,7 @@ function SizeStep({
           );
         })}
       </div>
+      {chosenList.length > 0 && boxes && <p className={`text-xs font-semibold ${muted}`}>{t('pack.boxesTitle')} · {t('pack.label', { n: boxes })}</p>}
       {chosenList.length > 0 && (
         <ul data-testid="size-pieces" className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
           {chosenList.map((size) => {
@@ -754,17 +888,17 @@ function SizeStep({
               <li key={size} className="flex items-center justify-between gap-1 rounded-xl bg-brand-50 py-0.5 pr-0.5 pl-3 dark:bg-brand-950">
                 <span className="text-sm font-bold tabular-nums">{size}</span>
                 <span className="flex items-center">
-                  <button type="button" aria-label={t('ni.sizes.less', { size })} onClick={() => onPieces(size, count - 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
+                  <button type="button" aria-label={boxes ? t('pack.lessBox', { size }) : t('ni.sizes.less', { size })} onClick={() => onPieces(size, count - 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
                     −
                   </button>
                   <input
                     inputMode="numeric"
-                    aria-label={t('ni.sizes.piecesOf', { size })}
+                    aria-label={boxes ? t('pack.boxesOf', { size }) : t('ni.sizes.piecesOf', { size })}
                     value={String(count)}
                     onChange={(e) => onPieces(size, /^\d+$/.test(e.target.value) ? Number(e.target.value) : 0)}
                     className="w-8 bg-transparent text-center text-base font-bold tabular-nums outline-none"
                   />
-                  <button type="button" aria-label={t('ni.sizes.more', { size })} onClick={() => onPieces(size, count + 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
+                  <button type="button" aria-label={boxes ? t('pack.moreBox', { size }) : t('ni.sizes.more', { size })} onClick={() => onPieces(size, count + 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
                     +
                   </button>
                 </span>

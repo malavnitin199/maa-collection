@@ -13,6 +13,8 @@ const offlineSaleSchema = z.object({
   manual: z.object({ name: z.string().max(MANUAL_NAME_MAX), size: z.string().max(MANUAL_SIZE_MAX).optional() }).optional(),
   quantity: z.number().int(),
   unitPricePaise: z.number().int(),
+  /** Whole boxes at a box price (ADR-047). */
+  totalPaise: z.number().int().positive().optional(),
   soldBy: z.uuid(),
   /** Who made it on the phone: must be the person logged in now. */
   recordedBy: z.uuid(),

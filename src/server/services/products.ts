@@ -6,6 +6,7 @@ import type { MessageKey } from '@/lib/i18n';
 import { codeFromScan } from '@/lib/item-link';
 import { AGE_GROUPS, FOR_GENDERS, parseTag, type AgeGroup, type ForGender, type ProductTags } from '@/lib/product-tags';
 import { tagSizeRange } from '@/lib/size-lists';
+import { packOf, perPiecePaise } from '@/lib/packs';
 import { designSizesById, findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
 import { STORE_TIMEZONE } from '@/lib/app-config';
 import { DomainError, isUniqueViolation } from './errors';
@@ -23,6 +24,9 @@ export type CounterProduct = {
   mrpPaise: number;
   pricePaise: number;
   stock: number;
+  /** Box packs (ADR-047): pieces in a box and the whole-box selling price (never the purchase price). */
+  packSize?: number | null;
+  packMrpPaise?: number | null;
   /** Main photo, if any (set by the counter lookup). */
   imageSrc?: string | null;
 };
@@ -40,6 +44,8 @@ export function toCounterProduct(p: Product): CounterProduct {
     mrpPaise: p.mrpPaise,
     pricePaise: p.pricePaise,
     stock: p.stock,
+    packSize: p.packSize,
+    packMrpPaise: p.packMrpPaise,
   };
 }
 
@@ -61,6 +67,8 @@ export async function counterCatalogue(db: Db, storeId: string): Promise<Counter
       mrpPaise: products.mrpPaise,
       pricePaise: products.pricePaise,
       stock: products.stock,
+      packSize: products.packSize,
+      packMrpPaise: products.packMrpPaise,
     })
     .from(products)
     .where(and(eq(products.storeId, storeId), eq(products.active, true)))
@@ -397,6 +405,12 @@ export type DesignInput = {
   /** Who it is for (plan v17), the same on every size and colour; empty = not set. */
   forGender?: string | null;
   ageGroup?: string | null;
+  /**
+   * Box packs (owner, 2026-11-21, ADR-047): pieces in one box and the whole-box prices.
+   * Quantities stay in pieces (boxes × size). A box purchase price sets the piece's
+   * cost (÷ size, to the paisa); a box MRP must not be above MRP × size.
+   */
+  pack?: { size: number; mrpPaise?: number | null; costPaise?: number | null } | null;
   staffId: string;
 };
 
@@ -422,7 +436,8 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   const colors = given.length > 0 ? given : [''];
   if (sizes.length === 0) throw new DomainError('Pick at least one size.', { key: 'stk.err.pickSize' });
   if (sizes.length * colors.length > 60) throw new DomainError('Too many combinations at once (max 60). Split the entry.', { key: 'stk.err.tooManyCombos' });
-  const rates = resolveSizeRates(sizes, input, input.sizeRates);
+  const pack = resolvePack(input);
+  const rates = resolveSizeRates(sizes, { ...input, costPaise: pack?.costPaise != null ? perPiecePaise(pack.costPaise, pack.size) : input.costPaise }, input.sizeRates);
   const tags = resolveTags(input);
   if (!Number.isInteger(input.quantityEach) || input.quantityEach < 0 || input.quantityEach > 10_000) {
     throw new DomainError('Pieces per size/colour must be 0 or more.', { key: 'stk.err.piecesEach' });
@@ -474,9 +489,26 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
         ...rates.get(size.toLowerCase())!,
         quantity: quantities.get(size.toLowerCase()) ?? input.quantityEach,
         ...tags,
+        packSize: pack?.size ?? null,
+        packMrpPaise: pack?.mrpPaise ?? null,
+        packCostPaise: pack?.costPaise ?? null,
       })),
     ),
   });
+}
+
+/** Checks a box pack (ADR-047): 2 … 1000 pieces; whole-box prices positive, the box MRP not above MRP × pieces. */
+function resolvePack(input: Pick<DesignInput, 'pack' | 'mrpPaise'>): { size: number; mrpPaise: number | null; costPaise: number | null } | null {
+  if (!input.pack) return null;
+  const size = packOf(input.pack.size);
+  if (!size) throw new DomainError('Pieces in a box must be a whole number from 2 to 1000.', { key: 'pack.err.size' });
+  const mrpPaise = input.pack.mrpPaise ?? null;
+  const costPaise = input.pack.costPaise ?? null;
+  if (mrpPaise !== null && (!Number.isSafeInteger(mrpPaise) || mrpPaise <= 0 || mrpPaise > input.mrpPaise * size)) {
+    throw new DomainError('The whole-box MRP cannot be more than MRP × pieces in the box.', { key: 'pack.err.mrp' });
+  }
+  if (costPaise !== null && (!Number.isSafeInteger(costPaise) || costPaise < 0)) throw new DomainError('Enter a valid box purchase price.', { key: 'pack.err.cost' });
+  return { size, mrpPaise, costPaise };
 }
 
 /** Plan v19: a stock date as typed (YYYY-MM-DD): a real day, from 2000 on, not after today in the shop. Empty = null. */
@@ -541,6 +573,10 @@ type NewProductRow = {
   quantity: number;
   forGender?: ForGender | null;
   ageGroup?: AgeGroup | null;
+  /** Box packs (ADR-047): pieces in a box and the whole-box prices; absent = sold loose. */
+  packSize?: number | null;
+  packMrpPaise?: number | null;
+  packCostPaise?: number | null;
 };
 
 /**
@@ -602,6 +638,9 @@ async function insertNewProducts(
               stock: row.quantity,
               forGender: row.forGender ?? null,
               ageGroup: row.ageGroup ?? null,
+              packSize: row.packSize ?? null,
+              packMrpPaise: row.packMrpPaise ?? null,
+              packCostPaise: row.packCostPaise ?? null,
               createdBy: input.staffId,
             })),
           )

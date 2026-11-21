@@ -7,11 +7,13 @@ import type { SheetPart } from '@/features/bills/sheet-parts';
 const numbers = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 /** Rupees the way the paper bill prints them: 6,120.00 (no ₹ in the cells). */
 const amount = (paise: number) => numbers.format(paise / 100);
+/** A quantity: whole, or to 2 places for a part box. */
+const qty = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
 
 /** S.N · Description of goods · Qty · Rate · Amount, then Total and units — like the paper. */
 export function BillSheet({ parts }: { parts: SheetPart[] }) {
   const t = useT();
-  const pieces = parts.reduce((n, p) => n + p.pieces, 0);
+  const units = parts.reduce((n, p) => n + p.units, 0);
   const total = parts.reduce((n, p) => n + p.totalPaise, 0);
   const many = parts.length > 1;
   const cell = 'px-1.5 py-1.5';
@@ -47,10 +49,10 @@ export function BillSheet({ parts }: { parts: SheetPart[] }) {
               <tr key={`${line.name}\u0000${line.ratePaise}`} data-testid="bill-sheet-line" className="border-t border-zinc-200 align-top dark:border-zinc-800">
                 <td className={`${cell} text-xs ${muted}`}>{i + 1}.</td>
                 <td className={cell}>
-                  <span className="block font-medium break-words">{line.name}</span>
+                  <span className="block font-medium break-words">{line.pack ? t('pack.goods', { name: line.name, n: line.pack }) : line.name}</span>
                   {line.sizes.length > 0 && <span className={`block text-xs break-words ${muted}`}>{line.sizes.join(' ')}</span>}
                 </td>
-                <td className={`${cell} text-right`}>{line.pieces}</td>
+                <td className={`${cell} text-right`}>{qty(line.qty)}</td>
                 <td className={`${cell} text-right`}>{amount(line.ratePaise)}</td>
                 <td className={`${cell} text-right font-medium`}>{amount(line.amountPaise)}</td>
               </tr>
@@ -59,7 +61,7 @@ export function BillSheet({ parts }: { parts: SheetPart[] }) {
               <tr className="border-t border-zinc-200 text-xs dark:border-zinc-800">
                 <td />
                 <td className={`${cell} text-right ${muted}`}>{t('bills.sheet.subtotal')}</td>
-                <td className={`${cell} text-right`}>{part.pieces}</td>
+                <td className={`${cell} text-right`}>{qty(part.units)}</td>
                 <td />
                 <td className={`${cell} text-right font-semibold`}>{amount(part.totalPaise)}</td>
               </tr>
@@ -71,7 +73,7 @@ export function BillSheet({ parts }: { parts: SheetPart[] }) {
             <td />
             <td className={`${cell} text-right font-semibold`}>{t('bills.sheet.total')}</td>
             <td data-testid="bill-sheet-units" className={`${cell} text-right font-semibold`}>
-              {pieces}
+              {qty(units)}
             </td>
             <td />
             <td data-testid="bill-sheet-total" className={`${cell} text-right font-bold`}>
@@ -80,7 +82,7 @@ export function BillSheet({ parts }: { parts: SheetPart[] }) {
           </tr>
         </tfoot>
       </table>
-      <p className={`border-t border-zinc-200 px-2 py-1.5 text-right text-xs dark:border-zinc-800 ${muted}`}>{t('bills.sheet.units', { n: pieces })}</p>
+      <p className={`border-t border-zinc-200 px-2 py-1.5 text-right text-xs dark:border-zinc-800 ${muted}`}>{t('bills.sheet.units', { n: qty(units) })}</p>
     </div>
   );
 }

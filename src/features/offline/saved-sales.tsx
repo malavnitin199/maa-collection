@@ -84,7 +84,7 @@ function SavedRow({ sale, meId, online }: { sale: QueuedSale; meId: string; onli
             {sale.manual && <span className="ml-1.5 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold dark:bg-zinc-800">{t('off.row.byHand')}</span>}
           </p>
         </div>
-        <p className="shrink-0 text-base font-bold tabular-nums">{formatPaise(sale.quantity * sale.unitPricePaise)}</p>
+        <p className="shrink-0 text-base font-bold tabular-nums">{formatPaise(sale.totalPaise ?? sale.quantity * sale.unitPricePaise)}</p>
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="inline-flex items-center gap-1 text-zinc-500 dark:text-zinc-400">

@@ -1,10 +1,22 @@
 import { ean13Svg, isValidEan13 } from '@/features/scanning/ean13';
 import { STORE_NAME } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
+import { boxPaise, packOf } from '@/lib/packs';
 import { sameSize } from '@/lib/size-prices';
 import { QrCode } from './qr-code';
 
-export type TagProduct = { sku: string; barcode: string; name: string; brand?: string; size: string; color: string; mrpPaise: number };
+export type TagProduct = {
+  sku: string;
+  barcode: string;
+  name: string;
+  brand?: string;
+  size: string;
+  color: string;
+  mrpPaise: number;
+  /** Box packs (ADR-047): one tag per box says "BOX OF 12" and the box price. */
+  packSize?: number | null;
+  packMrpPaise?: number | null;
+};
 
 /**
  * Hang tag, exactly 40 × 60 mm with ~1.5 mm padding (ADR-014, ADR-015): shop
@@ -28,6 +40,7 @@ export function HangTag({
 }) {
   const [rupees, paise] = formatPaise(product.mrpPaise).split('.');
   const longSize = product.size.length > 4;
+  const pack = packOf(product.packSize);
   return (
     <div
       data-testid="hang-tag"
@@ -50,7 +63,14 @@ export function HangTag({
               <span data-testid="tag-size" className={`${longSize ? 'text-[9pt]' : 'text-[15pt]'} leading-none font-bold`}>
                 {product.size}
               </span>
-              <span className="min-w-0 truncate text-right text-[6pt] leading-tight font-medium">{product.color}</span>
+              <span className="min-w-0 truncate text-right text-[6pt] leading-tight font-medium">
+                {pack && (
+                  <span data-testid="tag-pack" className="block font-bold">
+                    BOX OF {pack}
+                  </span>
+                )}
+                {product.color}
+              </span>
             </p>
           </div>
         </div>
@@ -102,7 +122,13 @@ export function HangTag({
           <span className="text-[11pt] font-bold">{rupees}</span>
           {paise && <sup className="text-[5.5pt] font-bold">.{paise}</sup>}
         </p>
-        <p className="mt-[0.3mm] text-center text-[4pt] leading-none text-zinc-500">(incl. of all taxes)</p>
+        {pack ? (
+          <p className="mt-[0.3mm] text-center text-[5pt] leading-none font-semibold">
+            per piece · Box {formatPaise(boxPaise(product.mrpPaise, pack, product.packMrpPaise)).replace('.00', '')}
+          </p>
+        ) : (
+          <p className="mt-[0.3mm] text-center text-[4pt] leading-none text-zinc-500">(incl. of all taxes)</p>
+        )}
       </div>
     </div>
   );

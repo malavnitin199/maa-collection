@@ -1,6 +1,7 @@
 import type { BillLine, Collection } from '@/server/services/bills';
 
-export type SheetPart = { supplierId: string; name: string; lines: BillLine[]; pieces: number; totalPaise: number };
+/** `units`: the Qty column added up (pieces, and boxes for box packs), as the paper's "Totals … Units". */
+export type SheetPart = { supplierId: string; name: string; lines: BillLine[]; pieces: number; units: number; totalPaise: number };
 
 /**
  * The ticked collections as the company's paper bill shows them (owner's
@@ -15,10 +16,11 @@ export function sheetParts(companies: { id: string; name: string }[], collection
       const lines: BillLine[] = [];
       for (const c of oldestFirst.filter((x) => x.supplierId === company.id)) {
         for (const l of c.lines) {
-          const same = lines.find((x) => x.name === l.name && x.ratePaise === l.ratePaise);
+          const same = lines.find((x) => x.name === l.name && x.ratePaise === l.ratePaise && x.pack === l.pack);
           if (!same) lines.push({ ...l, sizes: [...l.sizes] });
           else {
             same.pieces += l.pieces;
+            same.qty += l.qty;
             same.amountPaise += l.amountPaise;
             for (const s of l.sizes) if (!same.sizes.includes(s)) same.sizes.push(s);
           }
@@ -29,6 +31,7 @@ export function sheetParts(companies: { id: string; name: string }[], collection
         name: company.name,
         lines,
         pieces: lines.reduce((n, l) => n + l.pieces, 0),
+        units: lines.reduce((n, l) => n + l.qty, 0),
         totalPaise: lines.reduce((n, l) => n + l.amountPaise, 0),
       };
     })

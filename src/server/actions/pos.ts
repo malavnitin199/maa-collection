@@ -46,6 +46,8 @@ const saleSchema = z.object({
   manual: z.object({ name: z.string().max(MANUAL_NAME_MAX), size: z.string().max(MANUAL_SIZE_MAX).optional() }).optional(),
   quantity: z.number().int(),
   unitPricePaise: z.number().int(),
+  /** Whole boxes at a box price (ADR-047). */
+  totalPaise: z.number().int().positive().optional(),
   soldBy: z.uuid(),
 });
 

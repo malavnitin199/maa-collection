@@ -15,6 +15,12 @@ export type RecordSaleInput = {
   manual?: ManualItem;
   quantity: number;
   unitPricePaise: number;
+  /**
+   * Box packs (ADR-047): whole boxes sold at a box price keep that exact total
+   * (₹400 for 12 pieces); the piece price is the total ÷ pieces to the paisa, so the
+   * two may differ only by that rounding. Absent = quantity × unit price.
+   */
+  totalPaise?: number;
   /** Salesperson credited with the sale (may be someone else: "on behalf of"). */
   soldBy: string;
   /** Logged-in staff member entering it. */
@@ -65,6 +71,7 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
   if (!Number.isSafeInteger(input.unitPricePaise) || input.unitPricePaise <= 0) {
     throw new DomainError('Enter a valid sale price.', { key: 'error.salePrice' });
   }
+  const totalPaise = saleTotal(input);
   const manual = input.manual ? normaliseManual(input.manual) : null;
   if (!manual && !input.productId) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
   const offlineAt = input.offline ? offlineTime(input.offline.at) : null;
@@ -92,7 +99,7 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
             manualNote: manual.note,
             quantity: input.quantity,
             unitPricePaise: input.unitPricePaise,
-            totalPaise: input.quantity * input.unitPricePaise,
+            totalPaise,
             costPaise: null,
             soldBy: input.soldBy,
             recordedBy: input.recordedBy,
@@ -141,7 +148,7 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
           mrpPaise: offlineAt ? offlineMrp(product.mrpPaise, input.unitPricePaise, input.offline?.mrpPaise) : product.mrpPaise,
           quantity: input.quantity,
           unitPricePaise: input.unitPricePaise,
-          totalPaise: input.quantity * input.unitPricePaise,
+          totalPaise,
           costPaise: product.costPaise,
           soldBy: input.soldBy,
           recordedBy: input.recordedBy,
@@ -166,6 +173,15 @@ export async function recordSale(db: Db, storeId: string, input: RecordSaleInput
     }
     throw error;
   }
+}
+
+/** The total a sale records: quantity × piece price, or a box total that rounds to that piece price. */
+export function saleTotal({ quantity, unitPricePaise, totalPaise }: Pick<RecordSaleInput, 'quantity' | 'unitPricePaise' | 'totalPaise'>): number {
+  if (totalPaise === undefined) return quantity * unitPricePaise;
+  if (!Number.isSafeInteger(totalPaise) || totalPaise <= 0 || Math.abs(totalPaise - quantity * unitPricePaise) * 2 > quantity) {
+    throw new DomainError('Enter a valid sale price.', { key: 'error.salePrice' });
+  }
+  return totalPaise;
 }
 
 /** The phone's clock: a real time, never later than now (a phone set ahead is pulled back). */
