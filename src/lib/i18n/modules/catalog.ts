@@ -400,6 +400,15 @@ export const catalogEn = {
   'cat.pager.range': '{from}–{to} of {total}',
   'cat.pager.prev': 'Previous',
   'cat.pager.next': 'Next',
+  // Companies page search (2026-11-21)
+  'cat.find.label': 'Search companies',
+  'cat.find.placeholder': 'Search name, place, phone…',
+  'cat.find.location': 'Filter by place',
+  'cat.find.anywhere': 'All places',
+  'cat.find.summary': 'Summary',
+  'cat.find.count': '{n} of {total}',
+  'cat.find.none': 'No company matches.',
+  'cat.find.collections': '{n} collections',
 } as const;
 
 export const catalogHi: Record<keyof typeof catalogEn, string> = {
@@ -798,4 +807,12 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.pager.range': '{total} में से {from}–{to}',
   'cat.pager.prev': 'पिछले',
   'cat.pager.next': 'अगले',
+  'cat.find.label': 'कंपनी खोजें',
+  'cat.find.placeholder': 'नाम, जगह, फ़ोन खोजें…',
+  'cat.find.location': 'जगह से छाँटें',
+  'cat.find.anywhere': 'सभी जगह',
+  'cat.find.summary': 'सारांश',
+  'cat.find.count': '{total} में से {n}',
+  'cat.find.none': 'कोई कंपनी नहीं मिली।',
+  'cat.find.collections': '{n} कलेक्शन',
 };

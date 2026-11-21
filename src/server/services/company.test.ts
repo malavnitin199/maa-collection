@@ -179,7 +179,7 @@ describe('company location and the list', () => {
 });
 
 describe('companiesOverview', () => {
-  it('totals and one line per company: collections map to the company chosen when the item was made; open bills; recent first', async () => {
+  it('totals and one line per company: collections map to the company chosen when the item was made; open bills; latest activity first', async () => {
     const mills = await createSupplier(db, STORE_ID, { name: 'Mumbai Mills', contactName: '', phone: '', gstin: '', notes: '', workingSince: '2015-06-01' });
     // Surat Silks: two bills (one paid), two collections; Mumbai Mills: one bill of jeans; the demo companies have their seed data.
     await createDesign(db, STORE_ID, design({ billNumber: 'S1', stockDate: '2026-11-01' }));
@@ -193,8 +193,9 @@ describe('companiesOverview', () => {
     expect(surat.addedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     const mumbai = overview.rows.find((r) => r.id === mills.id)!;
     expect(mumbai).toMatchObject({ workingSince: '2015-06-01', bills: 1, openBills: 1, collections: 1, pieces: 2, amountPaise: 140000, duePaise: 140000 });
-    // Most recent bill first.
-    expect(overview.rows.indexOf(surat)).toBeLessThan(overview.rows.indexOf(mumbai));
+    // Latest activity first: both were added today (later than their bills), so the newest added comes first.
+    expect(overview.rows.indexOf(mumbai)).toBeLessThan(overview.rows.indexOf(surat));
+    expect(overview.rows.indexOf(mumbai)).toBe(0);
     expect(overview.totals.companies).toBe(overview.rows.length);
     expect(overview.totals.bills).toBe(overview.rows.reduce((n, r) => n + r.bills, 0));
     expect(overview.totals.openBills).toBe(overview.rows.reduce((n, r) => n + r.openBills, 0));

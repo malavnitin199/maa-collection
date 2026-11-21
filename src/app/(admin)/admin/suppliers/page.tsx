@@ -1,104 +1,56 @@
-import Link from 'next/link';
 import { Suspense } from 'react';
-import { card, muted, sectionTitle } from '@/components/ui/styles';
-import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
-import { CompanyBulkActions } from '@/features/catalog/bulk-actions';
+import { card, muted } from '@/components/ui/styles';
+import { CompanyBrowser } from '@/features/catalog/company-browser';
 import { SupplierForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
+import { can } from '@/lib/permissions';
 import { createSupplierAction } from '@/server/actions/admin';
 import { requirePermission } from '@/server/auth';
-import { getT, getLocale } from '@/server/i18n';
+import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
-import { listSuppliers } from '@/server/services/catalog';
-import { companySummaries } from '@/server/services/company';
-import { formatPaise } from '@/lib/money';
-import { can } from '@/lib/permissions';
-import { formatDate } from '@/lib/i18n';
+import { companiesOverview } from '@/server/services/company';
 
-
-async function AddSupplier() {
-  const [, t] = await Promise.all([requirePermission('catalog'), getT()]);
-  return (
-    <details id="add" className={card}>
-        <summary className="cursor-pointer font-medium text-brand-700 dark:text-brand-400">{t('cat.sup.addOpen')}</summary>
-        <div className="mt-3">
-          <SupplierForm action={createSupplierAction} submitLabel={t('cat.sup.add')} />
-        </div>
-      </details>
-  );
-}
-
-async function SupplierList() {
+/**
+ * Companies (owner's feedback 2026-11-21): the list first — search (with the
+ * microphone), a Location dropdown and short rows ten at a time; the figures
+ * fold away under *Summary*; *+ Add supplier* is a small chip that opens the
+ * form. Each row opens the company's page with everything else.
+ */
+async function Companies() {
   const [me, t] = await Promise.all([requirePermission('catalog'), getT()]);
-  const locale = await getLocale();
-  const db = await requestDb();
   const showMoney = can(me, 'costs');
-  const [rows, summaries] = await Promise.all([listSuppliers(db, STORE_ID), companySummaries(db, STORE_ID, { amounts: showMoney })]);
-  if (rows.length === 0) {
-    return <p className={`text-sm ${muted}`}>{t('cat.sup.none')}</p>;
-  }
+  const { rows, totals } = await companiesOverview(await requestDb(), STORE_ID, { amounts: showMoney });
+  if (rows.length === 0) return <p className={`text-sm ${muted}`}>{t('cat.sup.none')}</p>;
   return (
-    <SelectionProvider allIds={rows.map((s) => s.id)}>
-    <div className="flex justify-end">
-      <SelectToggle testId="select-companies" />
-    </div>
-    <ul data-testid="supplier-list" className="flex flex-col gap-2">
-      {rows.map((s) => (
-        <li key={s.id}>
-          <SelectableItem ids={[s.id]} label={s.name}>
-          <Link href={`/admin/suppliers/${s.id}`} className={`${card} flex items-center justify-between gap-3 active:bg-zinc-50 dark:active:bg-zinc-900`}>
-            <span className="min-w-0">
-              <span className="block truncate font-medium">
-                {s.name}
-                {!s.active && <span className={`ml-1 text-xs font-normal ${muted}`}>{t('cat.inactiveParen')}</span>}
-              </span>
-              <span className={`block text-xs ${muted}`}>
-                {[s.contactName, s.phone].filter(Boolean).join(' · ') || t('cat.sup.noContact')}
-              </span>
-              <span className={`block text-xs ${muted}`}>
-                {t('cat.productsInStock', { products: s.productCount, pcs: s.stockUnits })}
-                {s.lastReceiptAt && ` · ${t('cat.sup.lastDelivery', { date: formatDate(locale, s.lastReceiptAt, 'date') })}`}
-              </span>
-              {summaries.get(s.id) && (
-                <span className={`block text-xs ${summaries.get(s.id)!.duePaise ? 'text-amber-700 dark:text-amber-300' : muted}`}>
-                  {showMoney
-                    ? t('cat.sup.billsDues', { bills: summaries.get(s.id)!.bills, amount: formatPaise(summaries.get(s.id)!.duePaise ?? 0) })
-                    : t('cat.sup.bills', { bills: summaries.get(s.id)!.bills })}
-                </span>
-              )}
-            </span>
-            <span aria-hidden className={muted}>
-              ›
-            </span>
-          </Link>
-          </SelectableItem>
-        </li>
-      ))}
-    </ul>
-    <SelectionBar>
-      <CompanyBulkActions />
-    </SelectionBar>
-    </SelectionProvider>
+    <CompanyBrowser
+      showMoney={showMoney}
+      totals={totals}
+      rows={rows.map(({ id, name, location, contactName, phone, active, bills, openBills, collections, amountPaise, duePaise }) => ({
+        id, name, location, contactName, phone, active, bills, openBills, collections, amountPaise, duePaise,
+      }))}
+    />
   );
 }
 
 export default async function SuppliersPage() {
   const t = await getT();
   return (
-    <main className="flex flex-col gap-5">
-      <div>
+    <main className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t('nav.suppliers')}</h1>
-        <p className={`text-sm ${muted}`}>{t('cat.sup.subtitle')}</p>
+        {/* Small until opened; then the form takes the full width below the title. */}
+        <details id="add" className="group open:basis-full">
+          <summary className="ml-auto w-fit cursor-pointer list-none rounded-full bg-brand-600 px-3.5 py-1.5 text-sm font-semibold text-white select-none active:scale-95 group-open:bg-zinc-200 group-open:text-zinc-800 dark:group-open:bg-zinc-800 dark:group-open:text-zinc-100">
+            {t('cat.sup.addOpen')}
+          </summary>
+          <div className={`${card} mt-2`}>
+            <SupplierForm action={createSupplierAction} submitLabel={t('cat.sup.add')} />
+          </div>
+        </details>
       </div>
-      <Suspense fallback={null}>
-        <AddSupplier />
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
+        <Companies />
       </Suspense>
-      <section className="flex flex-col gap-2">
-        <h2 className={sectionTitle}>{t('cat.allSuppliers')}</h2>
-        <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
-          <SupplierList />
-        </Suspense>
-      </section>
     </main>
   );
 }

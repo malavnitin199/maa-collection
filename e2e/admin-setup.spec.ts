@@ -734,6 +734,8 @@ test('Companies and All tags → Select: hide companies at once; print chosen ta
   await page.getByRole('checkbox', { name: `Select ${b}` }).check();
   await page.getByTestId('selection-bar').getByRole('button', { name: 'Hide' }).click();
   await expect(page.getByTestId('selection-toast')).toContainText('Done for 2 items.');
+  // Hidden companies go to the end of the list: find it by name.
+  await page.getByTestId('company-search').fill(a);
   await expect(page.getByTestId('supplier-list').getByRole('listitem').filter({ hasText: a })).toContainText('(inactive)');
   await page.goto('/admin/stock/form');
   await expect(companyBox(page).locator('optgroup[label="Previous companies"] option', { hasText: a })).toHaveCount(1);

@@ -96,6 +96,8 @@ export type CompanyOverviewRow = CompanySummary & {
   id: string;
   name: string;
   location: string | null;
+  contactName: string | null;
+  phone: string | null;
   active: boolean;
   /** The day the shop started with this company, as the owner gave it (may be before the app). */
   workingSince: string | null;
@@ -407,8 +409,8 @@ const EMPTY_SUMMARY: CompanySummary = { bills: 0, openBills: 0, pieces: 0, colle
 /**
  * The companies overview on Home (owner's feedback 2026-11-20): every company
  * with its location, working-since and added-on days, bills, collections,
- * pieces, spend and dues, plus the totals. Companies with a recent bill come
- * first, then the rest by name; hidden companies last.
+ * pieces, spend and dues, plus the totals. Latest activity first (newest bill
+ * or the day it was added; same day: newest added first); hidden ones last.
  */
 export async function companiesOverview(db: Db, storeId: string, { amounts }: { amounts: boolean }): Promise<CompaniesOverview> {
   const [companies, summaries] = await Promise.all([
@@ -417,9 +419,12 @@ export async function companiesOverview(db: Db, storeId: string, { amounts }: { 
         id: suppliers.id,
         name: suppliers.name,
         location: suppliers.location,
+        contactName: suppliers.contactName,
+        phone: suppliers.phone,
         active: suppliers.active,
         workingSince: suppliers.workingSince,
         addedOn: sql<string>`to_char(${suppliers.createdAt} AT TIME ZONE ${tz}, 'YYYY-MM-DD')`,
+        createdAt: suppliers.createdAt,
       })
       .from(suppliers)
       .where(eq(suppliers.storeId, storeId)),
@@ -427,9 +432,12 @@ export async function companiesOverview(db: Db, storeId: string, { amounts }: { 
   ]);
   const hide = (value: number) => (amounts ? value : null);
   const blank = { ...EMPTY_SUMMARY, amountPaise: hide(0), paidPaise: hide(0), duePaise: hide(0) };
+  // Latest activity first — the newest bill, or the day the company was added — so a company just added is on top.
+  const activity = (row: { lastDate: string | null; addedOn: string }) => (row.lastDate && row.lastDate > row.addedOn ? row.lastDate : row.addedOn);
   const rows: CompanyOverviewRow[] = companies
-    .map((company) => ({ ...company, ...(summaries.get(company.id) ?? blank) }))
-    .sort((a, b) => Number(b.active) - Number(a.active) || (b.lastDate ?? '').localeCompare(a.lastDate ?? '') || a.name.localeCompare(b.name));
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .map(({ id, name, location, contactName, phone, active, workingSince, addedOn }) => ({ id, name, location, contactName, phone, active, workingSince, addedOn, ...(summaries.get(id) ?? blank) }))
+    .sort((a, b) => Number(b.active) - Number(a.active) || activity(b).localeCompare(activity(a)));
   const sum = (pick: (row: CompanyOverviewRow) => number | null) => rows.reduce((n, row) => n + (pick(row) ?? 0), 0);
   return {
     totals: {

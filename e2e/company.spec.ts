@@ -4,8 +4,8 @@ import { test, expect, type Page } from '@playwright/test';
  * Company accounts (owner's feedback 2026-11-20): the company page shows the
  * figures on top (bills, purchases, dues, pieces, collections), a period, and
  * tabs Bills · Payments · Products · By type · Details; a payment closes a bill.
- * Companies overview (2026-11-20): Home lists every company with its working-
- * since day, bills · collections · pieces, spend and dues.
+ * Companies page (2026-11-21): search, Location dropdown, Summary folded; Home
+ * has one small Companies line.
  */
 const PIN = '1234';
 const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
@@ -117,17 +117,21 @@ test('company page: figures, bills by number, a payment closes the bill, dues, l
   await page.goto('/admin/suppliers');
   await expect(page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(name) })).toContainText('1 bills · dues ₹0.00');
 
-  // Home → Companies overview under Today: totals and this company's line (most recent bill first).
+  // The Companies page: search (by place too), the Location dropdown, the folded Summary.
+  await page.getByTestId('company-search').fill('surat');
+  await expect(page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(name) })).toBeVisible();
+  await page.getByTestId('company-search').fill(`no such company ${run}`);
+  await expect(page.getByText('No company matches.')).toBeVisible();
+  await page.getByTestId('company-search').fill('');
+  await page.getByTestId('company-location').selectOption('Surat');
+  await expect(page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(name) })).toBeVisible();
+  await expect(page.getByTestId('company-summary')).toHaveCount(0);
+  await page.getByRole('button', { name: /^Summary/ }).click();
+  await expect(page.getByTestId('company-summary').getByText('Total spend')).toBeVisible();
+
+  // Home: one small Companies line that opens the Companies page.
   await page.goto('/admin/dashboard');
-  const home = page.getByTestId('home-companies');
-  await expect(home.getByRole('heading', { name: 'Companies' })).toBeVisible();
-  expect(Number(await page.getByTestId('home-companies-count').innerText())).toBeGreaterThanOrEqual(1);
-  expect(Number(await page.getByTestId('home-bills-count').innerText())).toBeGreaterThanOrEqual(1);
-  const line = page.getByTestId('home-company-rows').getByRole('link', { name: new RegExp(name) });
-  await expect(line).toContainText('Surat · since 1 Apr 2019');
-  await expect(line).toContainText('1 bills · 1 collections · 6 pcs');
-  await expect(line).toContainText('spent ₹2,400.00');
-  await expect(line).toContainText('due ₹0.00');
-  await line.click();
-  await expect(page).toHaveURL(companyUrl);
+  await expect(page.getByTestId('home-companies-line')).toContainText(/\d+ companies · \d+ bills/);
+  await page.getByTestId('home-companies').click();
+  await expect(page).toHaveURL(/\/admin\/suppliers$/);
 });
