@@ -71,7 +71,7 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 ## 3. Selling
 
 1. **Sell** → scan the tag (or type the number under the barcode).
-2. Check the **photo**, size and colour match the item.
+2. Check the **photo** and size match the item.
 3. **Sell this item** → quantity → agreed price (up to MRP). Selling for a colleague? Pick them in **Credit sale to**.
 4. **Record sale**. Stock goes down on every phone at once. Your sales **wait for the owner's check** (a "Waiting" mark in My sales) and count in your totals once he approves them; the owner's own sales count at once.
 
@@ -79,7 +79,7 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 1. Scan the first item → **Add more items**. It goes onto the bill and, if you used the camera, the camera opens again.
 2. Scan each next tag. Scanning the same tag again adds **one more piece**. With the camera, it stays on: the bottom shows the item just added; tap **Done** when all are in.
 3. Choose when to type prices: **Price as I scan** (a price box under the camera for each item) or **Price at the end**.
-4. The **bill** is one table: photo, item (size · colour, − / + for pieces), **MRP** and the **selling price**. **Fill prices one by one** jumps to the first empty price; Enter moves to the next. The **total** appears as soon as every price is in.
+4. The **bill** is one table: photo, item (size, − / + for pieces), **MRP** and the **selling price**. **Fill prices one by one** jumps to the first empty price; Enter moves to the next. The **total** appears as soon as every price is in.
 5. Pick **Credit sale to** once for the whole bill → **Save bill · ₹total**. Each item is saved as its own sale (stock, approvals and no-internet saving work as for one item). An item with a problem (price above MRP, not enough stock) stays on the bill in red with the reason. **Clear bill** drops everything not saved.
 
 **A box tag** (*Box of 12* shows on the item): **Sell this item** → **Pieces** to sell 1, 2 … pieces at the piece price, or **Whole boxes** to sell boxes at the **box price** (filled with the box MRP; it cannot be higher). Stock goes down by the pieces either way. On a several-item bill, each box item has a small **pcs / box** switch; with *box*, − / + count boxes and the price is per box.
@@ -114,7 +114,7 @@ Good to know:
 1. **Catalog → Tag old stock**.
 2. Optional: **Scan the tag's barcode** if the item already has one from the company. The app uses it (no new sticker), or tells you the item is already in the app.
 3. **📷 Take photo**: 1–4 photos, good light, plain background, the whole item.
-4. **Category**, **name** (e.g. "Phulkari Dupatta"), optionally who it is for (**For**: Girls / Boys / Both, **Age**: Adult / Child), tap a **size**, type the **colour**. Company is optional.
+4. **Category**, **name** (e.g. "Phulkari Dupatta"), optionally who it is for (**For**: Girls / Boys / Both, **Age**: Adult / Child), tap a **size**. Company is optional. (No colour here: colour is shown and changed only on the product page.)
 5. **MRP**, **selling price** (empty = MRP), **pieces counted**.
 6. **Save and get barcode**. The label appears.
 7. **Next item →**. Category, company, size and For / Age stay filled in.
@@ -125,7 +125,7 @@ Good to know:
 
 ### New stock from a company (Add stock → New item)
 
-**Add stock** has one big button, **New item**, and under **Other ways**: *Old form* (the earlier New item screen: sizes × colours grid, prices by size, photos), *More pieces of an existing item* and *Tag old stock*.
+**Add stock** has one big button, **New item**, and under **Other ways**: *Old form* (the earlier New item screen: sizes grid, prices by size, photos), *More pieces of an existing item* and *Tag old stock*.
 
 **New item** (plan v19) asks one thing at a time. The top is one short row (← · New item · step n of 4 · Start again), a thin bar of the steps, and the step's title with your choices beside it. The ← arrow, and the **phone's back button**, go back **one step at a time** without losing anything (back from the first screen leaves New item); the choice chips jump straight to a step:
 
@@ -143,7 +143,7 @@ Good to know:
    - **Save & add next** shows *Saved <name>: first – last item code · pieces* and goes straight to *What is it?* of the same bill — the fastest way through a bill.
    - **Save** shows the same message and returns to the start with everything cleared — done with this bill.
 
-There is no colour step: a new item has no colour unless you add one on its product page later.
+**Colour appears only on the product page** (owner, 2026-11-22): no screen asks for it or shows it — not the counter, bills, tags, lists or messages. Add or change an item's colour on its product page (*Edit*, *Colours* tab).
 
 **Items that come in a box** (e.g. boys' sandos, 10 or 12 a box): in the details card set **Comes as → Box**, tap **6 / 10 / 12** (or type the number), type the **MRP of one piece** and, if the box sells for less, the **Whole box MRP** (empty = MRP × pieces). For the purchase price choose **Per piece** or **Whole box** — with *Whole box* the app shows the price of one piece (₹500 ÷ 12 = ₹41.67). Under the sizes, count **boxes** (3 boxes of 12 = 36 pieces in stock). **One tag is printed per box**; it says *BOX OF 12* and the box price.
 
@@ -204,7 +204,7 @@ The Suppliers list shows each company's bills and dues too.
 
 ### Photos while creating tags (optional)
 
-- **New item**: the main photo (right of the name) goes on every item; under **Colours**, each colour can have its own **📷 Photo / 🖼 Gallery** instead.
+- **New item / Old form**: the main photo (right of the name) goes on every item.
 - **Tag old stock**: 1–4 photos, as before.
 - If a photo fails (e.g. weak signal), the items are still saved; the labels page says so — add it later on the item's page → Photos.
 
@@ -224,9 +224,9 @@ Each category has its sizes, set by the owner in **Categories** (tap a category 
 
 ### Tags (labels)
 
-Every piece gets a **hang tag, 40 × 60 mm**: shop name, **QR code**, the **size** big with the colour, **every size of its category with a tick box** — this piece's box is filled (e.g. ☐S ■M ☐L ☐XL ☐XXL), so on a printed tag you can tick another size with a pen — the name, **ART.** (item code) with the secret code price on the right if switched on, the **barcode**, and the **MRP**.
+Every piece gets a **hang tag, 40 × 60 mm**: shop name, **QR code**, the **size** big, **every size of its category with a tick box** — this piece's box is filled (e.g. ☐S ■M ☐L ☐XL ☐XXL), so on a printed tag you can tick another size with a pen — the name, **ART.** (item code) with the secret code price on the right if switched on, the **barcode**, and the **MRP**.
 
-- **Combined view (Products and All tags):** items with the same **name, company and MRP** show as **one card** — photos, every size with its pieces (e.g. M · 3, L · 2), every colour, total pieces and one design QR. Tap **Show 6 items** (Products) or **Show 6 tags** (All tags) to see them one by one, or pick **Show: Every item / Every tag** at the top. **Print tags** on a card prints that design. Each piece still gets its own tag and barcode.
+- **Combined view (Products and All tags):** items with the same **name, company and MRP** show as **one card** — photos, every size with its pieces (e.g. M · 3, L · 2), total pieces and one design QR. Tap **Show 6 items** (Products) or **Show 6 tags** (All tags) to see them one by one, or pick **Show: Every item / Every tag** at the top. **Print tags** on a card prints that design. Each piece still gets its own tag and barcode.
 - **All tags** (More → Labels, or *See all tags →* on any print page): every tag made in the app, in groups — by **Date** made (Today, Yesterday, …), **Company**, **Category** or **Delivery** (one bill). Filter by name or code, company (or *No company*), category, who made it, when (Today / 7 days / 30 days / All time) and *Only items in stock*. **Grid** shows each group's tags in lines; **Rows** puts each group on one line you swipe sideways (your phone remembers the choice). **Print this group** prints just that group; **Print these tags** prints everything shown. Tap a tag to open its item. A company's page has *See this company's tags*.
 - Print: after saving, or **Labels → print today's labels**. Choose **Tags on A4** (16 per page: cut, punch the circle, thread), **Tag printer 40×60 mm**, or **Sticker printer 50×25 mm** (small barcode sticker, no QR).
 - **QR code:** staff point the normal phone camera at it → the item opens (sellers: Sell screen with the item ready; catalog/stock/owner: the product page). You must be logged in on that phone; customers only see the login page. In-app and USB scanners read the QR too.
@@ -273,9 +273,9 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 
 | When | Required | Optional |
 |---|---|---|
-| Tag old stock | Category, name, MRP, pieces | Photo (recommended), For / Age, size (= Free), colour, company, selling price (= MRP), purchase price |
+| Tag old stock | Category, name, MRP, pieces | Photo (recommended), For / Age, size (= Free), company, selling price (= MRP), purchase price |
 | New item (steps) | Who it is for, what it is, company, product name, sale price (MRP), purchase price (with the *Purchase price* right), at least one size | Pieces per size (= 1), counter price (= MRP), bill no., stock date (= today), brand (= none) |
-| Old form | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), colours (= Assorted), brand (= company) |
+| Old form | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), brand (= company) |
 | Sale | Scan, quantity, price | Credit to a colleague |
 | Company | Name | Contact, phone, GSTIN, notes |
 
@@ -286,7 +286,7 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 - **Print and stick the same day**, so labels don't get mixed up.
 - Put labels in the **same place** on every item.
 - Two catalog people can work at once on different shelves.
-- Use **one name per design** ("Cotton Straight Kurta"), so its sizes and colours group together.
+- Use **one name per design** ("Cotton Straight Kurta"), so its sizes group together.
 
 ## 8. Problems & fixes
 

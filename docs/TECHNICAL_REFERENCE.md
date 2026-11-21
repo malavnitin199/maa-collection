@@ -879,3 +879,13 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Bills | `listCollections` lines carry `qty` and `pack`: box items are `qty` boxes at `ratePaise` = `pack_cost_paise` (else piece cost × size), amount = round(pieces × rate ÷ size); the collection value uses the same. `sheetParts` merges by name + rate + pack; `SheetPart.units` = the Qty column summed; `BillSheet` writes *name (box of n)*. |
 | New bill fix | `CompanyPicker exclude` (the bill keeps one picker; it is no longer keyed by the company count, so its *Company added* card stays). `CompanyCollections id` → empty state `company-collections-empty` with **+ New item from <company>** → `/admin/stock/new?supplier=<id>`. e2e: `bills.spec.ts` (new company), `packs.spec.ts`. |
 
+## 41. Colour only on the product page (2026-11-22, ADR-049)
+
+| Part | Notes |
+|---|---|
+| Rule | Never render `color` outside `src/app/(admin)/admin/products/[id]/page.tsx` (and the `ProductForm` there, `mode !== 'new'`). Data stays: `products.color` / `sales.color` columns, `CounterProduct.color`, `QueuedSale.color`, CSV exports. |
+| Server | `validateProductInput` no longer requires colour; `createProductsBatch` blank colour = `''` (was *Assorted*); clash messages, `reports` activity / top sellers / slow movers labels and `approvals` detail drop colour. |
+| Screens | Counter (`product-card` size chip only, `pos-screen` texts, `bill.tsx`), `exchange-screen`, `saved-sales`, `hang-tag` (Size box only), `barcode-label`, `labels/print` receipt lines, `labels` / `products` lists, `restock-form`, `catalog/check`, `design-card` (no `design-colours`), `suppliers/[id]` deliveries. |
+| Forms | `old-stock-form` sends `color: ''`; `new-item-form` (Old form) has no colours block or `colour-photos`, its tab is *Sizes*, `sendColors = ['']`; the wizard already sent `colors: []`. |
+| Texts | i18n messages without `{color}` (sell / offline / stock / help / hints), Guide stories 1.3, 2.x, New item lesson; `/help`. e2e updated (old-form designs use sizes only). |
+
