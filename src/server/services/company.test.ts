@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createPgliteDb, type Db } from '@/db/client';
 import { STORE_ID } from '@/lib/app-config';
 import { companyPeriod } from '@/lib/company-period';
-import { createSupplier, listCategories, listSuppliers, updateSupplier } from './catalog';
+import { createSupplier, deleteUnusedSuppliers, listCategories, listSuppliers, updateSupplier } from './catalog';
 import { addPayment, billKey, companiesOverview, companyReport, companySummaries } from './company';
 import { createDesign, listProducts, receiveStock, updateDesignRates } from './products';
 import { listStaff } from './staff';
@@ -209,3 +209,26 @@ describe('companiesOverview', () => {
     expect(again.totals.purchasesPaise).toBeNull();
   });
 });
+
+describe('deleteUnusedSuppliers', () => {
+  it('removes companies with nothing linked; keeps one with items, bills or payments and reports its counts', async () => {
+    const blank = { contactName: '', phone: '', gstin: '', notes: '' };
+    const empty = await createSupplier(db, STORE_ID, { ...blank, name: 'Empty Co' });
+    const paidOnly = await createSupplier(db, STORE_ID, { ...blank, name: 'Advance Co' });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId: paidOnly.id, amountPaise: 1000, staffId: owner });
+    await createDesign(db, STORE_ID, design({ billNumber: 'D1' })); // Surat Silks: 2 items, 1 bill
+
+    const result = await deleteUnusedSuppliers(db, STORE_ID, [empty.id, paidOnly.id, supplierId, empty.id]);
+    expect(result.deleted).toEqual([empty.id]);
+    expect(result.kept.sort((a, b) => a.name.localeCompare(b.name))).toEqual([
+      { name: 'Advance Co', items: 0, bills: 0, payments: 1 },
+      { name: 'Surat Silks', items: 2, bills: 1, payments: 0 },
+    ]);
+    const left = (await listSuppliers(db, STORE_ID)).map((s) => s.id);
+    expect(left).not.toContain(empty.id);
+    expect(left).toContain(paidOnly.id);
+    expect(left).toContain(supplierId);
+    expect(await deleteUnusedSuppliers(db, STORE_ID, [])).toEqual({ deleted: [], kept: [] });
+  });
+});
+

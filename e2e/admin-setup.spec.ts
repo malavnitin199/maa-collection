@@ -731,7 +731,7 @@ test('selecting on a long list: the top bar (Select all) and the action bar stay
   if (viewport.width < 640) await expect(page.getByRole('navigation', { name: 'Main' })).not.toBeInViewport();
 });
 
-test('Companies and All tags → Select: hide companies at once; print chosen tags', async ({ page }) => {
+test('Companies and All tags → Select: delete companies after a confirmation; print chosen tags', async ({ page }) => {
   await loginOwner(page);
   const a = `Sel Co A ${run}`;
   const b = `Sel Co B ${run}`;
@@ -744,17 +744,27 @@ test('Companies and All tags → Select: hide companies at once; print chosen ta
   }
   await page.goto('/admin/suppliers');
   await page.getByTestId('select-companies').click();
-  await page.getByRole('checkbox', { name: `Select ${a}` }).check();
+  // The tick sits beside the row, never over the name (owner, 2026-11-21).
+  const tick = page.getByRole('checkbox', { name: `Select ${a}` });
+  const name = page.getByTestId('supplier-list').getByText(a, { exact: true });
+  await expect
+    .poll(async () => (await name.boundingBox())!.x - ((await tick.boundingBox())!.x + (await tick.boundingBox())!.width))
+    .toBeGreaterThanOrEqual(0); // the row slides right; wait for it
+  await tick.check();
   await page.getByRole('checkbox', { name: `Select ${b}` }).check();
-  await page.getByTestId('selection-bar').getByRole('button', { name: 'Hide' }).click();
-  await expect(page.getByTestId('selection-toast')).toContainText('Done for 2 items.');
-  // Hidden companies go to the end of the list: find it by name.
-  await page.getByTestId('company-search').fill(a);
-  await expect(page.getByTestId('supplier-list').getByRole('listitem').filter({ hasText: a })).toContainText('(inactive)');
-  await page.goto('/admin/stock/form');
-  await companyBox(page).click();
-  await expect(page.getByRole('listbox').getByRole('option', { name: a, exact: true })).toHaveAttribute('data-group', 'Previous companies');
-  await page.keyboard.press('Escape');
+  // Delete only (no Hide / Bring back), and it asks first.
+  const bar = page.getByTestId('selection-bar');
+  await expect(bar.getByRole('button', { name: 'Hide' })).toHaveCount(0);
+  await bar.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByRole('dialog', { name: 'Delete 2 companies?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByTestId('supplier-list')).toContainText(a);
+  await bar.getByRole('button', { name: 'Delete' }).click();
+  await page.getByTestId('confirm-delete').click();
+  await expect(page.getByTestId('selection-toast')).toContainText('2 companies deleted.');
+  await page.getByTestId('company-search').fill(`Sel Co`);
+  await expect(page.getByTestId('supplier-list').getByText(a, { exact: true })).toHaveCount(0);
+  // A company with items, bills or payments is kept with the reason (unit test: deleteUnusedSuppliers).
 
   // All tags: tick two tags and print only those.
   await page.goto('/admin/labels?q=MAA-TS-00&show=tags');

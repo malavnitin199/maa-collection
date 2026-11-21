@@ -16,7 +16,8 @@ import { localName } from '@/lib/sections';
 import { addTypeSize, backfillSections, createSection, createType, moveSection, moveType, updateSection } from '@/server/services/sections';
 import { addPayment } from '@/server/services/company';
 import { DomainError } from '@/server/services/errors';
-import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
+import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier, deleteUnusedSuppliers,
+  setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   clearAllStock,
   correctTaggedItem,
@@ -264,6 +265,23 @@ export async function createSupplierAction(_prev: FormState, formData: FormData)
     return { message: (await getT())('act.added', { name: created.name }) };
   } catch (error) {
     return failure(error);
+  }
+}
+
+/** Companies → Select → Delete (2026-11-21): removes the chosen companies that have nothing linked; reports the rest. */
+export async function deleteCompaniesAction(ids: string[]): Promise<{ ok: true; deleted: number; message: string } | { ok: false; error: string }> {
+  await requirePermission('catalog');
+  try {
+    const list = (Array.isArray(ids) ? ids : []).map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500);
+    const result = await deleteUnusedSuppliers(await getDb(), STORE_ID, list);
+    revalidatePath('/admin', 'layout');
+    const t = await getT();
+    const parts = [];
+    if (result.deleted.length) parts.push(t(result.deleted.length === 1 ? 'bulk.deleted.one' : 'bulk.deleted.other', { n: result.deleted.length }));
+    for (const k of result.kept) parts.push(t('bulk.cantDelete', { name: k.name, items: k.items, bills: k.bills, payments: k.payments }));
+    return { ok: true, deleted: result.deleted.length, message: parts.join(' ') };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
 }
 

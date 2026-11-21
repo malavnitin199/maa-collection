@@ -69,13 +69,17 @@ export function CompanyBrowser({ rows, totals, showMoney }: { rows: BrowserRow[]
             className={`${input} min-w-0 flex-1`}
           />
           <SpeakButton script={script} text="" onText={setQuery} />
+        </div>
+        {/* Second line, small (owner, 2026-11-21): place filter · Summary … count · Select. */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-1.5">
           {places.length > 0 && (
             <select
               aria-label={t('cat.find.location')}
               data-testid="company-location"
               value={place}
               onChange={(e) => setPlace(e.target.value)}
-              className={`${input} w-auto max-w-[45%] shrink-0`}
+              className="h-8 max-w-[10rem] min-w-0 truncate rounded-full border border-zinc-300 bg-surface px-2.5 text-sm dark:border-zinc-700"
             >
               <option value="">{t('cat.find.anywhere')}</option>
               {places.map((p) => (
@@ -85,23 +89,24 @@ export function CompanyBrowser({ rows, totals, showMoney }: { rows: BrowserRow[]
               ))}
             </select>
           )}
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
           {/* The figures stay folded away until asked for. */}
           <button
             type="button"
             aria-expanded={summary}
             aria-controls="company-summary"
             onClick={() => setSummary(!summary)}
-            className="rounded-full border border-zinc-300 px-3 py-1 text-sm font-medium dark:border-zinc-700"
+            className="h-8 shrink-0 rounded-full border border-zinc-300 px-3 text-sm font-medium dark:border-zinc-700"
           >
             {t('cat.find.summary')} <span aria-hidden className={`inline-block transition ${summary ? 'rotate-180' : ''}`}>▾</span>
           </button>
+          </span>
           <span className="flex items-center gap-2">
-            <span data-testid="company-count" className={`text-xs whitespace-nowrap tabular-nums ${muted}`}>
-              {t('cat.find.count', { n: shown.length, total: rows.length })}
-            </span>
+            {/* Only while filtering: "3 of 23". */}
+            {(query.trim() || place) && (
+              <span data-testid="company-count" className={`text-xs whitespace-nowrap tabular-nums ${muted}`}>
+                {t('cat.find.count', { n: shown.length, total: rows.length })}
+              </span>
+            )}
             <SelectToggle testId="select-companies" />
           </span>
         </div>
@@ -126,7 +131,7 @@ export function CompanyBrowser({ rows, totals, showMoney }: { rows: BrowserRow[]
             className="flex flex-col gap-1.5"
             items={shown.map((s) => (
               <li key={s.id}>
-                <SelectableItem ids={[s.id]} label={s.name}>
+                <SelectableItem ids={[s.id]} label={s.name} gutter>
                   <Link href={`/admin/suppliers/${s.id}`} className={`${card} flex items-center justify-between gap-3 px-3.5 py-2.5 active:bg-zinc-50 dark:active:bg-zinc-900`}>
                     <span className="min-w-0">
                       <span className="block truncate font-medium">

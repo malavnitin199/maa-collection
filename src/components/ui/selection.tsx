@@ -203,12 +203,18 @@ export function SelectableItem({
   label,
   children,
   inside = false,
+  gutter = false,
 }: {
   ids: readonly string[];
   label: string;
   children: ReactNode;
   /** Inside an existing positioned card (e.g. an Approvals card): add no box of its own, cover that card. */
   inside?: boolean;
+  /**
+   * List rows (2026-11-21): while selecting, the row slides right and a smaller tick sits in
+   * the space on its left, so it never covers the name.
+   */
+  gutter?: boolean;
 }) {
   const t = useT();
   const { selecting, has, toggle, start } = useSelection();
@@ -261,7 +267,7 @@ export function SelectableItem({
         e.stopPropagation();
       }}
     >
-      {children}
+      {gutter ? <div className={`transition-[padding] duration-200 ${selecting ? 'pl-10' : ''}`}>{children}</div> : children}
       {selecting && (
         <>
           <button
@@ -269,11 +275,16 @@ export function SelectableItem({
             aria-hidden
             tabIndex={-1}
             onClick={flip}
-            className={`absolute inset-0 z-[1] rounded-2xl transition ${
+            className={`absolute z-[1] rounded-2xl transition ${gutter ? 'inset-y-0 right-0 left-10' : 'inset-0'} ${
               state === 'none' ? 'bg-slate-900/0 hover:bg-brand-500/5 active:bg-brand-500/10' : 'bg-brand-500/10 ring-[3px] ring-brand-600 ring-inset dark:ring-brand-400'
             }`}
           />
-          <SelectCheck state={state} label={t('sel.item', { name: label })} onToggle={flip} className="absolute top-2.5 left-2.5 z-[2]" />
+          <SelectCheck
+            state={state}
+            label={t('sel.item', { name: label })}
+            onToggle={flip}
+            className={gutter ? 'sel-check-sm absolute top-1/2 left-0.5 z-[2] -translate-y-1/2' : 'absolute top-2.5 left-2.5 z-[2]'}
+          />
         </>
       )}
     </div>

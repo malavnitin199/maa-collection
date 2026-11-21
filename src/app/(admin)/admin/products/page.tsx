@@ -71,7 +71,7 @@ function ProductRow({ p, photo, showCost, t, selectable = false }: { p: ProductL
   return (
     <li>
       {selectable ? (
-        <SelectableItem ids={[p.id]} label={`${p.name} ${p.color} ${p.size}`}>
+        <SelectableItem ids={[p.id]} label={`${p.name} ${p.color} ${p.size}`} gutter>
           {row}
         </SelectableItem>
       ) : (

@@ -55,6 +55,7 @@ const bold = (path: React.ReactNode, className = 'h-6 w-6') => (
 export const IconSelect = ({ className }: IconProps) => bold(<><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" /><path d="m8 12.3 2.8 2.8L16.3 9.5" /></>, className);
 export const IconClose = ({ className }: IconProps) => bold(<path d="M6 6l12 12M18 6 6 18" />, className);
 export const IconEyeOff = ({ className }: IconProps) => bold(<><path d="M3.5 12S7 5.5 12 5.5c1.6 0 3 .5 4.2 1.2M20.5 12S17 18.5 12 18.5c-1.6 0-3-.5-4.2-1.2" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /><path d="m4 4 16 16" /></>, className);
+export const IconTrash = ({ className }: IconProps) => bold(<><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5" /><path d="M10 11v5M14 11v5" /></>, className);
 export const IconEye = ({ className }: IconProps) => bold(<><path d="M3.5 12S7 5.5 12 5.5 20.5 12 20.5 12 17 18.5 12 18.5 3.5 12 3.5 12Z" /><circle cx="12" cy="12" r="3" /></>, className);
 export const IconRename = ({ className }: IconProps) => bold(<><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z" /><path d="m13.5 8.5 3 3" /></>, className);
 export const IconBuilding = ({ className }: IconProps) => bold(<><path d="M4.5 20.5V6.5l7-3v17" /><path d="M11.5 9.5h8v11" /><path d="M3 20.5h18M7.5 9h1M7.5 12.5h1M7.5 16h1M14.5 13h2M14.5 16.5h2" /></>, className);

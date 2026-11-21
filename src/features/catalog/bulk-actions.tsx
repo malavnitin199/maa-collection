@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { IconBuilding, IconEye, IconEyeOff, IconLayers, IconPeople, IconPriceTag, IconPrint, IconRename } from '@/components/ui/icons';
+import { IconBuilding, IconEye, IconEyeOff, IconLayers, IconPeople, IconPriceTag, IconPrint, IconRename, IconTrash } from '@/components/ui/icons';
 import { ActionGrid, ActionSheet, ActionTile, sheetDanger, sheetPrimary, sheetSecondary, useSelection } from '@/components/ui/selection';
 import { input } from '@/components/ui/styles';
 import { TagChooser } from '@/features/catalog/item-parts';
@@ -10,7 +10,7 @@ import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
 import type { ProductTags } from '@/lib/product-tags';
 import { PRINT_MAX } from '@/lib/selection-limits';
-import { bulkProductsAction, setCompaniesActiveAction, type BulkProductInput } from '@/server/actions/admin';
+import { bulkProductsAction, deleteCompaniesAction, type BulkProductInput } from '@/server/actions/admin';
 
 type Option = { id: string; name: string };
 type Sheet = 'hide' | 'rename' | 'company' | 'category' | 'tags' | 'prices';
@@ -275,23 +275,43 @@ export function PrintSelected() {
 }
 
 /** Companies → Select (plan v17): hide the chosen companies (they move to "Previous companies") or bring them back. */
+/**
+ * Companies → Select (owner's feedback 2026-11-21): Delete only, after a confirmation.
+ * Companies with items, bills or payments are kept (their history depends on them) and named in the message.
+ */
 export function CompanyBulkActions() {
   const t = useT();
   const router = useRouter();
   const { selected, clear, notify } = useSelection();
   const [busy, startBusy] = useTransition();
-  const run = (active: boolean) =>
+  const [confirm, setConfirm] = useState(false);
+  const n = selected.length;
+  const remove = () =>
     startBusy(async () => {
-      const result = await setCompaniesActiveAction(selected, active);
+      const result = await deleteCompaniesAction(selected);
+      setConfirm(false);
       if (!result.ok) return notify('error', result.error);
-      notify('ok', result.message);
+      notify(result.deleted > 0 ? 'ok' : 'error', result.message);
       clear();
       router.refresh();
     });
   return (
-    <ActionGrid>
-      <ActionTile icon={<IconEyeOff />} label={t('bulk.hide')} tone="danger" disabled={selected.length === 0 || busy} onClick={() => run(false)} wide />
-      <ActionTile icon={<IconEye />} label={t('bulk.bringBack')} disabled={selected.length === 0 || busy} onClick={() => run(true)} wide />
-    </ActionGrid>
+    <>
+      <ActionGrid>
+        <ActionTile icon={<IconTrash />} label={t('bulk.delete')} tone="danger" disabled={n === 0 || busy} onClick={() => setConfirm(true)} wide />
+      </ActionGrid>
+      {confirm && (
+        <ActionSheet title={t(n === 1 ? 'bulk.deleteAsk.one' : 'bulk.deleteAsk.other', { n })} onClose={() => setConfirm(false)}>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('bulk.deleteNote')}</p>
+          <button type="button" data-testid="confirm-delete" disabled={busy} onClick={remove} className={sheetDanger}>
+            <IconTrash className="h-5 w-5" />
+            {busy ? t('common.saving') : t(n === 1 ? 'bulk.deleteYes.one' : 'bulk.deleteYes.other', { n })}
+          </button>
+          <button type="button" onClick={() => setConfirm(false)} className={sheetSecondary}>
+            {t('common.cancel')}
+          </button>
+        </ActionSheet>
+      )}
+    </>
   );
 }
