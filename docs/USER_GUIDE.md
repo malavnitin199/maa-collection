@@ -147,6 +147,10 @@ Good to know:
 
 **Items that come in a box** (e.g. boys' sandos, 10 or 12 a box): in the details card set **Comes as → Box**, tap **6 / 10 / 12** (or type the number), type the **MRP of one piece** and, if the box sells for less, the **Whole box MRP** (empty = MRP × pieces). For the purchase price choose **Per piece** or **Whole box** — with *Whole box* the app shows the price of one piece (₹500 ÷ 12 = ₹41.67). Under the sizes, count **boxes** (3 boxes of 12 = 36 pieces in stock). **One tag is printed per box**; it says *BOX OF 12* and the box price.
 
+### Deleting items (owner)
+
+**Products → Select** → tick items → **Delete**, or open an item → **Delete this item** at the bottom (choose *Yes, delete it* for this size, or *Delete all N sizes of this design*). The app asks first; it cannot be undone. The item's tags, photos and stock entries go; **past sales stay** with their name, price and amount (reports and profit do not change; in *by category / company* they count under *Other*). If its delivery is on a bill, the bill amount goes down. An item that was part of an exchange is kept (the message says so). Prefer **Hide** for items you may bring back.
+
 ### Selecting many (Products, Approvals, All tags, Companies)
 
 - **Start**: tap **Select** above the list — or **press and hold any card** for half a second (the phone gives a small buzz).

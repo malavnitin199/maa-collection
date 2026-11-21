@@ -889,3 +889,12 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Forms | `old-stock-form` sends `color: ''`; `new-item-form` (Old form) has no colours block or `colour-photos`, its tab is *Sizes*, `sendColors = ['']`; the wizard already sent `colors: []`. |
 | Texts | i18n messages without `{color}` (sell / offline / stock / help / hints), Guide stories 1.3, 2.x, New item lesson; `/help`. e2e updated (old-form designs use sizes only). |
 
+## 42. Delete items (2026-11-22, ADR-050)
+
+| Part | Notes |
+|---|---|
+| Schema | Migration **0015_item_deleted**: `sales.item_deleted` (bool, default false); check `sales_item_or_manual` = item + MRP, or manual, or item_deleted. |
+| Service | `src/server/services/delete-products.ts` `deleteProducts(db, storeId, ids)` → `{ deleted, kept }` (kept = in an exchange). Order inside the transaction: find receipts (via `stock_movements.ref_id`) and their bills → `sales` set `product_id = null, item_deleted = true` → delete movements → `dropImagesOf` (`images.ts`; hands a shared photo's bytes to the first remaining user) → delete products → empty receipts: delete `bill_collections` + `stock_receipts` → `recompute` (now exported from `bills.ts`) each bill. Tests `delete-products.test.ts`. |
+| Action / UI | `deleteProductsAction` (`requireAdmin`, ≤ 500 ids, revalidates `/admin` + `/pos`). `src/features/catalog/delete-products.tsx`: `DeleteProductsSheet` (`confirm-delete-items`, `confirm-delete-design`), `DeleteItemButton` (`delete-item`, product page, `me.role === 'admin'`) → `/admin/products?deleted=<message>` (`deleted-note`). `ProductBulkActions canDelete` (Products page, owner) → Delete tile. e2e `delete-products.spec.ts`. |
+| Reports | `salesReport` byCategory / bySupplier: left join `products`, `manual = false`; labels `Other` / `No company`. |
+
