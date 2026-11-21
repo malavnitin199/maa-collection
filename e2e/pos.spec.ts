@@ -62,7 +62,7 @@ test('logged-out visitors go to login; salesmen cannot open admin pages; wrong P
   await expect(page.getByRole('link', { name: 'Products' })).toHaveCount(0);
 });
 
-test('camera scanner opens over the current screen without moving the scan form', async ({ page }) => {
+test('camera scanner opens on the whole screen without moving the scan form', async ({ page }) => {
   await login(page, 'Nitin');
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   const scanForm = page.locator('form').filter({ has: page.getByLabel('Scan barcode or enter SKU') });
@@ -82,29 +82,24 @@ test('camera scanner opens over the current screen without moving the scan form'
     .toBeLessThan(0.5);
   const before = await geometry();
   const cameraButton = page.getByRole('button', { name: 'Scan with camera' });
-  const buttonBefore = await cameraButton.boundingBox();
-  expect(buttonBefore).not.toBeNull();
-  expect(buttonBefore!.height).toBeGreaterThanOrEqual(44);
+  const buttonBox = await cameraButton.boundingBox();
+  expect(buttonBox!.height).toBeGreaterThanOrEqual(44);
 
   await cameraButton.click();
-
   const dialog = page.getByRole('dialog', { name: 'Camera scan' });
   await expect(dialog).toBeVisible();
   await expect(dialog).toBeFocused();
-  const dialogBounds = await dialog.boundingBox();
+  // Owner's feedback 2026-11-21: the camera fills the screen.
+  const viewport = page.viewportSize()!;
+  const bounds = (await dialog.boundingBox())!;
+  expect(bounds.x).toBeCloseTo(0, 0);
+  expect(bounds.y).toBeCloseTo(0, 0);
+  expect(bounds.width).toBeCloseTo(viewport.width, 0);
+  expect(bounds.height).toBeCloseTo(viewport.height, 0);
   const closeButton = dialog.getByRole('button', { name: 'Close' });
-  const closeBounds = await closeButton.boundingBox();
-  expect(dialogBounds).not.toBeNull();
-  expect(closeBounds).not.toBeNull();
-  const buttonCenterX = buttonBefore!.x + buttonBefore!.width / 2;
-  const closeCenterX = closeBounds!.x + closeBounds!.width / 2;
-  const dialogCenterX = dialogBounds!.x + dialogBounds!.width / 2;
-  expect(dialogBounds!.x).toBeLessThanOrEqual(buttonCenterX);
-  expect(dialogBounds!.x + dialogBounds!.width).toBeGreaterThanOrEqual(buttonCenterX);
-  expect(Math.abs(dialogBounds!.y + dialogBounds!.height - (buttonBefore!.y - 8))).toBeLessThan(20);
-  expect(Math.abs(closeCenterX - dialogCenterX)).toBeLessThan(1);
-  expect(closeBounds!.width).toBeGreaterThanOrEqual(44);
-  expect(closeBounds!.height).toBeGreaterThanOrEqual(44);
+  const closeBounds = (await closeButton.boundingBox())!;
+  expect(closeBounds.width).toBeGreaterThanOrEqual(44);
+  expect(closeBounds.height).toBeGreaterThanOrEqual(44);
   const after = await geometry();
   expect(after.x).toBeCloseTo(before.x, 1);
   expect(Math.abs(after.y - before.y)).toBeLessThan(4);
@@ -115,21 +110,86 @@ test('camera scanner opens over the current screen without moving the scan form'
   await expect(dialog).toHaveCount(0);
   await expect(cameraButton).toBeFocused();
 
+  // Focus stays inside the camera screen; Escape closes it.
   await cameraButton.click();
   await expect(dialog).toBeVisible();
   await page.keyboard.press('Tab');
-  await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+  await expect(closeButton).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+  await expect(closeButton).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(cameraButton).toBeFocused();
+});
 
-  await cameraButton.click();
-  await expect(dialog).toBeVisible();
-  await page.mouse.click(4, 4);
-  await expect(dialog).toHaveCount(0);
-  await expect(cameraButton).toBeFocused();
+test('several items on one bill: add more, the same tag adds a piece, prices one by one, total, saved as sales', async ({ page }) => {
+  await login(page, 'Owner');
+  const kurta = await addProduct(page, { name: `Bill Kurta ${run}`, size: 'L', mrp: '1500', price: '1400', stock: '4' });
+  const dupatta = await addProduct(page, { name: `Bill Dupatta ${run}`, size: 'Free', mrp: '999', price: '899', stock: '2' });
+
+  await login(page, 'Vishal');
+  await expect(page.getByLabel('Scan barcode or enter SKU')).toBeFocused();
+  await scan(page, kurta);
+  await expect(page.getByTestId('item-details')).toContainText(`Bill Kurta ${run}`);
+  await page.getByTestId('add-more').click();
+  const bill = page.getByTestId('bill');
+  await expect(bill.getByTestId('bill-line')).toHaveCount(1);
+
+  // The next tag goes straight onto the bill; the same tag again is one more piece.
+  await scan(page, dupatta);
+  await expect(bill.getByTestId('bill-line')).toHaveCount(2);
+  await scan(page, kurta);
+  await expect(bill.getByTestId('bill-line')).toHaveCount(2);
+  await expect(bill.getByTestId('bill-line').first().getByTestId('bill-qty')).toHaveText('×2');
+  await expect(bill).toContainText('Bill · 2 items · 3 pcs');
+  await expect(bill.getByTestId('bill-line').first()).toContainText('₹1,500.00'); // MRP in the table
+  await expect(bill.getByTestId('bill-total')).toHaveText('—');
+  await expect(bill).toContainText('2 prices to fill');
+
+  // Prices one by one: Enter moves to the next empty price.
+  await bill.getByRole('button', { name: 'Fill prices one by one' }).click();
+  const prices = bill.getByTestId('bill-price');
+  await expect(prices.first()).toBeFocused();
+  await page.keyboard.type('1300');
+  await page.keyboard.press('Enter');
+  await expect(prices.nth(1)).toBeFocused();
+  await page.keyboard.type('1200'); // above the dupatta's MRP
+  await expect(bill.getByTestId('bill-total')).toHaveText('₹3,800.00');
+  await bill.getByRole('button', { name: /^Save bill/ }).click();
+  await expect(bill.getByRole('alert')).toHaveText('Sale price cannot be above MRP.');
+  await prices.nth(1).fill('800');
+  await expect(bill.getByTestId('bill-total')).toHaveText('₹3,400.00');
+  await expect(bill).toContainText('Total');
+
+  await bill.getByLabel('Credit sale to').selectOption({ label: 'Nitin' });
+  await bill.getByRole('button', { name: 'Save bill · ₹3,400.00' }).click();
+  const card = page.getByTestId('done-overlay');
+  await expect(card).toContainText('Bill saved — waiting for the owner');
+  await expect(card).toContainText('₹3,400.00');
+  await expect(card).toContainText(`2 × Bill Kurta ${run} L`);
+  await expect(card).toContainText('Nitin');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('bill')).toHaveCount(0);
+  await expect(page.getByRole('status')).toContainText('Bill saved: 2 items, ₹3,400.00.');
+
+  // Each line is its own sale.
+  await page.goto('/pos/my-sales');
+  await expect(page.getByTestId('my-activity')).toContainText(`2 × Bill Kurta ${run}`);
+  await expect(page.getByTestId('my-activity')).toContainText(`1 × Bill Dupatta ${run}`);
+});
+
+test('a bill refuses more pieces than in stock and can be cleared', async ({ page }) => {
+  await login(page, 'Owner');
+  const shawl = await addProduct(page, { name: `Bill Shawl ${run}`, size: 'Free', mrp: '700', price: '650', stock: '1' });
+  await login(page, 'Pradeep');
+  await scan(page, shawl);
+  await page.getByTestId('add-more').click();
+  await scan(page, shawl);
+  await expect(page.getByRole('status')).toContainText('Only 1 left');
+  await expect(page.getByTestId('bill-qty')).toHaveText('×1');
+  await page.getByRole('button', { name: `One less Bill Shawl ${run}` }).click();
+  await expect(page.getByTestId('bill')).toHaveCount(0);
+  await expect(page.getByTestId('by-hand')).toBeVisible();
 });
 
 test('admin adds a product with a generated barcode, receives stock; salesman sells it on behalf of a colleague', async ({ page }) => {

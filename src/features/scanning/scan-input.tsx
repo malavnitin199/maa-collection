@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { input } from '@/components/ui/styles';
 import { IconCamera } from '@/components/ui/icons';
 import { ScanTick } from '@/features/feedback/effects';
@@ -32,21 +32,25 @@ const cameraButton =
 
 type Props = {
   label: string;
-  onScan: (code: string) => void;
+  /** `source`: typed / a hardware scanner, or the camera. */
+  onScan: (code: string, source: 'keys' | 'camera') => void;
   busy?: boolean;
   /** Catch hardware-scanner bursts anywhere on the page (only one ScanInput should enable this). */
   captureScanner?: boolean;
   /** Result of the last scan: a green tick (ok) or a shake (error). A new `id` plays it again. */
   result?: { kind: 'ok' | 'error'; id: number } | null;
+  /** The camera's state, when the screen controls it (the counter reopens it for the next item). */
+  camera?: { open: boolean; setOpen: (open: boolean) => void; keepOpen?: boolean; footer?: ReactNode };
 };
 
 /** Scan box + Find + camera; also accepts USB/Bluetooth scanners typing into the page. */
-export function ScanInput({ label, onScan, busy = false, captureScanner = true, result = null }: Props) {
+export function ScanInput({ label, onScan, busy = false, captureScanner = true, result = null, camera }: Props) {
   const t = useT();
   const id = useId();
   const [value, setValue] = useState('');
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [cameraAnchor, setCameraAnchor] = useState<{ top: number; left: number; bottom: number } | null>(null);
+  const [ownCamera, setOwnCamera] = useState(false);
+  const cameraOpen = camera ? camera.open : ownCamera;
+  const setCameraOpen = camera ? camera.setOpen : setOwnCamera;
   const ref = useRef<HTMLInputElement>(null);
   const cameraButtonRef = useRef<HTMLButtonElement>(null);
   const cameraWasOpen = useRef(false);
@@ -66,14 +70,14 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
     }
   }, [cameraOpen]);
 
-  function submit(raw: string) {
+  function submit(raw: string, source: 'keys' | 'camera' = 'keys') {
     const code = raw.trim();
     setValue('');
-    setCameraOpen(false);
-    if (code) onScan(code);
+    if (!camera?.keepOpen) setCameraOpen(false);
+    if (code) onScan(code, source);
   }
 
-  useScannerKeystrokes(submit, hydrated && captureScanner);
+  useScannerKeystrokes((code) => submit(code), hydrated && captureScanner);
 
   // A failed scan: the box shakes and flashes red (only a flash with reduced motion). Played on the
   // element itself so the text box keeps its focus.
@@ -133,15 +137,7 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
             disabled={!hydrated}
             onClick={() => {
               unlockAudio(); // camera scans aren't a tap: allow the sound now
-              if (cameraOpen) {
-                setCameraOpen(false);
-                return;
-              }
-              const button = cameraButtonRef.current;
-              if (!button) return;
-              const { top, left, bottom } = button.getBoundingClientRect();
-              setCameraAnchor({ top, left, bottom });
-              setCameraOpen(true);
+              setCameraOpen(!cameraOpen);
             }}
             className={cameraButton}
           >
@@ -156,9 +152,7 @@ export function ScanInput({ label, onScan, busy = false, captureScanner = true, 
           <p className="text-xs text-white/75">{t('scan.hardwareHint')}</p>
         </div>
       </form>
-      {cameraOpen && cameraAnchor && (
-        <CameraScanner anchor={cameraAnchor} onDecode={submit} onClose={() => setCameraOpen(false)} />
-      )}
+      {cameraOpen && <CameraScanner onDecode={(text) => submit(text, 'camera')} onClose={() => setCameraOpen(false)} keepOpen={camera?.keepOpen} footer={camera?.footer} />}
     </div>
   );
 }

@@ -1,18 +1,20 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
 
 type Props = {
   onDecode: (text: string) => void;
   onClose: () => void;
-  anchor: { top: number; left: number; bottom: number };
+  /** Stay on after a read and report every new tag (several items on one bill). */
+  keepOpen?: boolean;
+  /** Shown under the picture, e.g. the last item added and its price box. */
+  footer?: ReactNode;
 };
 
 type Engine = 'native' | 'zxing';
-type DialogPosition = { top: number; left: number; maxHeight: number };
 
 const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: 'environment',
@@ -191,79 +193,66 @@ function drawView(
   }
 }
 
-/** Uses the rear camera to read QR codes and 1D barcodes; closes after one decode. */
-export function CameraScanner({ onDecode, onClose, anchor }: Props) {
+/** A read of the same code this soon again is the same tag still in view, not a second piece. */
+const SAME_CODE_MS = 2500;
+/** After any read, a short pause so the person can move to the next tag. */
+const PAUSE_MS = 900;
+
+/**
+ * Uses the rear camera to read QR codes and 1D barcodes, on the whole screen
+ * (owner's feedback 2026-11-21: easier to aim). Closes after one read, unless
+ * `keepOpen` (several items on one bill): then every read is reported and the
+ * camera stays on; `footer` shows under the picture (what was added, a price box…).
+ */
+export function CameraScanner({ onDecode, onClose, keepOpen = false, footer }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const onDecodeRef = useRef(onDecode);
   const onCloseRef = useRef(onClose);
+  const keepOpenRef = useRef(keepOpen);
   const dialogRef = useRef<HTMLElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const hasFocusedDialog = useRef(false);
   const [error, setError] = useState<MessageKey | null>(null);
+  const [flash, setFlash] = useState(0);
   const t = useT();
   const titleId = useId();
   const [engine, setEngine] = useState<Engine | null>(null);
-  const [position, setPosition] = useState<DialogPosition | null>(null);
 
   useEffect(() => {
     onDecodeRef.current = onDecode;
-  });
-
-  useEffect(() => {
     onCloseRef.current = onClose;
+    keepOpenRef.current = keepOpen;
   });
 
   useEffect(() => {
+    dialogRef.current?.focus({ preventScroll: true });
+    // The page under the camera does not scroll while it is open.
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onCloseRef.current();
       } else if (event.key === 'Tab') {
+        // Keep focus inside the camera screen.
+        const items = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button, input, select, a[href]') ?? [])].filter((el) => !el.hasAttribute('disabled'));
+        if (items.length === 0) return;
+        const at = items.indexOf(document.activeElement as HTMLElement);
+        const next = event.shiftKey ? (at <= 0 ? items.length - 1 : at - 1) : at === -1 || at === items.length - 1 ? 0 : at + 1;
         event.preventDefault();
-        closeButtonRef.current?.focus({ preventScroll: true });
+        items[next].focus({ preventScroll: true });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    if (position && !hasFocusedDialog.current) {
-      hasFocusedDialog.current = true;
-      dialogRef.current?.focus({ preventScroll: true });
-    }
-  }, [position]);
-
-  useLayoutEffect(() => {
-    const placeDialog = () => {
-      const dialog = dialogRef.current;
-      if (!dialog) return;
-
-      const margin = 12;
-      const gap = 8;
-      const bounds = dialog.getBoundingClientRect();
-      const spaceAbove = Math.max(0, anchor.top - gap - margin);
-      const spaceBelow = Math.max(0, window.innerHeight - anchor.bottom - gap - margin);
-      const placeAbove = spaceAbove >= 180 || spaceAbove >= spaceBelow;
-      const availableSpace = placeAbove ? spaceAbove : spaceBelow;
-      const maxHeight = Math.max(120, Math.min(bounds.height, availableSpace));
-      const top = placeAbove
-        ? Math.max(margin, anchor.top - gap - maxHeight)
-        : Math.min(anchor.bottom + gap, window.innerHeight - margin - maxHeight);
-      const left = Math.max(margin, Math.min(anchor.left, window.innerWidth - margin - bounds.width));
-
-      setPosition({ top, left, maxHeight });
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = overflow;
     };
-
-    placeDialog();
-    window.addEventListener('resize', placeDialog);
-    return () => window.removeEventListener('resize', placeDialog);
-  }, [anchor, engine, error]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     let decoded = false;
     let stream: MediaStream | undefined;
     let stopDecoding: (() => void) | undefined;
+    let last: { code: string; at: number } | null = null;
 
     const release = () => {
       stopDecoding?.();
@@ -272,9 +261,19 @@ export function CameraScanner({ onDecode, onClose, anchor }: Props) {
     };
 
     // Readers can report a frame before startDecoding resolves, and keep
-    // reporting afterwards: act on the first read only.
+    // reporting afterwards: act on the first read only — or, kept open, on each
+    // new tag after a short pause.
     const handleText = (text: string) => {
       if (decoded || cancelled) return;
+      if (keepOpenRef.current) {
+        const now = Date.now();
+        if (last && (now - last.at < PAUSE_MS || (last.code === text && now - last.at < SAME_CODE_MS))) return;
+        last = { code: text, at: now };
+        setFlash((n) => n + 1);
+        navigator.vibrate?.(30);
+        onDecodeRef.current(text);
+        return;
+      }
       decoded = true;
       release();
       onDecodeRef.current(text);
@@ -307,61 +306,57 @@ export function CameraScanner({ onDecode, onClose, anchor }: Props) {
   }, []);
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[100] bg-black/70"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <section
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      data-testid="camera-screen"
+      className="fixed inset-0 z-[100] flex flex-col bg-black text-white outline-none"
     >
-      <section
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        style={
-          position
-            ? { top: position.top, left: position.left, maxHeight: position.maxHeight }
-            : { top: anchor.top, left: anchor.left, visibility: 'hidden' }
-        }
-        className="fixed flex w-[calc(100vw-1.5rem)] max-w-xl flex-col gap-3 overflow-y-auto rounded-2xl border border-zinc-200 bg-surface p-4 text-zinc-900 shadow-2xl dark:border-zinc-700 dark:text-zinc-100"
-      >
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h2 id={titleId} className="font-semibold">{t('scan.cameraTitle')}</h2>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:border-zinc-700 dark:hover:bg-zinc-900"
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {!error && <video ref={videoRef} muted playsInline className="absolute inset-0 h-full w-full object-cover" />}
+        {/* Aim here: a wide box in the middle, the rest dimmed; it flashes green on each read. */}
+        {!error && (
+          <div
+            aria-hidden
+            key={flash}
+            className={`pointer-events-none absolute inset-x-[7%] top-1/2 aspect-[16/10] max-h-[55%] -translate-y-1/2 rounded-2xl border-[3px] shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] ${flash ? 'cam-hit border-emerald-400' : 'border-white/90'}`}
           >
-            {t('scan.close')}
-          </button>
-        </div>
-        {error ? (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-300">
-            {t(error)}
-          </p>
-        ) : (
-          <>
-            <div className="relative overflow-hidden rounded-lg bg-black">
-              <video ref={videoRef} muted playsInline className="aspect-[4/3] w-full object-cover" />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-[8%] top-1/2 h-[38%] -translate-y-1/2 rounded-lg border-2 border-brand-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
-              />
-            </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              {t('scan.cameraHint')}{' '}
+            <span className="cam-line absolute inset-x-3 top-1/2 h-0.5 rounded bg-red-500/80" />
+          </div>
+        )}
+        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 bg-gradient-to-b from-black/70 to-transparent p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+          <div className="min-w-0">
+            <h2 id={titleId} className="text-lg font-semibold">
+              {t('scan.cameraTitle')}
+            </h2>
+            <p className="text-sm text-white/80">
+              {t(keepOpen ? 'scan.cameraHintMany' : 'scan.cameraHint')}{' '}
               {engine && (
-                <span data-testid="scan-engine">
+                <span data-testid="scan-engine" className="text-white/60">
                   ({t(engine === 'native' ? 'scan.engineNative' : 'scan.engineWeb')})
                 </span>
               )}
             </p>
-          </>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-white/15 px-4 py-2 text-sm font-semibold ring-1 ring-white/40 backdrop-blur active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            {t('scan.close')}
+          </button>
+        </div>
+        {error && (
+          <p role="alert" className="absolute inset-x-4 top-1/3 rounded-2xl bg-red-950/80 p-4 text-center text-sm text-red-100">
+            {t(error)}
+          </p>
         )}
-      </section>
-    </div>,
+      </div>
+      {footer && <div className="shrink-0 bg-zinc-950 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
+    </section>,
     document.body,
   );
 }

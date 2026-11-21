@@ -10,6 +10,7 @@ import { sectionsEn } from './modules/sections.ts';
 import { newItemEn } from './modules/newitem.ts';
 import { typingEn } from './modules/typing.ts';
 import { doneEn } from './modules/done.ts';
+import { billEn } from './modules/bill.ts';
 import { catalogEn } from './modules/catalog.ts';
 import { helpEn } from './modules/help.ts';
 import { ownerEn } from './modules/owner.ts';
@@ -93,6 +94,7 @@ const base = {
   'scan.hardwareHint': 'A USB/Bluetooth scanner types the code and presses Enter by itself.',
   'scan.cameraTitle': 'Camera scan',
   'scan.close': 'Close',
+  'scan.cameraHintMany': 'Scan each tag in turn — the camera stays on. Tap Done when all items are in.',
   'scan.cameraHint': 'Hold the barcode flat inside the box, about 15–20 cm away, until it is sharp. It reads automatically.',
   'scan.engineNative': "phone's built-in scanner",
   'scan.engineWeb': 'web scanner',
@@ -302,10 +304,12 @@ const base = {
   'login.keypad': 'Number keys',
   'login.hello': 'Hello {name}, enter your PIN',
   'login.backspace': 'Delete last digit',
+  'login.findName': 'Find your name',
+  'login.pickFirst': 'Tap your name first',
 } as const;
 
 /** All English text: the salesman screens above, plus the owner/catalog areas (one module each). */
-export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn, ...approvalsEn, ...offlineEn, ...sectionsEn, ...newItemEn, ...typingEn, ...doneEn } as const;
+export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn, ...approvalsEn, ...offlineEn, ...sectionsEn, ...newItemEn, ...typingEn, ...doneEn, ...billEn } as const;
 
 export type MessageKey = keyof typeof en;
 export type Messages = Record<MessageKey, string>;

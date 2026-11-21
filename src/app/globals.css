@@ -397,3 +397,33 @@ html[data-selecting] nav[data-dock] { transform: translateY(160%); opacity: 0; p
     animation: none;
   }
 }
+
+/* Login clean-up (2026-11-21): the name circles pop in one after another; a wrong PIN shakes the dots. */
+@keyframes login-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes login-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+.login-pop { animation: login-pop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards; }
+.login-shake { animation: login-shake 0.4s ease-in-out; }
+@media (prefers-reduced-motion: reduce) {
+  .login-pop, .login-shake { animation: none; }
+}
+
+/* Full-screen camera (2026-11-21): a scan line sweeps the box; the box pulses green on a read. */
+@keyframes cam-line { 0%, 100% { transform: translateY(-38%); } 50% { transform: translateY(38%); } }
+@keyframes cam-hit { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.04); } }
+.cam-line { animation: cam-line 2.2s ease-in-out infinite; }
+.cam-hit { animation: cam-hit 0.35s ease-out; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45), 0 0 24px 4px rgb(52 211 153 / 0.7); }
+@media (prefers-reduced-motion: reduce) {
+  .cam-line, .cam-hit { animation: none; }
+}
+@keyframes cam-added { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.cam-added { animation: cam-added 0.25s ease-out backwards; }
+@media (prefers-reduced-motion: reduce) { .cam-added { animation: none; } }

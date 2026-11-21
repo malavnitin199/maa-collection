@@ -6,6 +6,7 @@ import { sectionsHi } from './modules/sections.ts';
 import { newItemHi } from './modules/newitem.ts';
 import { typingHi } from './modules/typing.ts';
 import { doneHi } from './modules/done.ts';
+import { billHi } from './modules/bill.ts';
 import { catalogHi } from './modules/catalog.ts';
 import { helpHi } from './modules/help.ts';
 import { ownerHi } from './modules/owner.ts';
@@ -89,6 +90,7 @@ const base = {
   'scan.hardwareHint': 'USB/ब्लूटूथ स्कैनर अपने आप कोड लिखकर Enter दबाता है।',
   'scan.cameraTitle': 'कैमरा स्कैन',
   'scan.close': 'बंद करें',
+  'scan.cameraHintMany': 'एक-एक करके हर टैग स्कैन करें — कैमरा चालू रहेगा। सब आइटम आ जाएँ तो पूरा हुआ दबाएँ।',
   'scan.cameraHint': 'बारकोड को बॉक्स के अंदर सीधा रखें, 15–20 सेमी दूर, जब तक साफ़ न दिखे। यह अपने आप पढ़ लेगा।',
   'scan.engineNative': 'फ़ोन का अपना स्कैनर',
   'scan.engineWeb': 'वेब स्कैनर',
@@ -289,7 +291,9 @@ const base = {
   'theme.bahi': 'बही',
   'login.keypad': 'अंक बटन',
   'login.hello': 'नमस्ते {name}, अपना PIN डालें',
+  'login.findName': 'अपना नाम खोजें',
+  'login.pickFirst': 'पहले अपने नाम पर टैप करें',
   'login.backspace': 'आखिरी अंक मिटाएँ',
 };
 
-export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi, ...offlineHi, ...sectionsHi, ...newItemHi, ...typingHi, ...doneHi };
+export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi, ...offlineHi, ...sectionsHi, ...newItemHi, ...typingHi, ...doneHi, ...billHi };
