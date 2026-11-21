@@ -128,11 +128,13 @@ Good to know:
 **New item** (plan v19) asks one thing at a time; the bar at the top shows where you are, the back arrow and the chips under it go back without losing anything:
 
 0. **What are you adding?** — **One item** (one size, a few pieces) or **Many items** (sizes and pieces from a bill).
-1. **Who is it for?** — **Men, Women, Boys, Girls** (or a section you added). **+ Add** makes a new one on the spot. *If this screen shows only + Add, open Categories once and tap **Set up Men / Women / Boys / Girls**.*
-2. **What is it?** — that section's categories (Jeans 28–36, Shirt M–XXL, Kurta …). **+ Add** makes a new category with its sizes.
-3. **Item details** — **Company** (or *+ New company…*), **Product name**, **Sale price (MRP) ₹**, **Purchase price ₹** per piece (only with the *Purchase price* right). Under **More**: counter price if lower, bill no., stock date, brand. **Next**.
-4. **Which sizes?** — tap the sizes that came; each gets **− pieces +** (type a number if you like): 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** adds one the category lacks and keeps it for next time. *One item* lets you pick one size. The bar at the bottom counts sizes and pieces. **Next**.
-5. **Check and save** — name, section › category, company, size × pieces, total pieces and items, MRP, purchase per piece and total. Three ways to finish, each saving one item per size (its own barcode each):
+1. **Who is it for?** — **Men, Women, Boys, Girls** (or a section you added). **+ Add** makes a new one on the spot; you stay on this step and the new one shows chosen, glowing, marked **New** — tap it to go on. *If this screen shows only + Add, open Categories once and tap **Set up Men / Women / Boys / Girls**.*
+2. **What is it?** — that section's categories (Jeans 28–36, Shirt M–XXL, Kurta …). **+ Add** makes a new category: type its name and **tap its sizes** — one (S), a few, or a quick range (**S–M**, **S–XL**, 28–36 …); letter, waist and kids' age sizes are listed, others can be typed. You stay on this step with the new category chosen and marked **New**; tap it to go on.
+3. **Details & sizes** — one step, two parts that both start open; tap a part's header to close or open it (the closed header still shows what is in it, with a ✓ once done):
+   - **Item details** — **Company** (or *+ New company…*), **Product name (optional** — left empty, the item is named after its category and number, e.g. *Pajama 013*, the same number as its item code MAA-PJ-013), **Sale price (MRP) ₹**, **Purchase price ₹** per piece (only with the *Purchase price* right). Under **More**: counter price if lower, bill no., stock date, brand.
+   - **Which sizes?** — tap the sizes that came (from the category's sizes); each gets **− pieces +**: 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** adds one the category lacks and keeps it for next time. *One item* lets you pick one size.
+   The bar at the bottom says what is missing, or counts sizes and pieces. **Next**.
+4. **Check and save** — name, section › category, company, size × pieces, total pieces and items, MRP, purchase per piece and total. Three ways to finish, each saving one item per size (its own barcode each):
    - **Save & print tags** opens the tags page. There, **+ Add next item** starts the next product of the same bill (company, section, bill no., stock date kept) at *What is it?*.
    - **Save & add next** shows *Saved <name>: first – last item code · pieces* and goes straight to *What is it?* of the same bill — the fastest way through a bill.
    - **Save** shows the same message and returns to the start with everything cleared — done with this bill.
