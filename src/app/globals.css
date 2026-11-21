@@ -427,3 +427,8 @@ html[data-selecting] nav[data-dock] { transform: translateY(160%); opacity: 0; p
 @keyframes cam-added { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .cam-added { animation: cam-added 0.25s ease-out backwards; }
 @media (prefers-reduced-motion: reduce) { .cam-added { animation: none; } }
+
+/* New item (2026-11-21): a section or category just added glows until it is tapped. */
+@keyframes new-glow { 0%, 100% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0.55); } 50% { box-shadow: 0 0 0 8px rgb(16 185 129 / 0); } }
+.new-glow { animation: new-glow 1.4s ease-out 3; outline: 2px solid rgb(16 185 129); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .new-glow { animation: none; } }

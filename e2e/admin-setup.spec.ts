@@ -870,8 +870,8 @@ test('new item: one plain item with MRP, purchase and pieces on top → labels �
   await steps.getByLabel('Product name').fill(`Cotton Saree ${run}`);
   await steps.getByLabel('Sale price (MRP) ₹').fill('1200');
   await steps.getByLabel('Purchase price ₹').fill('600');
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByTestId('size-summary')).toHaveText('1 size · 1 pc'); // Saree: Free, chosen already
+  // Details and sizes are one step (2026-11-21): Saree's only size, Free, is chosen already.
+  await expect(page.getByTestId('size-summary')).toHaveText('1 size · 1 pc');
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Save & print tags' }).click();
   await expect(page.getByTestId('receipt-lines')).toContainText(`Cotton Saree ${run} · Free`);

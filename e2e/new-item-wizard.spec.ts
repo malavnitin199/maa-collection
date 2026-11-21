@@ -15,7 +15,7 @@ async function login(page: Page, who: string, lands: RegExp) {
 
 const heading = (page: Page, text: string) => expect(page.getByRole('heading', { level: 2, name: text })).toBeVisible();
 
-test('many items: who → what → details → sizes with pieces → check → save and print; back keeps everything', async ({ page }) => {
+test('many items: who → what → details & sizes (two panels) → check → save and print; back keeps everything', async ({ page }) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   await page.goto('/admin/stock');
   await page.getByRole('link', { name: /^New item/ }).click();
@@ -24,7 +24,7 @@ test('many items: who → what → details → sizes with pieces → check → s
   await page.getByRole('button', { name: /^Many items/ }).click();
 
   await heading(page, 'Who is it for?');
-  await expect(page.getByText('Step 1 of 5')).toBeVisible();
+  await expect(page.getByText('Step 1 of 4')).toBeVisible();
   const who = page.getByRole('group', { name: 'Who is it for?' }).getByRole('button');
   await expect(who.nth(0)).toHaveText('Men'); // then Women, Boys, Girls, any the owner added, and Add last
   await expect(who.nth(3)).toHaveText('Girls');
@@ -35,19 +35,22 @@ test('many items: who → what → details → sizes with pieces → check → s
   await expect(page.getByRole('button', { name: /^Kurta/ })).toContainText('M–XXL');
   await page.getByRole('button', { name: /^Kurta/ }).click();
 
-  await heading(page, 'Item details');
+  // Owner's feedback 2026-11-21: details and sizes are one step, two panels, both open.
+  await heading(page, 'Details & sizes');
   await expect(page.getByTestId('wizard-path')).toHaveText(/Men.*Kurta/);
+  const detailsPanel = page.getByRole('button', { name: /^Item details/ });
+  const sizesPanel = page.getByRole('button', { name: /^Which sizes\?/ });
+  await expect(detailsPanel).toHaveAttribute('aria-expanded', 'true');
+  await expect(sizesPanel).toHaveAttribute('aria-expanded', 'true');
   const next = page.getByRole('button', { name: 'Next' });
   await expect(next).toBeDisabled();
+  await expect(page.getByTestId('size-summary')).toHaveText('Choose the company and type the MRP');
   await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await page.getByLabel('Sale price (MRP) ₹').fill('1299');
   await page.getByLabel('Purchase price ₹').fill('700');
-  await expect(next).toBeEnabled();
-  await next.click();
-
-  await heading(page, 'Which sizes?');
   await expect(page.getByTestId('size-summary')).toHaveText('Tap the sizes that came');
+  await expect(next).toBeDisabled();
   await expect(page.getByTestId('size-cards').getByRole('button', { name: /^Size / })).toHaveText(['M', 'L', 'XL', 'XXL']);
   await page.getByRole('button', { name: 'Size M', exact: true }).click();
   await page.getByRole('button', { name: 'Size L', exact: true }).click();
@@ -55,12 +58,23 @@ test('many items: who → what → details → sizes with pieces → check → s
   await expect(page.getByLabel('Pieces of size L')).toHaveValue('2');
   await expect(page.getByTestId('size-summary')).toHaveText('2 sizes · 3 pcs');
 
-  // Back to the details: everything typed is still there; the sizes too when we return.
-  await page.getByRole('button', { name: 'Back' }).click();
-  await heading(page, 'Item details');
+  // A panel closes and opens again; its header still says what is in it.
+  await detailsPanel.click();
+  await expect(detailsPanel).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByLabel('Product name')).toBeHidden();
+  await expect(detailsPanel).toContainText(`Shree Ganesh Textiles · Chikan Kurta ${run} · MRP ₹1,299.00`);
+  await sizesPanel.click();
+  await expect(sizesPanel).toContainText('M × 1 · L × 2');
+  await detailsPanel.click();
   await expect(page.getByLabel('Product name')).toHaveValue(`Chikan Kurta ${run}`);
+  await next.click();
+  await heading(page, 'Check and save');
+
+  // Back: everything typed and picked is still there.
+  await page.getByRole('button', { name: 'Back' }).click();
+  await heading(page, 'Details & sizes');
   await expect(page.getByLabel('Purchase price ₹')).toHaveValue('700');
-  await page.getByRole('button', { name: 'Next' }).click();
+  await sizesPanel.click();
   await expect(page.getByLabel('Pieces of size L')).toHaveValue('2');
   await page.getByRole('button', { name: 'Next' }).click();
 
@@ -103,17 +117,31 @@ test('one item: a new category and a new size on the spot; one size only', async
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('heading', { name: 'New category in Men' })).toBeVisible();
   await sheet.getByLabel('Category name').fill(`Shorts ${run}`);
-  await sheet.getByLabel('Sizes (in shop order)').fill('30, 32');
+  // Sizes are tapped (owner, 2026-11-21): a quick range, then one more, then one less.
+  await sheet.getByRole('button', { name: 'S–M', exact: true }).click();
+  await expect(sheet.getByTestId('size-chips-picked')).toHaveText('2 picked: S, M');
+  await sheet.getByRole('button', { name: 'Size S', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Size M', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Size 32', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Size 30', exact: true }).click();
+  await expect(sheet.getByTestId('size-chips-picked')).toHaveText('2 picked: 30, 32');
   await sheet.getByRole('button', { name: 'Add category' }).click();
 
-  await heading(page, 'Item details');
+  // Stays on "What is it?": the new category is chosen and marked New; a tap goes on.
+  await heading(page, 'What is it?');
+  const added = page.getByRole('button', { name: new RegExp(`^New.*Shorts ${run}`) });
+  await expect(added).toHaveAttribute('aria-pressed', 'true');
+  await expect(added).toHaveAttribute('data-new', 'true');
+  await expect(added).toContainText('30–32');
+  await page.keyboard.press('Escape'); // the done card
+  await added.click();
+
+  await heading(page, 'Details & sizes');
   await expect(page.getByTestId('wizard-path')).toHaveText(new RegExp(`Men.*Shorts ${run}`));
   await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
-  await page.getByLabel('Product name').fill(`Cargo Shorts ${run}`);
+  // No product name: it gets "Shorts … + number" on save.
+  await expect(page.getByLabel('Product name (optional)')).toHaveAttribute('placeholder', `Shorts ${run} + number`);
   await page.getByLabel('Sale price (MRP) ₹').fill('899');
-  await page.getByRole('button', { name: 'Next' }).click();
-
-  await heading(page, 'Which size?');
   await expect(page.getByTestId('size-summary')).toHaveText('Tap the size');
   await expect(page.getByRole('button', { name: 'All sizes' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Size 30', exact: true }).click();
@@ -131,9 +159,11 @@ test('one item: a new category and a new size on the spot; one size only', async
   await page.getByRole('button', { name: 'Next' }).click();
 
   await heading(page, 'Check and save');
+  await expect(page.getByTestId('review-card')).toContainText(`Shorts ${run} + number`);
   await expect(page.getByTestId('review-sizes').getByRole('listitem')).toHaveText(['34 × 3']);
   await page.getByRole('button', { name: 'Save & print tags' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=1&mode=one$/);
+  await expect(page.getByTestId('receipt-lines')).toContainText(new RegExp(`Shorts ${run} 001 · 34`));
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(3);
 
   // The new size stayed on the category.
@@ -152,7 +182,6 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await page.getByLabel('Sale price (MRP) ₹').fill('1899');
   await page.getByText('More: counter price, bill no., stock date, brand').click();
   await page.getByLabel('Bill no.').fill(`LF-${run}`);
-  await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'All sizes' }).click();
   await expect(page.getByTestId('size-summary')).toHaveText('4 sizes · 4 pcs');
   await page.getByRole('button', { name: 'Next' }).click();
@@ -177,7 +206,6 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await expect(details.getByLabel('Sale price (MRP) ₹')).toHaveValue('');
   await details.getByLabel('Product name').fill(`Banarasi ${run}`);
   await details.getByLabel('Sale price (MRP) ₹').fill('4500');
-  await details.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByTestId('size-summary')).toHaveText('1 size · 1 pc'); // Saree: Free
   await page.getByRole('button', { name: 'One more of size Free' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
