@@ -41,9 +41,9 @@ const design = (over: Partial<Parameters<typeof createDesign>[2]> = {}) => ({
   ...over,
 });
 
-/** A bill from the Bills section for this company (or several). */
-const bill = (amountPaise: number, over: Partial<Parameters<typeof createBill>[2]> = {}) =>
-  createBill(db, STORE_ID, { operationId: `bill-${Math.random()}`, billDate: '2026-11-05', companies: [{ supplierId, amountPaise }], staffId: owner, ...over });
+/** A bill from the Bills section for this company (or several); its amount is the value of its collections. */
+const bill = (receiptIds: string[], over: Partial<Parameters<typeof createBill>[2]> = {}) =>
+  createBill(db, STORE_ID, { operationId: `bill-${Math.random()}`, billDate: '2026-11-05', companies: [supplierId], receiptIds, staffId: owner, ...over });
 
 describe('companyReport', () => {
   it('collections with pieces, items and value from the purchase price on the day; a delivery is not a bill', async () => {
@@ -74,43 +74,46 @@ describe('companyReport', () => {
   });
 
   it('bills from the Bills section: payments naming a bill close this company’s part; dues = bill amounts − payments', async () => {
-    const a = await createDesign(db, STORE_ID, design({ stockDate: '2026-11-02' })); // value ₹2000
-    const b1 = await bill(210000, { billNumber: 'SS-1', billDate: '2026-11-03', receiptIds: [a.receipt.id] }); // ₹2100 with freight
-    await bill(50000, { billNumber: 'SS-2', billDate: '2026-11-09' });
-    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 200000, billId: b1.id, paidOn: '2026-11-06', staffId: owner });
-    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 10000, billId: b1.id, paidOn: '2026-11-07', staffId: owner });
+    const a = await createDesign(db, STORE_ID, design({ stockDate: '2026-11-02' })); // 4 pcs × ₹500 = ₹2000
+    const c = await createDesign(db, STORE_ID, design({ name: 'Anarkali', quantityEach: 1, stockDate: '2026-11-08' })); // 2 pcs × ₹500 = ₹1000
+    const b1 = await bill([a.receipt.id], { billNumber: 'SS-1', billDate: '2026-11-03' });
+    await bill([c.receipt.id], { billNumber: 'SS-2', billDate: '2026-11-09' });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 150000, billId: b1.id, paidOn: '2026-11-06', staffId: owner });
+    await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 50000, billId: b1.id, paidOn: '2026-11-07', staffId: owner });
     await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 30000, paidOn: '2026-11-08', note: 'advance', staffId: owner });
 
     const r = await companyReport(db, STORE_ID, supplierId, { amounts: true });
     expect(r.bills.map((x) => [x.billNumber, x.status, x.amountPaise, x.paidPaise, x.duePaise, x.collections])).toEqual([
-      ['SS-2', 'open', 50000, 0, 50000, 0],
-      ['SS-1', 'paid', 210000, 210000, 0, 1],
+      ['SS-2', 'open', 100000, 0, 100000, 1],
+      ['SS-1', 'paid', 200000, 200000, 0, 1],
     ]);
-    expect(r.totals).toMatchObject({ bills: 2, openBills: 1, closedBills: 1, billedPaise: 260000, paidPaise: 240000 });
-    expect(r.account).toMatchObject({ billedPaise: 260000, paidPaise: 240000, duePaise: 20000, openBills: 1, lastBillDate: '2026-11-09' });
-    expect(r.deliveries[0].billId).toBe(b1.id);
+    expect(r.totals).toMatchObject({ bills: 2, openBills: 1, closedBills: 1, billedPaise: 300000, paidPaise: 230000 });
+    expect(r.account).toMatchObject({ billedPaise: 300000, paidPaise: 230000, duePaise: 70000, openBills: 1, lastBillDate: '2026-11-09' });
+    expect(r.deliveries.find((d) => d.receiptId === a.receipt.id)!.billId).toBe(b1.id);
     expect(r.payments.map((p) => [p.paidOn, p.amountPaise, p.status, p.billNumber])).toEqual([
       ['2026-11-08', 30000, 'account', null],
-      ['2026-11-07', 10000, 'bill', 'SS-1'],
-      ['2026-11-06', 200000, 'bill', 'SS-1'],
+      ['2026-11-07', 50000, 'bill', 'SS-1'],
+      ['2026-11-06', 150000, 'bill', 'SS-1'],
     ]);
   });
 
   it('a bill with two companies: each sees only its own part; the other company is named', async () => {
     const mills = await createSupplier(db, STORE_ID, { name: 'Mumbai Mills', contactName: '', phone: '', gstin: '', notes: '' });
-    await bill(0, { billNumber: 'JOINT', companies: [{ supplierId, amountPaise: 100000 }, { supplierId: mills.id, amountPaise: 40000 }] });
+    const ours = await createDesign(db, STORE_ID, design()); // ₹2000
+    const theirs = await createDesign(db, STORE_ID, design({ supplierId: mills.id, name: 'Cargo', quantityEach: 1 })); // ₹1000
+    await bill([ours.receipt.id, theirs.receipt.id], { billNumber: 'JOINT', companies: [supplierId, mills.id] });
     const surat = await companyReport(db, STORE_ID, supplierId, { amounts: true });
-    expect(surat.bills[0]).toMatchObject({ billNumber: 'JOINT', amountPaise: 100000, totalPaise: 140000, others: ['Mumbai Mills'] });
-    expect(surat.account.duePaise).toBe(100000);
+    expect(surat.bills[0]).toMatchObject({ billNumber: 'JOINT', amountPaise: 200000, totalPaise: 300000, others: ['Mumbai Mills'] });
+    expect(surat.account.duePaise).toBe(200000);
     const mumbai = await companyReport(db, STORE_ID, mills.id, { amounts: true });
-    expect(mumbai.account.duePaise).toBe(40000);
+    expect(mumbai.account.duePaise).toBe(100000);
   });
 
   it('the period limits bills, collections and payments by day; dues stay all-time', async () => {
-    await createDesign(db, STORE_ID, design({ stockDate: '2026-09-15' }));
-    await createDesign(db, STORE_ID, design({ name: 'Anarkali', stockDate: '2026-11-15' }));
-    const old = await bill(200000, { billNumber: 'OLD', billDate: '2026-09-15' });
-    await bill(200000, { billNumber: 'NEW', billDate: '2026-11-15' });
+    const sept = await createDesign(db, STORE_ID, design({ stockDate: '2026-09-15' }));
+    const nov = await createDesign(db, STORE_ID, design({ name: 'Anarkali', stockDate: '2026-11-15' }));
+    const old = await bill([sept.receipt.id], { billNumber: 'OLD', billDate: '2026-09-15' });
+    await bill([nov.receipt.id], { billNumber: 'NEW', billDate: '2026-11-15' });
     await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 100000, billId: old.id, paidOn: '2026-09-20', staffId: owner });
 
     const period = companyPeriod({ period: 'custom', from: '2026-11-01', to: '2026-11-30' }, '2026-11-20');
@@ -132,8 +135,8 @@ describe('companyReport', () => {
   });
 
   it('hides every amount from people without the purchase-price right', async () => {
-    await createDesign(db, STORE_ID, design());
-    await bill(1000);
+    const made = await createDesign(db, STORE_ID, design());
+    await bill([made.receipt.id]);
     await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 1000, staffId: owner });
     const r = await companyReport(db, STORE_ID, supplierId, { amounts: false });
     expect(r.totals.amountPaise).toBeNull();
@@ -153,9 +156,11 @@ describe('addPayment', () => {
     await expect(addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 12.5, staffId: owner })).rejects.toThrow(/amount/);
     await expect(addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 100, paidOn: '2999-01-01', staffId: owner })).rejects.toThrow(/date/);
     const mills = await createSupplier(db, STORE_ID, { name: 'Mumbai Mills', contactName: '', phone: '', gstin: '', notes: '' });
-    const theirs = await bill(5000, { companies: [{ supplierId: mills.id, amountPaise: 5000 }] });
+    const theirStock = await createDesign(db, STORE_ID, design({ supplierId: mills.id, name: 'Cargo' }));
+    const theirs = await bill([theirStock.receipt.id], { companies: [mills.id] });
     await expect(addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 100, billId: theirs.id, staffId: owner })).rejects.toMatchObject({ key: 'bill.err.notThisCompany' });
-    const mine = await bill(5000, { billNumber: 'INV-9' });
+    const myStock = await createDesign(db, STORE_ID, design());
+    const mine = await bill([myStock.receipt.id], { billNumber: 'INV-9' });
     const made = await addPayment(db, STORE_ID, { operationId: 'pay-once', supplierId, amountPaise: 100, billId: mine.id, staffId: owner });
     expect(made.paidOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(made).toMatchObject({ billId: mine.id, billNumber: 'INV-9' });
@@ -173,8 +178,8 @@ describe('company location and the list', () => {
     await updateSupplier(db, STORE_ID, supplierId, { name: 'Surat Silks', contactName: '', phone: '', gstin: '', notes: '', location: '', active: true });
     expect((await listSuppliers(db, STORE_ID)).find((s) => s.id === supplierId)!.location).toBeNull();
 
-    await createDesign(db, STORE_ID, design());
-    await bill(200000);
+    const made = await createDesign(db, STORE_ID, design());
+    await bill([made.receipt.id]);
     await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, amountPaise: 50000, staffId: owner });
     const summary = (await companySummaries(db, STORE_ID, { amounts: true })).get(supplierId)!;
     expect(summary).toMatchObject({ bills: 1, openBills: 1, pieces: 4, collections: 1, amountPaise: 200000, paidPaise: 50000, duePaise: 150000 });
@@ -203,13 +208,13 @@ describe('companiesOverview', () => {
   it('totals and one line per company: collections map to the company chosen when the item was made; open bills; latest activity first', async () => {
     const mills = await createSupplier(db, STORE_ID, { name: 'Mumbai Mills', contactName: '', phone: '', gstin: '', notes: '', workingSince: '2015-06-01' });
     // Surat Silks: two collections, two bills (one paid); Mumbai Mills: one collection of jeans and its bill.
-    await createDesign(db, STORE_ID, design({ stockDate: '2026-11-01' }));
-    await createDesign(db, STORE_ID, design({ name: 'Anarkali', mrpPaise: 249900, costPaise: 100000, quantityEach: 1, stockDate: '2026-11-15' }));
-    const s1 = await bill(200000, { billDate: '2026-11-01' });
-    await bill(200000, { billDate: '2026-11-15' });
+    const k1 = await createDesign(db, STORE_ID, design({ stockDate: '2026-11-01' }));
+    const k2 = await createDesign(db, STORE_ID, design({ name: 'Anarkali', mrpPaise: 249900, costPaise: 100000, quantityEach: 1, stockDate: '2026-11-15' }));
+    const s1 = await bill([k1.receipt.id], { billDate: '2026-11-01' });
+    await bill([k2.receipt.id], { billDate: '2026-11-15' });
     await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId, billId: s1.id, amountPaise: 200000, staffId: owner });
-    await createDesign(db, STORE_ID, design({ supplierId: mills.id, categoryId: jeansId, name: 'Slim Jeans', mrpPaise: 199900, costPaise: 70000, quantityEach: 1, stockDate: '2026-11-10' }));
-    await bill(140000, { billDate: '2026-11-10', companies: [{ supplierId: mills.id, amountPaise: 140000 }] });
+    const jeans = await createDesign(db, STORE_ID, design({ supplierId: mills.id, categoryId: jeansId, name: 'Slim Jeans', mrpPaise: 199900, costPaise: 70000, quantityEach: 1, stockDate: '2026-11-10' }));
+    await bill([jeans.receipt.id], { billDate: '2026-11-10', companies: [mills.id] });
 
     const overview = await companiesOverview(db, STORE_ID, { amounts: true });
     const surat = overview.rows.find((r) => r.id === supplierId)!;
@@ -241,14 +246,15 @@ describe('deleteUnusedSuppliers', () => {
     const paidOnly = await createSupplier(db, STORE_ID, { ...blank, name: 'Advance Co' });
     await addPayment(db, STORE_ID, { operationId: `pay-${Math.random()}`, supplierId: paidOnly.id, amountPaise: 1000, staffId: owner });
     const billOnly = await createSupplier(db, STORE_ID, { ...blank, name: 'Billed Co' });
-    await bill(1000, { companies: [{ supplierId: billOnly.id, amountPaise: 1000 }] });
+    const billed = await createDesign(db, STORE_ID, design({ supplierId: billOnly.id, name: 'Billed Kurta' }));
+    await bill([billed.receipt.id], { companies: [billOnly.id] });
     await createDesign(db, STORE_ID, design()); // Surat Silks: 2 items, 1 collection
 
     const result = await deleteUnusedSuppliers(db, STORE_ID, [empty.id, paidOnly.id, billOnly.id, supplierId, empty.id]);
     expect(result.deleted).toEqual([empty.id]);
     expect(result.kept.sort((a, b) => a.name.localeCompare(b.name))).toEqual([
       { name: 'Advance Co', items: 0, collections: 0, bills: 0, payments: 1 },
-      { name: 'Billed Co', items: 0, collections: 0, bills: 1, payments: 0 },
+      { name: 'Billed Co', items: 2, collections: 1, bills: 1, payments: 0 },
       { name: 'Surat Silks', items: 2, collections: 1, bills: 0, payments: 0 },
     ]);
     const left = (await listSuppliers(db, STORE_ID)).map((s) => s.id);

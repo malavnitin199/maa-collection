@@ -3,13 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { ActionSheet, sheetDanger, sheetSecondary } from '@/components/ui/selection';
-import { errorBox, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { card, errorBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useDone } from '@/features/feedback/effects';
 import { useT } from '@/features/i18n/i18n-provider';
 import { formatPaise } from '@/lib/money';
 import { deleteBillAction, setBillCollectionsAction } from '@/server/actions/bills';
 import type { Collection } from '@/server/services/bills';
-import { CollectionRow } from './bill-form';
+import { CompanyCollections } from './bill-form';
 
 /** "Take off" one collection from a bill (it goes back to the waiting list). */
 export function RemoveCollection({ billId, receiptId, name }: { billId: string; receiptId: string; name: string }) {
@@ -34,18 +34,16 @@ export function RemoveCollection({ billId, receiptId, name }: { billId: string; 
   );
 }
 
-/** "+ Add collections": the ones waiting for a bill (this bill's companies first), ticked and added at once. */
-export function AddCollections({ billId, collections, companyIds }: { billId: string; collections: Collection[]; companyIds: string[] }) {
+/** "+ Add collections": each of the bill's companies' collections waiting for a bill, ticked and added at once; the amount follows. */
+export function AddCollections({ billId, collections, companies }: { billId: string; collections: Collection[]; companies: { id: string; name: string }[] }) {
   const t = useT();
   const router = useRouter();
   const done = useDone();
   const [open, setOpen] = useState(false);
-  const [every, setEvery] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
-  const shown = every ? collections : collections.filter((c) => c.supplierId && companyIds.includes(c.supplierId));
-  const value = collections.filter((c) => picked.includes(c.receiptId)).reduce((n, c) => n + c.valuePaise, 0);
+  const chosen = collections.filter((c) => picked.includes(c.receiptId));
   if (!open)
     return (
       <button type="button" onClick={() => setOpen(true)} className={`${secondaryButton} self-start text-sm`}>
@@ -53,27 +51,11 @@ export function AddCollections({ billId, collections, companyIds }: { billId: st
       </button>
     );
   return (
-    <div data-testid="add-collections" className="flex flex-col gap-2">
+    <div data-testid="add-collections" className={`${card} flex flex-col gap-3`}>
       {done.node}
-      <label className={`flex items-center gap-1.5 self-end text-xs ${muted}`}>
-        <input type="checkbox" checked={every} onChange={(e) => setEvery(e.target.checked)} className="h-4 w-4 accent-brand-600" />
-        {t('bills.allCompanies')}
-      </label>
-      {shown.length === 0 ? (
-        <p className={`text-sm ${muted}`}>{t('bills.noCollections')}</p>
-      ) : (
-        <div className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
-          {shown.map((c) => (
-            <CollectionRow
-              key={c.receiptId}
-              c={c}
-              checked={picked.includes(c.receiptId)}
-              onToggle={() => setPicked(picked.includes(c.receiptId) ? picked.filter((p) => p !== c.receiptId) : [...picked, c.receiptId])}
-              showCompany
-            />
-          ))}
-        </div>
-      )}
+      {companies.map((c) => (
+        <CompanyCollections key={c.id} name={c.name} list={collections.filter((x) => x.supplierId === c.id)} picked={picked} onChange={setPicked} />
+      ))}
       {error && (
         <p role="alert" className={errorBox}>
           {error}
@@ -87,7 +69,7 @@ export function AddCollections({ billId, collections, companyIds }: { billId: st
             start(async () => {
               const result = await setBillCollectionsAction(billId, { add: picked });
               if (!result.ok) return setError(result.error);
-              done.show({ title: t('bills.saved'), detail: t('bills.picked', { n: picked.length, pcs: collections.filter((c) => picked.includes(c.receiptId)).reduce((n, c) => n + c.pieces, 0), value: formatPaise(value) }) });
+              done.show({ title: t('bills.saved'), detail: t('bills.picked', { n: chosen.length, pcs: chosen.reduce((n, c) => n + c.pieces, 0), value: formatPaise(chosen.reduce((n, c) => n + c.valuePaise, 0)) }) });
               setPicked([]);
               setOpen(false);
               router.refresh();

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/db/client';
-import { rupeesToPaise } from '@/features/inventory/inventory';
 import { STORE_ID } from '@/lib/app-config';
 import { requirePermission } from '@/server/auth';
 import { errorText, getT } from '@/server/i18n';
@@ -18,8 +17,8 @@ export type BillFormInput = {
   billNumber: string;
   billDate: string;
   note: string;
-  /** Rupees as typed, per company. */
-  companies: { supplierId: string; amount: string }[];
+  /** The companies chosen, in order. The amounts are worked out from the collections. */
+  companies: string[];
   receiptIds?: string[];
 };
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -34,13 +33,7 @@ async function fail(error: unknown): Promise<{ ok: false; error: string }> {
 const uuid = (value: unknown) => typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value);
 const ids = (list: unknown) => (Array.isArray(list) ? list.filter(uuid).slice(0, 500) : []) as string[];
 
-function companies(input: BillFormInput) {
-  return (Array.isArray(input.companies) ? input.companies : []).slice(0, 20).map((c) => {
-    const paise = rupeesToPaise(String(c.amount ?? '').trim() || '0');
-    if (paise === null) throw new DomainError('Enter each company’s amount.', { key: 'bill.err.amount' });
-    return { supplierId: uuid(c.supplierId) ? String(c.supplierId) : '', amountPaise: paise };
-  });
-}
+const companies = (input: BillFormInput) => ids(input.companies).slice(0, 20);
 
 function refresh() {
   revalidatePath('/admin', 'layout');

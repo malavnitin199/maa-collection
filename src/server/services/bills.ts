@@ -9,8 +9,9 @@ import { cleanStockDate, shopToday } from './products';
 /**
  * Bills section (owner's feedback 2026-11-21). A **bill** is the company's paper
  * bill, entered by the owner: a number, the day printed on it, one or more
- * companies each with its part of the amount (the bill's total is their sum),
- * and the **collections** it covers. A collection is one stock receipt — one
+ * companies, and the **collections** it covers. Nothing is typed as an amount:
+ * each company's part is worked out from its collections on the bill (the
+ * bill's total is their sum). A collection is one stock receipt — one
  * New item save (a design in its sizes) or one Receive stock entry — and is on
  * at most one bill. Dues come from bill amounts minus payments; a payment may
  * name a bill (that company's part of it).
@@ -18,7 +19,8 @@ import { cleanStockDate, shopToday } from './products';
 
 const ARRIVALS = ['opening', 'stock_in'] as const;
 const tz = sql.raw(`'${STORE_TIMEZONE.replace(/'/g, "''")}'`);
-const MAX_AMOUNT = 1_000_000_000; // ₹1 crore
+/** Fits the integer column (₹2 crore); a bill is never near this. */
+const MAX_PART = 2_000_000_000;
 
 export type Collection = {
   receiptId: string;
@@ -137,24 +139,16 @@ export type BillInput = {
   billNumber?: string | null;
   billDate?: string | null;
   note?: string | null;
-  companies: { supplierId: string; amountPaise: number }[];
-  receiptIds?: string[];
+  /** The companies on the bill, in the order chosen. */
+  companies: string[];
+  /** The collections on it; each must be one of the chosen companies' and on no other bill. */
+  receiptIds: string[];
   staffId: string;
 };
 
-function cleanCompanies(companies: BillInput['companies']) {
-  const seen = new Set<string>();
-  const out: { supplierId: string; amountPaise: number }[] = [];
-  for (const c of companies) {
-    if (!c.supplierId || seen.has(c.supplierId)) continue;
-    if (!Number.isSafeInteger(c.amountPaise) || c.amountPaise < 0 || c.amountPaise > MAX_AMOUNT) {
-      throw new DomainError('Enter each company’s amount (₹0 to ₹1 crore).', { key: 'bill.err.amount' });
-    }
-    seen.add(c.supplierId);
-    out.push({ supplierId: c.supplierId, amountPaise: c.amountPaise });
-  }
+function cleanCompanyIds(companies: string[]): string[] {
+  const out = [...new Set((companies ?? []).filter(Boolean))];
   if (out.length === 0) throw new DomainError('Choose at least one company.', { key: 'bill.err.company' });
-  if (out.reduce((n, c) => n + c.amountPaise, 0) <= 0) throw new DomainError('Enter the bill’s amount.', { key: 'bill.err.amount' });
   return out;
 }
 
@@ -171,12 +165,18 @@ async function checkCompanies(db: Db, storeId: string, ids: string[]) {
   if (found.length !== ids.length) throw new DomainError('Choose at least one company.', { key: 'bill.err.company' });
 }
 
-/** Adds collections to a bill: each must be this shop's and on no other bill. */
-async function attach(db: Db, storeId: string, billId: string, receiptIds: string[]) {
+/** Adds collections to a bill: each must be this shop's, one of the bill's companies', and on no other bill. */
+async function attach(db: Db, storeId: string, billId: string, receiptIds: string[], companies: string[]) {
   const unique = [...new Set(receiptIds)];
   if (unique.length === 0) return;
-  const found = await db.select({ id: stockReceipts.id }).from(stockReceipts).where(and(eq(stockReceipts.storeId, storeId), inArray(stockReceipts.id, unique)));
+  const found = await db
+    .select({ id: stockReceipts.id, supplierId: stockReceipts.supplierId })
+    .from(stockReceipts)
+    .where(and(eq(stockReceipts.storeId, storeId), inArray(stockReceipts.id, unique)));
   if (found.length !== unique.length) throw new DomainError('A collection was not found.', { key: 'bill.err.collection' });
+  if (found.some((r) => !r.supplierId || !companies.includes(r.supplierId))) {
+    throw new DomainError('A collection is from a company that is not on this bill.', { key: 'bill.err.otherCompany' });
+  }
   try {
     await db.insert(billCollections).values(unique.map((receiptId) => ({ billId, receiptId })));
   } catch (error) {
@@ -185,15 +185,33 @@ async function attach(db: Db, storeId: string, billId: string, receiptIds: strin
   }
 }
 
-/** A new bill. The same operation id again returns the first bill. */
+/**
+ * The bill's amounts (owner's feedback 2026-11-21: never typed): each company's
+ * part is the value of its collections on the bill — purchase price × pieces,
+ * at the price on the day they arrived. Stored, so later price changes do not
+ * move a bill.
+ */
+async function recompute(db: Db, storeId: string, billId: string) {
+  const links = await db.select({ receiptId: billCollections.receiptId }).from(billCollections).where(eq(billCollections.billId, billId));
+  const list = await listCollections(db, storeId, { receiptIds: links.map((l) => l.receiptId), limit: 10_000 });
+  const parts = await db.select({ id: billCompanies.id, supplierId: billCompanies.supplierId }).from(billCompanies).where(eq(billCompanies.billId, billId));
+  for (const part of parts) {
+    const amount = list.filter((c) => c.supplierId === part.supplierId).reduce((n, c) => n + c.valuePaise, 0);
+    await db.update(billCompanies).set({ amountPaise: Math.min(amount, MAX_PART) }).where(eq(billCompanies.id, part.id));
+  }
+}
+
+/** A new bill from the chosen companies and collections; its amount is worked out. The same operation id again returns the first bill. */
 export async function createBill(db: Db, storeId: string, input: BillInput): Promise<{ id: string; duplicate: boolean }> {
   if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
   const [existing] = await db.select({ id: bills.id }).from(bills).where(and(eq(bills.storeId, storeId), eq(bills.operationId, input.operationId))).limit(1);
   if (existing) return { id: existing.id, duplicate: true };
-  const companies = cleanCompanies(input.companies);
+  const companies = cleanCompanyIds(input.companies);
+  if (!input.receiptIds?.length) throw new DomainError('Tick at least one collection.', { key: 'bill.err.noCollection' });
   const billDate = cleanBillDate(input.billDate);
-  await checkCompanies(db, storeId, companies.map((c) => c.supplierId));
+  await checkCompanies(db, storeId, companies);
   return db.transaction(async (tx) => {
+    const t = tx as unknown as Db;
     const [bill] = await tx
       .insert(bills)
       .values({
@@ -205,8 +223,9 @@ export async function createBill(db: Db, storeId: string, input: BillInput): Pro
         staffId: input.staffId,
       })
       .returning({ id: bills.id });
-    await tx.insert(billCompanies).values(companies.map((c) => ({ billId: bill.id, ...c })));
-    await attach(tx as unknown as Db, storeId, bill.id, input.receiptIds ?? []);
+    await tx.insert(billCompanies).values(companies.map((supplierId) => ({ billId: bill.id, supplierId, amountPaise: 0 })));
+    await attach(t, storeId, bill.id, input.receiptIds, companies);
+    await recompute(t, storeId, bill.id);
     return { id: bill.id, duplicate: false };
   });
 }
@@ -217,32 +236,60 @@ async function ownBill(db: Db, storeId: string, id: string) {
   return bill;
 }
 
-/** Changes the number, date, note and companies with their amounts. A company with payments on this bill stays. */
-export async function updateBill(db: Db, storeId: string, id: string, input: Omit<BillInput, 'operationId' | 'receiptIds' | 'staffId'>): Promise<void> {
+async function billCompanyIds(db: Db, billId: string): Promise<string[]> {
+  return (await db.select({ id: billCompanies.supplierId }).from(billCompanies).where(eq(billCompanies.billId, billId))).map((r) => r.id);
+}
+
+/**
+ * Changes the number, date, note and companies. A company taken off takes its
+ * collections with it; a company with payments on this bill stays.
+ */
+export async function updateBill(
+  db: Db,
+  storeId: string,
+  id: string,
+  input: { billNumber?: string | null; billDate?: string | null; note?: string | null; companies: string[] },
+): Promise<void> {
   await ownBill(db, storeId, id);
-  const companies = cleanCompanies(input.companies);
+  const companies = cleanCompanyIds(input.companies);
   const billDate = cleanBillDate(input.billDate);
-  await checkCompanies(db, storeId, companies.map((c) => c.supplierId));
+  await checkCompanies(db, storeId, companies);
   const paidCompanies = await db.selectDistinct({ id: supplierPayments.supplierId }).from(supplierPayments).where(eq(supplierPayments.billId, id));
-  if (paidCompanies.some((p) => !companies.some((c) => c.supplierId === p.id))) {
+  if (paidCompanies.some((p) => !companies.includes(p.id))) {
     throw new DomainError('A company with payments on this bill cannot be taken off it.', { key: 'bill.err.paidCompany' });
   }
+  const before = await billCompanyIds(db, id);
+  const gone = before.filter((c) => !companies.includes(c));
+  const added = companies.filter((c) => !before.includes(c));
   await db.transaction(async (tx) => {
+    const t = tx as unknown as Db;
     await tx
       .update(bills)
       .set({ billNumber: input.billNumber?.trim().slice(0, 40) || null, billDate, note: input.note?.trim().slice(0, 200) || null })
       .where(eq(bills.id, id));
-    await tx.delete(billCompanies).where(eq(billCompanies.billId, id));
-    await tx.insert(billCompanies).values(companies.map((c) => ({ billId: id, ...c })));
+    if (gone.length) {
+      const theirs = await tx
+        .select({ id: stockReceipts.id })
+        .from(stockReceipts)
+        .innerJoin(billCollections, eq(billCollections.receiptId, stockReceipts.id))
+        .where(and(eq(billCollections.billId, id), inArray(stockReceipts.supplierId, gone)));
+      if (theirs.length) await tx.delete(billCollections).where(and(eq(billCollections.billId, id), inArray(billCollections.receiptId, theirs.map((r) => r.id))));
+      await tx.delete(billCompanies).where(and(eq(billCompanies.billId, id), inArray(billCompanies.supplierId, gone)));
+    }
+    if (added.length) await tx.insert(billCompanies).values(added.map((supplierId) => ({ billId: id, supplierId, amountPaise: 0 })));
+    await recompute(t, storeId, id);
   });
 }
 
-/** Adds and takes off collections. */
+/** Adds and takes off collections; the amounts follow. */
 export async function setBillCollections(db: Db, storeId: string, id: string, { add = [], remove = [] }: { add?: string[]; remove?: string[] }): Promise<void> {
   await ownBill(db, storeId, id);
+  const companies = await billCompanyIds(db, id);
   await db.transaction(async (tx) => {
+    const t = tx as unknown as Db;
     if (remove.length) await tx.delete(billCollections).where(and(eq(billCollections.billId, id), inArray(billCollections.receiptId, remove)));
-    await attach(tx as unknown as Db, storeId, id, add);
+    await attach(t, storeId, id, add, companies);
+    await recompute(t, storeId, id);
   });
 }
 

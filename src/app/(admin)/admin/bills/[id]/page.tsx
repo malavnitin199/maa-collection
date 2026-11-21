@@ -92,7 +92,6 @@ async function BillDetail({ id }: { id: string }) {
         <h2 className={sectionTitle}>{t('bills.collections')}</h2>
         <p data-testid="bill-value" className="text-sm">
           {t('bills.picked', { n: bill.collections, pcs: bill.pieces, value: formatPaise(bill.valuePaise) })}
-          <span className={`block text-xs ${muted}`}>{t('bills.difference', { total: formatPaise(bill.totalPaise), value: formatPaise(bill.valuePaise), diff: formatPaise(bill.totalPaise - bill.valuePaise) })}</span>
         </p>
         {bill.list.length > 0 && (
           <ul data-testid="bill-collection-list" className="flex flex-col gap-2">
@@ -111,7 +110,7 @@ async function BillDetail({ id }: { id: string }) {
             ))}
           </ul>
         )}
-        <AddCollections billId={bill.id} collections={waiting} companyIds={bill.companies.map((c) => c.supplierId)} />
+        <AddCollections billId={bill.id} collections={waiting} companies={bill.companies.map((c) => ({ id: c.supplierId, name: c.name }))} />
       </section>
 
       <details className={card}>
@@ -126,7 +125,7 @@ async function BillDetail({ id }: { id: string }) {
               billNumber: bill.billNumber ?? '',
               billDate: bill.billDate,
               note: bill.note ?? '',
-              companies: bill.companies.map((c) => ({ supplierId: c.supplierId, name: c.name, amount: rupees(c.amountPaise) })),
+              companies: bill.companies.map((c) => ({ id: c.supplierId, name: c.name })),
             }}
           />
         </div>

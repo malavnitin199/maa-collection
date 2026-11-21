@@ -23,7 +23,7 @@ async function NewBill({ supplier }: { supplier?: string }) {
       previous={companies.filter((c) => !c.active).map(({ id, name }) => ({ id, name }))}
       collections={collections}
       today={shopToday()}
-      initial={start ? { billNumber: '', billDate: shopToday(), note: '', companies: [{ supplierId: start.id, name: start.name, amount: '' }] } : undefined}
+      initial={start ? { billNumber: '', billDate: shopToday(), note: '', companies: [{ id: start.id, name: start.name }] } : undefined}
     />
   );
 }

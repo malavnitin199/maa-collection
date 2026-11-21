@@ -2,7 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 
 /**
  * Bills section (owner's feedback 2026-11-21): a bill names one or more
- * companies with each one's amount and the collections it covers; the Bills
+ * companies (listed one under the other) and the collections it covers; the
+ * amount is worked out from them; the Bills
  * page lists them; Home has one Bills line.
  */
 const PIN = '1234';
@@ -48,58 +49,63 @@ test('a bill with two companies and two collections; take one off and add it bac
   await addCollection(page, a, `Jeans One ${run}`);
   await addCollection(page, b, `Jeans Two ${run}`);
 
-  // Home → Bills → + New bill.
+  // Home → Bills → + New bill. Companies one after another, listed one under the other; no amount to type.
   await page.goto('/admin/dashboard');
   await expect(page.getByTestId('home-bills')).toBeVisible();
   await page.getByTestId('home-bills').click();
   await page.getByRole('link', { name: '+ New bill' }).click();
   const form = page.getByTestId('bill-form');
   await expect(form.getByText('Choose a company to see its collections.')).toBeVisible();
+  await expect(form.getByLabel(/amount/i)).toHaveCount(0);
   await form.getByLabel('Bill no. (optional)').fill(`JB-${run}`);
   await form.getByLabel('Bill date').fill('2026-11-01'); // backdated
   for (const company of [a, b]) {
     await form.getByRole('combobox', { name: /^(Company|Add another company)/ }).click();
     await page.getByRole('listbox').getByRole('option', { name: company, exact: true }).click();
   }
-  await expect(form.getByTestId('bill-company')).toHaveCount(2);
-  await form.getByLabel(`Amount for ${a} ₹`).fill('1500');
-  await form.getByLabel(`Amount for ${b} ₹`).fill('1000');
-  await expect(form.getByTestId('bill-sum')).toHaveText('₹2,500.00');
-  // The chosen companies' collections are offered; tick both.
-  for (const name of [`Jeans One ${run}`, `Jeans Two ${run}`]) {
-    await form.getByTestId('collection-option').filter({ hasText: name }).getByRole('checkbox').check();
-  }
-  await expect(form.getByTestId('bill-picked')).toContainText('2 collections');
+  await expect(form.getByTestId('bill-company')).toHaveText([new RegExp(`^1${a}`), new RegExp(`^2${b}`)]);
+  // Each company's waiting collections sit under its name.
+  const groups = form.getByTestId('company-collections-group');
+  await expect(groups).toHaveCount(2);
+  await expect(groups.nth(0)).toContainText(`Jeans One ${run}`);
+  await expect(groups.nth(1)).toContainText(`Jeans Two ${run}`);
+  for (const name of [`Jeans One ${run}`, `Jeans Two ${run}`]) await form.getByRole('checkbox', { name }).click();
+  // 4 sizes × 1 pc × ₹300 each = ₹1,200 a company; ₹2,400 the bill.
+  await expect(form.getByTestId('bill-company').nth(0)).toContainText('1 collections ticked · ₹1,200.00');
+  await expect(form.getByTestId('bill-total')).toHaveText('₹2,400.00');
   await form.getByRole('button', { name: 'Save bill' }).click();
   await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`bill JB-${run}`);
-  await expect(page.getByTestId('bill-detail-total')).toHaveText('₹2,500.00');
+  await expect(page.getByTestId('bill-detail-total')).toHaveText('₹2,400.00');
   await expect(page.getByTestId('bill-companies')).toContainText(a);
-  await expect(page.getByTestId('bill-companies')).toContainText('₹1,500.00');
+  await expect(page.getByTestId('bill-companies')).toContainText('₹1,200.00');
   await expect(page.getByTestId('bill-collection-list').locator('li')).toHaveCount(2);
 
   // Take one off, then add it back.
   await page.getByRole('button', { name: `Take Jeans Two ${run} off this bill` }).click();
   await expect(page.getByTestId('bill-collection-list').locator('li')).toHaveCount(1);
+  await expect(page.getByTestId('bill-detail-total')).toHaveText('₹1,200.00'); // the amount follows the collections
   await page.getByRole('button', { name: '+ Add collections' }).click();
-  await page.getByTestId('add-collections').getByTestId('collection-option').filter({ hasText: `Jeans Two ${run}` }).getByRole('checkbox').check();
+  await page.getByTestId('add-collections').getByRole('checkbox', { name: `Jeans Two ${run}` }).click();
   await page.getByRole('button', { name: 'Add 1 to this bill' }).click();
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('bill-collection-list').locator('li')).toHaveCount(2);
+  await expect(page.getByTestId('bill-detail-total')).toHaveText('₹2,400.00');
   const billUrl = page.url();
 
   // The Bills list shows it with both companies and what is due.
   await page.goto('/admin/bills');
   const row = page.getByTestId('bill-list').getByRole('link').filter({ hasText: `JB-${run}` });
   await expect(row).toContainText(`${a}, ${b}`);
-  await expect(row).toContainText('Due ₹2,500.00');
+  await expect(row).toContainText('Due ₹2,400.00');
 
-  // A second, empty bill can be deleted after a confirmation.
-  await page.getByRole('link', { name: '+ New bill' }).click();
+  // A second bill (a new collection of company A) can be deleted after a confirmation; its collection waits again.
+  await addCollection(page, a, `Jeans Three ${run}`);
+  await page.goto('/admin/bills/new');
   await form.getByRole('combobox', { name: /^Company/ }).click();
   await page.getByRole('listbox').getByRole('option', { name: a, exact: true }).click();
-  await form.getByLabel('Bill amount ₹').fill('10');
+  await form.getByRole('checkbox', { name: `Jeans Three ${run}` }).click();
   await form.getByRole('button', { name: 'Save bill' }).click();
   await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);
   await expect(page).not.toHaveURL(billUrl);

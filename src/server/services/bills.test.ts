@@ -39,10 +39,11 @@ const collection = (supplierId: string, name: string, sizes = ['28', '30', '32',
     quantityEach: 2,
     staffId: owner,
   });
-const base = (over: Partial<Parameters<typeof createBill>[2]> = {}) => ({
+const base = (receiptIds: string[], over: Partial<Parameters<typeof createBill>[2]> = {}) => ({
   operationId: `b-${Math.random()}`,
   billDate: '2026-11-10',
-  companies: [{ supplierId: surat, amountPaise: 500000 }],
+  companies: [surat],
+  receiptIds,
   staffId: owner,
   ...over,
 });
@@ -55,65 +56,84 @@ describe('collections', () => {
     const mine = waiting.find((c) => c.receiptId === jeans.receipt.id)!;
     expect(mine).toMatchObject({ supplierName: 'Surat Silks', names: ['Slim Jeans'], items: 6, pieces: 12, valuePaise: 480000, billId: null });
     expect(mine.sizes).toEqual(['28', '30', '32', '34', '36', '38']);
-    await createBill(db, STORE_ID, base({ receiptIds: [jeans.receipt.id] }));
+    await createBill(db, STORE_ID, base([jeans.receipt.id]));
     expect((await listCollections(db, STORE_ID, { unbilled: true })).some((c) => c.receiptId === jeans.receipt.id)).toBe(false);
   });
 });
 
 describe('createBill', () => {
-  it('a bill with 3 collections: total typed, value of the collections beside it, the bill date and the day entered', async () => {
+  it('a bill with 3 collections: the amount is worked out from them (never typed); the bill date and the day entered', async () => {
     const made = await Promise.all([collection(surat, 'Jeans A'), collection(surat, 'Jeans B'), collection(surat, 'Jeans C')]);
-    const { id } = await createBill(db, STORE_ID, base({ billNumber: ' SS-101 ', receiptIds: made.map((m) => m.receipt.id) }));
+    const { id } = await createBill(db, STORE_ID, base(made.map((m) => m.receipt.id), { billNumber: ' SS-101 ' }));
     const bill = (await getBill(db, STORE_ID, id))!;
-    expect(bill).toMatchObject({ billNumber: 'SS-101', billDate: '2026-11-10', totalPaise: 500000, paidPaise: 0, duePaise: 500000, status: 'open', collections: 3, pieces: 36, valuePaise: 1440000 });
+    // 3 × (6 sizes × 2 pcs × ₹400) = ₹14,400.
+    expect(bill).toMatchObject({ billNumber: 'SS-101', billDate: '2026-11-10', totalPaise: 1440000, paidPaise: 0, duePaise: 1440000, status: 'open', collections: 3, pieces: 36, valuePaise: 1440000 });
     expect(bill.createdOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(bill.list.map((c) => c.names[0]).sort()).toEqual(['Jeans A', 'Jeans B', 'Jeans C']);
-    expect(bill.companies).toEqual([{ supplierId: surat, name: 'Surat Silks', amountPaise: 500000, paidPaise: 0, duePaise: 500000 }]);
+    expect(bill.companies).toEqual([{ supplierId: surat, name: 'Surat Silks', amountPaise: 1440000, paidPaise: 0, duePaise: 1440000 }]);
   });
 
-  it('several companies, each with its part; the total is their sum; payments close a part', async () => {
-    const { id } = await createBill(db, STORE_ID, base({ companies: [{ supplierId: surat, amountPaise: 300000 }, { supplierId: mumbai, amountPaise: 200000 }] }));
-    await addPayment(db, STORE_ID, { operationId: `p-${Math.random()}`, supplierId: mumbai, amountPaise: 200000, billId: id, staffId: owner });
+  it('several companies: each part is its own collections’ value; the total is their sum; payments close a part', async () => {
+    const s1 = await collection(surat, 'Surat Jeans'); // 12 pcs × ₹400 = ₹4,800
+    const m1 = await collection(mumbai, 'Mumbai Cargo', ['M', 'L']); // 4 pcs × ₹400 = ₹1,600
+    const { id } = await createBill(db, STORE_ID, base([s1.receipt.id, m1.receipt.id], { companies: [surat, mumbai] }));
+    await addPayment(db, STORE_ID, { operationId: `p-${Math.random()}`, supplierId: mumbai, amountPaise: 160000, billId: id, staffId: owner });
     const bill = (await getBill(db, STORE_ID, id))!;
-    expect(bill.totalPaise).toBe(500000);
+    expect(bill.totalPaise).toBe(640000);
     expect(bill.companies.map((c) => [c.name, c.amountPaise, c.duePaise])).toEqual([
-      ['Mumbai Mills', 200000, 0],
-      ['Surat Silks', 300000, 300000],
+      ['Mumbai Mills', 160000, 0],
+      ['Surat Silks', 480000, 480000],
     ]);
-    expect(bill).toMatchObject({ paidPaise: 200000, duePaise: 300000, status: 'open', hasPayments: true });
-    expect(await billsSummary(db, STORE_ID)).toEqual({ bills: 1, open: 1, duePaise: 300000 });
+    expect(bill).toMatchObject({ paidPaise: 160000, duePaise: 480000, status: 'open', hasPayments: true });
+    expect(await billsSummary(db, STORE_ID)).toEqual({ bills: 1, open: 1, duePaise: 480000 });
     expect((await listBills(db, STORE_ID, { supplierId: mumbai })).map((b) => b.id)).toEqual([id]);
   });
 
-  it('refuses: no company, a zero bill, a future date, a collection already on another bill; the same tap twice makes one bill', async () => {
-    await expect(createBill(db, STORE_ID, base({ companies: [] }))).rejects.toMatchObject({ key: 'bill.err.company' });
-    await expect(createBill(db, STORE_ID, base({ companies: [{ supplierId: surat, amountPaise: 0 }] }))).rejects.toMatchObject({ key: 'bill.err.amount' });
-    await expect(createBill(db, STORE_ID, base({ billDate: '2999-01-01' }))).rejects.toMatchObject({ key: 'bill.err.date' });
+  it('refuses: no company, no collection, another company’s collection, a future date, a collection already on another bill; the same tap twice makes one bill', async () => {
     const c = await collection(surat, 'Taken');
-    await createBill(db, STORE_ID, base({ receiptIds: [c.receipt.id] }));
-    await expect(createBill(db, STORE_ID, base({ receiptIds: [c.receipt.id] }))).rejects.toMatchObject({ key: 'bill.err.taken' });
-    const once = base();
+    const m = await collection(mumbai, 'Theirs', ['M']);
+    await expect(createBill(db, STORE_ID, base([c.receipt.id], { companies: [] }))).rejects.toMatchObject({ key: 'bill.err.company' });
+    await expect(createBill(db, STORE_ID, base([]))).rejects.toMatchObject({ key: 'bill.err.noCollection' });
+    await expect(createBill(db, STORE_ID, base([m.receipt.id]))).rejects.toMatchObject({ key: 'bill.err.otherCompany' });
+    await expect(createBill(db, STORE_ID, base([c.receipt.id], { billDate: '2999-01-01' }))).rejects.toMatchObject({ key: 'bill.err.date' });
+    await createBill(db, STORE_ID, base([c.receipt.id]));
+    await expect(createBill(db, STORE_ID, base([c.receipt.id]))).rejects.toMatchObject({ key: 'bill.err.taken' });
+    const free = await collection(surat, 'Free');
+    const once = base([free.receipt.id]);
     const first = await createBill(db, STORE_ID, once);
     expect(await createBill(db, STORE_ID, once)).toEqual({ id: first.id, duplicate: true });
   });
 });
 
 describe('changing a bill', () => {
-  it('collections added and taken off; details and amounts edited; a company with payments stays; deleting frees its collections', async () => {
-    const a = await collection(surat, 'A');
-    const b = await collection(surat, 'B');
-    const { id } = await createBill(db, STORE_ID, base({ receiptIds: [a.receipt.id] }));
+  it('collections added and taken off move the amount; a company added or taken off (with its collections); one with payments stays; deleting frees its collections', async () => {
+    const a = await collection(surat, 'A'); // ₹4,800
+    const b = await collection(surat, 'B', ['M', 'L']); // ₹1,600
+    const m = await collection(mumbai, 'M1', ['M']); // ₹800
+    const { id } = await createBill(db, STORE_ID, base([a.receipt.id]));
     await setBillCollections(db, STORE_ID, id, { add: [b.receipt.id], remove: [a.receipt.id] });
+    expect(await getBill(db, STORE_ID, id)).toMatchObject({ totalPaise: 160000, collections: 1 });
     expect((await getBill(db, STORE_ID, id))!.list.map((c) => c.names[0])).toEqual(['B']);
+    await expect(setBillCollections(db, STORE_ID, id, { add: [m.receipt.id] })).rejects.toMatchObject({ key: 'bill.err.otherCompany' });
 
-    await updateBill(db, STORE_ID, id, { billNumber: 'NEW-1', billDate: '2026-11-01', companies: [{ supplierId: surat, amountPaise: 450000 }, { supplierId: mumbai, amountPaise: 50000 }] });
-    expect(await getBill(db, STORE_ID, id)).toMatchObject({ billNumber: 'NEW-1', billDate: '2026-11-01', totalPaise: 500000 });
+    await updateBill(db, STORE_ID, id, { billNumber: 'NEW-1', billDate: '2026-11-01', companies: [surat, mumbai] });
+    await setBillCollections(db, STORE_ID, id, { add: [m.receipt.id] });
+    expect(await getBill(db, STORE_ID, id)).toMatchObject({ billNumber: 'NEW-1', billDate: '2026-11-01', totalPaise: 240000 });
 
     await addPayment(db, STORE_ID, { operationId: `p-${Math.random()}`, supplierId: mumbai, amountPaise: 1000, billId: id, staffId: owner });
-    await expect(updateBill(db, STORE_ID, id, { billDate: '2026-11-01', companies: [{ supplierId: surat, amountPaise: 1 }] })).rejects.toMatchObject({ key: 'bill.err.paidCompany' });
+    await expect(updateBill(db, STORE_ID, id, { billDate: '2026-11-01', companies: [surat] })).rejects.toMatchObject({ key: 'bill.err.paidCompany' });
     await expect(deleteBill(db, STORE_ID, id)).rejects.toMatchObject({ key: 'bill.err.hasPayments' });
 
-    const other = await createBill(db, STORE_ID, base({ receiptIds: [a.receipt.id] }));
+    // Taking a company (without payments) off takes its collections off too.
+    const two = await createBill(db, STORE_ID, base([a.receipt.id]));
+    const n1 = await collection(mumbai, 'N1', ['L']);
+    await updateBill(db, STORE_ID, two.id, { billDate: '2026-11-01', companies: [surat, mumbai] });
+    await setBillCollections(db, STORE_ID, two.id, { add: [n1.receipt.id] });
+    await updateBill(db, STORE_ID, two.id, { billDate: '2026-11-01', companies: [surat] });
+    expect(await getBill(db, STORE_ID, two.id)).toMatchObject({ collections: 1, totalPaise: 480000 });
+    await deleteBill(db, STORE_ID, two.id);
+
+    const other = await createBill(db, STORE_ID, base([a.receipt.id]));
     await deleteBill(db, STORE_ID, other.id);
     expect(await getBill(db, STORE_ID, other.id)).toBeNull();
     expect((await listCollections(db, STORE_ID, { unbilled: true })).some((c) => c.receiptId === a.receipt.id)).toBe(true);
