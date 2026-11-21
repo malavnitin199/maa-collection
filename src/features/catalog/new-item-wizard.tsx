@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from 'react';
 import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
 import { ResumeSheet } from '@/features/forms/resume-sheet';
 import { useDone } from '@/features/feedback/effects';
@@ -41,6 +41,20 @@ const tile =
 const tileOn = 'ring-2 ring-brand-600 bg-brand-50 dark:bg-brand-950';
 const artCircle = 'flex h-20 w-20 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition group-hover:scale-105 dark:bg-brand-950 dark:text-brand-300';
 const field = 'flex flex-col gap-1 text-sm font-medium';
+
+/** The markup % this phone used last (ADR-053), or null. Storage may be blocked: then nothing. */
+function readMarkup(): string | null {
+  try {
+    const saved = window.localStorage.getItem('maa-markup');
+    return saved && /^\d{1,3}$/.test(saved) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+function subscribeMarkup(onChange: () => void) {
+  window.addEventListener('storage', onChange);
+  return () => window.removeEventListener('storage', onChange);
+}
 const nextButton = 'inline-flex min-h-12 items-center gap-1.5 rounded-2xl bg-brand-600 px-6 text-base font-bold text-white shadow-md shadow-brand-700/25 transition hover:bg-brand-700 active:scale-[0.97] disabled:opacity-40';
 
 /** "28–36" or "M–XXL": a category's size range at a glance. */
@@ -85,6 +99,19 @@ export function NewItemWizard({
   const [supplierId, setSupplierId] = useState(initial.supplierId ?? '');
   const [supplierName, setSupplierName] = useState(suppliers.find((s) => s.id === initial.supplierId)?.name ?? '');
   const [mrp, setMrp] = useState('');
+  // Sale price from the purchase price (owner, 2026-11-22, ADR-053): purchase + this %, 50 unless changed (remembered on the phone).
+  const savedMarkup = useSyncExternalStore(subscribeMarkup, readMarkup, () => null);
+  const [typedMarkup, setMarkupText] = useState<string | null>(null);
+  const markupText = typedMarkup ?? savedMarkup ?? '50';
+  const changeMarkup = (text: string) => {
+    const clean = text.replace(/\D/g, '').slice(0, 3);
+    setMarkupText(clean);
+    try {
+      if (clean) window.localStorage.setItem('maa-markup', clean);
+    } catch {
+      // Not remembered; it still works for this entry.
+    }
+  };
   const [cost, setCost] = useState('');
   const [price, setPrice] = useState('');
   const [billNumber, setBillNumber] = useState(initial.billNumber ?? '');
@@ -122,11 +149,14 @@ export function NewItemWizard({
   const noSize = ordered.length === 0;
   const totalBoxes = noSize ? count('') : ordered.reduce((n, size) => n + count(size), 0);
   const totalPieces = noSize ? piecesOf('') : ordered.reduce((n, size) => n + piecesOf(size), 0);
-  const mrpPaise = rupeesToPaise(mrp);
   const typedCost = showCost && cost.trim() ? rupeesToPaise(cost) : null;
   const boxCost = boxed && costAs === 'box' ? typedCost : null;
   // Always per piece (a box price ÷ pieces in the box, to the paisa).
   const costPaise = boxCost !== null && pack ? perPiecePaise(boxCost, pack) : boxed && costAs === 'box' ? null : typedCost;
+  // The sale price (MRP) is optional: empty = purchase + markup %, to whole rupees.
+  const markup = /^\d{1,3}$/.test(markupText) ? Math.min(Number(markupText), 500) : 50;
+  const derivedMrp = costPaise !== null && costPaise > 0 ? Math.round((costPaise * (100 + markup)) / 10000) * 100 : null;
+  const mrpPaise = mrp.trim() ? rupeesToPaise(mrp) : derivedMrp;
   const packMrpPaise = boxed && packMrp.trim() ? rupeesToPaise(packMrp) : null;
   const pricePaise = price.trim() ? rupeesToPaise(price) : null;
   // The name is optional (owner, 2026-11-21): a blank one becomes "<category> <number>" on save.
@@ -291,7 +321,8 @@ export function NewItemWizard({
         sizes: ordered,
         noSize,
         colors: [],
-        mrp,
+        // Empty sale price: the one worked out from the purchase price.
+        mrp: mrp.trim() || (mrpPaise !== null ? String(mrpPaise / 100) : ''),
         price,
         // A box purchase price goes with the box; the piece's cost is worked out from it.
         cost: boxed && costAs === 'box' ? '' : cost,
@@ -636,18 +667,8 @@ export function NewItemWizard({
                 </div>
               )}
             </div>
+            {/* Purchase price first, then the sale price (owner, 2026-11-22, ADR-053). */}
             <div className="grid grid-cols-2 gap-3">
-              <label className={field}>
-                {boxed ? t('pack.mrpPiece') : t('ni.mrp')}
-                <input required inputMode="decimal" value={mrp} onChange={(e) => setMrp(e.target.value)} className={`${input} text-lg tabular-nums`} />
-              </label>
-              {boxed && (
-                <label className={field}>
-                  {t('pack.mrpBox')}
-                  <input inputMode="decimal" value={packMrp} onChange={(e) => setPackMrp(e.target.value)} className={`${input} text-lg tabular-nums`} />
-                  {mrpPaise !== null && pack && <span className={`text-xs ${muted}`}>{t('pack.mrpBoxHint', { amount: formatPaise(mrpPaise * pack) })}</span>}
-                </label>
-              )}
               {showCost && !boxed && (
                 <label className={field}>
                   {t('ni.cost')}
@@ -680,6 +701,38 @@ export function NewItemWizard({
                     </span>
                   )}
                 </div>
+              )}
+              <div className={field}>
+                <label htmlFor="ni-mrp">{boxed ? t('pack.mrpPiece') : t('ni.mrp')}</label>
+                <input
+                  id="ni-mrp"
+                  inputMode="decimal"
+                  value={mrp}
+                  placeholder={derivedMrp !== null ? String(derivedMrp / 100) : undefined}
+                  onChange={(e) => setMrp(e.target.value)}
+                  className={`${input} text-lg tabular-nums`}
+                />
+                {/* Optional (ADR-053): empty = purchase + markup %. */}
+                {showCost && (
+                  <span data-testid="mrp-from-cost" className={`flex flex-wrap items-center gap-1 text-xs ${muted}`}>
+                    {t('ni.markup.before')}
+                    <input
+                      inputMode="numeric"
+                      aria-label={t('ni.markup.aria')}
+                      value={markupText}
+                      onChange={(e) => changeMarkup(e.target.value)}
+                      className="h-7 w-11 rounded-lg border border-zinc-300 bg-surface text-center text-xs font-bold tabular-nums dark:border-zinc-700"
+                    />
+                    %{!mrp.trim() && derivedMrp !== null && <b className="text-zinc-800 dark:text-zinc-100"> = {formatPaise(derivedMrp)}</b>}
+                  </span>
+                )}
+              </div>
+              {boxed && (
+                <label className={field}>
+                  {t('pack.mrpBox')}
+                  <input inputMode="decimal" value={packMrp} onChange={(e) => setPackMrp(e.target.value)} className={`${input} text-lg tabular-nums`} />
+                  {mrpPaise !== null && pack && <span className={`text-xs ${muted}`}>{t('pack.mrpBoxHint', { amount: formatPaise(mrpPaise * pack) })}</span>}
+                </label>
               )}
             </div>
             {type && (

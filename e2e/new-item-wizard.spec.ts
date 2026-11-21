@@ -49,7 +49,7 @@ test('many items: who → what → details & sizes (one card) → check → save
   await expect(card.getByRole('button', { name: 'Size M', exact: true })).toBeVisible();
   const next = page.getByRole('button', { name: 'Next' });
   await expect(next).toBeDisabled();
-  await expect(page.getByTestId('size-summary')).toHaveText('Type the MRP');
+  await expect(page.getByTestId('size-summary')).toHaveText('Type the purchase price or the MRP');
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await page.getByLabel('Sale price (MRP) ₹').fill('1299');
@@ -307,4 +307,37 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByTestId('size-cards').getByRole('button').first().click();
   await expect(page.getByTestId('no-size-pieces')).toHaveCount(0);
+});
+
+test('purchase price first; an empty sale price is purchase + 50% (the % can be changed) (owner, 2026-11-22)', async ({ page }, info) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  const name = `Markup Kurta ${run}${info.project.name[0]}`;
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: /^One item/ }).click();
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurta/ }).click();
+  await page.getByLabel('Product name').fill(name);
+  // Purchase price comes before the sale price.
+  const purchase = page.getByRole('textbox', { name: /^Purchase price ₹/ });
+  const sale = page.getByLabel('Sale price (MRP) ₹');
+  expect((await purchase.boundingBox())!.x).toBeLessThan((await sale.boundingBox())!.x);
+  await purchase.fill('700');
+  const hint = page.getByTestId('mrp-from-cost');
+  await expect(hint).toContainText('= ₹1,050.00');
+  await expect(sale).toHaveAttribute('placeholder', '1050');
+  await hint.getByLabel('Markup % on the purchase price').fill('40');
+  await expect(hint).toContainText('= ₹980.00');
+  await page.getByTestId('size-cards').getByRole('button').first().click();
+  await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByTestId('review-card')).toContainText('MRP ₹980.00');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
+  await expect(page.getByTestId('product-list').getByRole('listitem').first()).toContainText('MRP ₹980.00');
+  // The % is remembered on this phone for the next item.
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: /^One item/ }).click();
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurta/ }).click();
+  await expect(page.getByTestId('mrp-from-cost').getByLabel('Markup % on the purchase price')).toHaveValue('40');
 });
