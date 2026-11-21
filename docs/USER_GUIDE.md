@@ -8,14 +8,14 @@ Live app: https://maa-collection-pi.vercel.app
 
 ## 1. New here? (2 minutes)
 
-1. Open the app on your phone, tap **your name**, type your **PIN** (the owner gives it to you).
+1. Open the app on your phone, tap **your name**, type your **PIN** (the owner gives it to you). The phone remembers who logged in last, so next time your name is already picked. Dots show how many digits are in; **Log in** lights up once your name and at least 4 digits are there. A wrong PIN shakes the dots and clears them. With more than 6 people a **Find your name** box appears.
 2. Put it on your home screen: Chrome → ⋮ → *Add to Home screen* (or *Install app*); iPhone → Share → *Add to Home Screen*. It gets the green **MC** icon and opens full-screen, straight to your screen while you're logged in.
 3. The tabs at the bottom:
    - **Sell**: scan and sell
    - **Exchange**: swap an item from an earlier sale
    - **My sales**: your totals for today and this month
    - **Catalog**: only if the owner gave you catalog or stock work
-4. To scan: tap **Scan with camera**; the camera opens in a popup anchored above that button without moving the screen. If there is not enough room above it, the popup opens below. Allow camera access, then hold the barcode flat in the green box 15–20 cm away. Use the centered **Close** button to return; you can also tap outside the popup or press Escape. A USB/Bluetooth scanner works without tapping anything.
+4. To scan: tap **Scan with camera**; the camera fills the whole screen. Allow camera access, then hold the barcode or QR code inside the box 15–20 cm away; the box flashes green when it reads. **Close** (top right) or Escape returns. A USB/Bluetooth scanner works without tapping anything.
 5. **Log out** at the end of the day (⋯ at the top right → **Log out**), especially on a shared phone.
 
 **The top of every screen** shows **Maa Collection** with your name, and two round buttons: **अ / A** (language) and **⋯** (menu). The ⋯ menu holds the colours and Day / Night, **Sound and vibration**, **Guide** and **Log out**.
@@ -74,6 +74,13 @@ The owner sets these in **Menu → Staff & permissions** → tap *Permissions* u
 2. Check the **photo**, size and colour match the item.
 3. **Sell this item** → quantity → agreed price (up to MRP). Selling for a colleague? Pick them in **Credit sale to**.
 4. **Record sale**. Stock goes down on every phone at once. Your sales **wait for the owner's check** (a "Waiting" mark in My sales) and count in your totals once he approves them; the owner's own sales count at once.
+
+**Several items for one customer (a bill):**
+1. Scan the first item → **Add more items**. It goes onto the bill and, if you used the camera, the camera opens again.
+2. Scan each next tag. Scanning the same tag again adds **one more piece**. With the camera, it stays on: the bottom shows the item just added; tap **Done** when all are in.
+3. Choose when to type prices: **Price as I scan** (a price box under the camera for each item) or **Price at the end**.
+4. The **bill** is one table: photo, item (size · colour, − / + for pieces), **MRP** and the **selling price**. **Fill prices one by one** jumps to the first empty price; Enter moves to the next. The **total** appears as soon as every price is in.
+5. Pick **Credit sale to** once for the whole bill → **Save bill · ₹total**. Each item is saved as its own sale (stock, approvals and no-internet saving work as for one item). An item with a problem (price above MRP, not enough stock) stays on the bill in red with the reason. **Clear bill** drops everything not saved.
 
 **Tag won't scan?** (torn tag, broken scanner, dead camera) Tap **Tag won't scan? Enter by hand** under the scan box: type the **item name** as you call it (e.g. "blue kurti"), a **size** if you know it, quantity and the **price the customer paid** → **Record sale**. No stock changes (the app does not know which piece it was) and there is no MRP limit; the owner sees it marked **By hand** and checks it.
 
@@ -155,9 +162,9 @@ There is no colour step: a new item has no colour unless you add one on its prod
 - **Other details** tab: change **For / Age** for the whole design (**Save tags**), and **Edit this item**.
 - Every way of adding an item (**New item**, **Tag old stock**, **More → Add a single product**) lets you tap **For** and **Age** while adding; change them later here.
 
-### Companies on Home
+### The Companies page
 
-Under **Today** on Home: **Companies** — how many companies, **Bills** (and how many are still open), **Collections** (and pieces bought), **Total spend** and **Dues now**; then every company, ten at a time (**Previous / Next**): its location and **since** when you have been buying from it (or the day it was added here), *bills · collections · pcs*, what you have **spent** and what is **due**. Companies with the newest bill come first; hidden ones last. Tap a company to open its page; **All companies** opens the list, **+ Add company** the add form.
+Home has one small **Companies** line under Today (how many companies, bills, dues); tap it, or **Suppliers**, to open the Companies page. There: a **search** box with a **microphone** (name, place, contact or phone; English or Hindi), a **place** dropdown (all the locations you have typed), **Summary ▸** (tap to see companies, bills and open bills, collections and pieces, total spend, dues now), and the companies ten at a time (**Previous / Next**): name, location · contact · phone, *bills · dues* and collections. The latest activity comes first (a new bill, or a company you just added); hidden companies last. **+ Add supplier** (top right) opens the add form.
 
 When you add or edit a company, give **Working since** — the day you started buying from them, even years ago. It is separate from the day the company was added in the app; both show under **Details**. Company name is required; location and the date are optional.
 
