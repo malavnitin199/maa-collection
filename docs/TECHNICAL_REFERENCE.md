@@ -915,3 +915,9 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Wizard | `noSize = ordered.length === 0`; its count lives in `pieces['']` (default 1); `sizesOk = totalPieces > 0`; `SizeStep` shows `no-size-pieces` (aria *Pieces with no size* / *Boxes with no size*, *One less* / *One more*); `size-summary` *No size · n pcs*; `review-sizes` *No size × n*. |
 | Counter | `product-card` hides the size chip when empty; `pos-screen` messages use *No size* (`ni.noSize`). |
 
+## 45. Sale price from the purchase price (2026-11-22, ADR-053)
+
+| Part | Notes |
+|---|---|
+| Wizard | `new-item-wizard.tsx`: purchase block first in the price grid; `#ni-mrp` optional. `markupText` = typed ?? `readMarkup()` (`useSyncExternalStore`, `localStorage maa-markup`) ?? 50; `derivedMrp = round(costPaise × (100 + markup) / 10000) × 100`; `mrpPaise = typed MRP ?? derivedMrp`; save sends the derived rupees when the box is empty. `mrp-from-cost` hint with the % box (aria *Markup % on the purchase price*). `ni.panel.needDetails` = *Type the purchase price or the MRP*. e2e *purchase price first; an empty sale price is purchase + 50%*. |
+
