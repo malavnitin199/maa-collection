@@ -43,8 +43,12 @@ export async function createPgliteDb(
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: path.join(process.cwd(), 'drizzle') });
   const typed = db as unknown as Db;
-  if (options.seed === 'demo' || options.seed === 'demo+samples') await seedDemoData(typed, { pins: 'dev' });
-  // Sample companies/categories for trying the app locally; unit tests use plain 'demo'.
-  if (options.seed === 'demo+samples') await addSampleCatalog(typed);
+  if (options.seed === 'demo' || options.seed === 'demo+samples') {
+    const { seeded } = await seedDemoData(typed, { pins: 'dev' });
+    // Sample companies/categories for trying the app locally (unit tests use plain 'demo').
+    // Only into a shop the demo seed just made — never into a copy of the live shop
+    // (`pnpm db:copy-live`), which must stay exactly like live.
+    if (seeded && options.seed === 'demo+samples') await addSampleCatalog(typed);
+  }
   return typed;
 }
