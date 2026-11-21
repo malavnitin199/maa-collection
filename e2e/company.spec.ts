@@ -43,7 +43,7 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await expect(page.getByTestId('company-dues')).toHaveText('₹0.00');
   await expect(page.getByRole('tab', { name: 'Bills', exact: true })).toHaveAttribute('aria-selected', 'true');
 
-  // A bill through the old form (sizes × colours): 2 sizes × 1 colour × 3 pieces at ₹400 purchase = ₹2,400, bill no. INV-<run>.
+  // A bill through the old form (sizes): 2 sizes × 3 pieces at ₹400 purchase = ₹2,400, bill no. INV-<run>.
   await page.getByRole('link', { name: `+ New item from ${name}` }).click();
   await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=/);
   await page.goto(page.url().replace('/admin/stock/new', '/admin/stock/form'));
@@ -51,11 +51,9 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Sale price (MRP) ₹').fill('1299');
   await page.getByLabel('Purchase price ₹', { exact: true }).fill('400');
-  await page.getByRole('tab', { name: 'Colours', exact: true }).click();
+  await page.getByRole('tab', { name: 'Sizes', exact: true }).click();
   await page.getByRole('button', { name: 'Size M' }).click();
   await page.getByRole('button', { name: 'Size L' }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Blue');
-  await page.getByRole('button', { name: 'Add colour' }).click();
   await page.getByRole('tab', { name: 'Details', exact: true }).click();
   await page.getByLabel('Pieces each').fill('3');
   await page.getByLabel('Supplier bill no. (optional)').fill(`INV-${run}`);

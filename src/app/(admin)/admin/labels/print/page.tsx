@@ -292,7 +292,7 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
           {receipt.lines.map((line) => (
             <li key={line.id} className="flex justify-between gap-2 border-b border-zinc-100 py-1 dark:border-zinc-900">
               <Link href={`/admin/products/${line.id}`} className={link}>
-                {[line.name, line.color, line.size].filter(Boolean).join(' · ')}
+                {[line.name, line.size].filter(Boolean).join(' · ')}
               </Link>
               <span className="tabular-nums">
                 {t('stk.labels.pcs', { n: line.quantity })}

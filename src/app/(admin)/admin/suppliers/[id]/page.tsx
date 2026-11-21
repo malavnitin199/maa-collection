@@ -158,7 +158,6 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
                       <li key={`${line.productId}-${i}`} className="flex justify-between gap-3">
                         <Link href={`/admin/products/${line.productId}`} className={`min-w-0 truncate ${link}`}>
                           {line.name} · {line.size}
-                          {line.color && ` · ${line.color}`}
                         </Link>
                         <span className="shrink-0 tabular-nums">
                           {t('own.pcs', { n: line.pieces })}

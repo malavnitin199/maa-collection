@@ -23,7 +23,7 @@ export const catalogEn = {
   'cat.mrpRupees': 'MRP (₹)',
 
   // Products list
-  'cat.products.searchPlaceholder': 'Search name, SKU, colour, barcode',
+  'cat.products.searchPlaceholder': 'Search name, SKU, barcode',
   'cat.products.search': 'Search',
   'cat.products.noPhoto': 'no photo',
   'cat.products.none': 'No products found.',
@@ -129,7 +129,7 @@ export const catalogEn = {
 
   // Add product page and product form
   'cat.new.title': 'Add product',
-  'cat.new.intro': 'One size and colour, e.g. an item with the manufacturer’s barcode already on its tag. For a design in several sizes/colours use “+ Stock”.',
+  'cat.new.intro': 'One size, e.g. an item with the manufacturer’s barcode already on its tag. For a design in several sizes use “+ Stock”.',
   'cat.form.name': 'Product name',
   'cat.form.chooseCategory': 'Choose category…',
   'cat.form.supplierOptional': 'Supplier (optional)',
@@ -360,12 +360,12 @@ export const catalogEn = {
   'cat.menu.oldStockHint': 'Photo → details → barcode, one item at a time',
   'cat.menu.checkHint': 'Items without photo, company, stock or purchase price',
   'cat.menu.newItem': 'New item',
-  'cat.menu.newItemHint': 'Photo, name, MRP → barcode; one colour or many sizes × colours',
+  'cat.menu.newItemHint': 'Photo, name, MRP → barcode; one size or many sizes',
   'cat.menu.receive': 'Receive stock (restock)',
   'cat.menu.receiveHint': 'Scan existing items to add pieces',
   'cat.menu.productsHint': 'Search, photos, edit, rates',
   'cat.menu.single': 'Add a single product',
-  'cat.menu.singleHint': 'One size/colour, or a manufacturer barcode',
+  'cat.menu.singleHint': 'One size, or a manufacturer barcode',
   'cat.menu.categoriesHint': 'Kurta, Saree… and their SKU codes',
   'cat.menu.suppliers': 'Companies (suppliers)',
   'cat.menu.suppliersHint': 'Companies you buy from',
@@ -447,7 +447,7 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.mrpRupees': 'MRP (₹)',
 
   // Products list
-  'cat.products.searchPlaceholder': 'नाम, SKU, रंग, बारकोड से खोजें',
+  'cat.products.searchPlaceholder': 'नाम, SKU, बारकोड से खोजें',
   'cat.products.search': 'खोजें',
   'cat.products.noPhoto': 'फ़ोटो नहीं',
   'cat.products.none': 'कोई प्रोडक्ट नहीं मिला।',
@@ -553,7 +553,7 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
 
   // Add product page and product form
   'cat.new.title': 'प्रोडक्ट जोड़ें',
-  'cat.new.intro': 'एक साइज़ और एक रंग, जैसे ऐसा आइटम जिसके टैग पर कंपनी का बारकोड पहले से लगा है। कई साइज़/रंग वाले डिज़ाइन के लिए “+ स्टॉक” इस्तेमाल करें।',
+  'cat.new.intro': 'एक साइज़, जैसे ऐसा आइटम जिसके टैग पर कंपनी का बारकोड पहले से लगा है। कई साइज़ वाले डिज़ाइन के लिए “+ स्टॉक” इस्तेमाल करें।',
   'cat.form.name': 'प्रोडक्ट का नाम',
   'cat.form.chooseCategory': 'कैटेगरी चुनें…',
   'cat.form.supplierOptional': 'सप्लायर (ज़रूरी नहीं)',
@@ -784,12 +784,12 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.menu.oldStockHint': 'फ़ोटो → जानकारी → बारकोड, एक बार में एक आइटम',
   'cat.menu.checkHint': 'बिना फ़ोटो, कंपनी, स्टॉक या खरीद दाम वाले आइटम',
   'cat.menu.newItem': 'नया आइटम',
-  'cat.menu.newItemHint': 'फ़ोटो, नाम, MRP → बारकोड; एक रंग या कई साइज़ × रंग',
+  'cat.menu.newItemHint': 'फ़ोटो, नाम, MRP → बारकोड; एक साइज़ या कई साइज़',
   'cat.menu.receive': 'स्टॉक प्राप्त करें (फिर से भरें)',
   'cat.menu.receiveHint': 'पुराने आइटम स्कैन करके पीस जोड़ें',
   'cat.menu.productsHint': 'खोजें, फ़ोटो, बदलें, रेट',
   'cat.menu.single': 'एक प्रोडक्ट जोड़ें',
-  'cat.menu.singleHint': 'एक साइज़/रंग, या कंपनी का बारकोड',
+  'cat.menu.singleHint': 'एक साइज़, या कंपनी का बारकोड',
   'cat.menu.categoriesHint': 'कुर्ता, साड़ी… और उनके SKU कोड',
   'cat.menu.suppliers': 'कंपनियाँ (सप्लायर)',
   'cat.menu.suppliersHint': 'जिन कंपनियों से आप खरीदते हैं',

@@ -148,7 +148,7 @@ describe('new design from a supplier (sizes × colours)', () => {
     expect(again.duplicate).toBe(true);
     expect(again.products).toHaveLength(2);
     expect(await db.select().from(products).where(eq(products.name, 'Silk Kurta'))).toHaveLength(2);
-    await expect(createDesign(db, STORE_ID, { ...input, operationId: 'design-3', sizes: ['L', 'XL'] })).rejects.toThrow(/Already in the catalogue: Green L/);
+    await expect(createDesign(db, STORE_ID, { ...input, operationId: 'design-3', sizes: ['L', 'XL'] })).rejects.toThrow(/Already in the catalogue: L \(MAA-KU-/);
   });
 
   it('validates sizes, colours and prices', async () => {
@@ -393,7 +393,7 @@ describe('quick add many products', () => {
     };
     const result = await createProductsBatch(db, STORE_ID, input);
     expect(result.products.map((p) => [p.sku, p.name, p.size, p.color, p.brand, p.pricePaise, p.stock])).toEqual([
-      ['MAA-SA-002', 'Georgette Saree', 'Free', 'Assorted', 'Shree Ganesh', 220000, 3],
+      ['MAA-SA-002', 'Georgette Saree', 'Free', '', 'Shree Ganesh', 220000, 3],
       ['MAA-SA-003', 'Cotton Saree', 'Free', 'Yellow', 'Shree Ganesh', 110000, 5],
     ]);
     expect((await getReceiptForLabels(db, STORE_ID, result.receipt.id))?.lines.reduce((n, l) => n + l.quantity, 0)).toBe(8);

@@ -45,8 +45,8 @@ export const offlineEn = {
   // Counter
   'off.saved.title': 'Saved on this phone',
   'off.saved.detail': '{item} · sent when internet is back',
-  'off.saved.mine': 'Saved on this phone: {qty} × {name} ({size}, {color}) at {price}. It is sent to the shop when internet is back.',
-  'off.saved.other': 'Saved on this phone: {qty} × {name} ({size}, {color}) at {price}, credited to {other}. It is sent to the shop when internet is back.',
+  'off.saved.mine': 'Saved on this phone: {qty} × {name} ({size}) at {price}. It is sent to the shop when internet is back.',
+  'off.saved.other': 'Saved on this phone: {qty} × {name} ({size}) at {price}, credited to {other}. It is sent to the shop when internet is back.',
   'off.saved.handMine': 'Saved on this phone: {qty} × {name} at {price}. It is sent to the shop when internet is back.',
   'off.saved.handOther': 'Saved on this phone: {qty} × {name} at {price}, credited to {other}. It is sent to the shop when internet is back.',
   'off.fromPhone': 'No internet: from this phone’s copy of {time}. Stock may have changed.',
@@ -102,8 +102,8 @@ export const offlineHi: Record<keyof typeof offlineEn, string> = {
 
   'off.saved.title': 'इस फ़ोन में सेव',
   'off.saved.detail': '{item} · इंटरनेट आने पर भेजी जाएगी',
-  'off.saved.mine': 'इस फ़ोन में सेव: {qty} × {name} ({size}, {color}), {price} में। इंटरनेट आने पर दुकान को भेज दी जाएगी।',
-  'off.saved.other': 'इस फ़ोन में सेव: {qty} × {name} ({size}, {color}), {price} में, {other} के नाम। इंटरनेट आने पर दुकान को भेज दी जाएगी।',
+  'off.saved.mine': 'इस फ़ोन में सेव: {qty} × {name} ({size}), {price} में। इंटरनेट आने पर दुकान को भेज दी जाएगी।',
+  'off.saved.other': 'इस फ़ोन में सेव: {qty} × {name} ({size}), {price} में, {other} के नाम। इंटरनेट आने पर दुकान को भेज दी जाएगी।',
   'off.saved.handMine': 'इस फ़ोन में सेव: {qty} × {name}, {price} में। इंटरनेट आने पर दुकान को भेज दी जाएगी।',
   'off.saved.handOther': 'इस फ़ोन में सेव: {qty} × {name}, {price} में, {other} के नाम। इंटरनेट आने पर दुकान को भेज दी जाएगी।',
   'off.fromPhone': 'इंटरनेट नहीं: इस फ़ोन की {time} की कॉपी से। स्टॉक बदल चुका हो सकता है।',

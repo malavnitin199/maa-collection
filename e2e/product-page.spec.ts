@@ -26,18 +26,16 @@ async function loginOwner(page: Page) {
 
 test('product page: figures, period, Sales and Purchases tabs, Hindi / English boxes in Other details', async ({ page }) => {
   await loginOwner(page);
-  // A design through the old form: 2 sizes × 1 colour × 3 pieces at ₹400 purchase, bill P-<run>.
+  // A design through the old form: 2 sizes × 3 pieces at ₹400 purchase, bill P-<run>.
   await page.goto('/admin/stock/form');
   await page.getByLabel('Product name').fill(`Figure Kurta ${run}`);
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   await page.getByLabel('Sale price (MRP) ₹').fill('1299');
   await page.getByLabel('Purchase price ₹', { exact: true }).fill('400');
-  await page.getByRole('tab', { name: 'Colours', exact: true }).click();
+  await page.getByRole('tab', { name: 'Sizes', exact: true }).click();
   await page.getByRole('button', { name: 'Size M' }).click();
   await page.getByRole('button', { name: 'Size L' }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Blue');
-  await page.getByRole('button', { name: 'Add colour' }).click();
   await page.getByRole('tab', { name: 'Details', exact: true }).click();
   await page.getByLabel('Pieces each').fill('3');
   await page.getByLabel('Supplier bill no. (optional)').fill(`P-${run}`);

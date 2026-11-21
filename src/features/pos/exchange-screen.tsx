@@ -164,7 +164,7 @@ export function ExchangeScreen({ me, staff }: { me: StaffOption; staff: StaffOpt
       {step.name === 'pick-sale' && (
         <section className={card}>
           <h2 className="font-semibold">
-            {t('ex.whichSale')} <span className={`font-normal ${muted}`}>{step.returned.name} · {step.returned.size} · {step.returned.color}</span>
+            {t('ex.whichSale')} <span className={`font-normal ${muted}`}>{step.returned.name} · {step.returned.size}</span>
           </h2>
           <label className="mt-3 flex max-w-40 flex-col gap-1 text-sm font-medium">
             {t('ex.unitsReturned')}

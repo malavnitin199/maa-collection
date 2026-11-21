@@ -29,7 +29,7 @@ function List({ id, title, hint, count, items, fix, t }: { id: string; title: st
           {items.map((item) => (
             <li key={item.id} className="flex items-center justify-between gap-2 border-b border-zinc-100 py-1.5 dark:border-zinc-900">
               <span className="min-w-0 truncate">
-                {item.name} · {item.color} · {item.size} <span className={muted}>({item.sku})</span>
+                {item.name} · {item.size} <span className={muted}>({item.sku})</span>
               </span>
               <Link href={`/admin/products/${item.id}`} className={`shrink-0 ${link}`}>
                 {fix} →

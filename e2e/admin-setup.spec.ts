@@ -19,11 +19,12 @@ async function loginOwner(page: Page) {
 }
 
 /**
- * New item and the product page (plan v17): top tabs Details (open first) · Colours · Other details.
+ * New item and the product page (plan v17): top tabs Details (open first) · Sizes (old form) / Colours (product page) · Other details.
  * New item's must-haves: company, sale price (MRP) and purchase price.
  */
-const tab = (page: Page, name: 'Details' | 'Colours' | 'Other details') => page.getByRole('tab', { name, exact: true }).click();
-const showVariants = (page: Page) => tab(page, 'Colours');
+const tab = (page: Page, name: 'Details' | 'Sizes' | 'Colours' | 'Other details') => page.getByRole('tab', { name, exact: true }).click();
+// The old form's sizes tab (no colours since 2026-11-22: colour lives on the product page only).
+const showVariants = (page: Page) => tab(page, 'Sizes');
 const companyBox = (page: Page) => page.getByRole('combobox', { name: /^Company/ });
 const salePrice = (page: Page) => page.getByLabel('Sale price (MRP) ₹');
 const purchasePrice = (page: Page) => page.getByLabel('Purchase price ₹', { exact: true });
@@ -82,7 +83,7 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
   await expect(tabs.getByRole('link', { name: 'Products' })).toHaveAttribute('aria-current', 'page');
 });
 
-test('owner enters a new design from a supplier in sizes × colours, prints labels; salesman can scan it', async ({ page }) => {
+test('owner enters a new design from a supplier in sizes, prints labels; salesman can scan it', async ({ page }) => {
   await loginOwner(page);
   // Supplier for this run.
   await page.goto('/admin/suppliers');
@@ -111,53 +112,54 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await showVariants(page);
   await page.getByRole('button', { name: 'Size M' }).click();
   await page.getByRole('button', { name: 'Size L' }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Blue, Pink');
-  await page.getByRole('button', { name: 'Add colour' }).click();
+  // No colour box any more (owner, 2026-11-22).
+  await expect(page.getByLabel('Colour', { exact: true })).toHaveCount(0);
   await expect(page.getByTestId('item-size-pills')).toHaveText('ML');
-  await expect(page.getByTestId('combo-grid').getByRole('row')).toHaveCount(3); // sizes + Blue + Pink
+  await expect(page.getByTestId('combo-grid').getByRole('row')).toHaveCount(2); // sizes + pieces
   await tab(page, 'Details');
   await page.getByLabel('Pieces each').fill('2');
   await page.getByLabel('Counter price, if lower (₹)').fill('1399');
   await page.getByLabel('Supplier bill no. (optional)').fill('INV-42');
-  await expect(page.getByTestId('design-preview')).toHaveText('4 items · 8 pcs · purchase ₹6,400.00');
-  await page.getByRole('button', { name: 'Save 4 items' }).click();
+  await expect(page.getByTestId('design-preview')).toHaveText('2 items · 4 pcs · purchase ₹3,200.00');
+  await page.getByRole('button', { name: 'Save 2 items' }).click();
 
-  // Labels: one per piece by default (8), or one per item (4).
+  // Labels: one per piece by default (4), or one per item (2). No colour on the lines or tags.
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
-  await expect(page.getByText('Saved 4 new items with barcodes.')).toBeVisible();
-  await expect(page.getByTestId('receipt-lines')).toContainText(`Chikan Kurta ${run} · Pink · L`);
+  await expect(page.getByText('Saved 2 new items with barcodes.')).toBeVisible();
+  await expect(page.getByTestId('receipt-lines')).toContainText(`Chikan Kurta ${run} · L`);
   // Plan v19: "Add next item" opens the New item steps with the company, section (Kurta → Men) and bill no. kept.
   await expect(page.getByRole('link', { name: '+ Add next item' })).toHaveAttribute('href', /^\/admin\/stock\/new\?supplier=[0-9a-f-]{36}&section=[0-9a-f-]{36}&bill=INV-42&n=[0-9a-f-]{36}$/);
   const labels = page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ });
-  await expect(labels).toHaveCount(8);
-  await page.getByRole('link', { name: 'One per item instead (4)' }).click();
   await expect(labels).toHaveCount(4);
+  await expect(page.getByTestId('hang-tag').first()).not.toContainText('Colour');
+  await page.getByRole('link', { name: 'One per item instead (2)' }).click();
+  await expect(labels).toHaveCount(2);
   const barcode = (await labels.first().getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
   expect(barcode).toMatch(/^200\d{10}$/);
 
-  // Product page: header tags; Colours shows every colour × size with its pieces.
+  // Product page (the one place colour stays): header tags; Colours shows every size with its pieces.
   await page.getByTestId('receipt-lines').getByRole('link').first().click();
   await expect(page.getByTestId('item-pills')).toContainText('Girls');
   await expect(page.getByTestId('item-pills')).toContainText('Adult');
   await tab(page, 'Colours');
-  await expect(page.getByTestId('design-variants').getByRole('link')).toHaveCount(4);
-  await expect(page.getByTestId('design-variants').getByRole('link', { name: `Pink L: 2 in stock` })).toBeVisible();
+  await expect(page.getByTestId('design-variants').getByRole('link')).toHaveCount(2);
+  await expect(page.getByTestId('design-variants').getByRole('link', { name: 'L: 2 in stock' })).toBeVisible();
   // Other details: change "for whom" for the whole design.
   await tab(page, 'Other details');
   await page.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Both' }).click();
   await page.getByRole('button', { name: 'Save tags' }).click();
-  await expect(page.getByText('Tags saved for 4 items.')).toBeVisible();
+  await expect(page.getByText('Tags saved for 2 items.')).toBeVisible();
   // Rates for the whole design (Details).
   await tab(page, 'Details');
   const rates = page.locator('section', { has: page.getByRole('heading', { name: 'Rates for the whole design' }) });
   await rates.getByLabel('MRP (₹)').fill('1599');
   await rates.getByLabel('Price (₹)').fill('1499');
-  await rates.getByRole('button', { name: 'Apply to all 4 sizes/colours' }).click();
-  await expect(page.getByText('Rates updated for 4 items.')).toBeVisible();
+  await rates.getByRole('button', { name: 'Apply to all 2 sizes/colours' }).click();
+  await expect(page.getByText('Rates updated for 2 items.')).toBeVisible();
   await page.goto(`/admin/products?q=${encodeURIComponent(`Chikan Kurta ${run}`)}&show=items`);
-  await expect(page.getByTestId('product-list').getByRole('listitem').filter({ hasText: '₹1,499.00' })).toHaveCount(4);
+  await expect(page.getByTestId('product-list').getByRole('listitem').filter({ hasText: '₹1,499.00' })).toHaveCount(2);
 
-  // Same entry again is refused (sizes/colours already exist).
+  // Same entry again is refused (the size already exists).
   await page.goto('/admin/stock/form');
   await choose(companyBox(page), `Design Co ${run}`);
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
@@ -166,9 +168,8 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await purchasePrice(page).fill('800');
   await showVariants(page);
   await page.getByRole('button', { name: 'Size M' }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Blue');
   await page.getByRole('button', { name: /^Save 1 item/ }).click();
-  await expect(page.getByText(/Already in the catalogue: Blue M/)).toBeVisible();
+  await expect(page.getByText(/Already in the catalogue: M \(MAA-KU-/)).toBeVisible();
 
   // A salesman scans the new barcode at the counter.
   await page.context().clearCookies(); // switch user: start logged out
@@ -184,7 +185,7 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
   await expect(page.getByTestId('item-details')).toContainText('₹1,499.00');
 });
 
-test('owner gives sizes their own MRP, selling and purchase price; every colour of a size gets them', async ({ page }) => {
+test('owner gives sizes their own MRP, selling and purchase price', async ({ page }) => {
   await loginOwner(page);
   const name = `Linen Shirt ${run}`;
   await page.goto('/admin/stock/form');
@@ -196,8 +197,6 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await page.getByLabel('Counter price, if lower (₹)').fill('500');
   await showVariants(page);
   for (const size of ['XL', 'M', 'L']) await page.getByRole('button', { name: `Size ${size}`, exact: true }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Black, White');
-  await page.getByRole('button', { name: 'Add colour' }).click();
 
   // Sizes listed in shop order; empty boxes show the default.
   await page.getByText('Price by size (optional)').click();
@@ -215,30 +214,30 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await expect(preview).toContainText('M: ₹500.00 · MRP ₹700.00 · purchase ₹300.00 (default)');
   await expect(preview).toContainText('L: ₹550.00 · MRP ₹700.00 · purchase ₹330.00 (own price)');
   await expect(preview).toContainText('XL: ₹600.00 · MRP ₹750.00 · purchase ₹360.00 (own price)');
-  // (300 + 330 + 360) × 2 colours × 1 piece
-  await expect(page.getByTestId('design-preview')).toContainText('purchase ₹1,980.00');
+  // (300 + 330 + 360) × 1 piece
+  await expect(page.getByTestId('design-preview')).toContainText('purchase ₹990.00');
 
   // Above MRP for one size is flagged in the preview and refused by the server.
   await editor.getByLabel('Size XL selling price').fill('800');
   await expect(page.getByText('Selling price is above MRP for size XL.')).toBeVisible();
-  await page.getByRole('button', { name: 'Save 6 items' }).click();
+  await page.getByRole('button', { name: 'Save 3 items' }).click();
   await expect(page.getByText('Size XL: Selling price cannot be above MRP.')).toBeVisible();
   await editor.getByLabel('Size XL selling price').fill('600');
-  await page.getByRole('button', { name: 'Save 6 items' }).click();
+  await page.getByRole('button', { name: 'Save 3 items' }).click();
 
-  // Labels print each size's own MRP, on both colours.
+  // Labels print each size's own MRP.
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
-  await expect(page.getByText('Saved 6 new items with barcodes.')).toBeVisible();
+  await expect(page.getByText('Saved 3 new items with barcodes.')).toBeVisible();
   const labels = page.getByTestId('label-sheet').getByRole('listitem');
-  await expect(labels.filter({ hasText: 'MRP ₹750.00' })).toHaveCount(2);
-  await expect(labels.filter({ hasText: 'MRP ₹700.00' })).toHaveCount(4);
+  await expect(labels.filter({ hasText: 'MRP ₹750.00' })).toHaveCount(1);
+  await expect(labels.filter({ hasText: 'MRP ₹700.00' })).toHaveCount(2);
 
   const list = page.getByTestId('product-list').getByRole('listitem');
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await expect(list).toHaveCount(6);
-  await expect(list.filter({ hasText: '₹500.00 · MRP ₹700.00 · purchase ₹300.00' })).toHaveCount(2);
-  await expect(list.filter({ hasText: '₹550.00 · MRP ₹700.00 · purchase ₹330.00' })).toHaveCount(2);
-  await expect(list.filter({ hasText: '₹600.00 · MRP ₹750.00 · purchase ₹360.00' })).toHaveCount(2);
+  await expect(list).toHaveCount(3);
+  await expect(list.filter({ hasText: '₹500.00 · MRP ₹700.00 · purchase ₹300.00' })).toHaveCount(1);
+  await expect(list.filter({ hasText: '₹550.00 · MRP ₹700.00 · purchase ₹330.00' })).toHaveCount(1);
+  await expect(list.filter({ hasText: '₹600.00 · MRP ₹750.00 · purchase ₹360.00' })).toHaveCount(1);
 
   // Product page: rates by size, filled with today's prices; change only L.
   await page.getByTestId('product-list').getByRole('link').first().click();
@@ -248,12 +247,12 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await expect(rates.getByLabel('Size XL MRP')).toHaveValue('750');
   await expect(rates.getByLabel('Size M selling price')).toHaveValue('');
   await rates.getByLabel('Size L selling price').fill('520');
-  await rates.getByRole('button', { name: 'Apply to all 6 sizes/colours' }).click();
-  await expect(page.getByText('Rates updated for 6 items.')).toBeVisible();
+  await rates.getByRole('button', { name: 'Apply to all 3 sizes/colours' }).click();
+  await expect(page.getByText('Rates updated for 3 items.')).toBeVisible();
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await expect(list.filter({ hasText: '₹520.00 · MRP ₹700.00 · purchase ₹330.00' })).toHaveCount(2);
-  await expect(list.filter({ hasText: '₹500.00 · MRP ₹700.00' })).toHaveCount(2);
-  await expect(list.filter({ hasText: '₹600.00 · MRP ₹750.00' })).toHaveCount(2);
+  await expect(list.filter({ hasText: '₹520.00 · MRP ₹700.00 · purchase ₹330.00' })).toHaveCount(1);
+  await expect(list.filter({ hasText: '₹500.00 · MRP ₹700.00' })).toHaveCount(1);
+  await expect(list.filter({ hasText: '₹600.00 · MRP ₹750.00' })).toHaveCount(1);
 });
 
 test('hang tags: QR code, size boxed, the design\'s sizes with this one highlighted; the QR link opens the item', async ({ page }) => {
@@ -442,7 +441,7 @@ test('plan v19: Needs sorting → Move under puts the shop\'s old category under
   await expect(list.getByRole('listitem').filter({ hasText: 'Dress Material' })).toContainText('DM');
 });
 
-test('photos while creating tags: one per colour (every size gets it), or the main photo at the top of a new item', async ({ page }) => {
+test('photos while creating tags: the main photo goes on every size of a new item', async ({ page }) => {
   await loginOwner(page);
   const jpeg = Buffer.from(
     await page.evaluate(() => {
@@ -458,40 +457,29 @@ test('photos while creating tags: one per colour (every size gets it), or the ma
   );
   const file = { name: 'item.jpg', mimeType: 'image/jpeg', buffer: jpeg };
 
-  // Sizes × colours: Blue gets its own photo, Red none (and there is no main photo).
+  // Two sizes, one main photo: every size gets it (no photo per colour since 2026-11-22 — colour lives on the product page).
   await page.goto('/admin/stock/form');
   await choose(companyBox(page), 'Royal Garments');
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(`Photo Kurta ${run}`);
   await salePrice(page).fill('999');
   await purchasePrice(page).fill('500');
+  await page.getByTestId('item-photo').getByLabel('Gallery for this item').setInputFiles(file);
   await showVariants(page);
   await page.getByRole('button', { name: 'Size M', exact: true }).click();
   await page.getByRole('button', { name: 'Size L', exact: true }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Blue, Red');
-  await page.getByRole('button', { name: 'Add colour' }).click();
-  const photos = page.getByTestId('colour-photos');
-  await photos.getByLabel('Gallery for Blue').setInputFiles(file);
-  await expect(photos.getByRole('img', { name: 'Photo for Blue' })).toBeVisible();
-  await expect(photos.getByRole('button', { name: 'Remove photo for Blue' })).toBeVisible();
-  await expect(photos.getByRole('button', { name: 'Choose photo for Red from gallery' })).toBeVisible();
-  await page.getByRole('button', { name: 'Save 4 items' }).click();
+  await expect(page.getByTestId('colour-photos')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save 2 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
-  await expect(page.getByText('Saved 4 new items with barcodes.')).toBeVisible();
+  await expect(page.getByText('Saved 2 new items with barcodes.')).toBeVisible();
   await expect(page.getByRole('alert').filter({ hasText: 'photo could not be saved' })).toHaveCount(0);
 
-  // Blue L (not the first Blue item) shows the photo; Red M has none.
-  const lines = page.getByTestId('receipt-lines');
-  await lines.getByRole('link', { name: `Photo Kurta ${run} · Blue · L` }).click();
+  // L (not the first item) shows the photo too.
+  await page.getByTestId('receipt-lines').getByRole('link', { name: `Photo Kurta ${run} · L` }).click();
   await tab(page, 'Colours'); // photos sit with the colours on the product page
   const photo = page.getByRole('img', { name: 'Product photo 1' });
   await expect(photo).toBeVisible();
   await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
-  await page.goBack();
-  await page.getByTestId('receipt-lines').getByRole('link', { name: `Photo Kurta ${run} · Red · M` }).click();
-  await tab(page, 'Colours');
-  await expect(page.getByText('No photos yet.', { exact: false })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'No photo' })).toBeVisible(); // the header's empty photo square
 
   // One plain item: the main photo fills the box at the top. The old quick-add address lands on the earlier form.
   await page.goto('/admin/stock/quick');
@@ -629,7 +617,6 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   await purchasePrice(page).fill('300');
   await showVariants(page);
   for (const size of ['M', 'L', 'XL']) await page.getByRole('button', { name: `Size ${size}`, exact: true }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Black');
   await page.getByRole('button', { name: 'Save 3 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
@@ -662,14 +649,14 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   await expect(rows.filter({ hasText: `${name} Pro` })).toHaveCount(3);
 
   // For / Age and a new MRP for two of them (tick boxes).
-  await page.getByRole('checkbox', { name: `Select ${name} Pro Black M` }).check();
-  await page.getByRole('checkbox', { name: `Select ${name} Pro Black L` }).check();
+  await page.getByRole('checkbox', { name: `Select ${name} Pro M` }).check();
+  await page.getByRole('checkbox', { name: `Select ${name} Pro L` }).check();
   await expect(page.getByTestId('selected-count')).toHaveText('2 selected');
   await bar.getByRole('button', { name: 'For / Age' }).click();
   await sheet.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Boys' }).click();
   await sheet.getByRole('button', { name: 'Apply' }).click();
   await expect(toast).toContainText('Done for 2 items.');
-  await page.getByRole('checkbox', { name: `Select ${name} Pro Black XL` }).check();
+  await page.getByRole('checkbox', { name: `Select ${name} Pro XL` }).check();
   await bar.getByRole('button', { name: 'Prices' }).click();
   await sheet.getByLabel('New MRP ₹').fill('200');
   await sheet.getByRole('button', { name: 'Apply' }).click();
@@ -680,8 +667,8 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   await expect(rows.filter({ hasText: 'MRP ₹650.00' })).toHaveCount(1);
 
   // Print just two tags.
-  await page.getByRole('checkbox', { name: `Select ${name} Pro Black M` }).check();
-  await page.getByRole('checkbox', { name: `Select ${name} Pro Black L` }).check();
+  await page.getByRole('checkbox', { name: `Select ${name} Pro M` }).check();
+  await page.getByRole('checkbox', { name: `Select ${name} Pro L` }).check();
   await bar.getByRole('button', { name: 'Print tags' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?items=/);
   await expect(page.getByRole('heading', { name: 'Selected tags' })).toBeVisible();
@@ -787,7 +774,7 @@ test('owner restocks existing items by scanning each piece and by name search', 
   for (let i = 0; i < 3; i++) {
     await page.keyboard.type('8905555000012', { delay: 5 });
     await page.keyboard.press('Enter');
-    await expect(page.getByLabel('Pieces of Oxford Shirt Sky Blue 40')).toHaveValue(String(i + 1));
+    await expect(page.getByLabel('Pieces of Oxford Shirt 40')).toHaveValue(String(i + 1));
   }
   const shirtLine = page.getByTestId('restock-lines').getByRole('listitem').filter({ hasText: 'Oxford Shirt' });
   const [, before] = (await shirtLine.innerText()).match(/now (\d+) →/) ?? [];
@@ -795,9 +782,9 @@ test('owner restocks existing items by scanning each piece and by name search', 
   // Name search with several matches → pick one, then bump with +.
   await scanBox.fill('Crew Tee');
   await page.keyboard.press('Enter');
-  await page.getByTestId('restock-choices').getByRole('button', { name: /White · L/ }).click();
+  await page.getByTestId('restock-choices').getByRole('button', { name: /Classic Crew Tee · L/ }).click();
   await page.getByRole('button', { name: 'One more Classic Crew Tee L' }).click();
-  await expect(page.getByLabel('Pieces of Classic Crew Tee White L')).toHaveValue('2');
+  await expect(page.getByLabel('Pieces of Classic Crew Tee L')).toHaveValue('2');
 
   await page.getByLabel('Supplier bill no. (optional)').fill('RS-1');
   await page.getByRole('button', { name: 'Receive 5 pieces and print labels' }).click();
@@ -879,7 +866,7 @@ test('new item: one plain item with MRP, purchase and pieces on top → labels �
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   await expect(page.getByText('Saved 1 new item with barcodes.')).toBeVisible();
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(3);
-  await expect(page.getByTestId('receipt-lines')).toContainText(`Georgette Saree ${run} · Assorted · Free`);
+  await expect(page.getByTestId('receipt-lines')).toContainText(`Georgette Saree ${run} · Free`);
   const georgette = page.getByTestId('label-sheet').getByRole('listitem').filter({ hasText: `Georgette Saree ${run}` }).first();
   const barcode = (await georgette.getByRole('img', { name: /^Barcode/ }).getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
 
@@ -1005,7 +992,7 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
 
   // A tag opens its item (combined view: open the design's tags first).
   await page.getByTestId('design-card').filter({ hasText: `Silk TagLib ${run}` }).getByText('Show 1 tag').click();
-  await page.getByRole('link', { name: `Open Silk TagLib ${run} · Assorted · Free` }).click();
+  await page.getByRole('link', { name: `Open Silk TagLib ${run} · Free` }).click();
   await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
 
   // Print one group (by company): one tag per piece in stock, or one per item.
@@ -1031,7 +1018,7 @@ test('combined view: one card per design (name + company + MRP) on Products and 
   await page.getByRole('button', { name: 'Add supplier' }).click();
   await expect(page.getByRole('status')).toContainText(`${company} added.`);
 
-  // One design in 2 sizes × 2 colours = 4 items, 2 pieces each.
+  // One design in 4 sizes = 4 items, 2 pieces each (no colours outside the product page since 2026-11-22).
   await page.goto('/admin/stock/form');
   await choose(companyBox(page), company);
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
@@ -1040,24 +1027,21 @@ test('combined view: one card per design (name + company + MRP) on Products and 
   await purchasePrice(page).fill('800');
   await page.getByLabel('Counter price, if lower (₹)').fill('1399');
   await showVariants(page);
-  await page.getByRole('button', { name: 'Size M' }).click();
-  await page.getByRole('button', { name: 'Size L' }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Blue, Pink');
-  await page.getByRole('button', { name: 'Add colour' }).click();
+  for (const size of ['M', 'L', 'XL', 'XXL']) await page.getByRole('button', { name: `Size ${size}`, exact: true }).click();
   await tab(page, 'Details');
   await page.getByLabel('Pieces each').fill('2');
   await page.getByRole('button', { name: 'Save 4 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
-  // Products: one card for the 4 items, with every size and colour and their pieces.
+  // Products: one card for the 4 items, with every size and its pieces (no colour row).
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}`);
   const cards = page.getByTestId('design-list').getByTestId('design-card');
   await expect(cards).toHaveCount(1);
   const designCard = cards.first();
   await expect(designCard).toContainText(name);
   await expect(designCard).toContainText(`${company} · MRP ₹1,499.00 · selling ₹1,399.00`);
-  await expect(designCard.getByTestId('design-sizes')).toHaveText('M · 4L · 4');
-  await expect(designCard.getByTestId('design-colours')).toHaveText('Blue · 4Pink · 4');
+  await expect(designCard.getByTestId('design-sizes')).toHaveText('M · 2L · 2XL · 2XXL · 2');
+  await expect(designCard.getByTestId('design-colours')).toHaveCount(0);
   await expect(designCard).toContainText('Items: 4 · In stock: 8 pcs');
   await expect(designCard.getByRole('img', { name: `Design QR for ${name}` })).toBeVisible();
   const items = designCard.getByTestId('design-items').getByRole('listitem');
@@ -1180,7 +1164,7 @@ test('catalog person tags old stock with a photo; label, today\'s labels, photo 
   await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Saree (SA)' });
   await page.getByLabel('Product name').fill(`Phulkari Dupatta ${run}`);
   await page.getByRole('button', { name: 'M', exact: true }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('Orange');
+  await expect(page.getByLabel('Colour', { exact: true })).toHaveCount(0); // colour only on the product page
   await page.getByLabel('MRP (₹)').fill('899');
   await expect(page.getByLabel('Purchase price (₹)')).toHaveCount(0);
   await page.getByLabel('Pieces counted').fill('3');
@@ -1371,7 +1355,6 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   await forTags.getByRole('button', { name: 'Girls' }).click();
   await ageTags.getByRole('button', { name: 'Adult' }).click();
   await page.getByRole('button', { name: 'M', exact: true }).click();
-  await page.getByLabel('Colour', { exact: true }).fill('White');
   await page.getByLabel('MRP (₹)').fill('999');
   await page.getByLabel('Pieces counted').fill('2');
   await page.getByRole('button', { name: 'Save and get barcode' }).click();

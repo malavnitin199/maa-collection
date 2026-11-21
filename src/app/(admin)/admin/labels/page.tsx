@@ -101,7 +101,7 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
   /** One real hang tag: tap to open the item; pieces in stock under it. */
   const tagCell = (item: (typeof shownRows)[number], selectable = true) => {
     const tag = (
-      <Link href={`/admin/products/${item.id}`} aria-label={t('stk.lib.open', { name: `${item.name} · ${item.color} · ${item.size}` })} className="tag-open">
+      <Link href={`/admin/products/${item.id}`} aria-label={t('stk.lib.open', { name: `${item.name} · ${item.size}` })} className="tag-open">
         <HangTag product={item} sizes={sizes.get(item.id)} qrValue={itemLink(origin, item.barcode)} priceCode={labelPriceCode(settings, item.costPaise)} />
       </Link>
     );
@@ -109,7 +109,7 @@ async function AllTags({ searchParams }: { searchParams: Promise<Record<string, 
     <li key={item.id} className="tag-cell">
       {/* Plan v17: tick tags to print just those. */}
       {selectable ? (
-        <SelectableItem ids={[item.id]} label={`${item.name} ${item.color} ${item.size}`}>
+        <SelectableItem ids={[item.id]} label={`${item.name} ${item.size}`}>
           {tag}
         </SelectableItem>
       ) : (

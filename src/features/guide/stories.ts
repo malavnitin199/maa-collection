@@ -133,8 +133,8 @@ export const STORIES: Story[] = [
       },
       {
         scene: { kind: 'tag', part: 'size' },
-        text: { en: 'Big **size**, and the colour', hi: 'बड़ा **साइज़**, और रंग' },
-        say: { en: 'The size is printed big, with the colour next to it.', hi: 'साइज़ बड़ा छपा है, साथ में रंग।' },
+        text: { en: 'The **size**, printed big', hi: '**साइज़**, बड़ा छपा' },
+        say: { en: 'The size is printed big at the top.', hi: 'साइज़ ऊपर बड़ा छपा है।' },
       },
       {
         scene: { kind: 'tag', part: 'sizes' },
@@ -169,8 +169,8 @@ export const STORIES: Story[] = [
       },
       {
         scene: { kind: 'card', button: SELL_THIS },
-        text: { en: 'Check **size and colour**', hi: '**साइज़ और रंग** मिलाएँ' },
-        say: { en: 'Check the photo, size and colour match the piece. Then tap Sell this item.', hi: 'फ़ोटो, साइज़ और रंग पीस से मिलाएँ। फिर यह आइटम बेचें दबाएँ।' },
+        text: { en: 'Check **photo and size**', hi: '**फ़ोटो और साइज़** मिलाएँ' },
+        say: { en: 'Check the photo and size match the piece. Then tap Sell this item.', hi: 'फ़ोटो और साइज़ पीस से मिलाएँ। फिर यह आइटम बेचें दबाएँ।' },
       },
       {
         scene: { kind: 'field', label: { en: 'Sale price (₹)', hi: 'बिक्री दाम (₹)' }, value: '1299', note: { en: 'MRP ₹1,499', hi: 'MRP ₹1,499' } },
@@ -289,8 +289,8 @@ export const STORIES: Story[] = [
       },
       {
         scene: { kind: 'chips', label: { en: 'Sizes', hi: 'साइज़' }, chips: ['M', 'L', 'XL', 'XXL'] },
-        text: { en: 'Many sizes? The **Colours** tab', hi: 'कई साइज़? **रंग** टैब' },
-        say: { en: 'Comes in many sizes or colours? Open the Colours tab and tap them. Every pair gets its own barcode.', hi: 'कई साइज़ या रंग में आया है? रंग टैब खोलकर उन्हें चुनें। हर जोड़ी को अपना बारकोड मिलता है।' },
+        text: { en: 'Many sizes? Tap **each size**', hi: 'कई साइज़? **हर साइज़** दबाएँ' },
+        say: { en: 'Comes in many sizes? Tap each size. Every size gets its own barcode.', hi: 'कई साइज़ में आया है? हर साइज़ दबाएँ। हर साइज़ को अपना बारकोड मिलता है।' },
       },
       {
         scene: { kind: 'print' },
@@ -298,7 +298,7 @@ export const STORIES: Story[] = [
         say: { en: 'Save and print the tags. Then tap Add next item: the company and category stay.', hi: 'सेव करें और टैग प्रिंट करें। फिर अगला आइटम जोड़ें दबाएँ: कंपनी और कैटेगरी वही रहती हैं।' },
       },
     ],
-    tip: { en: 'Bigger sizes cost more? Colours → Price by size.', hi: 'बड़े साइज़ महँगे? रंग → साइज़ के हिसाब से दाम।' },
+    tip: { en: 'Bigger sizes cost more? Sizes → Price by size.', hi: 'बड़े साइज़ महँगे? साइज़ → साइज़ के हिसाब से दाम।' },
     open: { href: '/admin/stock/new', label: { en: 'New item', hi: 'नया आइटम' } },
   },
   {

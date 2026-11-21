@@ -142,7 +142,7 @@ async function recentActivity(
       kind: 'sale' as const,
       id: r.id,
       at: r.at,
-      description: r.manual ? `${r.quantity} × ${r.name}${r.size ? ` (${r.size})` : ''}` : `${r.quantity} × ${r.name} (${r.size}, ${r.color})`,
+      description: r.manual ? `${r.quantity} × ${r.name}${r.size ? ` (${r.size})` : ''}` : `${r.quantity} × ${r.name} (${r.size})`,
       amountPaise: r.totalPaise,
       creditedTo: r.creditedTo,
       recordedBy: r.recordedBy,
@@ -350,7 +350,7 @@ export async function salesReport(db: Db, storeId: string, period: ReportPeriod,
     db
       .select({
         productId: sales.productId,
-        label: sql<string>`${sales.productName} || ' · ' || ${sales.color} || ' · ' || ${sales.size}`,
+        label: sql<string>`${sales.productName} || ' · ' || ${sales.size}`,
         units,
         revenuePaise: revenue,
         profitPaise: profit,
@@ -364,7 +364,7 @@ export async function salesReport(db: Db, storeId: string, period: ReportPeriod,
     db
       .select({
         productId: products.id,
-        label: sql<string>`${products.name} || ' · ' || ${products.color} || ' · ' || ${products.size}`,
+        label: sql<string>`${products.name} || ' · ' || ${products.size}`,
         stock: products.stock,
         mrpValuePaise: int(sql`${products.stock} * ${products.mrpPaise}`),
         lastSoldAt: sql<Date | null>`(select max(${sales.createdAt}) from ${sales} where ${sales.productId} = ${products.id})`,

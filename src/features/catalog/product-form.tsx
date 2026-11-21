@@ -115,7 +115,8 @@ export function ProductForm({ action, mode, initial, categories, suppliers, prev
         )}
         <div className="grid grid-cols-2 gap-4">
           <Field label={t('cat.form.size')} name="size" defaultValue={initial?.size} />
-          <Field label={t('cat.form.colour')} name="color" defaultValue={initial?.color} words />
+          {/* Colour only when editing on the product page (owner, 2026-11-22). */}
+          {mode !== 'new' && <Field label={t('cat.form.colour')} name="color" defaultValue={initial?.color} words />}
         </div>
         <Field label={t('cat.mrpRupees')} name="mrp" inputMode="decimal" defaultValue={initial?.mrp} />
         <Field

@@ -5,7 +5,7 @@ import { packOf } from '@/lib/packs';
 type LabelProduct = { sku: string; barcode: string; name: string; size: string; color: string; mrpPaise: number; packSize?: number | null };
 
 /**
- * Label-printer sticker, exactly 50 × 25 mm: name, size/colour, MRP, barcode
+ * Label-printer sticker, exactly 50 × 25 mm: name, size, MRP, barcode
  * and SKU (+ code price if enabled). Prints one per page on a sticker roll.
  */
 export function StickerLabel({ product, priceCode = null }: { product: LabelProduct; priceCode?: string | null }) {
@@ -28,7 +28,7 @@ export function StickerLabel({ product, priceCode = null }: { product: LabelProd
       )}
       <div className="flex justify-between gap-1 font-mono text-[5.5pt] leading-tight text-zinc-600">
         <span className="truncate">
-          {[product.size, product.color, packOf(product.packSize) ? `Box of ${product.packSize}` : '', product.sku].filter(Boolean).join(' · ')}
+          {[product.size, packOf(product.packSize) ? `Box of ${product.packSize}` : '', product.sku].filter(Boolean).join(' · ')}
         </span>
         {priceCode && <span data-testid="price-code">{priceCode}</span>}
       </div>

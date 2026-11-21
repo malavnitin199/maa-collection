@@ -49,7 +49,6 @@ export function OldStockForm({
   const [supplierId, setSupplierId] = useState('');
   const [name, setName] = useState('');
   const [size, setSize] = useState('');
-  const [color, setColor] = useState('');
   const [mrp, setMrp] = useState('');
   const [price, setPrice] = useState('');
   const [cost, setCost] = useState('');
@@ -117,7 +116,8 @@ export function OldStockForm({
     form.set('supplierId', supplierId);
     form.set('name', name);
     form.set('size', size);
-    form.set('color', color);
+    // No colour here (owner, 2026-11-22): it can be added on the product page.
+    form.set('color', '');
     form.set('mrp', mrp);
     form.set('price', price);
     form.set('cost', cost);
@@ -149,7 +149,6 @@ export function OldStockForm({
         lines: [
           { label: t('done.line.item'), value: result.product.name },
           { label: t('done.line.size'), value: result.product.size },
-          { label: t('done.line.colour'), value: result.product.color },
           { label: t('done.line.mrp'), value: formatPaise(result.product.mrpPaise) },
           { label: t('done.line.barcode'), value: result.product.barcode },
         ].filter((line) => line.value),
@@ -165,7 +164,6 @@ export function OldStockForm({
     photos.forEach((p) => URL.revokeObjectURL(p.url));
     setPhotos([]);
     setName('');
-    setColor('');
     setMrp('');
     setPrice('');
     setCost('');
@@ -399,10 +397,6 @@ export function OldStockForm({
           </div>
           <input aria-label={t('stk.size')} value={size} onChange={(e) => setSize(e.target.value)} placeholder={t('stk.old.sizePlaceholder')} className={input} />
         </div>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {t('stk.colour')}
-          <input value={color} onChange={(e) => setColor(e.target.value)} placeholder={t('stk.old.colourPlaceholder')} className={input} />
-        </label>
         <CompanyPicker
           label={t('stk.old.companyOptional')}
           companies={suppliers}

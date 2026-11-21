@@ -134,7 +134,7 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
             {choices.map((item) => (
               <li key={item.id}>
                 <button type="button" onClick={() => addItem(item)} className={`${secondaryButton} w-full text-left`}>
-                  {item.name} · {item.color} · {item.size}
+                  {item.name} · {item.size}
                   <span className={`block text-xs ${muted}`}>
                     {item.sku} · {t('stk.inStock', { n: item.stock })}{item.supplierName && ` · ${item.supplierName}`}
                   </span>
@@ -151,7 +151,7 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
             <li key={line.id} className={`${card} flex items-center justify-between gap-3 py-3`}>
               <span className="min-w-0">
                 <span className="block truncate font-medium">
-                  {line.name} · {line.color} · {line.size}
+                  {line.name} · {line.size}
                 </span>
                 <span className={`block text-xs ${muted}`}>
                   {line.sku} · {t('stk.receive.nowTo', { from: line.stock, to: line.stock + line.quantity })}
@@ -162,7 +162,7 @@ export function RestockForm({ suppliers, initialSupplierId }: { suppliers: { id:
                   −
                 </button>
                 <input
-                  aria-label={t('stk.receive.piecesOf', { name: line.name, color: line.color, size: line.size })}
+                  aria-label={t('stk.receive.piecesOf', { name: line.name, size: line.size })}
                   inputMode="numeric"
                   value={line.quantity}
                   onChange={(e) => setQuantity(line.id, /^\d+$/.test(e.target.value) ? Number(e.target.value) : 0)}

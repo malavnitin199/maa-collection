@@ -24,7 +24,6 @@ async function addProduct(
   await page.getByLabel('Brand').fill('Test Brand');
   await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Size').fill(size);
-  await page.getByLabel('Colour').fill('Blue');
   // Plan v17: who it is for, optional.
   if (tags?.for) await page.getByRole('group', { name: 'For' }).getByRole('button', { name: tags.for }).click();
   if (tags?.age) await page.getByRole('group', { name: 'Age' }).getByRole('button', { name: tags.age }).click();

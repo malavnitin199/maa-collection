@@ -202,16 +202,16 @@ function resolveSizeRates(sizes: readonly string[], defaults: { mrpPaise: number
   );
 }
 
-const ENTER_KEY: Record<'name' | 'brand' | 'category' | 'size' | 'color', MessageKey> = {
+const ENTER_KEY: Record<'name' | 'brand' | 'category' | 'size', MessageKey> = {
   name: 'stk.err.enter.name',
   brand: 'stk.err.enter.brand',
   category: 'stk.err.enter.category',
   size: 'stk.err.enter.size',
-  color: 'stk.err.enter.color',
 };
 
+/** Colour is optional (owner, 2026-11-22): it is typed and shown only on the product page. */
 function validateProductInput(input: ProductInput) {
-  for (const field of ['name', 'brand', 'category', 'size', 'color'] as const) {
+  for (const field of ['name', 'brand', 'category', 'size'] as const) {
     if (!input[field].trim()) throw new DomainError(`Enter the ${field === 'name' ? 'product name' : field}.`, { key: ENTER_KEY[field] });
   }
   validatePrices(input);
@@ -468,7 +468,7 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
       ),
     );
   if (clash.length > 0) {
-    const list = clash.map((c) => `${c.color} ${c.size} (${c.sku})`).join(', ');
+    const list = clash.map((c) => `${c.size} (${c.sku})`).join(', ');
     throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`, { key: 'stk.err.alreadyInCatalogue', vars: { list } });
   }
 
@@ -738,7 +738,8 @@ export async function createProductsBatch(
       name: row.name.trim(),
       brand,
       size: row.size?.trim() || 'Free',
-      color: row.color?.trim() || 'Assorted',
+      // No colour = empty (owner, 2026-11-22: colour lives on the product page only).
+      color: row.color?.trim() ?? '',
       mrpPaise: row.mrpPaise,
       pricePaise: row.pricePaise,
       costPaise: row.costPaise,
@@ -777,7 +778,7 @@ export async function createProductsBatch(
       ),
     );
   if (clash.length > 0) {
-    const list = clash.map((c) => `${c.name} ${c.color} ${c.size} (${c.sku})`).join(', ');
+    const list = clash.map((c) => `${c.name} ${c.size} (${c.sku})`).join(', ');
     throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`, { key: 'stk.err.alreadyInCatalogue', vars: { list } });
   }
 

@@ -65,7 +65,7 @@ function SavedRow({ sale, meId, online }: { sale: QueuedSale; meId: string; onli
   const t = useT();
   const locale = useLocale();
   const [asking, setAsking] = useState(false);
-  const detail = [sale.size, sale.color].filter(Boolean).join(' · ');
+  const detail = sale.size;
   const problem = sale.state === 'problem';
   return (
     <li

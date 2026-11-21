@@ -47,7 +47,7 @@ const HI = {
   ],
   sell: [
     <><strong>बेचें</strong> टैब → टैग स्कैन करें (कैमरा या USB/ब्लूटूथ स्कैनर) या बारकोड के नीचे का कोड डालें।</>,
-    <>देखें कि फ़ोटो, साइज़ और रंग हाथ वाले आइटम से मिलते हैं।</>,
+    <>देखें कि फ़ोटो और साइज़ हाथ वाले आइटम से मिलते हैं।</>,
     <><strong>यह आइटम बेचें</strong> दबाएँ, मात्रा और ग्राहक से तय हुआ दाम डालें (MRP तक)।</>,
     <>किसी साथी के लिए बेच रहे हैं? <strong>बिक्री किसके नाम</strong> में उन्हें चुनें। यह भी दर्ज होता है कि बिक्री आपने डाली।</>,
     <><strong>बिक्री दर्ज करें</strong> दबाएँ। स्टॉक हर फ़ोन पर तुरंत घट जाता है।</>,
@@ -65,14 +65,14 @@ const HI = {
   tagOne: [
     <>आइटम पर पहले से <strong>कंपनी का बारकोड</strong> है? पहले <strong>टैग का बारकोड स्कैन करें</strong> दबाएँ — ऐप वही इस्तेमाल करेगा (नया स्टिकर नहीं) या बता देगा कि आइटम पहले से ऐप में है।</>,
     <>आइटम की <strong>📷 फ़ोटो खींचें</strong> (1–4 फ़ोटो)। अच्छी रोशनी, सादा बैकग्राउंड, पूरा आइटम दिखे।</>,
-    <><strong>कैटेगरी</strong> चुनें, <strong>नाम</strong> लिखें (जैसे &ldquo;Phulkari Dupatta&rdquo;), चाहें तो <strong>किसके लिए</strong> (लड़कियाँ / लड़के / दोनों) और <strong>उम्र</strong> (बड़े / बच्चे) चुनें, <strong>साइज़</strong> पर टैप करें, <strong>रंग</strong> डालें।</>,
+    <><strong>कैटेगरी</strong> चुनें, <strong>नाम</strong> लिखें (जैसे &ldquo;Phulkari Dupatta&rdquo;), चाहें तो <strong>किसके लिए</strong> (लड़कियाँ / लड़के / दोनों) और <strong>उम्र</strong> (बड़े / बच्चे) चुनें, <strong>साइज़</strong> पर टैप करें।</>,
     <><strong>MRP</strong>, <strong>बिक्री दाम</strong> (खाली छोड़ें = MRP) और <strong>गिने हुए पीस</strong> डालें।</>,
     <><strong>सेव करें और बारकोड पाएँ</strong> दबाएँ। लेबल दिख जाएगा।</>,
     <><strong>अगला आइटम →</strong> दबाएँ। अगले आइटम के लिए कैटेगरी, कंपनी और साइज़ भरे रहते हैं।</>,
     <>आखिर में: <strong>आज के लेबल प्रिंट करें</strong> → हर पीस का एक लेबल → हर पीस पर एक चिपकाएँ। स्टिकर प्रिंटर है? प्रिंट से पहले <strong>स्टिकर प्रिंटर 50×25 mm</strong> चुनें।</>,
   ],
   more: [
-    <><strong>कंपनी से आया नया माल</strong> → स्टॉक जोड़ें → <strong>नया आइटम</strong>: ऊपर नाम, कैटेगरी, किसके लिए (लड़कियाँ / लड़के, बड़े / बच्चे) और दाईं ओर फ़ोटो; फिर कंपनी, बिक्री दाम (MRP) और खरीद दाम। टैब: <strong>जानकारी</strong> (पीस, बिल), <strong>रंग</strong> (साइज़ × रंग), <strong>और जानकारी</strong> (ब्रांड)। सेव के बाद <strong>+ अगला आइटम जोड़ें</strong>।</>,
+    <><strong>कंपनी से आया नया माल</strong> → स्टॉक जोड़ें → <strong>नया आइटम</strong>: ऊपर नाम, कैटेगरी, किसके लिए (लड़कियाँ / लड़के, बड़े / बच्चे) और दाईं ओर फ़ोटो; फिर कंपनी, बिक्री दाम (MRP) और खरीद दाम। टैब: <strong>जानकारी</strong> (पीस, बिल), <strong>साइज़</strong> (हर साइज़ के पीस), <strong>और जानकारी</strong> (ब्रांड)। सेव के बाद <strong>+ अगला आइटम जोड़ें</strong>।</>,
     <><strong>जो आइटम पहले से हैं, उनके और पीस</strong> → स्टॉक जोड़ें → पहले से मौजूद आइटम के और पीस (<em>स्टॉक</em> अधिकार चाहिए)। वही टैग फिर स्कैन करने पर एक पीस और जुड़ता है।</>,
     <><strong>प्रोडक्ट या उसकी फ़ोटो बदलें</strong> → प्रोडक्ट → आइटम पर टैप करें।</>,
     <><strong>क्या ठीक करना बाकी है?</strong> → कैटलॉग → <strong>ध्यान दें</strong>: बिना फ़ोटो, कंपनी या स्टॉक वाले आइटम।</>,
@@ -81,7 +81,7 @@ const HI = {
     <><strong>कंपनी और कैटेगरी</strong>: मेनू → सप्लायर / कैटेगरी। जिन कंपनियों से माल खरीदते हैं और जिस तरह के आइटम बेचते हैं, वे जोड़ें।</>,
     <><strong>स्टाफ़ और अधिकार</strong>: हर व्यक्ति को PIN के साथ जोड़ें। हर सेल्समैन के लिए और अधिकार टिक करें: <em>कैटलॉग</em> (प्रोडक्ट, फ़ोटो, लेबल), <em>दाम</em> (MRP/बिक्री दाम बदलना), <em>स्टॉक</em> (स्टॉक प्राप्त करना), <em>खरीद दाम</em> (कोड दाम देखना — सिर्फ़ भरोसेमंद स्टाफ़)।</>,
     <><strong>कोड दाम</strong>: सेटिंग → 10 अक्षरों का एक शब्द चुनें; फिर लेबल पर खरीद दाम ऐसे अक्षरों में दिखेगा जो सिर्फ़ आपका स्टाफ़ पढ़ सके।</>,
-    <><strong>रेट</strong>: कोई भी प्रोडक्ट खोलें → पूरे डिज़ाइन के रेट। बड़े साइज़ का अपना MRP, बिक्री और खरीद दाम <em>साइज़ के हिसाब से दाम</em> में रख सकते हैं — उस साइज़ के हर रंग को वही मिलता है। पुरानी बिक्री के दाम नहीं बदलते।</>,
+    <><strong>रेट</strong>: कोई भी प्रोडक्ट खोलें → पूरे डिज़ाइन के रेट। बड़े साइज़ का अपना MRP, बिक्री और खरीद दाम <em>साइज़ के हिसाब से दाम</em> में रख सकते हैं। पुरानी बिक्री के दाम नहीं बदलते।</>,
     <><strong>नज़र रखें</strong>: होम पर आज की बिक्री और आपकी मंज़ूरी के लिए बाकी एंट्री दिखती हैं; रिपोर्ट में महीना, मुनाफ़ा और हर सेल्समैन; गतिविधि में हर बिक्री और एक्सचेंज की सूची है।</>,
     <><strong>रिपोर्ट</strong>: सबसे ज़्यादा बिकने वाले, जो नहीं बिक रहा, किसी भी समय की कैटेगरी / कंपनी / सेल्समैन के हिसाब से बिक्री, और अकाउंटेंट के लिए <strong>CSV डाउनलोड</strong> (बिक्री, स्टॉक)।</>,
   ],
@@ -94,7 +94,7 @@ const HI = {
   ],
   habits: [
     <>बिक्री दर्ज करने से पहले काउंटर पर हमेशा फ़ोटो मिलाएँ।</>,
-    <>एक डिज़ाइन का एक ही नाम रखें (&ldquo;Cotton Straight Kurta&rdquo;), ताकि साइज़ और रंग एक साथ रहें।</>,
+    <>एक डिज़ाइन का एक ही नाम रखें (&ldquo;Cotton Straight Kurta&rdquo;), ताकि उसके साइज़ एक साथ रहें।</>,
     <><em>खरीद दाम</em> का अधिकार सिर्फ़ उन्हें दें जिन पर मालिक को पूरा भरोसा हो।</>,
     <>फ़ोन से प्रिंट: लेबल पेज खोलें → प्रिंट करें → अपना प्रिंटर या &ldquo;Save as PDF&rdquo; चुनें।</>,
   ],
@@ -159,7 +159,7 @@ export default async function HelpPage() {
               ? HI.sell
               : [
                   <>Tab <strong>Sell</strong> → scan the tag (camera or USB/Bluetooth scanner) or type the code under the barcode.</>,
-                  <>Check the photo, size and colour match the item in your hand.</>,
+                  <>Check the photo and size match the item in your hand.</>,
                   <>Tap <strong>Sell this item</strong>, set quantity and the price agreed with the customer (up to MRP).</>,
                   <>Selling for a colleague? Choose them in <strong>Credit sale to</strong>. It is recorded that you entered it.</>,
                   <>Tap <strong>Record sale</strong>. Stock goes down straight away on every phone.</>,
@@ -199,7 +199,7 @@ export default async function HelpPage() {
               : [
                   <>Item already has a <strong>barcode from the company</strong>? Tap <strong>Scan the tag&apos;s barcode</strong> first — the app uses it (no new sticker) or tells you if the item is already in the app.</>,
                   <><strong>📷 Take photo</strong> of the item (1–4 photos). Good light, plain background, whole item visible.</>,
-                  <>Choose the <strong>category</strong>, type the <strong>name</strong> (e.g. &ldquo;Phulkari Dupatta&rdquo;), tap who it is for if you like (<strong>For</strong>: Girls / Boys / Both, <strong>Age</strong>: Adult / Child), tap a <strong>size</strong>, add the <strong>colour</strong>.</>,
+                  <>Choose the <strong>category</strong>, type the <strong>name</strong> (e.g. &ldquo;Phulkari Dupatta&rdquo;), tap who it is for if you like (<strong>For</strong>: Girls / Boys / Both, <strong>Age</strong>: Adult / Child), tap a <strong>size</strong>.</>,
                   <>Enter <strong>MRP</strong>, the <strong>selling price</strong> (leave empty = MRP) and <strong>pieces counted</strong>.</>,
                   <>Tap <strong>Save and get barcode</strong>. The label appears.</>,
                   <>Tap <strong>Next item →</strong>. Category, company and size stay filled in for the next one.</>,
@@ -220,7 +220,7 @@ export default async function HelpPage() {
             HI.more.map((item, i) => <li key={i}>{item}</li>)
           ) : (
             <>
-              <li><strong>New stock from a company</strong> → Add stock → <strong>New item</strong>: name, category, who it is for (Girls / Boys, Adult / Child) and the photo on the right; then company, sale price (MRP) and purchase price. Tabs: <strong>Details</strong> (pieces, bill), <strong>Colours</strong> (sizes × colours), <strong>Other details</strong> (brand). After saving, tap <strong>+ Add next item</strong>.</li>
+              <li><strong>New stock from a company</strong> → Add stock → <strong>New item</strong>: name, category, who it is for (Girls / Boys, Adult / Child) and the photo on the right; then company, sale price (MRP) and purchase price. Tabs: <strong>Details</strong> (pieces, bill), <strong>Sizes</strong> (pieces of each size), <strong>Other details</strong> (brand). After saving, tap <strong>+ Add next item</strong>.</li>
               <li><strong>More pieces of items you already have</strong> → Add stock → More pieces of an existing item (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece.</li>
               <li><strong>Edit a product or its photos</strong> → Products → tap the item.</li>
               <li><strong>What&apos;s left to fix?</strong> → Catalog → <strong>Needs attention</strong>: items without photo, company or stock.</li>
@@ -238,7 +238,7 @@ export default async function HelpPage() {
                   <><strong>Companies & categories</strong>: Menu → Companies / Categories. Add the companies you buy from and the kinds of items you sell.</>,
                   <><strong>Staff & permissions</strong>: add each person with a PIN. Tick extra rights per salesman: <em>Catalog</em> (products, photos, labels), <em>Prices</em> (change MRP/selling price), <em>Stock</em> (receive stock), <em>Purchase price</em> (see the code price — trusted staff only).</>,
                   <><strong>Code price</strong>: Settings → choose a 10-letter word; labels then show the purchase price in letters only your staff can read.</>,
-                  <><strong>Rates</strong>: open any product → Rates for the whole design. A bigger size can have its own MRP, selling and purchase price under <em>Price by size</em> — every colour of that size gets it. Past sales keep their prices.</>,
+                  <><strong>Rates</strong>: open any product → Rates for the whole design. A bigger size can have its own MRP, selling and purchase price under <em>Price by size</em>. Past sales keep their prices.</>,
                   <><strong>Track</strong>: Home shows today&apos;s sales and what is waiting for you; Reports has the month, profit and each salesperson; Activity lists every sale and exchange.</>,
                   <><strong>Reports</strong>: best sellers, what is not selling, sales by category / company / salesperson for any period, and <strong>CSV downloads</strong> (sales, stock) for your accountant.</>,
                 ]
@@ -304,7 +304,7 @@ export default async function HelpPage() {
           ) : (
             <>
               <li>Always check the photo at the counter before recording a sale.</li>
-              <li>Use one name for one design (&ldquo;Cotton Straight Kurta&rdquo;), so sizes and colours group together.</li>
+              <li>Use one name for one design (&ldquo;Cotton Straight Kurta&rdquo;), so its sizes group together.</li>
               <li>Give the <em>Purchase price</em> right only to people the owner fully trusts.</li>
               <li>Printing from a phone: open the labels page → Print → choose your printer or &ldquo;Save as PDF&rdquo;.</li>
             </>

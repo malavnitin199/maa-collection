@@ -9,7 +9,7 @@ import { QrCode } from './qr-code';
 
 /**
  * One design on screen (plan v14): items with the same name, company and MRP.
- * Photos side by side, every size and colour with its pieces, one QR that opens
+ * Photos side by side, every size with its pieces, one QR that opens
  * the design, and the separate items / tags folded away under "Show N …".
  * Server-rendered: nothing about the items is sent to the phone as data.
  */
@@ -79,16 +79,6 @@ export function DesignCard({
             {design.sizes.map((s) => (
               <span key={s.size} className={chip(s.pieces === 0)}>
                 {s.size} · <b className="tabular-nums">{s.pieces}</b>
-              </span>
-            ))}
-          </dd>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <dt className={`w-14 shrink-0 text-xs ${muted}`}>{t('cat.design.colours')}</dt>
-          <dd data-testid="design-colours" className="flex flex-wrap gap-1">
-            {design.colors.map((c) => (
-              <span key={c.color} className={chip(c.pieces === 0)}>
-                {c.color} · <b className="tabular-nums">{c.pieces}</b>
               </span>
             ))}
           </dd>

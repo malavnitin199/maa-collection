@@ -23,7 +23,6 @@ async function addProduct(page: Page, name: string, stock: string) {
   await page.getByLabel('Brand').fill('Test Brand');
   await page.getByRole('combobox', { name: /^Category/ }).selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Size').fill('M');
-  await page.getByLabel('Colour').fill('Blue');
   await page.getByLabel('MRP (₹)').fill('999');
   await page.getByLabel('Selling price (₹)').fill('899');
   await page.getByLabel(/Purchase price/).fill('500');
@@ -120,7 +119,7 @@ test('no internet: scan and sell from the phone’s copy, sell by hand, see them
   await strip.click();
   const sheet = page.getByRole('dialog', { name: 'Saved on this phone' });
   await expect(sheet.getByTestId('saved-sale')).toHaveCount(2);
-  await expect(sheet.getByTestId('saved-sale').first()).toContainText(`${name} · M · Blue`);
+  await expect(sheet.getByTestId('saved-sale').first()).toContainText(`${name} · M`);
   await expect(sheet.getByTestId('saved-sale').first()).toContainText('2 × ₹850.00 · for Vishal');
   await expect(sheet.getByTestId('send-now')).toHaveText('Waiting for internet');
   await expect(sheet.getByTestId('send-now')).toBeDisabled();

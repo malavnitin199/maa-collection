@@ -375,7 +375,7 @@ export async function pendingForOwner(db: Db, storeId: string, { limit = 200 }: 
       day: r.day,
       manual: r.manual,
       title: r.name,
-      detail: [r.size, r.color].filter(Boolean).join(' · ') || (r.manual ? '' : r.sku),
+      detail: r.size || (r.manual ? '' : r.sku),
       quantity: r.quantity,
       amountPaise: r.totalPaise,
       mrpPaise: r.mrpPaise,

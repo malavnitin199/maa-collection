@@ -159,7 +159,7 @@ export function BillPanel({
                   </td>
                   <td className="bg-brand-50/50 px-2 py-1.5 dark:bg-zinc-900/70">
                     <span className="line-clamp-1 font-semibold">{line.product.name}</span>
-                    <span className={`block text-xs ${muted}`}>{[line.product.size, line.product.color].filter(Boolean).join(' · ')}</span>
+                    <span className={`block text-xs ${muted}`}>{line.product.size}</span>
                     <span className="mt-1 flex items-center gap-1">
                       <button type="button" aria-label={t('bill.less', { name: line.product.name })} onClick={() => onQty(line.key, line.qty - 1)} className="h-7 w-7 rounded-full bg-white text-base leading-none font-bold shadow-sm ring-1 ring-zinc-200 active:scale-90 dark:bg-zinc-800 dark:ring-zinc-700">
                         −
@@ -269,7 +269,7 @@ export function CameraBillFooter({ line, lines, mode, onPrice, onDone }: { line:
               {line.product.name} <span className="font-normal text-white/70">×{line.qty}</span>
             </span>
             <span className="block text-xs text-white/70">
-              {[line.product.size, line.product.color].filter(Boolean).join(' · ')} · {t('bill.colMrp')} {formatPaise(lineMrp(line))}
+              {line.product.size} · {t('bill.colMrp')} {formatPaise(lineMrp(line))}
             </span>
           </span>
           {mode === 'scan' && (

@@ -20,14 +20,14 @@ import { formatPaise } from '@/lib/money';
 import type { ProductTags } from '@/lib/product-tags';
 import { ratesForSize, sortSizes } from '@/lib/size-prices';
 import { addPhotoToItemsAction, createDesignAction } from '@/server/actions/admin';
-import { photoForm, PhotoSlot, usePhotoPicker, type PickedPhoto } from './photo-slot';
+import { photoForm, usePhotoPicker, type PickedPhoto } from './photo-slot';
 
 type Option = { id: string; name: string };
 type CategoryOption = Option & { code: string; sizes?: string[] };
 
-/** What an item is saved as when no size or colour is picked (same as the old quick add). */
+/** What an item is saved as when no size is picked (same as the old quick add). No colour here (owner, 2026-11-22). */
 const PLAIN_SIZE = 'Free';
-const PLAIN_COLOUR = 'Assorted';
+const NO_COLOUR = [''];
 
 const SIZE_GROUPS: { label: MessageKey; sizes: string[] }[] = [
   { label: 'stk.design.group.clothing', sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'] },
@@ -109,7 +109,7 @@ function PhotoSquare({ photo, onChange, disabled }: { photo: PickedPhoto | null;
  * must-haves — company, sale price (MRP), purchase price; then top tabs:
  * **Details** (pieces, counter price, bill), **Colours** (sizes × colours, each
  * pair its own item and barcode) and **Other details** (brand; more fields later).
- * Nothing picked under Colours = one item, size Free, colour Assorted.
+ * Nothing picked under Sizes = one item, size Free, no colour.
  */
 export function NewItemForm({
   suppliers,
@@ -144,12 +144,8 @@ export function NewItemForm({
   const [billNumber, setBillNumber] = useState('');
   const [sizes, setSizes] = useState<string[]>([]);
   const [customSize, setCustomSize] = useState('');
-  const [colors, setColors] = useState<string[]>([]);
-  const [colorText, setColorText] = useState('');
   // Sizes' own rates (kept while a size is unticked; only ticked sizes are saved).
   const [sizeOwn, setSizeOwn] = useState<OwnRatesText>({});
-  // Optional photo per colour (key: colour in lower case); colours without one get the main photo.
-  const [colorPhotos, setColorPhotos] = useState<Record<string, PickedPhoto>>({});
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
@@ -169,19 +165,9 @@ export function NewItemForm({
     setCustomSize('');
     touched();
   };
-  const addColor = () => {
-    const values = colorText.split(',').map((c) => c.trim()).filter(Boolean);
-    const next = [...colors];
-    for (const value of values) if (!next.some((c) => c.toLowerCase() === value.toLowerCase())) next.push(value);
-    setColors(next);
-    setColorText('');
-    touched();
-  };
-
-  const allColors = colorText.trim() ? [...colors, ...colorText.split(',').map((c) => c.trim()).filter(Boolean)] : colors;
   // What is sent: nothing picked = one plain item.
   const sendSizes = sizes.length > 0 ? sizes : [PLAIN_SIZE];
-  const sendColors = allColors.length > 0 ? allColors : [PLAIN_COLOUR];
+  const sendColors = NO_COLOUR;
   const combos = sendSizes.length * sendColors.length;
   const qty = /^\d+$/.test(quantity) ? Number(quantity) : 0;
   const category = categories.find((c) => c.id === categoryId);
@@ -228,9 +214,7 @@ export function NewItemForm({
   function clearItem() {
     operationId.current = null;
     if (photo) URL.revokeObjectURL(photo.url);
-    for (const p of Object.values(colorPhotos)) URL.revokeObjectURL(p.url);
     setPhoto(null);
-    setColorPhotos({});
     setName('');
     setMrp('');
     setCost('');
@@ -239,8 +223,6 @@ export function NewItemForm({
     setBillNumber('');
     setSizes([]);
     setCustomSize('');
-    setColors([]);
-    setColorText('');
     setSizeOwn({});
     setProgress(null);
   }
@@ -257,7 +239,7 @@ export function NewItemForm({
     setBrand(company);
     window.scrollTo({ top: 0 });
   }
-  const dirty = Boolean(name.trim() || mrp.trim() || sizes.length || colors.length || photo);
+  const dirty = Boolean(name.trim() || mrp.trim() || sizes.length || photo);
   // Coming back to this page later starts a fresh entry — or asks when name, price and sizes are already in (owner's rule, 2026-11-20).
   const resume = useFreshOnReturn(startOver, { ask: () => Boolean(name.trim() && (mrp.trim() || sizes.length)) });
 
@@ -289,16 +271,8 @@ export function NewItemForm({
         return;
       }
       // Items are saved; now the photos (a failed photo never loses the items).
-      // A colour's own photo goes on that colour; the main photo on every other item.
-      const uploads: { ids: string[]; photo: PickedPhoto }[] = [];
-      const mainIds: string[] = [];
-      for (const color of sendColors) {
-        const ids = result.items.filter((item) => item.color.toLowerCase() === color.toLowerCase()).map((item) => item.id);
-        const own = colorPhotos[color.toLowerCase()];
-        if (own) uploads.push({ ids, photo: own });
-        else mainIds.push(...ids);
-      }
-      if (photo && mainIds.length > 0) uploads.unshift({ ids: mainIds, photo });
+      // The main photo goes on every item saved.
+      const uploads: { ids: string[]; photo: PickedPhoto }[] = photo ? [{ ids: result.items.map((item) => item.id), photo }] : [];
       let photoFailed = false;
       for (const upload of uploads) {
         if (upload.ids.length === 0) continue;
@@ -399,46 +373,7 @@ export function NewItemForm({
         </button>
       </div>
 
-      <div className="flex flex-col gap-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-900">
-        <span className="text-sm font-medium">{t('stk.design.colours')}</span>
-        {colors.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {colors.map((color) => (
-              <Chip
-                key={color}
-                selected
-                label={t('stk.design.removeColour', { color })}
-                onClick={() => {
-                  setColors(colors.filter((c) => c !== color));
-                  touched();
-                }}
-              >
-                {color} ✕
-              </Chip>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <input
-            value={colorText}
-            onChange={(e) => setColorText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addColor();
-              }
-            }}
-            placeholder={t('stk.design.colourPlaceholder')}
-            aria-label={t('stk.colour')}
-            className={`w-full ${input}`}
-          />
-          <button type="button" onClick={addColor} className={secondaryButton}>
-            {t('stk.design.addColour')}
-          </button>
-        </div>
-      </div>
-
-      {/* Every colour × size pair and its pieces: what will be saved. */}
+      {/* Every size and its pieces: what will be saved. */}
       {combos > 1 && (
         <div className="overflow-x-auto border-t border-zinc-100 pt-3 dark:border-zinc-900">
           <table data-testid="combo-grid" aria-label={t('cat.product.grid')} className="w-full text-center text-sm tabular-nums">
@@ -454,8 +389,8 @@ export function NewItemForm({
             </thead>
             <tbody>
               {sendColors.map((c) => (
-                <tr key={c} className="border-t border-zinc-100 dark:border-zinc-900">
-                  <th className="px-2 py-1.5 text-left font-medium">{c}</th>
+                <tr key={c || 'plain'} className="border-t border-zinc-100 dark:border-zinc-900">
+                  <th className="px-2 py-1.5 text-left font-medium">{t('done.line.pieces')}</th>
                   {orderedSizes.map((s) => (
                     <td key={s} className="px-2 py-1.5">
                       {qty}
@@ -465,35 +400,6 @@ export function NewItemForm({
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {allColors.length > 0 && (
-        <div data-testid="colour-photos" className="flex flex-col gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-900">
-          <span className="text-sm font-medium">
-            {t('stk.design.photoEach')} <span className={`font-normal ${muted}`}>{t('stk.optional')}</span>
-          </span>
-          <ul className="flex flex-col gap-2">
-            {allColors.map((color) => (
-              <li key={color} className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm">{color}</span>
-                <PhotoSlot
-                  label={color}
-                  photo={colorPhotos[color.toLowerCase()] ?? null}
-                  disabled={saving}
-                  onChange={(next) => {
-                    touched();
-                    setColorPhotos((current) => {
-                      const copy = { ...current };
-                      if (next) copy[color.toLowerCase()] = next;
-                      else delete copy[color.toLowerCase()];
-                      return copy;
-                    });
-                  }}
-                />
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 
@@ -640,7 +546,7 @@ export function NewItemForm({
         idPrefix="item"
         tabs={[
           { id: 'details', label: t('cat.tab.details'), content: details },
-          { id: 'colours', label: t('cat.tab.colours'), content: colours, tone: 'amber' },
+          { id: 'colours', label: t('ni.short.sizes'), content: colours, tone: 'amber' },
           { id: 'other', label: t('cat.tab.other'), content: other, tone: 'slate' },
         ]}
       />

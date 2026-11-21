@@ -58,7 +58,7 @@ function Phone({ children, band, dock }: { children: React.ReactNode; band?: Rea
   );
 }
 
-const SAMPLE_TAG = { sku: 'MAA-KU-003', barcode: inStoreEan13(1), name: 'Cotton Straight Kurta', brand: 'Laxmi Fashion House', size: 'L', color: 'Blue', mrpPaise: 149900 };
+const SAMPLE_TAG = { sku: 'MAA-KU-003', barcode: inStoreEan13(1), name: 'Cotton Straight Kurta', brand: 'Laxmi Fashion House', size: 'L', color: '', mrpPaise: 149900 };
 // Where each part sits on the 40 × 60 mm tag (left, top, width, height in %).
 const TAG_BOX: Record<TagPart, [number, number, number, number]> = {
   hole: [2.5, 1.3, 9, 6],

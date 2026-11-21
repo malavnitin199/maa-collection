@@ -7,7 +7,7 @@
 export const newItemEn = {
   'ni.hub.hint': 'Who is it for → what is it → details → sizes and pieces → tags',
   'ni.hub.form.title': 'Old form',
-  'ni.hub.form.hint': 'Sizes × colours grid, prices by size, photos',
+  'ni.hub.form.hint': 'Sizes grid, prices by size, photos',
   'ni.noSections': 'No sections yet (Men / Women / Boys / Girls).',
   'ni.goCategories': 'Set them up in Categories',
   'ni.start.title': 'What are you adding?',
@@ -98,7 +98,7 @@ export const newItemEn = {
 export const newItemHi: Record<keyof typeof newItemEn, string> = {
   'ni.hub.hint': 'किसके लिए → क्या है → जानकारी → साइज़ और पीस → टैग',
   'ni.hub.form.title': 'पुराना फ़ॉर्म',
-  'ni.hub.form.hint': 'साइज़ × रंग की तालिका, साइज़ के हिसाब से दाम, फ़ोटो',
+  'ni.hub.form.hint': 'साइज़ की तालिका, साइज़ के हिसाब से दाम, फ़ोटो',
   'ni.noSections': 'अभी कोई सेक्शन नहीं (पुरुष / महिला / लड़के / लड़कियाँ)।',
   'ni.goCategories': 'कैटेगरी में सेट करें',
   'ni.start.title': 'क्या जोड़ रहे हैं?',

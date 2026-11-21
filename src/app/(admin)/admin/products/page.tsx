@@ -46,7 +46,7 @@ function ProductRow({ p, photo, showCost, t, selectable = false }: { p: ProductL
         )}
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">
-            {p.name} <span className={`font-normal ${muted}`}>· {p.color} · {p.size}</span>
+            {p.name} <span className={`font-normal ${muted}`}>· {p.size}</span>
           </span>
           <span className={`block truncate text-xs ${muted}`}>
             {p.sku} · {p.category}
@@ -71,7 +71,7 @@ function ProductRow({ p, photo, showCost, t, selectable = false }: { p: ProductL
   return (
     <li>
       {selectable ? (
-        <SelectableItem ids={[p.id]} label={`${p.name} ${p.color} ${p.size}`} gutter>
+        <SelectableItem ids={[p.id]} label={`${p.name} ${p.size}`} gutter>
           {row}
         </SelectableItem>
       ) : (

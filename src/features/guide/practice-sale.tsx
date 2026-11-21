@@ -15,7 +15,7 @@ import { inStoreEan13 } from '@/features/scanning/ean13';
 import { say, speechSupported, stopSpeaking } from './voice';
 
 /** The sample piece (same as the tag in "Read a tag"). Nothing here touches the shop's data. */
-const SAMPLE = { sku: 'MAA-KU-003', barcode: inStoreEan13(1), name: 'Cotton Straight Kurta', brand: 'Laxmi Fashion House', size: 'L', color: 'Blue', mrpPaise: 149900 };
+const SAMPLE = { sku: 'MAA-KU-003', barcode: inStoreEan13(1), name: 'Cotton Straight Kurta', brand: 'Laxmi Fashion House', size: 'L', color: '', mrpPaise: 149900 };
 const STOCK = 4;
 
 type Stage = 'start' | 'item' | 'price' | 'done';
@@ -127,7 +127,7 @@ export function PracticeSale() {
           <section className="fb-card flex flex-col gap-2 rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-black/5 dark:ring-white/10">
             <p className="text-lg font-semibold">{SAMPLE.name}</p>
             <p className="text-sm">
-              {SAMPLE.size} · {SAMPLE.color} · <span className="font-mono text-xs">{SAMPLE.sku}</span>
+              {SAMPLE.size} · <span className="font-mono text-xs">{SAMPLE.sku}</span>
             </p>
             <p className={`text-sm ${muted}`}>{t('sell.stockLine', { stock: STOCK, mrp: formatPaise(SAMPLE.mrpPaise) })}</p>
             <div className="mt-2 flex justify-end gap-2">

@@ -20,7 +20,7 @@ export type TagProduct = {
 
 /**
  * Hang tag, exactly 40 × 60 mm with ~1.5 mm padding (ADR-014, ADR-015): shop
- * and punch hole, size big with the colour, QR (opens the item), every size of
+ * and punch hole, size big (no colour: owner, 2026-11-22), QR (opens the item), every size of
  * the category with a tick box (this piece's filled; tick another by pen), name,
  * ART. (= SKU) and code price, the EAN-13 barcode, and the MRP.
  */
@@ -55,10 +55,7 @@ export function HangTag({
           </p>
           {product.brand && <p className="mt-[0.5mm] truncate text-[4.5pt] leading-none text-zinc-500 uppercase">{product.brand}</p>}
           <div className="mt-[0.8mm] border border-zinc-800 px-[1mm] pt-[0.3mm] pb-[0.5mm]">
-            <p className="flex justify-between text-[4pt] leading-none font-semibold tracking-wide uppercase">
-              <span>Size</span>
-              <span>Colour</span>
-            </p>
+            <p className="text-[4pt] leading-none font-semibold tracking-wide uppercase">Size</p>
             <p className="mt-[0.4mm] flex items-end justify-between gap-[1mm]">
               <span data-testid="tag-size" className={`${longSize ? 'text-[9pt]' : 'text-[15pt]'} leading-none font-bold`}>
                 {product.size}
@@ -69,7 +66,6 @@ export function HangTag({
                     BOX OF {pack}
                   </span>
                 )}
-                {product.color}
               </span>
             </p>
           </div>

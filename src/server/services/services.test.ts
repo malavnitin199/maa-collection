@@ -237,14 +237,14 @@ describe('owner reports', () => {
     expect(week.byCategory.map((r) => [r.label, r.units, r.revenuePaise])).toEqual([['Kurta', 2, 240000], ['T-Shirt', 1, 45000]]);
     expect(week.bySupplier).toEqual([expect.objectContaining({ label: 'No company', units: 3 })]);
     expect(week.bySalesperson.map((r) => r.label)).toEqual(['Vishal', 'Nitin']);
-    expect(week.topProducts[0]).toMatchObject({ label: 'Anarkali Kurta · Blue · M', units: 2 });
+    expect(week.topProducts[0]).toMatchObject({ label: 'Anarkali Kurta · M', units: 2 });
     // The 1 Oct sale is 45 days back: outside both the 7-day and the 30-day window.
     expect((await salesReport(db, STORE_ID, '30d', now)).totals.count).toBe(2);
     // Stock not moving: in stock, nothing sold in 30 days → excludes the kurta and tee sold this week.
     const slow = week.slowMovers.map((s) => s.label);
-    expect(slow).toContain('Slim Fit Jeans · Indigo · 32');
-    expect(slow).not.toContain('Anarkali Kurta · Blue · M');
-    expect(slow).not.toContain('Banarasi Saree · Green · Free'); // out of stock
+    expect(slow).toContain('Slim Fit Jeans · 32');
+    expect(slow).not.toContain('Anarkali Kurta · M');
+    expect(slow).not.toContain('Banarasi Saree · Free'); // out of stock
   });
 });
 

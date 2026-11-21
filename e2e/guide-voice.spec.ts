@@ -66,14 +66,14 @@ test('a lesson plays as a story: few words, the voice says more, and it moves on
 
   // When the voice finishes, the next step comes by itself.
   await finish(page);
-  await expect(text).toHaveText('Check size and colour');
-  await expect.poll(async () => (await spoken(page)).at(-1)?.text).toMatch(/^Check the photo, size and colour/);
+  await expect(text).toHaveText('Check photo and size');
+  await expect.poll(async () => (await spoken(page)).at(-1)?.text).toMatch(/^Check the photo and size/);
 
   // Next / Back, and the arrow keys.
   await story.getByRole('button', { name: 'Next step' }).click();
   await expect(text).toHaveText('Type the agreed price');
   await story.getByRole('button', { name: 'Back a step' }).click();
-  await expect(text).toHaveText('Check size and colour');
+  await expect(text).toHaveText('Check photo and size');
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
   await expect(text).toHaveText('Record sale ✓');
