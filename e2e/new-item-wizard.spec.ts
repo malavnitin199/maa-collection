@@ -15,7 +15,7 @@ async function login(page: Page, who: string, lands: RegExp) {
 
 const heading = (page: Page, text: string) => expect(page.getByRole('heading', { level: 2, name: text })).toBeVisible();
 
-test('many items: who → what → details & sizes (two panels) → check → save and print; back keeps everything', async ({ page }) => {
+test('many items: who → what → details & sizes (one card) → check → save and print; back keeps everything', async ({ page }) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   await page.goto('/admin/stock');
   await page.getByRole('link', { name: /^New item/ }).click();
@@ -35,13 +35,12 @@ test('many items: who → what → details & sizes (two panels) → check → sa
   await expect(page.getByRole('button', { name: /^Kurta/ })).toContainText('M–XXL');
   await page.getByRole('button', { name: /^Kurta/ }).click();
 
-  // Owner's feedback 2026-11-21: details and sizes are one step, two panels, both open.
+  // Owner's feedback 2026-11-21: details and sizes on one step, in the same card (company, name, prices, sizes).
   await heading(page, 'Details & sizes');
   await expect(page.getByTestId('wizard-path')).toHaveText(/Men.*Kurta/);
-  const detailsPanel = page.getByRole('button', { name: /^Item details/ });
-  const sizesPanel = page.getByRole('button', { name: /^Which sizes\?/ });
-  await expect(detailsPanel).toHaveAttribute('aria-expanded', 'true');
-  await expect(sizesPanel).toHaveAttribute('aria-expanded', 'true');
+  const card = page.getByTestId('details-form');
+  await expect(card.getByTestId('size-cards')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Size M', exact: true })).toBeVisible();
   const next = page.getByRole('button', { name: 'Next' });
   await expect(next).toBeDisabled();
   await expect(page.getByTestId('size-summary')).toHaveText('Choose the company and type the MRP');
@@ -58,15 +57,10 @@ test('many items: who → what → details & sizes (two panels) → check → sa
   await expect(page.getByLabel('Pieces of size L')).toHaveValue('2');
   await expect(page.getByTestId('size-summary')).toHaveText('2 sizes · 3 pcs');
 
-  // A panel closes and opens again; its header still says what is in it.
-  await detailsPanel.click();
-  await expect(detailsPanel).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.getByLabel('Product name')).toBeHidden();
-  await expect(detailsPanel).toContainText(`Shree Ganesh Textiles · Chikan Kurta ${run} · MRP ₹1,299.00`);
-  await sizesPanel.click();
-  await expect(sizesPanel).toContainText('M × 1 · L × 2');
-  await detailsPanel.click();
-  await expect(page.getByLabel('Product name')).toHaveValue(`Chikan Kurta ${run}`);
+  // Size buttons are small chips (owner, 2026-11-21).
+  const chip = await card.getByRole('button', { name: 'Size XL', exact: true }).boundingBox();
+  expect(chip!.height).toBeLessThanOrEqual(44);
+  await expect(card.getByTestId('size-pieces').getByRole('listitem')).toHaveCount(2);
   await next.click();
   await heading(page, 'Check and save');
 
@@ -74,7 +68,6 @@ test('many items: who → what → details & sizes (two panels) → check → sa
   await page.getByRole('button', { name: 'Back' }).click();
   await heading(page, 'Details & sizes');
   await expect(page.getByLabel('Purchase price ₹')).toHaveValue('700');
-  await sizesPanel.click();
   await expect(page.getByLabel('Pieces of size L')).toHaveValue('2');
   await page.getByRole('button', { name: 'Next' }).click();
 

@@ -95,9 +95,6 @@ export function NewItemWizard({
   const [sheet, setSheet] = useState<'section' | 'type' | null>(null);
   // Just added on this step (a section or a category): shown chosen with a glow; tap it to go on.
   const [fresh, setFresh] = useState<string | null>(null);
-  // The two panels of the Details & sizes step: both open at first; each can be closed.
-  const [detailsOpen, setDetailsOpen] = useState(true);
-  const [sizesOpen, setSizesOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   // "Saved …" after Save / Save & add next (goes by itself).
@@ -163,8 +160,6 @@ export function NewItemWizard({
   const pickType = (next: WizardType) => {
     haptic();
     chooseType(next);
-    setDetailsOpen(true);
-    setSizesOpen(true);
     go('details');
   };
   const toggleSize = (size: string) => {
@@ -293,16 +288,10 @@ export function NewItemWizard({
     details: t('ni.step.detailsSizes'),
     review: t('ni.step.review'),
   };
-  /** Next on the Details & sizes step: both parts must be done; else the part that is missing opens. */
+  /** Next on the Details & sizes step: everything must be in; else the card scrolls to what is missing. */
   const finishDetails = () => {
-    if (!detailsOk) {
-      setDetailsOpen(true);
-      document.getElementById('ni-details-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    if (!sizesOk) {
-      setSizesOpen(true);
-      document.getElementById('ni-sizes-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!detailsOk || !sizesOk) {
+      document.getElementById(detailsOk ? 'ni-sizes' : 'ni-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     toReview();
@@ -487,109 +476,93 @@ export function NewItemWizard({
         )}
       </div>
 
-      {/* Details & sizes (owner's feedback 2026-11-21): one step, two panels that open and close.
+      {/* Details & sizes (owner's feedback 2026-11-21): one card — company, name, prices, then the sizes, then More.
           Stays mounted once reached (the company list it may grow lives inside it). */}
       {reached >= 2 && (
-        <div hidden={step !== 'details'} data-testid="details-step" className={`flex flex-col gap-3 ${step === 'details' ? (direction === 'next' ? 'step-next' : 'step-back') : ''}`}>
-          <Panel
-            id="ni-details-panel"
-            title={t('ni.panel.details')}
-            summary={[supplierName, shownName, mrpPaise !== null ? t('ni.review.mrp', { amount: formatPaise(mrpPaise) }) : ''].filter(Boolean).join(' · ')}
-            done={detailsOk}
-            open={detailsOpen}
-            onToggle={() => setDetailsOpen(!detailsOpen)}
+        <div hidden={step !== 'details'} data-testid="details-step" className={step === 'details' ? (direction === 'next' ? 'step-next' : 'step-back') : ''}>
+          <form
+            id="ni-details"
+            data-testid="details-form"
+            noValidate
+            className={`${card} flex scroll-mt-28 flex-col gap-4`}
+            onSubmit={(e) => {
+              e.preventDefault();
+              finishDetails();
+            }}
           >
-            <form
-              id="ni-details"
-              data-testid="details-form"
-              noValidate
-              className="flex flex-col gap-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                finishDetails();
+            <CompanyPicker
+              label={t('stk.item.company')}
+              companies={suppliers}
+              previous={previousSuppliers}
+              value={supplierId}
+              required
+              emptyLabel={t('ni.chooseCompany')}
+              onChange={(id, companyName) => {
+                setSupplierId(id);
+                setSupplierName(companyName);
               }}
-            >
-              <CompanyPicker
-                label={t('stk.item.company')}
-                companies={suppliers}
-                previous={previousSuppliers}
-                value={supplierId}
-                required
-                emptyLabel={t('ni.chooseCompany')}
-                onChange={(id, companyName) => {
-                  setSupplierId(id);
-                  setSupplierName(companyName);
-                }}
+            />
+            <label className={field}>
+              {t('ni.name.optional')}
+              <LangText
+                value={name}
+                onValueChange={setName}
+                maxLength={120}
+                autoComplete="off"
+                placeholder={type ? t('ni.name.auto', { type: type.name }) : undefined}
+                inputClassName={`${input} min-w-0 flex-1 text-lg`}
               />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
               <label className={field}>
-                {t('ni.name.optional')}
-                <LangText
-                  value={name}
-                  onValueChange={setName}
-                  maxLength={120}
-                  autoComplete="off"
-                  placeholder={type ? t('ni.name.auto', { type: type.name }) : undefined}
-                  inputClassName={`${input} min-w-0 flex-1 text-lg`}
-                />
+                {t('ni.mrp')}
+                <input required inputMode="decimal" value={mrp} onChange={(e) => setMrp(e.target.value)} className={`${input} text-lg tabular-nums`} />
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              {showCost && (
                 <label className={field}>
-                  {t('ni.mrp')}
-                  <input required inputMode="decimal" value={mrp} onChange={(e) => setMrp(e.target.value)} className={`${input} text-lg tabular-nums`} />
+                  {t('ni.cost')}
+                  <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} className={`${input} text-lg tabular-nums`} />
+                  <span className={`text-xs ${muted}`}>{t('ni.perPiece')}</span>
                 </label>
-                {showCost && (
-                  <label className={field}>
-                    {t('ni.cost')}
-                    <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} className={`${input} text-lg tabular-nums`} />
-                    <span className={`text-xs ${muted}`}>{t('ni.perPiece')}</span>
-                  </label>
-                )}
+              )}
+            </div>
+            {type && (
+              <div id="ni-sizes" className="flex scroll-mt-28 flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+                <SizeStep
+                  type={type}
+                  single={mode === 'one'}
+                  offered={offered}
+                  sizes={sizes}
+                  pieces={pieces}
+                  onToggle={toggleSize}
+                  onAll={(all) => setSizes(all ? offered : [])}
+                  onPieces={(size, value) => setPieces({ ...pieces, [size]: Math.max(0, Math.min(999, value)) })}
+                  onTypeSizes={(next) => addToList(sectionId, (s) => ({ ...s, types: s.types.map((x) => (x.id === type.id ? { ...x, sizes: next } : x)) }))}
+                />
               </div>
-              <details className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
-                <summary className="cursor-pointer text-sm font-medium text-brand-700 dark:text-brand-300">{t('ni.more')}</summary>
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label className={field}>
-                    {t('ni.price')}
-                    <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className={`${input} tabular-nums`} />
-                  </label>
-                  <label className={field}>
-                    {t('ni.bill')}
-                    <input value={billNumber} onChange={(e) => setBillNumber(e.target.value)} maxLength={60} className={input} />
-                  </label>
-                  <label className={field}>
-                    {t('ni.stockDate')}
-                    <input type="date" value={stockDate} onChange={(e) => setStockDate(e.target.value)} className={input} />
-                  </label>
-                  <label className={field}>
-                    {t('ni.brand')}
-                    <LangText value={brand} onValueChange={setBrand} maxLength={60} />
-                  </label>
-                </div>
-              </details>
-            </form>
-          </Panel>
-          {type && (
-            <Panel
-              id="ni-sizes-panel"
-              title={t(mode === 'one' ? 'ni.step.size' : 'ni.step.sizes')}
-              summary={sizeLine}
-              done={sizesOk}
-              open={sizesOpen}
-              onToggle={() => setSizesOpen(!sizesOpen)}
-            >
-              <SizeStep
-                type={type}
-                single={mode === 'one'}
-                offered={offered}
-                sizes={sizes}
-                pieces={pieces}
-                onToggle={toggleSize}
-                onAll={(all) => setSizes(all ? offered : [])}
-                onPieces={(size, value) => setPieces({ ...pieces, [size]: Math.max(0, Math.min(999, value)) })}
-                onTypeSizes={(next) => addToList(sectionId, (s) => ({ ...s, types: s.types.map((x) => (x.id === type.id ? { ...x, sizes: next } : x)) }))}
-              />
-            </Panel>
-          )}
+            )}
+            <details className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
+              <summary className="cursor-pointer text-sm font-medium text-brand-700 dark:text-brand-300">{t('ni.more')}</summary>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className={field}>
+                  {t('ni.price')}
+                  <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className={`${input} tabular-nums`} />
+                </label>
+                <label className={field}>
+                  {t('ni.bill')}
+                  <input value={billNumber} onChange={(e) => setBillNumber(e.target.value)} maxLength={60} className={input} />
+                </label>
+                <label className={field}>
+                  {t('ni.stockDate')}
+                  <input type="date" value={stockDate} onChange={(e) => setStockDate(e.target.value)} className={input} />
+                </label>
+                <label className={field}>
+                  {t('ni.brand')}
+                  <LangText value={brand} onValueChange={setBrand} maxLength={60} />
+                </label>
+              </div>
+            </details>
+          </form>
         </div>
       )}
 
@@ -640,30 +613,6 @@ export function NewItemWizard({
         />
       )}
     </div>
-  );
-}
-
-/** A part of the Details & sizes step that opens and closes; the closed header still says what is in it. */
-function Panel({ id, title, summary, done, open, onToggle, children }: { id: string; title: string; summary: string; done: boolean; open: boolean; onToggle: () => void; children: React.ReactNode }) {
-  return (
-    <section id={id} className="scroll-mt-28 rounded-3xl bg-surface ring-1 ring-brand-100 dark:ring-brand-900">
-      <button type="button" aria-expanded={open} aria-controls={`${id}-body`} onClick={onToggle} className="flex w-full items-center gap-3 p-4 text-left">
-        <span
-          aria-hidden
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${done ? 'bg-emerald-600 text-white' : 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300'}`}
-        >
-          {done ? '✓' : '•'}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-base font-bold">{title}</span>
-          {summary && <span className={`block truncate text-xs ${muted}`}>{summary}</span>}
-        </span>
-        <IconChevron className={`h-5 w-5 shrink-0 text-brand-700 transition-transform duration-200 dark:text-brand-300 ${open ? '-rotate-90' : 'rotate-90'}`} />
-      </button>
-      <div id={`${id}-body`} hidden={!open} className="px-4 pb-4">
-        {children}
-      </div>
-    </section>
   );
 }
 
@@ -729,29 +678,47 @@ function SizeStep({
     });
   };
 
+  const chosenList = offered.filter(chosen);
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">{t('stk.design.sizesFor', { name: type.name })}</p>
+        <p className="text-sm font-medium">{t(single ? 'ni.step.size' : 'ni.step.sizes')}</p>
         {!single && offered.length > 1 && (
-          <button type="button" onClick={() => onAll(!allChosen)} className="rounded-full px-3 py-1.5 text-sm font-bold text-brand-700 transition hover:bg-brand-50 active:scale-95 dark:text-brand-300 dark:hover:bg-brand-950">
+          <button type="button" onClick={() => onAll(!allChosen)} className="rounded-full px-2.5 py-1 text-sm font-bold text-brand-700 transition hover:bg-brand-50 active:scale-95 dark:text-brand-300 dark:hover:bg-brand-950">
             {allChosen ? t('ni.sizes.none') : t('ni.sizes.all')}
           </button>
         )}
       </div>
       {offered.length === 0 && <p className={`text-sm ${muted}`}>{t('ni.sizes.noSizes')}</p>}
-      <div data-testid="size-cards" className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+      {/* Small chips (owner, 2026-11-21): tap to choose; the pieces of each chosen size are just below. */}
+      <div data-testid="size-cards" className="flex flex-wrap gap-1.5">
         {offered.map((size) => {
           const on = chosen(size);
-          const count = pieces[size] ?? 1;
           return (
-            <div key={size} className={`flex flex-col overflow-hidden rounded-2xl ring-1 transition ${on ? 'bg-brand-600 text-white shadow-md ring-brand-600' : 'bg-surface ring-zinc-200 dark:ring-zinc-700'}`}>
-              <button type="button" aria-pressed={on} aria-label={t('stk.sizeAria', { size })} onClick={() => onToggle(size)} className="flex min-h-16 items-center justify-center px-2 text-2xl font-bold tabular-nums transition active:scale-95">
-                {size}
-              </button>
-              {on && (
-                <div className="flex items-center justify-between bg-black/15 px-1 py-1">
-                  <button type="button" aria-label={t('ni.sizes.less', { size })} onClick={() => onPieces(size, count - 1)} className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold active:scale-90">
+            <button
+              key={size}
+              type="button"
+              aria-pressed={on}
+              aria-label={t('stk.sizeAria', { size })}
+              onClick={() => onToggle(size)}
+              className={`min-h-10 min-w-11 rounded-xl px-3 text-sm font-bold tabular-nums transition active:scale-95 ${
+                on ? 'bg-brand-600 text-white shadow-sm' : 'bg-surface text-zinc-800 ring-1 ring-zinc-300 hover:ring-brand-400 dark:text-zinc-100 dark:ring-zinc-700'
+              }`}
+            >
+              {size}
+            </button>
+          );
+        })}
+      </div>
+      {chosenList.length > 0 && (
+        <ul data-testid="size-pieces" className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+          {chosenList.map((size) => {
+            const count = pieces[size] ?? 1;
+            return (
+              <li key={size} className="flex items-center justify-between gap-1 rounded-xl bg-brand-50 py-0.5 pr-0.5 pl-3 dark:bg-brand-950">
+                <span className="text-sm font-bold tabular-nums">{size}</span>
+                <span className="flex items-center">
+                  <button type="button" aria-label={t('ni.sizes.less', { size })} onClick={() => onPieces(size, count - 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
                     −
                   </button>
                   <input
@@ -759,17 +726,17 @@ function SizeStep({
                     aria-label={t('ni.sizes.piecesOf', { size })}
                     value={String(count)}
                     onChange={(e) => onPieces(size, /^\d+$/.test(e.target.value) ? Number(e.target.value) : 0)}
-                    className="w-10 bg-transparent text-center text-lg font-bold tabular-nums outline-none"
+                    className="w-8 bg-transparent text-center text-base font-bold tabular-nums outline-none"
                   />
-                  <button type="button" aria-label={t('ni.sizes.more', { size })} onClick={() => onPieces(size, count + 1)} className="flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold active:scale-90">
+                  <button type="button" aria-label={t('ni.sizes.more', { size })} onClick={() => onPieces(size, count + 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
                     +
                   </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <div className="flex gap-2">
         <input
           value={newSize}
@@ -783,9 +750,9 @@ function SizeStep({
           maxLength={12}
           placeholder={t('stk.design.otherSizePlaceholder')}
           aria-label={t('ni.sizes.newSize')}
-          className={`w-full ${input}`}
+          className={`w-full ${input} py-2 text-sm`}
         />
-        <button type="button" disabled={busy || !newSize.trim()} onClick={addSize} className="min-h-11 shrink-0 rounded-2xl border border-brand-300 px-4 text-sm font-bold text-brand-700 transition hover:bg-brand-50 active:scale-95 disabled:opacity-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-950">
+        <button type="button" disabled={busy || !newSize.trim()} onClick={addSize} className="min-h-10 shrink-0 rounded-xl border border-brand-300 px-3 text-sm font-bold text-brand-700 transition hover:bg-brand-50 active:scale-95 disabled:opacity-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-950">
           {t('ni.sizes.addSize')}
         </button>
       </div>

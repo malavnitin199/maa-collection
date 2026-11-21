@@ -30,7 +30,6 @@ export const newItemEn = {
   // Owner's feedback 2026-11-21: details and sizes on one step; name optional; size chips; new tiles glow.
   'ni.short.detailsSizes': 'Details',
   'ni.step.detailsSizes': 'Details & sizes',
-  'ni.panel.details': 'Item details',
   'ni.panel.needDetails': 'Choose the company and type the MRP',
   'ni.name.optional': 'Product name (optional)',
   'ni.name.auto': '{type} + number',
@@ -121,7 +120,6 @@ export const newItemHi: Record<keyof typeof newItemEn, string> = {
   'ni.short.sizes': 'साइज़',
   'ni.short.detailsSizes': 'जानकारी',
   'ni.step.detailsSizes': 'जानकारी और साइज़',
-  'ni.panel.details': 'आइटम की जानकारी',
   'ni.panel.needDetails': 'कंपनी चुनें और MRP लिखें',
   'ni.name.optional': 'प्रोडक्ट का नाम (ज़रूरी नहीं)',
   'ni.name.auto': '{type} + नंबर',
