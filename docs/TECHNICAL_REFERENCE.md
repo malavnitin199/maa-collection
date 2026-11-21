@@ -936,3 +936,14 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Route | `src/app/(admin)/admin/companies` (+ `[id]`); `next.config.ts` redirects `/admin/suppliers` and `/admin/suppliers/:path*`. All links, `revalidatePath`s and tests use `/admin/companies`. |
 | Delete | `deleteCompaniesAction` = `requirePermission('catalog')`; `CompanyBrowser canDelete = can(me, 'catalog')`; `DeleteCompanyButton` shown with Catalog. |
 
+
+## 48. Laptop database = a copy of live (2026-11-22, ADR-056)
+
+| Part | Notes |
+|---|---|
+| Command | `pnpm db:copy-live` = `node scripts/db-copy-live.ts`, run from `maa-collection/` with `pnpm dev` stopped (`lsof +D .pglite` refuses while a program holds it). Neon address from `LIVE_DATABASE_URL`, else `.env.neon` (`DATABASE_URL_UNPOOLED`); never printed. |
+| Read | One `repeatable read read only` transaction on Neon with fixed text formats (UTC, ISO dates, `extra_float_digits = 3`, hex bytea); per public table (generated columns left out): row count, fingerprint `md5(string_agg(md5(row(cols)::text) order by …))`, `COPY … TO STDOUT`; sequences' `last_value`. |
+| Build | `createPgliteDb('.pglite-new', { seed: 'none' })` (this code's migrations). Stops when live has more migrations, or a live column the laptop lacks ("git pull"). `session_replication_role = replica` during `COPY … FROM '/dev/blob'`; `setval` per sequence. Every table's count + fingerprint must equal live's, else the new folder is thrown away and `.pglite/` is untouched. |
+| Swap | Writes `.pglite-new/maa-live-copy.json` (live time, tables, rows). An existing `.pglite/` with that marker is replaced; one without it goes to `../backups/laptop-database-before-live-copy-<YYYY-MM-DD-HHMM>/`. |
+| Start-up | `createPgliteDb` runs `addSampleCatalog` only when `seedDemoData` just created the shop (`seeded`); before, it re-added the 5 sample companies on every start. Tests `src/db/client.test.ts` (×2). |
+| Tests | Playwright reuses a running `:3000` server (`reuseExistingServer`); on a copy its PIN `1234` logins fail — stop `pnpm dev` first, or run e2e on a fresh `next start -p 3217` with `DATABASE_URL=pglite:memory`. |

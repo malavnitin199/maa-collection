@@ -165,11 +165,13 @@ pnpm dev
 
 Open **http://localhost:3000** and log in. **No database setup is needed locally.** The app uses PGlite, an embedded Postgres stored in `./.pglite/`. It creates the tables and the demo shop the first time it runs.
 
-> **Local login:** every seeded account (Owner, Vishal, Nitin, Pradeep, Balram) uses PIN **`1234`** in local development and tests only. Production has different, random PINs.
+> **Local login:** every seeded account (Owner, Vishal, Nitin, Pradeep, Balram) uses PIN **`1234`** in local development and tests only. Production has different, random PINs — and so does the laptop after `pnpm db:copy-live` (log in with your live PIN).
 >
 > Use `localhost`, not `127.0.0.1` or your IP address, or the page loads but its buttons stay disabled.
 
 To start over with a fresh local database: stop the server, delete `.pglite/`, and run `pnpm dev` again.
+
+**Same data as the live shop:** stop `pnpm dev`, run `pnpm db:copy-live`, start `pnpm dev` again. It copies the live database (Neon, read only — live is never changed) into `.pglite/` and checks every table against live. Needs `.env.neon` (see *Database changes* below). Afterwards log in with your **live** PIN. Run it again whenever you want the latest; a laptop database that isn't a copy (e.g. the demo data) is first moved to `../backups/laptop-database-before-live-copy-<date>/` — to go back, stop the server and rename that folder to `.pglite`. Nothing ever goes from the laptop to live. Before `pnpm test:e2e`, stop `pnpm dev`: the tests reuse a running server and log in with the demo PIN `1234`, which the copy doesn't have (with no server running they start their own, with a fresh test database).
 
 ### 4. (Optional) Production build on your computer
 
@@ -245,6 +247,7 @@ Full guide: **[`docs/SCANNING.md`](docs/SCANNING.md)**.
 | `pnpm db:migrate` | Apply migrations to `DATABASE_URL` |
 | `pnpm db:sample` | Add the 5 sample companies and 5 extra categories to a database (skips existing ones) |
 | `pnpm db:seed` | Seed an **empty** Postgres with the shop, staff and demo products; prints one random PIN per person |
+| `pnpm db:copy-live` | Make the laptop database (`.pglite/`) an exact copy of live (reads Neon via `.env.neon`, never writes to it); stop `pnpm dev` first |
 
 ---
 
@@ -375,10 +378,11 @@ vercel deploy --prod                 # production
 |---|---|
 | `pnpm: command not found` | `npm install -g pnpm@12.18.0` |
 | Odd install or build errors | Check `node -v` is 26, delete `node_modules`, run `pnpm install` |
-| Forgot a PIN | Admin → **Staff** → set a new PIN. Locally, all PINs are `1234` |
+| Forgot a PIN | Admin → **Staff** → set a new PIN. Locally, all PINs are `1234` (on a copy of live: the live PINs) |
 | Locked out of every admin account | Run `pnpm db:seed` on an empty database, or ask a developer to reset a PIN in the database |
 | Page loads but buttons stay disabled (dev) | Use `http://localhost:3000`, not `127.0.0.1` or an IP address |
 | Local data looks wrong / want a clean start | Stop `pnpm dev`, delete `.pglite/`, start again |
+| Want the laptop to show the live shop's data | Stop `pnpm dev`, run `pnpm db:copy-live`, start again; log in with your live PIN |
 | "Camera needs HTTPS" | Use the live site or `localhost` |
 | Camera opens but never reads | Barcode flat in the green box, 15–20 cm away, bright screen, no glare |
 | "No item found" | That code isn't a product yet. Admin → Products → Add product |
