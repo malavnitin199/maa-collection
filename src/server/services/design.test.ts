@@ -92,3 +92,11 @@ describe('createDesign for the step-by-step New item', () => {
     expect(result.products.every((p) => p.brand === 'Libas' && p.stock === 2)).toBe(true);
   });
 });
+
+describe('no size (owner, 2026-11-22, ADR-052)', () => {
+  it('saves one item with an empty size and the pieces given; without the choice, sizes are still required', async () => {
+    const { products } = await createDesign(db, STORE_ID, { ...base(), name: 'Plain Dupatta', sizes: [], noSize: true, quantities: { '': 5 } });
+    expect(products.map((p) => [p.size, p.stock])).toEqual([['', 5]]);
+    await expect(createDesign(db, STORE_ID, { ...base(), name: 'Other Dupatta', sizes: [] })).rejects.toThrow(/Pick at least one size/);
+  });
+});

@@ -164,7 +164,7 @@ describe('a new item needs both levels (section + type)', () => {
   it('refuses a category that is not sorted yet, on every way of making items; allows it once sorted; refuses a hidden section', async () => {
     const company = await createSupplier(db, STORE_ID, { name: 'Sock Co', contactName: '', phone: '', gstin: '', notes: '' });
     const socks = await createCategory(db, STORE_ID, { name: 'Socks' });
-    const needsSorting = 'Sort this category under Men, Women, Boys or Girls first (Categories).';
+    const needsSorting = 'Put this category under a collection first (Categories).';
     await expect(createDesign(db, STORE_ID, design(socks.id, 'ns-1', company.id))).rejects.toThrow(needsSorting);
     await expect(
       createProductsBatch(db, STORE_ID, { operationId: 'ns-2', categoryId: socks.id, staffId: owner, rows: [{ name: 'Old Socks', mrpPaise: 9900, pricePaise: 9900, costPaise: null, quantity: 1 }] }),
@@ -185,7 +185,7 @@ describe('a new item needs both levels (section + type)', () => {
 
     // A hidden section takes no new items (its items and types stay).
     await updateSection(db, STORE_ID, men.id, { name: 'Men', active: false });
-    await expect(createDesign(db, STORE_ID, { ...design(socks.id, 'ns-5', company.id), name: 'Other Socks' })).rejects.toThrow('This section is hidden. Bring it back in Categories first.');
+    await expect(createDesign(db, STORE_ID, { ...design(socks.id, 'ns-5', company.id), name: 'Other Socks' })).rejects.toThrow('This collection is hidden. Bring it back in Categories first.');
     expect(await listProducts(db, STORE_ID, { categoryId: socks.id })).toHaveLength(3);
   });
 
@@ -201,7 +201,7 @@ describe('a new item needs both levels (section + type)', () => {
     // But no new item in an unsorted category.
     await expect(
       createProductsBatch(db, STORE_ID, { operationId: 'old-ok-2', categoryId: kurta.id, staffId: owner, rows: [{ name: 'New Kurta', mrpPaise: 9900, pricePaise: 9900, costPaise: null, quantity: 1 }] }),
-    ).rejects.toThrow(/Sort this category/);
+    ).rejects.toThrow(/Put this category under a collection/);
   });
 });
 

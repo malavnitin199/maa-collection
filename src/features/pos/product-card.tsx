@@ -82,11 +82,13 @@ export function ProductCard({ product, children }: { product: CounterProduct; ch
         <div className="min-w-0 flex-1">
           <h2 className="text-lg leading-tight font-semibold">{product.name}</h2>
           {/* Size only (owner, 2026-11-22: colour is shown on the product page alone). */}
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <span data-testid="item-size" className="rounded-full bg-brand-600 px-2.5 py-0.5 text-sm font-bold text-white">
-              {product.size}
-            </span>
-          </div>
+          {product.size && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <span data-testid="item-size" className="rounded-full bg-brand-600 px-2.5 py-0.5 text-sm font-bold text-white">
+                {product.size}
+              </span>
+            </div>
+          )}
         </div>
       </div>
       <ProductDetails product={product} />

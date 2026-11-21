@@ -535,6 +535,8 @@ export type DesignActionInput = {
   ageGroup?: string;
   /** Box packs (ADR-047): pieces in a box, whole-box MRP and purchase price ('' = not given). */
   pack?: { size: string | number; mrp?: string; cost?: string } | null;
+  /** No size picked (ADR-052): one item with an empty size. */
+  noSize?: boolean;
 };
 
 /** `items`: the saved items (in entry order) so photos can be attached right after. */
@@ -587,6 +589,7 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
             costPaise: can(admin, 'costs') ? toPaise(String(input.pack.cost ?? ''), 'cost price', true) : null,
           }
         : null,
+      noSize: input.noSize === true,
       staffId: admin.id,
     });
     revalidatePath('/admin', 'layout');

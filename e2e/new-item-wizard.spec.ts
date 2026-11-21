@@ -54,8 +54,9 @@ test('many items: who → what → details & sizes (one card) → check → save
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await page.getByLabel('Sale price (MRP) ₹').fill('1299');
   await page.getByLabel('Purchase price ₹').fill('700');
-  await expect(page.getByTestId('size-summary')).toHaveText('Tap the sizes that came');
-  await expect(next).toBeDisabled();
+  // No size yet: the pieces box stands in (owner, 2026-11-22) — Next works with 1 piece, no size.
+  await expect(page.getByTestId('size-summary')).toHaveText('No size · 1 pc');
+  await expect(next).toBeEnabled();
   await expect(page.getByTestId('size-cards').getByRole('button', { name: /^Size / })).toHaveText(['M', 'L', 'XL', 'XXL']);
   await page.getByRole('button', { name: 'Size M', exact: true }).click();
   await page.getByRole('button', { name: 'Size L', exact: true }).click();
@@ -141,7 +142,7 @@ test('one item: a new category and a new size on the spot; one size only', async
   // No product name: it gets "Shorts … + number" on save.
   await expect(page.getByLabel('Product name (optional)')).toHaveAttribute('placeholder', `Shorts ${run} + number`);
   await page.getByLabel('Sale price (MRP) ₹').fill('899');
-  await expect(page.getByTestId('size-summary')).toHaveText('Tap the size');
+  await expect(page.getByTestId('size-summary')).toHaveText('No size · 1 pc');
   await expect(page.getByRole('button', { name: 'All sizes' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Size 30', exact: true }).click();
   await page.getByRole('button', { name: 'Size 32', exact: true }).click();
@@ -273,4 +274,37 @@ test('compact top, short company list, Next inside the card, and the phone back 
   await heading(page, 'What are you adding?');
   await page.goBack();
   await expect(page).toHaveURL(/\/admin\/stock$/);
+});
+
+test('no size picked: just the pieces; saved as one item with no size (owner, 2026-11-22)', async ({ page }, info) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  const name = `Plain Dupatta ${run}${info.project.name[0]}`;
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: /^Many items/ }).click();
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurta/ }).click();
+  await page.getByLabel('Product name').fill(name);
+  await page.getByLabel('Sale price (MRP) ₹').fill('499');
+  // No size tapped: a pieces box shows instead; Next works.
+  const plain = page.getByTestId('no-size-pieces');
+  await expect(plain).toContainText('No size? Just the pieces:');
+  await plain.getByRole('button', { name: 'One more' }).click();
+  await plain.getByRole('button', { name: 'One more' }).click();
+  await expect(plain.getByLabel('Pieces with no size')).toHaveValue('3');
+  await expect(page.getByTestId('size-summary')).toHaveText('No size · 3 pcs');
+  await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByTestId('review-sizes')).toHaveText('No size × 3');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
+  const rows = page.getByTestId('product-list').getByRole('listitem');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('3');
+  // Tapping a size hides the pieces box again.
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: /^Many items/ }).click();
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurta/ }).click();
+  await page.getByTestId('size-cards').getByRole('button').first().click();
+  await expect(page.getByTestId('no-size-pieces')).toHaveCount(0);
 });

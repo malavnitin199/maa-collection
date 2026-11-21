@@ -109,7 +109,7 @@ export function PosScreen({
     setMessage(null);
   }
 
-  const outOfStock = (product: CounterProduct) => t('sell.outOfStock', { name: product.name, size: product.size });
+  const outOfStock = (product: CounterProduct) => t('sell.outOfStock', { name: product.name, size: product.size || t('ni.noSize') });
 
   /** The same tag again adds a piece; the shop's count limits it (not the phone's copy, which may be behind). */
   function addToBill(product: CounterProduct, fromPhone?: string) {
@@ -356,7 +356,7 @@ export function PosScreen({
     const { product } = pending;
     // The shop's count refuses; the phone's copy may be behind, and the owner chose to save such sales anyway (D-07).
     if (product.stock <= 0 && !pending.fromPhone) {
-      return setMessage({ kind: 'error', text: t('sell.outOfStock', { name: product.name, size: product.size }) });
+      return setMessage({ kind: 'error', text: t('sell.outOfStock', { name: product.name, size: product.size || t('ni.noSize') }) });
     }
     setQtyText('1');
     setPriceText((product.pricePaise / 100).toString());
@@ -394,8 +394,8 @@ export function PosScreen({
     const problem = validateSaleDraft({ quantity, unitPricePaise }, limits, t);
     if (problem) return setMessage({ kind: 'error', text: problem });
     const creditedName = staff.find((s) => s.id === creditTo)?.name ?? me.name;
-    const values = { qty: quantity, name: product.name, size: product.size, price: formatPaise(unitPricePaise), me: me.name, other: creditedName };
-    const item = `${quantity} × ${product.name} (${product.size})`;
+    const values = { qty: quantity, name: product.name, size: product.size || t('ni.noSize'), price: formatPaise(unitPricePaise), me: me.name, other: creditedName };
+    const item = `${quantity} × ${product.name}${product.size ? ` (${product.size})` : ''}`;
     const amount = formatPaise(totalPaise ?? saleTotalPaise(quantity, unitPricePaise));
 
     startTransition(async () => {
@@ -639,7 +639,7 @@ export function PosScreen({
           <h2 className="text-lg font-semibold">
             {t('sell.heading', { name: pending.product.name })}{' '}
             <span className={`text-sm font-normal ${muted}`}>
-              {pending.product.sku} · {pending.product.size}
+              {[pending.product.sku, pending.product.size].filter(Boolean).join(' · ')}
             </span>
           </h2>
           <p data-testid="sell-stock" className={`mt-1 text-sm ${muted}`}>

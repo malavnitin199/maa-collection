@@ -118,8 +118,10 @@ export function NewItemWizard({
   const pack = boxed ? packOf(/^\d+$/.test(packText.trim()) ? Number(packText.trim()) : NaN) : null;
   // With boxes, each size's count is boxes; stock is kept in pieces.
   const piecesOf = (size: string) => count(size) * (pack ?? 1);
-  const totalBoxes = ordered.reduce((n, size) => n + count(size), 0);
-  const totalPieces = ordered.reduce((n, size) => n + piecesOf(size), 0);
+  // No size picked (owner, 2026-11-22, ADR-052): one item with an empty size; its count sits under key ''.
+  const noSize = ordered.length === 0;
+  const totalBoxes = noSize ? count('') : ordered.reduce((n, size) => n + count(size), 0);
+  const totalPieces = noSize ? piecesOf('') : ordered.reduce((n, size) => n + piecesOf(size), 0);
   const mrpPaise = rupeesToPaise(mrp);
   const typedCost = showCost && cost.trim() ? rupeesToPaise(cost) : null;
   const boxCost = boxed && costAs === 'box' ? typedCost : null;
@@ -136,9 +138,14 @@ export function NewItemWizard({
     (!boxed || (pack !== null && (!packMrp.trim() || (packMrpPaise !== null && mrpPaise !== null && packMrpPaise <= mrpPaise * pack))));
   const boxesText = (n: number) => t(n === 1 ? 'pack.boxes.one' : 'pack.boxes.other', { n });
   const pcs = (n: number) => t(n === 1 ? 'stk.item.pcs.one' : 'stk.item.pcs.other', { n });
-  const sizesOk = ordered.length > 0 && totalPieces > 0;
+  const sizesOk = totalPieces > 0;
   const shownName = name.trim() || (type ? t('ni.name.auto', { type: type.name }) : '');
-  const sizeLine = [pack ? t('pack.label', { n: pack }) : '', ordered.map((size) => `${size} × ${count(size)}`).join(' · ')].filter(Boolean).join(' · ');
+  const sizeLine = [
+    pack ? t('pack.label', { n: pack }) : '',
+    noSize ? `${t('ni.noSize')} × ${count('')}` : ordered.map((size) => `${size} × ${count(size)}`).join(' · '),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   const go = (next: Step) => {
     const index = next === 'start' ? -1 : FLOW.indexOf(next);
@@ -282,13 +289,14 @@ export function NewItemWizard({
         name,
         brand,
         sizes: ordered,
+        noSize,
         colors: [],
         mrp,
         price,
         // A box purchase price goes with the box; the piece's cost is worked out from it.
         cost: boxed && costAs === 'box' ? '' : cost,
         quantityEach: '1',
-        quantities: Object.fromEntries(ordered.map((size) => [size, piecesOf(size)])),
+        quantities: noSize ? { '': piecesOf('') } : Object.fromEntries(ordered.map((size) => [size, piecesOf(size)])),
         billNumber,
         stockDate,
         pack: boxed && pack ? { size: pack, mrp: packMrp, cost: costAs === 'box' ? cost : '' } : null,
@@ -499,6 +507,11 @@ export function NewItemWizard({
                 </p>
               </div>
               <ul data-testid="review-sizes" className="flex flex-wrap gap-2">
+                {noSize && (
+                  <li className="rounded-xl bg-brand-50 px-3 py-1.5 text-sm font-semibold text-brand-900 ring-1 ring-brand-100 dark:bg-brand-950 dark:text-brand-100 dark:ring-brand-900">
+                    {t('ni.noSize')} × {pack ? boxesText(count('')) : count('')}
+                  </li>
+                )}
                 {ordered.map((size) => (
                   <li key={size} className="rounded-xl bg-brand-50 px-3 py-1.5 text-sm font-semibold text-brand-900 ring-1 ring-brand-100 dark:bg-brand-950 dark:text-brand-100 dark:ring-brand-900">
                     {size} × {pack ? boxesText(count(size)) : count(size)}
@@ -507,7 +520,7 @@ export function NewItemWizard({
               </ul>
               <p data-testid="review-total" className="font-semibold">
                 {pack ? t('pack.review', { n: pack, boxes: boxesText(totalBoxes), pieces: pcs(totalPieces) }) + ' · ' : ''}
-                {t('ni.review.pieces', { pieces: pcs(totalPieces), items: t(ordered.length === 1 ? 'ni.review.items.one' : 'ni.review.items.other', { n: ordered.length }) })}
+                {t('ni.review.pieces', { pieces: pcs(totalPieces), items: t(ordered.length <= 1 ? 'ni.review.items.one' : 'ni.review.items.other', { n: Math.max(1, ordered.length) }) })}
               </p>
               <p className="text-sm">
                 {mrpPaise !== null && t('ni.review.mrp', { amount: formatPaise(mrpPaise) })}
@@ -711,8 +724,8 @@ export function NewItemWizard({
               <p data-testid="size-summary" className="text-sm font-semibold">
                 {!detailsOk
                   ? t('ni.panel.needDetails')
-                  : ordered.length === 0
-                    ? t(mode === 'one' ? 'ni.sizes.pickSingle' : 'ni.sizes.pickOne')
+                  : noSize
+                    ? t('ni.noSize.summary', { pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces) })
                     : t('ni.sizes.summary', {
                         sizes: t(ordered.length === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: ordered.length }),
                         pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces),
@@ -878,6 +891,27 @@ function SizeStep({
           );
         })}
       </div>
+      {/* No size picked (owner, 2026-11-22, ADR-052): just the pieces (or boxes), saved as one item with no size. */}
+      {chosenList.length === 0 && (
+        <div data-testid="no-size-pieces" className="flex items-center justify-between gap-2 rounded-xl bg-brand-50 py-0.5 pr-0.5 pl-3 dark:bg-brand-950">
+          <span className="text-sm font-medium">{boxes ? t('ni.noSize.boxesHint') : t('ni.noSize.hint')}</span>
+          <span className="flex items-center">
+            <button type="button" aria-label={t('ni.noSize.less')} onClick={() => onPieces('', (pieces[''] ?? 1) - 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
+              −
+            </button>
+            <input
+              inputMode="numeric"
+              aria-label={boxes ? t('ni.noSize.boxesAria') : t('ni.noSize.piecesAria')}
+              value={String(pieces[''] ?? 1)}
+              onChange={(e) => onPieces('', /^\d+$/.test(e.target.value) ? Number(e.target.value) : 0)}
+              className="w-10 bg-transparent text-center text-base font-bold tabular-nums outline-none"
+            />
+            <button type="button" aria-label={t('ni.noSize.more')} onClick={() => onPieces('', (pieces[''] ?? 1) + 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
+              +
+            </button>
+          </span>
+        </div>
+      )}
       {chosenList.length > 0 && boxes && <p className={`text-xs font-semibold ${muted}`}>{t('pack.boxesTitle')} · {t('pack.label', { n: boxes })}</p>}
       {chosenList.length > 0 && (
         <ul data-testid="size-pieces" className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">

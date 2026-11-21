@@ -412,6 +412,8 @@ export type DesignInput = {
    * cost (÷ size, to the paisa); a box MRP must not be above MRP × size.
    */
   pack?: { size: number; mrpPaise?: number | null; costPaise?: number | null } | null;
+  /** New item with no size picked (ADR-052): one item, size empty; `quantities['']` = its pieces. */
+  noSize?: boolean;
   staffId: string;
 };
 
@@ -431,7 +433,8 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   // Plan v19 (D-V19-5): an empty brand stays empty (the old form sends the company's name itself).
   const brand = input.brand.trim();
   if (name.length > 120) throw new DomainError('Enter the design / product name.', { key: 'stk.err.designName' });
-  const sizes = cleanList(input.sizes);
+  // No size (owner, 2026-11-22, ADR-052): one item with an empty size, only its pieces.
+  const sizes = input.noSize ? [''] : cleanList(input.sizes);
   // Plan v19 (D-V19-3): no colour given = one item per size with an empty colour, shown as nothing.
   const given = cleanList(input.colors);
   const colors = given.length > 0 ? given : [''];
