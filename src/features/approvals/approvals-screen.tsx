@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { AllDoneArt } from '@/components/ui/art';
-import { ActionGrid, ActionSheet, ActionTile, SelectableItem, SelectionBar, SelectionProvider, SelectToggle, sheetDanger, sheetSecondary, useSelection } from '@/components/ui/selection';
+import { ActionSheet, ActionTile, SelectableItem, SelectionBar, SelectionProvider, SelectToggle, sheetDanger, sheetSecondary, useSelection } from '@/components/ui/selection';
 import { IconReject, IconTick } from '@/components/ui/icons';
 import { card, errorBox, input, muted, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
@@ -80,20 +80,17 @@ function SelectedActions() {
     });
   return (
     <>
-      <ActionGrid>
-        <ActionTile icon={<IconTick />} label={t('appr.sel.approveN', { n })} tone="success" disabled={n === 0 || busy} onClick={() => decide('approve')} wide />
-        <ActionTile
-          icon={<IconReject />}
-          label={t('appr.sel.rejectShort')}
-          tone="danger"
-          disabled={n === 0 || busy}
-          onClick={() => {
-            setProblem(null);
-            setRejecting(true);
-          }}
-          wide
-        />
-      </ActionGrid>
+      <ActionTile icon={<IconTick />} label={t('appr.sel.approveN', { n })} tone="success" disabled={n === 0 || busy} onClick={() => decide('approve')} />
+      <ActionTile
+        icon={<IconReject />}
+        label={t('appr.sel.rejectShort')}
+        tone="danger"
+        disabled={n === 0 || busy}
+        onClick={() => {
+          setProblem(null);
+          setRejecting(true);
+        }}
+      />
       {rejecting && (
         <ActionSheet title={t('bulk.sheet', { action: t('appr.sel.rejectShort'), n })} onClose={() => setRejecting(false)}>
           <p className="text-sm font-semibold">{t('appr.reject.reason')}</p>

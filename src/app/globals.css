@@ -309,11 +309,9 @@ html { scroll-padding-top: 6.5rem; }
   60% { transform: scale(1.14); }
   100% { transform: scale(1); }
 }
-/* The bars slide in, the sheet rises, the message pops up. */
-@keyframes sel-down { from { transform: translateY(-100%); } to { transform: none; } }
+/* The bar slides in, the sheet rises, the message pops up. */
 @keyframes sel-up { from { transform: translateY(100%); opacity: 0.6; } to { transform: none; opacity: 1; } }
 @keyframes sel-fade-in { from { opacity: 0; } to { opacity: 1; } }
-.sel-top { animation: sel-down 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .sel-bottom { animation: sel-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .sel-sheet { animation: sel-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .sel-fade { animation: sel-fade-in 0.2s ease both; }
@@ -323,7 +321,7 @@ nav[data-dock] { transition: transform 0.25s ease, opacity 0.2s ease; }
 html[data-selecting] nav[data-dock] { transform: translateY(160%); opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
   .sel-check, .sel-check .sel-check-mark, .sel-check .sel-check-dash, nav[data-dock] { transition: none; }
-  .sel-check[data-state="all"], .sel-check[data-state="some"], .sel-top, .sel-bottom, .sel-sheet, .sel-fade, .sel-toast { animation: none; }
+  .sel-check[data-state="all"], .sel-check[data-state="some"], .sel-bottom, .sel-sheet, .sel-fade, .sel-toast { animation: none; }
 }
 
 /* Header (plan v17): a soft gradient in the theme's dye with a faint glow at the top right. */

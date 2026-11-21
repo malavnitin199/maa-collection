@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { IconPrint, IconTrash } from '@/components/ui/icons';
-import { ActionGrid, ActionSheet, ActionTile, sheetDanger, sheetSecondary, useSelection } from '@/components/ui/selection';
+import { ActionSheet, ActionTile, sheetDanger, sheetSecondary, useSelection } from '@/components/ui/selection';
 import { DeleteProductsSheet } from '@/features/catalog/delete-products';
 import { useT } from '@/features/i18n/i18n-provider';
 import { PRINT_MAX } from '@/lib/selection-limits';
@@ -21,9 +21,7 @@ export function ProductDeleteAction() {
   const [confirm, setConfirm] = useState(false);
   return (
     <>
-      <ActionGrid>
-        <ActionTile icon={<IconTrash />} label={t('prod.delete')} tone="danger" disabled={selected.length === 0} onClick={() => setConfirm(true)} />
-      </ActionGrid>
+      <ActionTile icon={<IconTrash />} label={t('prod.delete')} tone="danger" disabled={selected.length === 0} onClick={() => setConfirm(true)} />
       {confirm && (
         <DeleteProductsSheet
           ids={selected}
@@ -46,18 +44,15 @@ export function PrintSelected() {
   const router = useRouter();
   const { selected, notify } = useSelection();
   return (
-    <ActionGrid>
-      <ActionTile
-        icon={<IconPrint />}
-        label={t('bulk.printN', { n: selected.length })}
-        disabled={selected.length === 0}
-        wide
-        onClick={() => {
-          if (selected.length > PRINT_MAX) return notify('error', t('bulk.printMax', { n: PRINT_MAX }));
-          router.push(`/admin/labels/print?${new URLSearchParams({ items: selected.join(',') })}`);
-        }}
-      />
-    </ActionGrid>
+    <ActionTile
+      icon={<IconPrint />}
+      label={t('bulk.printN', { n: selected.length })}
+      disabled={selected.length === 0}
+      onClick={() => {
+        if (selected.length > PRINT_MAX) return notify('error', t('bulk.printMax', { n: PRINT_MAX }));
+        router.push(`/admin/labels/print?${new URLSearchParams({ items: selected.join(',') })}`);
+      }}
+    />
   );
 }
 
@@ -104,9 +99,7 @@ export function CompanyBulkActions() {
   const [confirm, setConfirm] = useState(false);
   return (
     <>
-      <ActionGrid>
-        <ActionTile icon={<IconTrash />} label={t('bulk.delete')} tone="danger" disabled={selected.length === 0} onClick={() => setConfirm(true)} wide />
-      </ActionGrid>
+      <ActionTile icon={<IconTrash />} label={t('bulk.delete')} tone="danger" disabled={selected.length === 0} onClick={() => setConfirm(true)} />
       {confirm && (
         <DeleteCompaniesSheet
           ids={selected}

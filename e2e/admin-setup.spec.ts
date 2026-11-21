@@ -606,7 +606,7 @@ test('header: the full shop name, अ / A and a ⋯ menu with colours, sound, Gu
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('Products → Select (owner, ADR-057): Delete is the only action; a long-press starts it', async ({ page }) => {
+test('Products → Select (owner, ADR-057): one bar at the bottom — Select all · Cancel · Delete; nothing at the top', async ({ page }) => {
   await loginOwner(page);
   const name = `Sel Tee ${run}`;
   await page.goto('/admin/stock/form');
@@ -632,28 +632,37 @@ test('Products → Select (owner, ADR-057): Delete is the only action; a long-pr
   await expect(page.getByTestId('selected-count')).toHaveText('1 selected');
   await expect(page).toHaveURL(/show=items/);
   const bar = page.getByTestId('selection-bar');
-  // Delete is the only action: no Hide, Rename, Company, Category, For / Age, Prices or Print tags.
-  await expect(bar.getByRole('button')).toHaveText(['Delete']);
-  const selectAll = page.getByRole('checkbox', { name: 'Select all', exact: true });
+  // Everything sits in the bottom bar: Select all, Cancel and Delete — no Hide, Rename, Company,
+  // Category, For / Age, Prices or Print tags, and no bar at the top (the header stays).
+  await expect(bar.getByTestId('selected-count')).toHaveText('1 selected');
+  const selectAll = bar.getByRole('checkbox', { name: 'Select all', exact: true });
+  await expect(bar.getByRole('button')).toHaveText(['Cancel', 'Delete']);
+  await expect(page.getByTestId('selection-top')).toHaveCount(0);
+  await expect(page.getByRole('banner')).toBeInViewport();
   await selectAll.click();
   await expect(page.getByTestId('selected-count')).toHaveText('3 selected');
   await expect(selectAll).toHaveAttribute('aria-checked', 'true');
-  // ✕ leaves selection mode; the Select button is back.
-  await page.getByRole('button', { name: 'Done selecting' }).click();
+  // Select all again: nothing ticked.
+  await selectAll.click();
+  await expect(page.getByTestId('selected-count')).toHaveText('Select items');
+  await expect(selectAll).toHaveAttribute('aria-checked', 'false');
+  // Cancel leaves selection mode; the Select button is back.
+  await rows.nth(1).click();
+  await expect(page.getByTestId('selected-count')).toHaveText('1 selected');
+  await bar.getByRole('button', { name: 'Cancel' }).click();
   await expect(bar).toBeHidden();
   await expect(page.getByTestId('select-products')).toBeVisible();
+  await expect(page).toHaveURL(/show=items/); // a tap while selecting ticks, it never opens the item
 });
 
-test('selecting on a long list: the top bar (Select all) and the action bar stay on screen while scrolling', async ({ page }) => {
+test('selecting on a long list: the bottom bar (Select all, Cancel, actions) stays on screen while scrolling', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/products'); // every design: a long page
   await page.getByTestId('select-products').click();
   const viewport = page.viewportSize()!;
   for (const to of ['bottom', 'middle'] as const) {
     await page.evaluate((where) => window.scrollTo(0, where === 'bottom' ? document.documentElement.scrollHeight : document.documentElement.scrollHeight / 2), to);
-    // (polls: the bars slide in for a moment)
-    await expect.poll(async () => Math.round((await page.getByTestId('selection-top').boundingBox())!.y)).toBe(0);
-    // On a phone it sits on the bottom edge; on wider screens it floats 16 px above it.
+    // (polls: the bar slides in for a moment) On a phone it sits on the bottom edge; on wider screens it floats 16 px above it.
     const gap = viewport.width < 640 ? 0 : 16;
     await expect.poll(async () => {
       const bottom = (await page.getByTestId('selection-bar').boundingBox())!;
@@ -661,6 +670,8 @@ test('selecting on a long list: the top bar (Select all) and the action bar stay
     }).toBe(viewport.height - gap);
   }
   await expect(page.getByRole('checkbox', { name: 'Select all', exact: true })).toBeInViewport();
+  await expect(page.getByTestId('selection-bar').getByRole('button', { name: 'Cancel' })).toBeInViewport();
+  await expect(page.getByTestId('selection-top')).toHaveCount(0);
   // The phone's menu dock steps aside while selecting.
   if (viewport.width < 640) await expect(page.getByRole('navigation', { name: 'Main' })).not.toBeInViewport();
 });

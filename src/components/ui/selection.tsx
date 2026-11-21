@@ -9,9 +9,10 @@ import { useT } from '@/features/i18n/i18n-provider';
 /**
  * Selecting many things at once (plan v17), built like a phone app:
  * - **Select** (or a long-press on any card) starts selection mode;
- * - a dark bar takes the place of the header: ✕ · "3 selected" · **Select all**;
  * - every card shows a big round tick that pops in; a tap anywhere on the card ticks it;
- * - the menu dock steps aside and a bottom bar holds the screen's actions as icon tiles;
+ * - the menu dock steps aside and one bar at the bottom holds everything (ADR-057, the
+ *   owner's choice: nothing at the top): "3 selected", then **Select all** · **Cancel** ·
+ *   the screen's own actions, as icon tiles in one row;
  * - actions open a bottom sheet; results show as a short message that fades away.
  * Lists stay server-rendered: each card is wrapped in a `SelectableItem` with the
  * ids it stands for (a design card stands for all its items). Screens put their own
@@ -134,7 +135,7 @@ export function SelectionProvider({ allIds, children }: { allIds: readonly strin
   );
 }
 
-/** "Select" — the way in (a long-press on a card works too). Hidden while selecting: the top bar has ✕. */
+/** "Select" — the way in (a long-press on a card works too). Hidden while selecting: the bottom bar has Cancel. */
 export function SelectToggle({ testId }: { testId?: string }) {
   const t = useT();
   const { selecting, start, allIds } = useSelection();
@@ -291,10 +292,21 @@ export function SelectableItem({
   );
 }
 
+/** The look of a tile in the bottom bar: a clear icon above a word. */
+const tile =
+  'flex min-h-[4.25rem] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[0.8rem] leading-tight font-bold transition active:scale-95 disabled:opacity-35 disabled:active:scale-100';
+const tones = {
+  plain: 'bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15',
+  danger: 'bg-red-600 text-white hover:bg-red-500',
+  success: 'bg-emerald-600 text-white hover:bg-emerald-500',
+};
+
 /**
- * While selecting: the top bar (✕ · how many · Select all) and the bottom bar
- * with the screen's actions (children: an `ActionGrid` of `ActionTile`s). The
- * page keeps room under the list so the last cards can scroll above the bar.
+ * While selecting: one bar at the bottom (ADR-057) — how many are chosen, then one row of
+ * tiles: **Select all** (everything on the screen, or nothing when all are ticked) ·
+ * **Cancel** (leave selecting) · the screen's own `ActionTile`s (children; their sheets are
+ * portals, so they take no place in the row). The page keeps room under the list so the
+ * last cards can scroll above the bar.
  */
 export function SelectionBar({ children }: { children: ReactNode }) {
   const t = useT();
@@ -322,14 +334,18 @@ export function SelectionBar({ children }: { children: ReactNode }) {
     <>
       <div aria-hidden data-testid="selection-space" style={{ height: height + 24 }} />
 
-      <div role="toolbar" aria-label={t('sel.bar')} data-testid="selection-top" className="sel-top fixed inset-x-0 top-0 z-40 bg-slate-900 pt-[env(safe-area-inset-top)] text-white shadow-xl shadow-slate-950/30">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-2 px-2 sm:px-4">
-          <button type="button" onClick={stop} aria-label={t('sel.close')} title={t('sel.close')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:bg-white/10 active:scale-90">
-            <IconClose className="h-6 w-6" />
-          </button>
-          <p data-testid="selected-count" aria-live="polite" className="min-w-0 flex-1 truncate text-lg font-bold">
-            {n === 0 ? t('sel.none') : t(n === 1 ? 'sel.count.one' : 'sel.count.other', { n })}
-          </p>
+      <div
+        ref={bar}
+        role="region"
+        aria-label={t('sel.actions')}
+        data-testid="selection-bar"
+        className="sel-bottom fixed inset-x-0 bottom-0 z-40 rounded-t-[1.75rem] bg-slate-900 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-white shadow-[0_-12px_40px_rgb(2_6_23/0.35)] sm:inset-x-4 sm:bottom-4 sm:mx-auto sm:max-w-3xl sm:rounded-[1.75rem]"
+      >
+        <div aria-hidden className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/25 sm:hidden" />
+        <p data-testid="selected-count" aria-live="polite" className="mb-2.5 px-1 text-center text-sm font-bold">
+          {n === 0 ? t('sel.none') : t(n === 1 ? 'sel.count.one' : 'sel.count.other', { n })}
+        </p>
+        <div className="grid auto-cols-fr grid-flow-col gap-2">
           <button
             type="button"
             role="checkbox"
@@ -339,71 +355,43 @@ export function SelectionBar({ children }: { children: ReactNode }) {
               toggleAll();
               haptic(10);
             }}
-            className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-white/10 py-1.5 pr-4 pl-1.5 text-sm font-bold ring-1 ring-white/15 transition hover:bg-white/15 active:scale-95"
+            className={`${tile} ${tones.plain}`}
           >
-            <span className="sel-check sel-check-dark pointer-events-none" data-state={all}>
+            <span aria-hidden className="sel-check sel-check-dark pointer-events-none" data-state={all}>
               <CheckMark />
             </span>
-            {t('sel.allCount', { n: allIds.length })}
+            {t('sel.allLabel')}
           </button>
+          <ActionTile icon={<IconClose />} label={t('sel.cancel')} onClick={stop} />
+          {children}
         </div>
-      </div>
-
-      <div
-        ref={bar}
-        role="region"
-        aria-label={t('sel.actions')}
-        data-testid="selection-bar"
-        className="sel-bottom fixed inset-x-0 bottom-0 z-40 rounded-t-[1.75rem] bg-slate-900 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-white shadow-[0_-12px_40px_rgb(2_6_23/0.35)] sm:inset-x-4 sm:bottom-4 sm:mx-auto sm:max-w-3xl sm:rounded-[1.75rem]"
-      >
-        <div aria-hidden className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-white/25 sm:hidden" />
-        {n === 0 && <p className="mb-2 px-1 text-center text-xs font-medium text-slate-300">{t('sel.hint')}</p>}
-        {children}
       </div>
     </>
   );
 }
 
-/** A big action in the bottom bar: a clear icon above a word. */
+/** One of the screen's actions in the bottom bar: a clear icon above a word. */
 export function ActionTile({
   icon,
   label,
   onClick,
   disabled = false,
   tone = 'plain',
-  wide = false,
 }: {
   icon: ReactNode;
   label: string;
   onClick: () => void;
   disabled?: boolean;
   tone?: 'plain' | 'danger' | 'success';
-  /** Takes the whole row (a screen with one or two actions). */
-  wide?: boolean;
 }) {
-  const tones = {
-    plain: 'bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15',
-    danger: 'bg-red-600 text-white hover:bg-red-500',
-    success: 'bg-emerald-600 text-white hover:bg-emerald-500',
-  };
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex min-h-[4.25rem] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[0.8rem] leading-tight font-bold transition active:scale-95 disabled:opacity-35 disabled:active:scale-100 ${tones[tone]} ${wide ? 'col-span-2 flex-row gap-2 text-sm' : ''}`}
-    >
+    <button type="button" onClick={onClick} disabled={disabled} className={`${tile} ${tones[tone]}`}>
       <span aria-hidden className="[&>svg]:h-6 [&>svg]:w-6">
         {icon}
       </span>
       {label}
     </button>
   );
-}
-
-/** The tiles inside the bottom bar: four across on a phone, one row on wider screens. */
-export function ActionGrid({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-4 gap-2 sm:auto-cols-fr sm:grid-flow-col">{children}</div>;
 }
 
 /**
