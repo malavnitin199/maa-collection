@@ -133,3 +133,26 @@ test('a bill with two companies and two collections; take one off and add it bac
   await expect(page).toHaveURL(/\/admin\/bills$/);
   await expect(page.getByTestId('bill-list')).toContainText(`JB-${run}`);
 });
+
+test('a company added from New bill: it is chosen, the "added" card shows, and New item for it is one tap away', async ({ page }) => {
+  await loginOwner(page);
+  const fresh = `Bill New Co ${run}`;
+  await page.goto('/admin/bills/new');
+  const form = page.getByTestId('bill-form');
+  await form.getByRole('combobox', { name: /^Company/ }).click();
+  await page.getByRole('listbox').getByRole('option', { name: '+ New company…' }).click();
+  await page.getByLabel('New company name').fill(fresh);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByText('Company added')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(form.getByTestId('bill-company')).toHaveText([new RegExp(`^1${fresh}`)]);
+  // Nothing of a new company waits for a bill: say so, and offer New item from it (company already chosen there).
+  await expect(form.getByTestId('company-collections-empty')).toContainText('No collections of this company are waiting for a bill.');
+  await expect(form.getByRole('button', { name: 'Next: check bill' })).toBeDisabled();
+  await form.getByRole('link', { name: `+ New item from ${fresh}` }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=/);
+  // It is not offered twice in the bill's company box.
+  await page.goto('/admin/bills/new');
+  await form.getByRole('combobox', { name: /^Company/ }).click();
+  await expect(page.getByRole('listbox').getByRole('option', { name: fresh, exact: true })).toHaveCount(1);
+});

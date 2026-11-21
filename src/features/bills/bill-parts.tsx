@@ -54,7 +54,7 @@ export function AddCollections({ billId, collections, companies }: { billId: str
     <div data-testid="add-collections" className={`${card} flex flex-col gap-3`}>
       {done.node}
       {companies.map((c) => (
-        <CompanyCollections key={c.id} name={c.name} list={collections.filter((x) => x.supplierId === c.id)} picked={picked} onChange={setPicked} />
+        <CompanyCollections key={c.id} id={c.id} name={c.name} list={collections.filter((x) => x.supplierId === c.id)} picked={picked} onChange={setPicked} />
       ))}
       {error && (
         <p role="alert" className={errorBox}>

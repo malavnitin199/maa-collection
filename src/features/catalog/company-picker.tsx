@@ -18,7 +18,8 @@ const PREVIOUS = 'previous:';
  * **Previous companies** (hidden ones — tap one to use it again) and
  * **+ New company…** (type a name; an existing name is reused, never doubled).
  * A compact `Dropdown`, not a <select> (2026-11-21: the phone's list filled the screen).
- * `name` adds a hidden input for forms that post FormData.
+ * `name` adds a hidden input for forms that post FormData. `exclude` hides
+ * companies already used elsewhere on the screen (New bill's chosen ones).
  */
 export function CompanyPicker({
   label,
@@ -30,6 +31,7 @@ export function CompanyPicker({
   required = false,
   name,
   disabled = false,
+  exclude = [],
 }: {
   label: string;
   companies: Company[];
@@ -40,6 +42,7 @@ export function CompanyPicker({
   required?: boolean;
   name?: string;
   disabled?: boolean;
+  exclude?: string[];
 }) {
   const t = useT();
   const [companies, setCompanies] = useState(initialCompanies);
@@ -82,8 +85,8 @@ export function CompanyPicker({
         placeholder={emptyLabel}
         searchPlaceholder={t('cat.company.search')}
         options={[
-          ...companies.map((c) => ({ value: c.id, label: c.name })),
-          ...previous.map((c) => ({ value: `${PREVIOUS}${c.id}`, label: c.name, group: t('cat.company.previous') })),
+          ...companies.filter((c) => !exclude.includes(c.id)).map((c) => ({ value: c.id, label: c.name })),
+          ...previous.filter((c) => !exclude.includes(c.id)).map((c) => ({ value: `${PREVIOUS}${c.id}`, label: c.name, group: t('cat.company.previous') })),
           { value: NEW, label: t('cat.company.new'), tone: 'action' as const },
         ]}
         onChange={(choice) => {

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, muted, primaryButton } from '@/components/ui/styles';
@@ -58,7 +59,7 @@ export function CollectionRow({ c, checked, onToggle }: { c: Collection; checked
 }
 
 /** One company's waiting collections, under its name, with "Select all". */
-export function CompanyCollections({ name, list, picked, onChange }: { name: string; list: Collection[]; picked: string[]; onChange: (picked: string[]) => void }) {
+export function CompanyCollections({ id, name, list, picked, onChange }: { id?: string; name: string; list: Collection[]; picked: string[]; onChange: (picked: string[]) => void }) {
   const t = useT();
   const ids = list.map((c) => c.receiptId);
   const all = ids.length > 0 && ids.every((id) => picked.includes(id));
@@ -77,7 +78,15 @@ export function CompanyCollections({ name, list, picked, onChange }: { name: str
         )}
       </div>
       {list.length === 0 ? (
-        <p className={`text-xs ${muted}`}>{t('bills.noCollectionsFor')}</p>
+        // A company with nothing waiting (e.g. one just added here): say so, and offer New item for it.
+        <div data-testid="company-collections-empty" className="flex flex-col items-start gap-1.5 rounded-xl border border-dashed border-zinc-300 px-3 py-2.5 dark:border-zinc-700">
+          <p className={`text-xs ${muted}`}>{t('bills.noCollectionsFor')}</p>
+          {id && (
+            <Link href={`/admin/stock/new?supplier=${id}`} className="text-sm font-semibold text-brand-700 dark:text-brand-300">
+              {t('bills.addCollectionFor', { name })}
+            </Link>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col gap-1.5">
           {list.map((c) => (
@@ -301,10 +310,11 @@ export function BillForm({
               })}
             </ul>
           )}
+          {/* One picker for the whole form (not re-made per pick), so the "Company added" card stays. */}
           <CompanyPicker
-            key={companies.length}
             label={companies.length ? t('bills.anotherCompany') : t('bills.colCompany')}
-            companies={suppliers.filter((s) => !companies.some((c) => c.id === s.id))}
+            companies={suppliers}
+            exclude={companies.map((c) => c.id)}
             previous={previous}
             value=""
             emptyLabel={t('bills.addCompany')}
@@ -320,7 +330,7 @@ export function BillForm({
           {companies.length === 0 ? (
             <p className={`text-sm ${muted}`}>{t('bills.pickCompanyFirst')}</p>
           ) : (
-            companies.map((c) => <CompanyCollections key={c.id} name={c.name} list={of(c.id)} picked={picked} onChange={(next) => (touched(), setPicked(next))} />)
+            companies.map((c) => <CompanyCollections key={c.id} id={c.id} name={c.name} list={of(c.id)} picked={picked} onChange={(next) => (touched(), setPicked(next))} />)
           )}
         </div>
       )}
