@@ -707,8 +707,9 @@ test('Companies and All tags → Select: delete companies after a confirmation; 
   const bar = page.getByTestId('selection-bar');
   await expect(bar.getByRole('button', { name: 'Hide' })).toHaveCount(0);
   await bar.getByRole('button', { name: 'Delete' }).click();
-  await expect(page.getByRole('dialog', { name: 'Delete 2 companies?' })).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel' }).click();
+  const ask = page.getByRole('dialog', { name: 'Delete 2 companies?' });
+  await expect(ask).toBeVisible();
+  await ask.getByRole('button', { name: 'Cancel' }).click(); // the sheet's Cancel (the bar has one too)
   await expect(page.getByTestId('supplier-list')).toContainText(a);
   await bar.getByRole('button', { name: 'Delete' }).click();
   await page.getByTestId('confirm-delete').click();
