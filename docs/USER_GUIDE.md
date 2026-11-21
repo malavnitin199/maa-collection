@@ -147,12 +147,12 @@ There is no colour step: a new item has no colour unless you add one on its prod
 
 - **Start**: tap **Select** above the list — or **press and hold any card** for half a second (the phone gives a small buzz).
 - **Top bar** (dark, in place of the header): **✕** to stop, how many are chosen, and **All** — tap it to choose everything on the screen (tap again to clear). A dash means some are chosen.
-- **Tick**: tap anywhere on a card; a big round tick fills in and the card gets a coloured ring. A design card stands for all its items.
+- **Tick**: tap anywhere on a card; a round tick fills in and the card gets a coloured ring. In the Companies and Products lists the rows slide right and the tick sits beside each row, so names stay readable. A design card stands for all its items.
 - **Bottom bar** (the menu bar steps aside meanwhile): big buttons with icons. Each opens a sheet from the bottom with **Apply** / **Cancel**; a green message confirms what was done.
   - **Products**: **Hide** (asks once; hidden items leave the counter and the lists, their sales stay — *Show → Hidden items* → **Bring back**), **Rename** (one new name for all), **Company**, **Category**, **For / Age**, **Prices** (a new MRP and / or selling price for all; refused if a selling price would be above an MRP), **Print tags**.
   - **Approvals**: **Approve n** (green) or **Reject** (red; choose one reason for all).
   - **All tags**: **Print n selected**.
-  - **Companies**: **Hide** (they go to *Previous companies*) or **Bring back**.
+  - **Companies**: **Delete** only. It asks first (*Delete 2 companies?* → **Yes, delete** / **Cancel**) and cannot be undone. A company that has items, bills or payments is **not** deleted — the message says *Can’t delete … it has n items, n bills, n payments* — because its purchase history depends on it. (To hide a company instead, untick **Active** in its **Edit supplier details**.)
 
 ### The product page (Products → tap an item)
 
@@ -168,7 +168,7 @@ There is no colour step: a new item has no colour unless you add one on its prod
 
 ### The Companies page
 
-Home has one small **Companies** line under Today (how many companies, bills, dues); tap it, or **Suppliers**, to open the Companies page. There: a **search** box with a **microphone** (name, place, contact or phone; English or Hindi), a **place** dropdown (all the locations you have typed), **Summary ▸** (tap to see companies, bills and open bills, collections and pieces, total spend, dues now), and the companies ten at a time (**Previous / Next**): name, location · contact · phone, *bills · dues* and collections. The latest activity comes first (a new bill, or a company you just added); hidden companies last. **+ Add supplier** (top right) opens the add form.
+Home has one small **Companies** line under Today (how many companies, bills, dues); tap it, or **Suppliers**, to open the Companies page. There: the **search** box with its **microphone** on one line (name, place, contact or phone; English or Hindi); on a second, small line the **place** filter (all the locations you have typed), **Summary ▸**, **Select** (and *n of N* while filtering) (tap to see companies, bills and open bills, collections and pieces, total spend, dues now), and the companies ten at a time (**Previous / Next**): name, location · contact · phone, *bills · dues* and collections. The latest activity comes first (a new bill, or a company you just added); hidden companies last. **+ Add supplier** (top right) opens the add form.
 
 When you add or edit a company, give **Working since** — the day you started buying from them, even years ago. It is separate from the day the company was added in the app; both show under **Details**. Company name is required; location and the date are optional.
 

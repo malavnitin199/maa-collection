@@ -833,3 +833,11 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Next | same | Inside the details card's last row (`size-summary` + submit); no sticky bar. |
 | Back | same | `stepBack` = one step back. Phone / browser back: past the start screen one guard entry (`history.pushState(history.state, '')`) is kept; `popstate` pops it and calls `stepBack`, and the guard is pushed again while not at the start; back at the start with the arrow, the guard is consumed (`skipPop`). Test: `goBack()` four times → What is it? → Who is it for? → start → `/admin/stock`. |
 
+## 38. Companies: Delete instead of Hide, ticks beside rows, two-line search (2026-11-21, ADR-043)
+
+| Part | Where | Notes |
+|---|---|---|
+| Delete | `deleteUnusedSuppliers` (`catalog.ts`), `deleteCompaniesAction` (`admin.ts`, *catalog* right), `CompanyBulkActions` (`bulk-actions.tsx`) | In one transaction: counts `products`, `stock_receipts`, `supplier_payments` per chosen company (the only tables pointing at `suppliers`); deletes those with none; returns `{ deleted, kept: [{ name, items, bills, payments }] }`. The bar has **Delete** only; an `ActionSheet` asks (*Delete n companies?*, `confirm-delete`); the toast lists deleted and kept (`bulk.deleted.*`, `bulk.cantDelete`). `setCompaniesActiveAction` / `setSuppliersActive` stay for code use; hiding one company is still the *Active* box in its edit form. Unit test in `company.test.ts`. |
+| Ticks | `SelectableItem gutter` (`selection.tsx`), `.sel-check-sm` (globals.css) | List rows (Companies, Products item list) slide right `pl-10` while selecting; a 1.6rem tick sits centred in the gap; the tap layer covers the card only. Grid tiles keep the corner tick. |
+| Search | `company-browser.tsx` | Line 1: search + mic. Line 2 (h-8 controls): place select (≤ 10rem) · Summary … count (only while filtering) · Select. |
+
