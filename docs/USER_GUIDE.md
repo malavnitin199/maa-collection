@@ -154,8 +154,16 @@ Good to know:
 ### Companies and Collections (owner, 2026-11-22)
 
 - The app says **Company** everywhere (never *supplier*). A company is **optional** on an item: leave the company box empty, or pick **No company** to clear it.
-- **Delete a company**: on its page tap **Delete this company** (or Companies → Select → Delete). It asks first. Its items stay, just with no company. **Bills are never changed**: a bill keeps the company's name (shown *(deleted)*), its amounts and payments; edit the bill yourself if you want to change it. Deleting items does not change bills either.
+- **Delete a company** (Catalog right): on its page tap **Delete this company** at the bottom (or Companies → Select → Delete). It asks first. Its items stay, just with no company. **Bills are never changed**: a bill keeps the company's name (shown *(deleted)*), its amounts and payments; edit the bill yourself if you want to change it. Deleting items does not change bills either.
 - **Collections** are the groups every item must belong to (on the shop now: Men, Women, Box, RAmDOm — New item's first step, *Which collection?*). **Home → Collections** lists each with *items · pcs*: change a name in its box and tap **Save**; the 🗑 appears only for a collection with **no items** and asks before deleting (its empty categories go too). In Bills, what used to be called *collections* (what came in on one New item save) is now called **stock entries**.
+
+### Editing an item (product page → Details)
+
+- **✎ Edit this item** (top): name, size, category, company, colour, MRP, selling and purchase price → **Save changes**. Brand, size and colour may be empty.
+- **+ Add sizes**: tap the sizes this design doesn't have yet (or type one), set the pieces → **Add N sizes**. They get the same name, prices and company, and their tags are ready to print (All tags).
+- **Add pieces to this size**: more stock of the size you are looking at.
+
+**Bills keep their own copy:** what was on a bill (items, sizes, quantities, rates, amounts, company names) is saved with the bill. Editing, deleting or renaming items or companies later never changes a bill.
 
 ### Deleting items (owner)
 
@@ -170,7 +178,7 @@ Good to know:
   - **Products**: **Hide** (asks once; hidden items leave the counter and the lists, their sales stay — *Show → Hidden items* → **Bring back**), **Rename** (one new name for all), **Company**, **Category**, **For / Age**, **Prices** (a new MRP and / or selling price for all; refused if a selling price would be above an MRP), **Print tags**.
   - **Approvals**: **Approve n** (green) or **Reject** (red; choose one reason for all).
   - **All tags**: **Print n selected**.
-  - **Companies** (owner): **Delete** only. It asks first (*Delete 2 companies?* → **Yes, delete** / **Cancel**) and cannot be undone. Any company can be deleted: its items **stay**, with no company; its **bills and payments stay exactly as they were**, still showing its name (marked *(deleted)*). (Earlier rule, replaced: a company that has items, bills or payments is **not** deleted — the message says *Can’t delete … it has n items, n bills, n payments* — because its purchase history depends on it. (To hide a company instead, untick **Active** in its **Edit company details**.)
+  - **Companies** (anyone with the Catalog right): **Delete** only. It asks first (*Delete 2 companies?* → **Yes, delete** / **Cancel**) and cannot be undone. Any company can be deleted: its items **stay**, with no company; its **bills and payments stay exactly as they were**, still showing its name (marked *(deleted)*). (Earlier rule, replaced: a company that has items, bills or payments is **not** deleted — the message says *Can’t delete … it has n items, n bills, n payments* — because its purchase history depends on it. (To hide a company instead, untick **Active** in its **Edit company details**.)
 
 ### The product page (Products → tap an item)
 

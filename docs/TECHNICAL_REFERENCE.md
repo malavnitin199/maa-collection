@@ -921,3 +921,18 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 |---|---|
 | Wizard | `new-item-wizard.tsx`: purchase block first in the price grid; `#ni-mrp` optional. `markupText` = typed ?? `readMarkup()` (`useSyncExternalStore`, `localStorage maa-markup`) ?? 50; `derivedMrp = round(costPaise × (100 + markup) / 10000) × 100`; `mrpPaise = typed MRP ?? derivedMrp`; save sends the derived rupees when the box is empty. `mrp-from-cost` hint with the % box (aria *Markup % on the purchase price*). `ni.panel.needDetails` = *Type the purchase price or the MRP*. e2e *purchase price first; an empty sale price is purchase + 50%*. |
 
+## 46. Edit items, + Add sizes, bills keep their own copy (2026-11-22, ADR-054)
+
+| Part | Notes |
+|---|---|
+| Edit | `validateProductInput` needs only name + category; `ProductForm` brand / size / colour `required={false}`. Product page Details: `edit-item` (`<details>`, *✎ Edit this item*) and `add-sizes-card` (`AddSizesForm`, `src/features/catalog/add-sizes-form.tsx`) at the top; *Other details* keeps the For / Age tags. |
+| + Add sizes | `addDesignSizes(db, storeId, productId, { operationId, sizes, quantities, staffId })` → `createDesign` with the item's values (company only if active and not deleted; box kept); `addDesignSizesAction` (catalog). |
+| Bill copy | Migration **0017_bill_copy**: `bill_collections.snapshot jsonb` (a `Collection`), `bill_companies.company_name` (+ backfill UPDATE). `attach` stores the copy; `companyParts` copies names; `billCopies` reads copies (live only for rows without one); `recompute`, `listBills`, `getBill` use copies. One-off: `node --import ./scripts/register.mjs scripts/backfill-bill-copies.ts` (`backfillBillCopies`). Tests `bill-copy.test.ts`, e2e `edit-items.spec.ts`. |
+
+## 47. Companies at /admin/companies; delete with the Catalog right (2026-11-22, ADR-055)
+
+| Part | Notes |
+|---|---|
+| Route | `src/app/(admin)/admin/companies` (+ `[id]`); `next.config.ts` redirects `/admin/suppliers` and `/admin/suppliers/:path*`. All links, `revalidatePath`s and tests use `/admin/companies`. |
+| Delete | `deleteCompaniesAction` = `requirePermission('catalog')`; `CompanyBrowser canDelete = can(me, 'catalog')`; `DeleteCompanyButton` shown with Catalog. |
+
