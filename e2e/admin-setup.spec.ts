@@ -606,9 +606,9 @@ test('header: the full shop name, अ / A and a ⋯ menu with colours, sound, Gu
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('Products → Select: rename, For / Age, prices, print, hide and bring back several items at once', async ({ page }) => {
+test('Products → Select (owner, ADR-057): Delete is the only action; a long-press starts it', async ({ page }) => {
   await loginOwner(page);
-  const name = `Bulk Tee ${run}`;
+  const name = `Sel Tee ${run}`;
   await page.goto('/admin/stock/form');
   await choose(companyBox(page), 'Royal Garments');
   await page.getByLabel('Category').selectOption({ label: 'T-Shirt (TS)' });
@@ -623,7 +623,7 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
   const rows = page.getByTestId('product-list').getByRole('listitem');
   await expect(rows).toHaveCount(3);
-  // A long-press on a card starts selecting with that card ticked (and does not open it).
+  // A long-press on a row starts selecting with that row ticked (and does not open it).
   const first = await rows.first().boundingBox();
   await page.mouse.move(first!.x + first!.width / 2, first!.y + first!.height / 2);
   await page.mouse.down();
@@ -632,69 +632,16 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   await expect(page.getByTestId('selected-count')).toHaveText('1 selected');
   await expect(page).toHaveURL(/show=items/);
   const bar = page.getByTestId('selection-bar');
-  const sheet = page.getByTestId('action-sheet');
-  const toast = page.getByTestId('selection-toast');
+  // Delete is the only action: no Hide, Rename, Company, Category, For / Age, Prices or Print tags.
+  await expect(bar.getByRole('button')).toHaveText(['Delete']);
   const selectAll = page.getByRole('checkbox', { name: 'Select all', exact: true });
   await selectAll.click();
   await expect(page.getByTestId('selected-count')).toHaveText('3 selected');
   await expect(selectAll).toHaveAttribute('aria-checked', 'true');
-
-  // Rename all three.
-  await bar.getByRole('button', { name: 'Rename' }).click();
-  await expect(sheet).toHaveAccessibleName('Rename · 3 selected');
-  await sheet.getByLabel('New name for all').fill(`${name} Pro`);
-  await sheet.getByRole('button', { name: 'Apply' }).click();
-  await expect(toast).toContainText('Done for 3 items.');
-  await expect(sheet).toBeHidden();
-  await expect(rows.filter({ hasText: `${name} Pro` })).toHaveCount(3);
-
-  // For / Age and a new MRP for two of them (tick boxes).
-  await page.getByRole('checkbox', { name: `Select ${name} Pro M` }).check();
-  await page.getByRole('checkbox', { name: `Select ${name} Pro L` }).check();
-  await expect(page.getByTestId('selected-count')).toHaveText('2 selected');
-  await bar.getByRole('button', { name: 'For / Age' }).click();
-  await sheet.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Boys' }).click();
-  await sheet.getByRole('button', { name: 'Apply' }).click();
-  await expect(toast).toContainText('Done for 2 items.');
-  await page.getByRole('checkbox', { name: `Select ${name} Pro XL` }).check();
-  await bar.getByRole('button', { name: 'Prices' }).click();
-  await sheet.getByLabel('New MRP ₹').fill('200');
-  await sheet.getByRole('button', { name: 'Apply' }).click();
-  await expect(sheet.getByRole('alert')).toContainText('Selling price would be above MRP');
-  await sheet.getByLabel('New MRP ₹').fill('650');
-  await sheet.getByRole('button', { name: 'Apply' }).click();
-  await expect(toast).toContainText('Done for 1 item.');
-  await expect(rows.filter({ hasText: 'MRP ₹650.00' })).toHaveCount(1);
-
-  // Print just two tags.
-  await page.getByRole('checkbox', { name: `Select ${name} Pro M` }).check();
-  await page.getByRole('checkbox', { name: `Select ${name} Pro L` }).check();
-  await bar.getByRole('button', { name: 'Print tags' }).click();
-  await expect(page).toHaveURL(/\/admin\/labels\/print\?items=/);
-  await expect(page.getByRole('heading', { name: 'Selected tags' })).toBeVisible();
-  await page.getByRole('link', { name: 'One per item instead (2)' }).click();
-  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(2);
-
-  // Hide all three: gone from Products; Hidden items brings them back.
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await page.getByTestId('select-products').click();
-  await selectAll.click();
-  await bar.getByRole('button', { name: 'Hide' }).click();
-  await sheet.getByRole('button', { name: 'Yes, hide 3' }).click();
-  await expect(toast).toContainText('Done for 3 items.');
-  await expect(rows).toHaveCount(0);
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=hidden`);
-  await expect(rows).toHaveCount(3);
-  await page.getByTestId('select-products').click();
-  await selectAll.click();
-  await bar.getByRole('button', { name: 'Bring back' }).click();
-  await expect(rows).toHaveCount(0);
   // ✕ leaves selection mode; the Select button is back.
   await page.getByRole('button', { name: 'Done selecting' }).click();
-  await expect(page.getByTestId('selection-top')).toBeHidden();
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await expect(rows).toHaveCount(3);
-  await expect(rows.filter({ hasText: 'MRP ₹650.00' })).toHaveCount(1);
+  await expect(bar).toBeHidden();
+  await expect(page.getByTestId('select-products')).toBeVisible();
 });
 
 test('selecting on a long list: the top bar (Select all) and the action bar stay on screen while scrolling', async ({ page }) => {
@@ -1118,6 +1065,10 @@ test('owner makes a salesman a catalog person; they get catalog screens but not 
   await expect(page.getByLabel('Size M selling price')).toBeVisible();
   await expect(page.getByLabel('Size L MRP')).toBeVisible();
   await expect(page.getByLabel(/purchase price/i)).toHaveCount(0);
+  // Products: Select (its only action, Delete, is the owner's) is not offered.
+  await page.goto('/admin/products');
+  await expect(page.getByTestId('design-list').getByTestId('design-card').first()).toBeVisible();
+  await expect(page.getByTestId('select-products')).toHaveCount(0);
   for (const path of ['/admin/dashboard', '/admin/staff', '/admin/settings', '/admin/activity']) {
     await page.goto(path);
     await expect(page, `${path} is owner-only`).toHaveURL(/\/pos$/);

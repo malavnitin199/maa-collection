@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { card, input, muted, okBox, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
-import { ProductBulkActions } from '@/features/catalog/bulk-actions';
+import { ProductDeleteAction } from '@/features/catalog/bulk-actions';
 import { DesignCard } from '@/features/catalog/design-card';
 import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
 import { groupDesigns } from '@/lib/design-groups';
@@ -81,6 +81,17 @@ function ProductRow({ p, photo, showCost, t, selectable = false }: { p: ProductL
   );
 }
 
+/** A design card that can be ticked, for those who may select; otherwise the card as it is. */
+function Selectable({ on, ids, label, children }: { on: boolean; ids: readonly string[]; label: string; children: ReactNode }) {
+  return on ? (
+    <SelectableItem ids={ids} label={label}>
+      {children}
+    </SelectableItem>
+  ) : (
+    children
+  );
+}
+
 async function ProductList({ searchParams }: { searchParams: Promise<Search> }) {
   const [me, t] = await Promise.all([requireAnyPermission(['catalog', 'prices', 'stock']), getT()]);
   const params = await searchParams;
@@ -103,7 +114,8 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
   };
   const showCost = can(me, 'costs');
   const canPrint = can(me, 'catalog') || can(me, 'stock');
-  const canSelect = can(me, 'catalog') || can(me, 'prices') || canPrint;
+  // Select's only action is Delete (ADR-057), which is the owner's (ADR-050).
+  const canSelect = me.role === 'admin';
   const designs = groupDesigns(items);
   const pieces = items.reduce((n, p) => n + p.stock, 0);
   const base = { q, supplierId, categoryId };
@@ -181,7 +193,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
         <ul data-testid="design-list" className="rise-in grid gap-3 sm:grid-cols-2">
           {designs.map((d) => (
             <li key={d.key}>
-              <SelectableItem ids={d.items.map((p) => p.id)} label={d.name}>
+              <Selectable on={canSelect} ids={d.items.map((p) => p.id)} label={d.name}>
               <DesignCard
                 design={d}
                 t={t}
@@ -197,28 +209,20 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
                   ))}
                 </ul>
               </DesignCard>
-              </SelectableItem>
+              </Selectable>
             </li>
           ))}
         </ul>
       ) : (
         <ul data-testid="product-list" className="flex flex-col gap-2">
           {items.map((p) => (
-            <ProductRow key={p.id} p={p} photo={photoOf(p.id)} showCost={showCost} t={t} selectable />
+            <ProductRow key={p.id} p={p} photo={photoOf(p.id)} showCost={showCost} t={t} selectable={canSelect} />
           ))}
         </ul>
       )}
       {items.length === 0 && <p className={`text-sm ${muted}`}>{t(show === 'hidden' ? 'cat.products.noneHidden' : 'cat.products.none')}</p>}
       <SelectionBar>
-        <ProductBulkActions
-          companies={supplierRows.filter((x) => x.active).map(({ id, name }) => ({ id, name }))}
-          categories={categoryRows.filter((c) => c.active).map(({ id, name, code }) => ({ id, name, code }))}
-          canCatalog={can(me, 'catalog')}
-          canPrices={can(me, 'prices')}
-          canPrint={canPrint}
-          canDelete={me.role === 'admin'}
-          hiddenView={show === 'hidden'}
-        />
+        <ProductDeleteAction />
       </SelectionBar>
       </SelectionProvider>
     </>
