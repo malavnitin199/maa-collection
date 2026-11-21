@@ -107,7 +107,7 @@ export function CompanyBrowser({ rows, totals, showMoney, canDelete = false }: {
                 {t('cat.find.count', { n: shown.length, total: rows.length })}
               </span>
             )}
-            {/* Select is for Delete, which only the owner may do (ADR-051). */}
+            {/* Select is for Delete (Catalog right, ADR-051). */}
             {canDelete && <SelectToggle testId="select-companies" />}
           </span>
         </div>
@@ -132,7 +132,7 @@ export function CompanyBrowser({ rows, totals, showMoney, canDelete = false }: {
             className="flex flex-col gap-1.5"
             items={shown.map((s) => {
               const row = (
-                <Link href={`/admin/suppliers/${s.id}`} className={`${card} flex items-center justify-between gap-3 px-3.5 py-2.5 active:bg-zinc-50 dark:active:bg-zinc-900`}>
+                <Link href={`/admin/companies/${s.id}`} className={`${card} flex items-center justify-between gap-3 px-3.5 py-2.5 active:bg-zinc-50 dark:active:bg-zinc-900`}>
                   <span className="min-w-0">
                     <span className="block truncate font-medium">
                       {s.name}

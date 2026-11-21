@@ -120,6 +120,13 @@
       "when": 1795295211304,
       "tag": "0016_company_deleted",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795298246074,
+      "tag": "0017_bill_copy",
+      "breakpoints": true
     }
   ]
 }

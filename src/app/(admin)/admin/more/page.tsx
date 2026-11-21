@@ -20,7 +20,7 @@ const GROUPS: { title: MessageKey; links: Item[] }[] = [
       { href: '/admin/products', Icon: IconBoxes, label: 'nav.products', hint: 'cat.menu.productsHint', needs: ['catalog', 'prices', 'stock'] },
       { href: '/admin/products/new', Icon: IconTag, label: 'cat.menu.single', hint: 'cat.menu.singleHint', needs: ['catalog'] },
       { href: '/admin/categories', Icon: IconGrid, label: 'nav.categories', hint: 'cat.menu.categoriesHint', needs: ['catalog'] },
-      { href: '/admin/suppliers', Icon: IconTruck, label: 'cat.menu.suppliers', hint: 'cat.menu.suppliersHint', needs: ['catalog'] },
+      { href: '/admin/companies', Icon: IconTruck, label: 'cat.menu.suppliers', hint: 'cat.menu.suppliersHint', needs: ['catalog'] },
       { href: '/admin/labels', Icon: IconPrinter, label: 'cat.menu.labels', hint: 'cat.menu.labelsHint', needs: ['catalog', 'stock'] },
     ],
   },

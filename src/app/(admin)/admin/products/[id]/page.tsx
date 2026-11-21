@@ -7,6 +7,7 @@ import { card, link, muted, okBox, secondaryButton, sectionTitle } from '@/compo
 import { HangTag } from '@/features/catalog/hang-tag';
 import { DesignTagsForm, ItemTabs } from '@/features/catalog/item-parts';
 import { PrintButton } from '@/features/catalog/print-button';
+import { AddSizesForm } from '@/features/catalog/add-sizes-form';
 import { DeleteItemButton } from '@/features/catalog/delete-products';
 import { ProductForm } from '@/features/catalog/product-form';
 import { DesignRatesForm, StockInForm } from '@/features/catalog/small-forms';
@@ -117,6 +118,57 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
           priceCode={labelPriceCode(settings, product.costPaise)}
         />
       </div>
+
+      {/* Owner's feedback 2026-11-22 (ADR-054): edit and add sizes at the top, not under Other details. */}
+      {can(me, 'catalog') && (
+        <details data-testid="edit-item" className={`${card} group print:hidden`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+            <span>
+              <span className="block font-semibold">✎ {t('cat.product.editDetails')}</span>
+              <span className={`block text-xs ${muted}`}>{t('cat.product.editHint')}</span>
+            </span>
+            <span aria-hidden className={`transition group-open:rotate-180 ${muted}`}>▾</span>
+          </summary>
+          <div className="mt-3 flex flex-col gap-3">
+            <ProductForm
+              mode="edit"
+              action={updateProductAction.bind(null, product.id)}
+              categories={categoryRows.filter((c) => c.active || c.id === product.categoryId).map(({ id, name, code }) => ({ id, name, code }))}
+              suppliers={supplierRows.filter((s) => s.active || s.id === product.supplierId).map(({ id, name }) => ({ id, name }))}
+              initial={{
+                name: product.name,
+                brand: product.brand,
+                categoryId: product.categoryId ?? '',
+                supplierId: product.supplierId ?? '',
+                size: product.size,
+                color: product.color,
+                mrp: rupees(product.mrpPaise),
+                price: rupees(product.pricePaise),
+                cost: can(me, 'costs') ? rupees(product.costPaise) : '',
+                active: product.active,
+              }}
+              showCost={can(me, 'costs')}
+            />
+            {!can(me, 'prices') && <p className={`text-xs ${muted}`}>{t('cat.product.noPricesRight')}</p>}
+          </div>
+        </details>
+      )}
+      {can(me, 'catalog') && (
+        <details data-testid="add-sizes-card" className={`${card} group print:hidden`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold">
+            {t('cat.addSizes.title')}
+            <span aria-hidden className={`transition group-open:rotate-180 ${muted}`}>▾</span>
+          </summary>
+          <div className="mt-3">
+            <AddSizesForm
+              productId={product.id}
+              offered={categoryRows.find((c) => c.id === product.categoryId)?.sizes ?? []}
+              existing={designSizes}
+              boxes={product.packSize}
+            />
+          </div>
+        </details>
+      )}
 
       {can(me, 'prices') && (
         <section className={`${card} flex flex-col gap-3 print:hidden`}>
@@ -255,7 +307,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
                     {a.supplierId && a.supplierName && (
                       <>
                         {' · '}
-                        <Link href={`/admin/suppliers/${a.supplierId}`} className={link}>
+                        <Link href={`/admin/companies/${a.supplierId}`} className={link}>
                           {a.supplierName}
                         </Link>
                       </>
@@ -305,34 +357,9 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const other = (
     <div className="flex flex-col gap-4 print:hidden">
       {can(me, 'catalog') ? (
-        <>
-          <section className={`${card} flex flex-col gap-3`}>
-            <DesignTagsForm action={updateDesignTagsAction.bind(null, product.id)} initial={{ forGender, ageGroup }} count={variants.length} />
-          </section>
-          <section className={`${card} flex flex-col gap-3`}>
-            <h2 className={sectionTitle}>{t('cat.product.editDetails')}</h2>
-            <ProductForm
-              mode="edit"
-              action={updateProductAction.bind(null, product.id)}
-              categories={categoryRows.filter((c) => c.active || c.id === product.categoryId).map(({ id, name, code }) => ({ id, name, code }))}
-              suppliers={supplierRows.filter((s) => s.active || s.id === product.supplierId).map(({ id, name }) => ({ id, name }))}
-              initial={{
-                name: product.name,
-                brand: product.brand,
-                categoryId: product.categoryId ?? '',
-                supplierId: product.supplierId ?? '',
-                size: product.size,
-                color: product.color,
-                mrp: rupees(product.mrpPaise),
-                price: rupees(product.pricePaise),
-                cost: can(me, 'costs') ? rupees(product.costPaise) : '',
-                active: product.active,
-              }}
-              showCost={can(me, 'costs')}
-            />
-            {!can(me, 'prices') && <p className={`text-xs ${muted}`}>{t('cat.product.noPricesRight')}</p>}
-          </section>
-        </>
+        <section className={`${card} flex flex-col gap-3`}>
+          <DesignTagsForm action={updateDesignTagsAction.bind(null, product.id)} initial={{ forGender, ageGroup }} count={variants.length} />
+        </section>
       ) : (
         <p className={`text-sm ${muted}`}>
           {product.brand} · {product.category}
@@ -441,7 +468,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
       <section data-testid="product-must-haves" className={`${card} flex flex-col gap-3 print:hidden`}>
         <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
           {supplier ? (
-            <Link href={`/admin/suppliers/${supplier.id}`} className={`${link} truncate font-semibold`}>
+            <Link href={`/admin/companies/${supplier.id}`} className={`${link} truncate font-semibold`}>
               {supplier.name}
             </Link>
           ) : (

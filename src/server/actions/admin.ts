@@ -33,6 +33,7 @@ import {
   bulkUpdateProducts,
   type BulkProductChange,
   setDesignTags,
+  addDesignSizes,
   stockIn,
   updateDesignRates,
   updateProduct,
@@ -273,8 +274,8 @@ export async function createSupplierAction(_prev: FormState, formData: FormData)
 /** Companies → Select → Delete (2026-11-21): removes the chosen companies that have nothing linked; reports the rest. */
 export async function deleteCompaniesAction(ids: string[]): Promise<{ ok: true; deleted: number; message: string } | { ok: false; error: string }> {
   // Owner's feedback 2026-11-22 (ADR-051): any company, after a confirmation; its items and stock entries stay.
-  // Owner only. Bills and payments are not touched (they keep its name).
-  await requireAdmin();
+  // Anyone with the Catalog right (bills and payments are not touched; they keep its name).
+  await requirePermission('catalog');
   try {
     const list = (Array.isArray(ids) ? ids : []).map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500);
     const result = await deleteCompanies(await getDb(), STORE_ID, list);
@@ -963,6 +964,28 @@ export async function deleteCollectionAction(id: string): Promise<{ ok: true; me
     const result = await deleteSection(await getDb(), STORE_ID, String(id));
     revalidatePath('/admin', 'layout');
     return { ok: true, message: (await getT())('col.deleted', { name: result.name }) };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** Product page → + Add sizes (ADR-054): new sizes of the design with their pieces. */
+export async function addDesignSizesAction(
+  productId: string,
+  input: { operationId: string; sizes: string[]; quantities: Record<string, number> },
+): Promise<{ ok: true; created: number; receiptId: string } | { ok: false; error: string }> {
+  const me = await requirePermission('catalog');
+  try {
+    const sizes = (Array.isArray(input.sizes) ? input.sizes : []).map((s) => String(s).slice(0, 20)).slice(0, 40);
+    const quantities: Record<string, number> = {};
+    for (const [size, n] of Object.entries(input.quantities ?? {})) {
+      const value = Number(n);
+      if (!Number.isInteger(value) || value < 0 || value > 10_000) throw new DomainError('Pieces must be a whole number.', { key: 'act.err.piecesWhole' });
+      quantities[String(size).slice(0, 20)] = value;
+    }
+    const result = await addDesignSizes(await getDb(), STORE_ID, String(productId), { operationId: String(input.operationId).slice(0, 100), sizes, quantities, staffId: me.id });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, created: result.products.length, receiptId: result.receipt.id };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }

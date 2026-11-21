@@ -23,7 +23,7 @@ const ADMIN_LINKS: NavLink[] = [
   { href: '/admin/approvals', label: 'nav.approvals' },
   { href: '/admin/products', label: 'nav.products' },
   { href: '/admin/stock', label: 'nav.addStock' },
-  { href: '/admin/suppliers', label: 'nav.suppliers' },
+  { href: '/admin/companies', label: 'nav.suppliers' },
   { href: '/admin/categories', label: 'nav.categories' },
   { href: '/admin/staff', label: 'nav.staff' },
   { href: '/admin/reports', label: 'nav.reports' },

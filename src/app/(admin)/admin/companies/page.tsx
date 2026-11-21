@@ -24,7 +24,7 @@ async function Companies() {
   return (
     <CompanyBrowser
       showMoney={showMoney}
-      canDelete={me.role === 'admin'}
+      canDelete={can(me, 'catalog')}
       totals={totals}
       rows={rows.map(({ id, name, location, contactName, phone, active, bills, openBills, collections, amountPaise, duePaise }) => ({
         id, name, location, contactName, phone, active, bills, openBills, collections, amountPaise, duePaise,
@@ -33,7 +33,7 @@ async function Companies() {
   );
 }
 
-export default async function SuppliersPage(props: PageProps<'/admin/suppliers'>) {
+export default async function CompaniesPage(props: PageProps<'/admin/companies'>) {
   const t = await getT();
   const { deleted } = (await props.searchParams) as { deleted?: string };
   return (

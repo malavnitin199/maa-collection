@@ -26,7 +26,7 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   const name = `Surat Silks ${run}`;
 
   // A company with a location.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(name);
   await page.getByLabel(/^Location/).fill('Surat');
@@ -148,7 +148,7 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await expect(page.getByTestId('company-bills-count')).toHaveText('1');
 
   // The companies list shows bills and dues.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await expect(page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(name) })).toContainText('1 bills · dues ₹0.00');
 
   // The Companies page: search (by place too), the Location dropdown, the folded Summary.
@@ -167,5 +167,5 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await page.goto('/admin/dashboard');
   await expect(page.getByTestId('home-companies-line')).toContainText(/\d+ companies/);
   await page.getByTestId('home-companies').click();
-  await expect(page).toHaveURL(/\/admin\/suppliers$/);
+  await expect(page).toHaveURL(/\/admin\/companies$/);
 });

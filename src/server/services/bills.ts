@@ -202,23 +202,55 @@ async function attach(db: Db, storeId: string, billId: string, receiptIds: strin
   if (found.some((r) => !r.supplierId || !companies.includes(r.supplierId))) {
     throw new DomainError('A collection is from a company that is not on this bill.', { key: 'bill.err.otherCompany' });
   }
+  // The bill's own copy of each entry as it is now (ADR-054): later changes to items or companies never reach it.
+  const live = await listCollections(db, storeId, { receiptIds: unique, limit: 10_000 });
+  const copyOf = (receiptId: string): Collection => {
+    const entry = live.find((c) => c.receiptId === receiptId);
+    if (entry) return { ...entry, billId };
+    const supplierId = found.find((r) => r.id === receiptId)?.supplierId ?? null;
+    return { receiptId, supplierId, supplierName: null, date: '', refNumber: null, names: [], sizes: [], items: 0, pieces: 0, valuePaise: 0, estimated: false, billId, lines: [] };
+  };
   try {
-    await db.insert(billCollections).values(unique.map((receiptId) => ({ billId, receiptId })));
+    await db.insert(billCollections).values(unique.map((receiptId) => ({ billId, receiptId, snapshot: copyOf(receiptId) as unknown as Record<string, unknown> })));
   } catch (error) {
     if (isUniqueViolation(error)) throw new DomainError('A collection is already on another bill.', { key: 'bill.err.taken' });
     throw error;
   }
 }
 
+/** Each company's part of a new bill, with the company's name copied onto the bill (ADR-054). */
+async function companyParts(db: Db, billId: string, ids: string[]) {
+  const names = await db.select({ id: suppliers.id, name: suppliers.name }).from(suppliers).where(inArray(suppliers.id, ids));
+  return ids.map((supplierId) => ({ billId, supplierId, companyName: names.find((n) => n.id === supplierId)?.name ?? '', amountPaise: 0 }));
+}
+
+/**
+ * The bill's copies of its stock entries (ADR-054), by bill. An entry put on a bill
+ * before copies were kept (no copy yet) is read as it is now.
+ */
+async function billCopies(db: Db, storeId: string, billIds: string[]): Promise<{ billId: string; entry: Collection }[]> {
+  if (billIds.length === 0) return [];
+  const rows = await db
+    .select({ billId: billCollections.billId, receiptId: billCollections.receiptId, snapshot: billCollections.snapshot })
+    .from(billCollections)
+    .where(inArray(billCollections.billId, billIds));
+  const missing = rows.filter((r) => !r.snapshot).map((r) => r.receiptId);
+  const live = missing.length ? await listCollections(db, storeId, { receiptIds: missing, limit: 10_000 }) : [];
+  return rows
+    .map((r) => ({ billId: r.billId, entry: (r.snapshot as unknown as Collection | null) ?? live.find((c) => c.receiptId === r.receiptId) ?? null }))
+    .filter((r): r is { billId: string; entry: Collection } => r.entry !== null)
+    .sort((a, b) => (b.entry.date ?? '').localeCompare(a.entry.date ?? ''));
+}
+
 /**
  * The bill's amounts (owner's feedback 2026-11-21: never typed): each company's
- * part is the value of its collections on the bill — purchase price × pieces,
- * at the price on the day they arrived. Stored, so later price changes do not
- * move a bill.
+ * part is the value of its stock entries on the bill — purchase price × pieces,
+ * at the price on the day they arrived — taken from the bill's own copy of
+ * those entries (ADR-054), so later changes to items or companies never move it.
+ * Run only when the bill itself is edited.
  */
 export async function recompute(db: Db, storeId: string, billId: string) {
-  const links = await db.select({ receiptId: billCollections.receiptId }).from(billCollections).where(eq(billCollections.billId, billId));
-  const list = await listCollections(db, storeId, { receiptIds: links.map((l) => l.receiptId), limit: 10_000 });
+  const list = (await billCopies(db, storeId, [billId])).map((r) => r.entry);
   const parts = await db.select({ id: billCompanies.id, supplierId: billCompanies.supplierId }).from(billCompanies).where(eq(billCompanies.billId, billId));
   for (const part of parts) {
     const amount = list.filter((c) => c.supplierId === part.supplierId).reduce((n, c) => n + c.valuePaise, 0);
@@ -248,7 +280,7 @@ export async function createBill(db: Db, storeId: string, input: BillInput): Pro
         staffId: input.staffId,
       })
       .returning({ id: bills.id });
-    await tx.insert(billCompanies).values(companies.map((supplierId) => ({ billId: bill.id, supplierId, amountPaise: 0 })));
+    await tx.insert(billCompanies).values(await companyParts(t, bill.id, companies));
     await attach(t, storeId, bill.id, input.receiptIds, companies);
     await recompute(t, storeId, bill.id);
     return { id: bill.id, duplicate: false };
@@ -301,7 +333,7 @@ export async function updateBill(
       if (theirs.length) await tx.delete(billCollections).where(and(eq(billCollections.billId, id), inArray(billCollections.receiptId, theirs.map((r) => r.id))));
       await tx.delete(billCompanies).where(and(eq(billCompanies.billId, id), inArray(billCompanies.supplierId, gone)));
     }
-    if (added.length) await tx.insert(billCompanies).values(added.map((supplierId) => ({ billId: id, supplierId, amountPaise: 0 })));
+    if (added.length) await tx.insert(billCompanies).values(await companyParts(t, id, added));
     await recompute(t, storeId, id);
   });
 }
@@ -351,18 +383,24 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
   const billIds = billRows.map((b) => b.id);
   const [parts, paid, links] = await Promise.all([
     db
-      .select({ billId: billCompanies.billId, supplierId: billCompanies.supplierId, name: suppliers.name, deletedAt: suppliers.deletedAt, amountPaise: billCompanies.amountPaise })
+      .select({
+        billId: billCompanies.billId,
+        supplierId: billCompanies.supplierId,
+        // The bill's own copy of the name (ADR-054); the company's current name only if no copy.
+        name: sql<string>`coalesce(nullif(${billCompanies.companyName}, ''), ${suppliers.name}, '')`,
+        deletedAt: suppliers.deletedAt,
+        amountPaise: billCompanies.amountPaise,
+      })
       .from(billCompanies)
-      .innerJoin(suppliers, eq(suppliers.id, billCompanies.supplierId))
+      .leftJoin(suppliers, eq(suppliers.id, billCompanies.supplierId))
       .where(inArray(billCompanies.billId, billIds)),
     db
       .select({ billId: supplierPayments.billId, supplierId: supplierPayments.supplierId, paid: sql<number>`sum(${supplierPayments.amountPaise})`.mapWith(Number) })
       .from(supplierPayments)
       .where(inArray(supplierPayments.billId, billIds))
       .groupBy(supplierPayments.billId, supplierPayments.supplierId),
-    db.select({ billId: billCollections.billId, receiptId: billCollections.receiptId }).from(billCollections).where(inArray(billCollections.billId, billIds)),
+    billCopies(db, storeId, billIds),
   ]);
-  const collections = await listCollections(db, storeId, { receiptIds: links.map((l) => l.receiptId), limit: 10_000 });
   return billRows.map((b) => {
     const companies = parts
       .filter((p) => p.billId === b.id)
@@ -371,7 +409,7 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
         return { supplierId: p.supplierId, name: p.name, deleted: p.deletedAt !== null, amountPaise: p.amountPaise, paidPaise, duePaise: Math.max(0, p.amountPaise - paidPaise) };
       })
       .sort((a, c) => a.name.localeCompare(c.name));
-    const mine = collections.filter((c) => links.some((l) => l.billId === b.id && l.receiptId === c.receiptId));
+    const mine = links.filter((l) => l.billId === b.id).map((l) => l.entry);
     const totalPaise = companies.reduce((n, c) => n + c.amountPaise, 0);
     const paidPaise = companies.reduce((n, c) => n + c.paidPaise, 0);
     const duePaise = companies.reduce((n, c) => n + c.duePaise, 0);
@@ -396,13 +434,38 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
 export async function getBill(db: Db, storeId: string, id: string): Promise<BillDetail | null> {
   const [row] = await listBills(db, storeId, { ids: [id] });
   if (!row) return null;
-  const links = await db.select({ receiptId: billCollections.receiptId }).from(billCollections).where(eq(billCollections.billId, id));
   const [payment] = await db.select({ id: supplierPayments.id }).from(supplierPayments).where(eq(supplierPayments.billId, id)).limit(1);
-  return { ...row, list: await listCollections(db, storeId, { receiptIds: links.map((l) => l.receiptId), limit: 10_000 }), hasPayments: Boolean(payment) };
+  // The bill's own copy of its entries (ADR-054), never today's items.
+  return { ...row, list: (await billCopies(db, storeId, [id])).map((r) => r.entry), hasPayments: Boolean(payment) };
 }
 
 /** Home's Bills line: how many bills, how many still open, and the dues on them. */
 export async function billsSummary(db: Db, storeId: string): Promise<{ bills: number; open: number; duePaise: number }> {
   const rows = await listBills(db, storeId);
   return { bills: rows.length, open: rows.filter((b) => b.status === 'open').length, duePaise: rows.reduce((n, b) => n + b.duePaise, 0) };
+}
+
+/**
+ * One-time (ADR-054, scripts/backfill-bill-copies.ts): bills made before copies were
+ * kept get one now, from the stock entries as they are today. Returns how many.
+ */
+export async function backfillBillCopies(db: Db, storeId: string): Promise<number> {
+  const rows = await db
+    .select({ billId: billCollections.billId, receiptId: billCollections.receiptId, supplierId: stockReceipts.supplierId })
+    .from(billCollections)
+    .innerJoin(bills, eq(bills.id, billCollections.billId))
+    .leftJoin(stockReceipts, eq(stockReceipts.id, billCollections.receiptId))
+    .where(and(eq(bills.storeId, storeId), isNull(billCollections.snapshot)));
+  if (rows.length === 0) return 0;
+  const live = await listCollections(db, storeId, { receiptIds: rows.map((r) => r.receiptId), limit: 10_000 });
+  for (const row of rows) {
+    const entry: Collection = live.find((c) => c.receiptId === row.receiptId) ?? {
+      receiptId: row.receiptId, supplierId: row.supplierId, supplierName: null, date: '', refNumber: null, names: [], sizes: [], items: 0, pieces: 0, valuePaise: 0, estimated: false, billId: row.billId, lines: [],
+    };
+    await db
+      .update(billCollections)
+      .set({ snapshot: { ...entry, billId: row.billId } as unknown as Record<string, unknown> })
+      .where(and(eq(billCollections.billId, row.billId), eq(billCollections.receiptId, row.receiptId)));
+  }
+  return rows.length;
 }

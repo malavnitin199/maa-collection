@@ -71,7 +71,7 @@ export function ProductForm({ action, mode, initial, categories, suppliers, prev
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t('cat.form.name')} name="name" defaultValue={initial?.name} words />
-        <Field label={t('item.brand')} name="brand" defaultValue={initial?.brand} words />
+        <Field label={t('item.brand')} name="brand" defaultValue={initial?.brand} words required={false} />
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t('item.category')}
           <select name="categoryId" required defaultValue={initial?.categoryId ?? ''} className={input}>
@@ -114,9 +114,9 @@ export function ProductForm({ action, mode, initial, categories, suppliers, prev
           </div>
         )}
         <div className="grid grid-cols-2 gap-4">
-          <Field label={t('cat.form.size')} name="size" defaultValue={initial?.size} />
+          <Field label={t('cat.form.size')} name="size" defaultValue={initial?.size} required={false} />
           {/* Colour only when editing on the product page (owner, 2026-11-22). */}
-          {mode !== 'new' && <Field label={t('cat.form.colour')} name="color" defaultValue={initial?.color} words />}
+          {mode !== 'new' && <Field label={t('cat.form.colour')} name="color" defaultValue={initial?.color} words required={false} />}
         </div>
         <Field label={t('cat.mrpRupees')} name="mrp" inputMode="decimal" defaultValue={initial?.mrp} />
         <Field

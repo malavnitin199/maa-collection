@@ -18,7 +18,9 @@ test('a company with an item is deleted from its page; the item stays with no co
   await loginOwner(page);
   const tag = `${run}${info.project.name[0]}`;
   const company = `Gone Co ${tag}`;
+  // The page lives at /admin/companies; an old /admin/suppliers link lands there.
   await page.goto('/admin/suppliers');
+  await expect(page).toHaveURL(/\/admin\/companies$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(company);
@@ -57,7 +59,7 @@ test('a company with an item is deleted from its page; the item stays with no co
   const total = await page.getByTestId('bill-detail-total').innerText();
 
   // The company's page → Delete this company → confirmation (what stays) → back on Companies.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByTestId('company-search').fill(company);
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(company) }).click();
   await page.getByTestId('delete-company').click();
@@ -65,7 +67,7 @@ test('a company with an item is deleted from its page; the item stays with no co
   await expect(sheet).toHaveAccessibleName('Delete this company?');
   await expect(sheet).toContainText('Its items stay, with no company. Its bills and payments stay as they are, with its name.');
   await sheet.getByTestId('confirm-delete').click();
-  await expect(page).toHaveURL(/\/admin\/suppliers\?deleted=/);
+  await expect(page).toHaveURL(/\/admin\/companies\?deleted=/);
   await expect(page.getByTestId('deleted-note')).toContainText('1 company deleted.');
   await expect(page.getByTestId('deleted-note')).toContainText('1 items now have no company. Its bills stay as they are.');
   await page.getByTestId('company-search').fill(company);

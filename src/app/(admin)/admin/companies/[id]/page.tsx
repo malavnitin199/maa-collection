@@ -70,7 +70,7 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
   const day = (value: string) => formatDate(locale, `${value}T00:00:00+05:30`, 'date');
   const money = (paise: number | null) => (paise === null ? '—' : formatPaise(paise));
   const periodHref = (key: CompanyPeriodKey) =>
-    key === 'custom' ? `/admin/suppliers/${id}?period=custom&from=${today.slice(0, 7)}-01&to=${today}` : `/admin/suppliers/${id}?period=${key}`;
+    key === 'custom' ? `/admin/companies/${id}?period=custom&from=${today.slice(0, 7)}-01&to=${today}` : `/admin/companies/${id}?period=${key}`;
   const billLabel = (bill: { billNumber: string | null; billDate: string }) => [bill.billNumber ? t('cat.bill', { number: bill.billNumber }) : null, day(bill.billDate)].filter(Boolean).join(' · ');
   const openBills = report.bills
     .filter((bill) => bill.status === 'open' && bill.duePaise)
@@ -315,7 +315,7 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
 
   return (
     <main className="flex flex-col gap-4">
-      <Link href="/admin/suppliers" className={`text-sm ${link}`}>
+      <Link href="/admin/companies" className={`text-sm ${link}`}>
         {t('cat.backSuppliers')}
       </Link>
       <div>
@@ -408,13 +408,13 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
           { id: 'details', label: t('cat.acc.tab.details'), content: detailsTab, tone: 'slate' },
         ]}
       />
-      {/* Owner only (ADR-051): delete the company; its items and stock entries stay. */}
-      {me.role === 'admin' && <DeleteCompanyButton id={supplier.id} />}
+      {/* Anyone with the Catalog right (ADR-051): delete the company; its items and stock entries stay, bills keep their copy. */}
+      {can(me, 'catalog') && <DeleteCompanyButton id={supplier.id} />}
     </main>
   );
 }
 
-export default async function SupplierPage(props: PageProps<'/admin/suppliers/[id]'>) {
+export default async function CompanyPage(props: PageProps<'/admin/companies/[id]'>) {
   const t = await getT();
   return (
     <Suspense fallback={<p className="text-sm text-zinc-500">{t('cat.sup.loading')}</p>}>

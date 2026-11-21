@@ -9,7 +9,7 @@ async function choose(box: Locator, label: string) {
 /**
  * The product page's clean-up (owner's feedback 2026-11-20): figures on top for
  * a period (in stock, sold, came in, profit, last sale, last arrival), one row
- * with company + prices + the two actions, tabs Details · Colours · Sales ·
+ * with company + prices + the two actions (Edit at the top of Details), tabs Details · Colours · Sales ·
  * Purchases · Other details; the edit form's word boxes type Hindi or English.
  */
 const PIN = '1234';
@@ -72,8 +72,10 @@ test('product page: figures, period, Sales and Purchases tabs, Hindi / English b
   await expect(arrivals).toContainText('First stock · Shree Ganesh Textiles');
   await expect(arrivals).toContainText('6 pcs');
   await expect(page.getByTestId('stock-history')).toBeVisible();
-  await page.getByRole('tab', { name: 'Other details', exact: true }).click();
-  const edit = page.getByRole('tabpanel', { name: 'Other details' });
+  // Edit sits at the top of Details (owner, 2026-11-22, ADR-054).
+  await page.getByRole('tab', { name: 'Details', exact: true }).click();
+  const edit = page.getByTestId('edit-item');
+  await edit.getByText('Edit this item').click();
   await expect(edit.getByLabel('Product name')).toHaveValue(`Figure Kurta ${run}`);
   await expect(edit.getByRole('button', { name: 'Type in Hindi' }).first()).toBeVisible();
 

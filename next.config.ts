@@ -19,7 +19,12 @@ const nextConfig: NextConfig = {
   // (query such as ?supplier= is kept) land there.
   async redirects() {
     // The old quick-add address lands on the earlier form (plan v19: /admin/stock/new is the step-by-step screen).
-    return [{ source: "/admin/stock/quick", destination: "/admin/stock/form", permanent: false }];
+    return [
+      { source: "/admin/stock/quick", destination: "/admin/stock/form", permanent: false },
+      // "Companies", never "suppliers" (owner, 2026-11-22, ADR-051): old links and bookmarks land on the new address.
+      { source: "/admin/suppliers", destination: "/admin/companies", permanent: false },
+      { source: "/admin/suppliers/:path*", destination: "/admin/companies/:path*", permanent: false },
+    ];
   },
   turbopack: {
     rules: {

@@ -40,7 +40,7 @@ test('a bill with two companies and two collections; take one off and add it bac
   const a = `Bill Co A ${run}`;
   const b = `Bill Co B ${run}`;
   for (const company of [a, b]) {
-    await page.goto('/admin/suppliers');
+    await page.goto('/admin/companies');
     await page.getByText('+ Add company').click();
     await page.getByLabel('Company name').fill(company);
     await page.getByRole('button', { name: 'Add company' }).click();

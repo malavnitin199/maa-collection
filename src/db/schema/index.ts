@@ -4,6 +4,7 @@ import {
   check,
   customType,
   date,
+  jsonb,
   index,
   integer,
   pgTable,
@@ -267,6 +268,8 @@ export const billCompanies = pgTable(
     supplierId: uuid('supplier_id')
       .notNull()
       .references(() => suppliers.id),
+    /** The company's name when it was put on the bill (ADR-054): the bill keeps its own copy. */
+    companyName: text('company_name').notNull().default(''),
     amountPaise: integer('amount_paise').notNull(),
   },
   (t) => [
@@ -287,6 +290,12 @@ export const billCollections = pgTable(
       .notNull()
       .references(() => stockReceipts.id),
     addedAt: timestamp('added_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The stock entry as it was when put on the bill (owner, 2026-11-22, ADR-054): items,
+     * sizes, quantities, rates, amounts and company — the bill's own copy, so deleting or
+     * changing items or companies later never changes the bill. (A `Collection`, see bills.ts.)
+     */
+    snapshot: jsonb('snapshot').$type<Record<string, unknown>>(),
   },
   (t) => [uniqueIndex('bill_collections_receipt_uq').on(t.receiptId), index('bill_collections_bill_idx').on(t.billId)],
 );

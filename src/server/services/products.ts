@@ -202,16 +202,18 @@ function resolveSizeRates(sizes: readonly string[], defaults: { mrpPaise: number
   );
 }
 
-const ENTER_KEY: Record<'name' | 'brand' | 'category' | 'size', MessageKey> = {
+const ENTER_KEY: Record<'name' | 'category', MessageKey> = {
   name: 'stk.err.enter.name',
-  brand: 'stk.err.enter.brand',
   category: 'stk.err.enter.category',
-  size: 'stk.err.enter.size',
 };
 
-/** Colour is optional (owner, 2026-11-22): it is typed and shown only on the product page. */
+/**
+ * Colour is optional (owner, 2026-11-22): it is typed and shown only on the product page.
+ * Brand and size may be empty too (D-V19-5; no-size items, ADR-052) — else items made
+ * by New item could not be edited (ADR-054).
+ */
 function validateProductInput(input: ProductInput) {
-  for (const field of ['name', 'brand', 'category', 'size'] as const) {
+  for (const field of ['name', 'category'] as const) {
     if (!input[field].trim()) throw new DomainError(`Enter the ${field === 'name' ? 'product name' : field}.`, { key: ENTER_KEY[field] });
   }
   validatePrices(input);
@@ -1276,4 +1278,48 @@ export async function productsByIds(db: Db, storeId: string, ids: readonly strin
     .from(products)
     .where(and(eq(products.storeId, storeId), eq(products.active, true), inArray(products.id, unique)))
     .orderBy(asc(products.name), asc(products.color), asc(products.size));
+}
+
+/**
+ * Product page → + Add sizes (owner, 2026-11-22, ADR-054): new sizes of this item's
+ * design, with their pieces — the same name, brand, category, company, colour,
+ * prices, box and tags; one stock entry. A size the design already has is refused.
+ * A hidden or deleted company is left off (the new sizes get no company).
+ */
+export async function addDesignSizes(
+  db: Db,
+  storeId: string,
+  productId: string,
+  input: { operationId: string; sizes: string[]; quantities: Record<string, number>; staffId: string },
+): Promise<DesignResult> {
+  const product = await getProduct(db, storeId, productId);
+  if (!product) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  if (!product.categoryId) throw new DomainError('Enter the category.', { key: 'stk.err.enter.category' });
+  let supplierId: string | null = null;
+  if (product.supplierId) {
+    const [company] = await db
+      .select({ id: suppliers.id })
+      .from(suppliers)
+      .where(and(eq(suppliers.id, product.supplierId), eq(suppliers.active, true), isNull(suppliers.deletedAt)))
+      .limit(1);
+    supplierId = company?.id ?? null;
+  }
+  return createDesign(db, storeId, {
+    operationId: input.operationId,
+    supplierId,
+    categoryId: product.categoryId,
+    name: product.name,
+    brand: product.brand,
+    sizes: input.sizes,
+    colors: [product.color],
+    mrpPaise: product.mrpPaise,
+    pricePaise: product.pricePaise === product.mrpPaise ? null : product.pricePaise,
+    costPaise: product.costPaise,
+    quantityEach: 0,
+    quantities: input.quantities,
+    pack: product.packSize ? { size: product.packSize, mrpPaise: product.packMrpPaise, costPaise: product.packCostPaise } : null,
+    forGender: product.forGender,
+    ageGroup: product.ageGroup,
+    staffId: input.staffId,
+  });
 }

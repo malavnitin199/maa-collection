@@ -31,7 +31,7 @@ async function Dashboard() {
         <FirstTimeTip id="owner" text={t('own.dash.tip')} helpHref="/guide#for-owner" />
         <div data-testid="quick-actions" className="rise-in grid grid-cols-2 gap-3 sm:grid-cols-4">
           <TagTile href="/admin/stock" primary icon={<IconStockAdd />} title={t('own.dash.newStock')} />
-          <TagTile href="/admin/suppliers" icon={<IconTag />} title={t('nav.suppliers')} />
+          <TagTile href="/admin/companies" icon={<IconTag />} title={t('nav.suppliers')} />
           <TagTile href="/admin/reports" icon={<IconRupee />} title={t('nav.reports')} />
           <TagTile
             href="/admin/approvals"

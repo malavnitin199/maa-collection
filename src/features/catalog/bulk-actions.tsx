@@ -325,7 +325,7 @@ function DeleteCompaniesSheet({ ids, onClose, onDone }: { ids: string[]; onClose
 }
 
 /**
- * Companies → Select → Delete (owner only, ADR-051), after a confirmation: any company;
+ * Companies → Select → Delete (Catalog right, ADR-051), after a confirmation: any company;
  * its items and stock entries stay with no company.
  */
 export function CompanyBulkActions() {
@@ -354,7 +354,7 @@ export function CompanyBulkActions() {
   );
 }
 
-/** A company's page (owner only): Delete this company → the confirmation → back to Companies with the result. */
+/** A company's page (Catalog right): Delete this company → the confirmation → back to Companies with the result. */
 export function DeleteCompanyButton({ id }: { id: string }) {
   const t = useT();
   const router = useRouter();
@@ -376,7 +376,7 @@ export function DeleteCompanyButton({ id }: { id: string }) {
           onClose={() => setOpen(false)}
           onDone={(result) => {
             setOpen(false);
-            router.replace(`/admin/suppliers?${new URLSearchParams({ deleted: result.message })}`);
+            router.replace(`/admin/companies?${new URLSearchParams({ deleted: result.message })}`);
           }}
         />
       )}

@@ -23,7 +23,7 @@ export async function CompaniesOverview({ me }: { me: CurrentStaff }) {
   const { totals } = await companiesOverview(db, STORE_ID, { amounts: showMoney });
   return (
     <Link
-      href="/admin/suppliers"
+      href="/admin/companies"
       data-testid="home-companies"
       className={`${card} rise-in flex items-center gap-3 py-3 active:bg-zinc-50 dark:active:bg-zinc-900`}
     >

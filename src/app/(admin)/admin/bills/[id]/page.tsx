@@ -72,7 +72,7 @@ async function BillDetail({ id }: { id: string }) {
                       {c.name} <span className={`text-xs ${muted}`}>{t('bills.companyDeleted')}</span>
                     </span>
                   ) : (
-                    <Link href={`/admin/suppliers/${c.supplierId}`} className={link}>
+                    <Link href={`/admin/companies/${c.supplierId}`} className={link}>
                       {c.name}
                     </Link>
                   )}

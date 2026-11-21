@@ -439,7 +439,7 @@ export function NewItemForm({
       </label>
       <p className={`text-xs ${muted}`}>
         {t('stk.item.missing')}{' '}
-        <Link href="/admin/suppliers" className={link}>
+        <Link href="/admin/companies" className={link}>
           {t('stk.item.addCompany')}
         </Link>{' '}
         ·{' '}

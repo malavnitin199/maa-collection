@@ -32,7 +32,7 @@ const purchasePrice = (page: Page) => page.getByLabel('Purchase price ₹', { ex
 test('owner adds a supplier and a category; both show up with details', async ({ page }) => {
   await loginOwner(page);
 
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`XYZ Textiles ${run}`);
   await page.getByLabel('Contact person (optional)').fill('Ramesh');
@@ -46,7 +46,7 @@ test('owner adds a supplier and a category; both show up with details', async ({
   await expect(page.getByRole('link', { name: 'Call 98765 43210' })).toHaveAttribute('href', 'tel:9876543210');
 
   // Duplicate supplier is refused.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`XYZ Textiles ${run}`);
   await page.getByRole('button', { name: 'Add company' }).click();
@@ -74,7 +74,7 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
   await expect(page.getByRole('link', { name: /New item/ })).toBeVisible();
   await tabs.getByRole('link', { name: 'More' }).click();
   await page.getByRole('link', { name: /^Companies/ }).click();
-  await expect(page).toHaveURL(/\/admin\/suppliers$/);
+  await expect(page).toHaveURL(/\/admin\/companies$/);
   await tabs.getByRole('link', { name: 'More' }).click();
   await page.getByRole('link', { name: /Categories/ }).click();
   await expect(page).toHaveURL(/\/admin\/categories$/);
@@ -86,7 +86,7 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
 test('owner enters a new design from a supplier in sizes, prints labels; salesman can scan it', async ({ page }) => {
   await loginOwner(page);
   // Supplier for this run.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`Design Co ${run}`);
   await page.getByRole('button', { name: 'Add company' }).click();
@@ -521,7 +521,7 @@ test('company box: add a company on the spot, the same name is reused, a hidden 
   await page.keyboard.press('Escape');
 
   // Hide it: Companies → the company → untick Active.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(fresh) }).click();
   await page.getByRole('tab', { name: 'Details', exact: true }).click(); // company page tabs (company accounts, 2026-11-20)
   await page.getByText('Edit company details').click();
@@ -723,13 +723,13 @@ test('Companies and All tags → Select: delete companies after a confirmation; 
   const a = `Sel Co A ${run}`;
   const b = `Sel Co B ${run}`;
   for (const company of [a, b]) {
-    await page.goto('/admin/suppliers');
+    await page.goto('/admin/companies');
     await page.getByText('+ Add company').click();
     await page.getByLabel('Company name').fill(company);
     await page.getByRole('button', { name: 'Add company' }).click();
     await expect(page.getByRole('status')).toContainText(`${company} added.`);
   }
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByTestId('select-companies').click();
   // The tick sits beside the row, never over the name (owner, 2026-11-21).
   const tick = page.getByRole('checkbox', { name: `Select ${a}` });
@@ -809,7 +809,7 @@ test('a salesman cannot add companies, categories, products, stock or change rat
   await page.getByLabel('PIN').fill(PIN);
   await page.getByRole('button', { name: 'Log in' }).click();
   await expect(page).toHaveURL(/\/pos$/);
-  for (const path of ['/admin/suppliers', '/admin/categories', '/admin/stock/new', '/admin/stock/form', '/admin/stock/receive', '/admin/products', '/admin/products/new', '/admin/more', '/admin/labels']) {
+  for (const path of ['/admin/companies', '/admin/categories', '/admin/stock/new', '/admin/stock/form', '/admin/stock/receive', '/admin/products', '/admin/products/new', '/admin/more', '/admin/labels']) {
     await page.goto(path);
     await expect(page, `${path} must be blocked`).toHaveURL(/\/pos$/);
   }
@@ -910,7 +910,7 @@ test('new item: one plain item with MRP, purchase and pieces on top → labels �
 test('all tags: grouped by date, company or delivery; filters; grid or sideways rows; print one group', async ({ page }) => {
   await loginOwner(page);
   const company = `Tag Lib Co ${run}`;
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(company);
   await page.getByRole('button', { name: 'Add company' }).click();
@@ -1012,7 +1012,7 @@ test('combined view: one card per design (name + company + MRP) on Products and 
   await loginOwner(page);
   const company = `Combo Co ${run}`;
   const name = `Combo Kurta ${run}`;
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(company);
   await page.getByRole('button', { name: 'Add company' }).click();

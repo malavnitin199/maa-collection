@@ -41,7 +41,7 @@ test('New item: type a name in Hindi from English letters, change it back, the c
 
   // The choice is for the whole phone: the brand box (under More) follows it.
   await page.getByRole('button', { name: 'Type in Hindi' }).first().click();
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   const company = page.getByLabel('Company name');
   await expect(company).toHaveAttribute('lang', 'hi');
@@ -55,7 +55,7 @@ test('New item: type a name in Hindi from English letters, change it back, the c
 test('a microphone sits next to name boxes where the browser can listen; it says when nothing was heard', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'speech recognition is a Chromium feature');
   await loginOwner(page);
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   const row = page.getByLabel('Company name').locator('..');
   const mic = row.getByRole('button', { name: 'Speak to fill' });

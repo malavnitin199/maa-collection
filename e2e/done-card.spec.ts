@@ -22,7 +22,7 @@ test('done card: a company with its details, a duplicate shows the red card; a c
   const card = page.getByTestId('done-overlay');
 
   // A company.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`Done Mills ${run}`);
   await page.getByLabel(/^Phone/).fill('98765 00000');
@@ -37,7 +37,7 @@ test('done card: a company with its details, a duplicate shows the red card; a c
   await expect(card).toBeHidden();
 
   // The same name again: the red card, clearly different.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByText('+ Add company').click();
   await page.getByLabel('Company name').fill(`Done Mills ${run}`);
   await page.getByRole('button', { name: 'Add company' }).click();
@@ -59,7 +59,7 @@ test('done card: a company with its details, a duplicate shows the red card; a c
   await expect(card).toBeHidden();
 
   // A payment on the company's page.
-  await page.goto('/admin/suppliers');
+  await page.goto('/admin/companies');
   await page.getByTestId('supplier-list').getByRole('link', { name: new RegExp(`Done Mills ${run}`) }).click();
   await page.getByRole('tab', { name: 'Payments', exact: true }).click();
   const form = page.getByTestId('payment-form');
