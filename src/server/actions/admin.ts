@@ -493,7 +493,7 @@ export type DesignActionInput = {
 
 /** `items`: the saved items (in entry order) so photos can be attached right after. */
 export type DesignActionResult =
-  | { ok: true; receiptId: string; created: number; items: { id: string; color: string; sku: string; size: string }[] }
+  | { ok: true; receiptId: string; created: number; items: { id: string; name: string; color: string; sku: string; size: string }[] }
   | { ok: false; error: string };
 
 export async function createDesignAction(input: DesignActionInput): Promise<DesignActionResult> {
@@ -536,7 +536,7 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
       staffId: admin.id,
     });
     revalidatePath('/admin', 'layout');
-    return { ok: true, receiptId: result.receipt.id, created: result.products.length, items: result.products.map((p) => ({ id: p.id, color: p.color, sku: p.sku, size: p.size })) };
+    return { ok: true, receiptId: result.receipt.id, created: result.products.length, items: result.products.map((p) => ({ id: p.id, name: p.name, color: p.color, sku: p.sku, size: p.size })) };
   } catch (error) {
     const state = await failure(error);
     return { ok: false, error: state.error ?? 'Something went wrong.' };

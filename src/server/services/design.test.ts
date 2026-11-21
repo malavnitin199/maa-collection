@@ -35,6 +35,18 @@ const base = () => ({
 });
 
 describe('createDesign for the step-by-step New item', () => {
+  it('a blank name becomes the category and the number of its first SKU (owner, 2026-11-21)', async () => {
+    const result = await createDesign(db, STORE_ID, { ...base(), name: '   ', sizes: ['M', 'L'] });
+    const first = result.products[0];
+    const number = first.sku.match(/-(\d+)$/)![1];
+    expect(first.name).toBe(`Kurta ${number}`);
+    expect(result.products.every((p) => p.name === first.name)).toBe(true);
+    // The next blank one gets the next number, so it never clashes with the first.
+    const again = await createDesign(db, STORE_ID, { ...base(), name: '', sizes: ['M'] });
+    expect(again.products[0].name).toBe(`Kurta ${String(Number(number) + 2).padStart(3, '0')}`);
+    expect(again.products[0].sku.endsWith(String(Number(number) + 2).padStart(3, '0'))).toBe(true);
+  });
+
   it('pieces per size (2 × M, 2 × L, 5 × XL), one item per size with an empty colour and an empty brand', async () => {
     const result = await createDesign(db, STORE_ID, { ...base(), quantities: { M: 2, l: 2, XL: 5 } });
     expect(result.duplicate).toBe(false);

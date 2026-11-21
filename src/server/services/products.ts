@@ -216,6 +216,12 @@ export function skuPrefix(codeOrCategory: string): string {
   return `MAA-${code}-`;
 }
 
+/** "Pajama 013": the category's name and the number its next SKU will take. */
+export async function defaultDesignName(db: Db, storeId: string, category: { name: string; code: string }): Promise<string> {
+  const next = (await highestSkuNumber(db, storeId, skuPrefix(category.code))) + 1;
+  return `${category.name} ${String(next).padStart(3, '0')}`;
+}
+
 async function highestSkuNumber(db: Db, storeId: string, prefix: string): Promise<number> {
   const rows = await db
     .select({ sku: products.sku })
@@ -406,10 +412,10 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   const existing = await findReceiptByOperation(db, storeId, input.operationId);
   if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
 
-  const name = input.name.trim();
+  let name = input.name.trim().replace(/\s+/g, ' ');
   // Plan v19 (D-V19-5): an empty brand stays empty (the old form sends the company's name itself).
   const brand = input.brand.trim();
-  if (!name) throw new DomainError('Enter the design / product name.', { key: 'stk.err.designName' });
+  if (name.length > 120) throw new DomainError('Enter the design / product name.', { key: 'stk.err.designName' });
   const sizes = cleanList(input.sizes);
   // Plan v19 (D-V19-3): no colour given = one item per size with an empty colour, shown as nothing.
   const given = cleanList(input.colors);
@@ -429,6 +435,9 @@ export async function createDesign(db: Db, storeId: string, input: DesignInput):
   const stockDate = cleanStockDate(input.stockDate);
   const category = await resolveCategoryForNewItem(db, storeId, input.categoryId);
   await resolveSupplier(db, storeId, input.supplierId);
+  // Owner's feedback 2026-11-21: the name is optional. A blank one becomes the category and the
+  // number of the first SKU it gets ("Pajama 013" ↔ MAA-PJ-013), so the name and the tag line up.
+  if (!name) name = await defaultDesignName(db, storeId, category);
 
   const clash = await db
     .select({ size: products.size, color: products.color, sku: products.sku })
