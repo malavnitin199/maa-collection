@@ -57,8 +57,6 @@ test('a bill with two companies and two collections; take one off and add it bac
   const form = page.getByTestId('bill-form');
   await expect(form.getByText('Choose a company to see its collections.')).toBeVisible();
   await expect(form.getByLabel(/amount/i)).toHaveCount(0);
-  await form.getByLabel('Bill no. (optional)').fill(`JB-${run}`);
-  await form.getByLabel('Bill date').fill('2026-11-01'); // backdated
   for (const company of [a, b]) {
     await form.getByRole('combobox', { name: /^(Company|Add another company)/ }).click();
     await page.getByRole('listbox').getByRole('option', { name: company, exact: true }).click();
@@ -73,10 +71,29 @@ test('a bill with two companies and two collections; take one off and add it bac
   // 4 sizes × 1 pc × ₹300 each = ₹1,200 a company; ₹2,400 the bill.
   await expect(form.getByTestId('bill-company').nth(0)).toContainText('1 collections ticked · ₹1,200.00');
   await expect(form.getByTestId('bill-total')).toHaveText('₹2,400.00');
+
+  // Step 2: the bill laid out like the paper — party, bill no., date, S.N · goods · qty · rate · amount, total.
+  await form.getByRole('button', { name: 'Next: check bill' }).click();
+  await expect(form).toHaveAttribute('data-step', 'check');
+  await expect(form.getByTestId('bill-party')).toContainText(`${a}, ${b}`);
+  const sheet = form.getByTestId('bill-sheet');
+  await expect(sheet.locator('thead').getByRole('columnheader')).toHaveText(['S.N', 'Description', 'Qty', 'Rate', 'Amount (₹)']);
+  await expect(sheet.getByTestId('bill-sheet-part')).toHaveCount(2);
+  await expect(sheet.getByTestId('bill-sheet-line').first()).toHaveText(new RegExp(`^1\\.Jeans One ${run}.*4300\\.001,200\\.00$`));
+  await expect(sheet.getByTestId('bill-sheet-units')).toHaveText('8');
+  await expect(sheet.getByTestId('bill-sheet-total')).toHaveText('2,400.00');
+  // The phone's back button goes back to ticking (nothing lost), then Next again.
+  await page.goBack();
+  await expect(form).toHaveAttribute('data-step', 'pick');
+  await expect(form.getByRole('checkbox', { name: `Jeans Two ${run}` })).toHaveAttribute('aria-checked', 'true');
+  await form.getByRole('button', { name: 'Next: check bill' }).click();
+  await form.getByLabel('Bill no. (optional)').fill(`JB-${run}`);
+  await form.getByLabel('Bill date').fill('2026-11-01'); // backdated
   await form.getByRole('button', { name: 'Save bill' }).click();
   await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`bill JB-${run}`);
+  await expect(page.getByTestId('bill-sheet').getByTestId('bill-sheet-line')).toHaveCount(2);
   await expect(page.getByTestId('bill-detail-total')).toHaveText('₹2,400.00');
   await expect(page.getByTestId('bill-companies')).toContainText(a);
   await expect(page.getByTestId('bill-companies')).toContainText('₹1,200.00');
@@ -106,6 +123,7 @@ test('a bill with two companies and two collections; take one off and add it bac
   await form.getByRole('combobox', { name: /^Company/ }).click();
   await page.getByRole('listbox').getByRole('option', { name: a, exact: true }).click();
   await form.getByRole('checkbox', { name: `Jeans Three ${run}` }).click();
+  await form.getByRole('button', { name: 'Next: check bill' }).click();
   await form.getByRole('button', { name: 'Save bill' }).click();
   await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);
   await expect(page).not.toHaveURL(billUrl);

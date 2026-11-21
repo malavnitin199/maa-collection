@@ -4,6 +4,8 @@ import { Suspense } from 'react';
 import { IconBack } from '@/components/ui/icons';
 import { card, link, muted, sectionTitle } from '@/components/ui/styles';
 import { BillForm } from '@/features/bills/bill-form';
+import { BillSheet } from '@/features/bills/bill-sheet';
+import { sheetParts } from '@/features/bills/sheet-parts';
 import { AddCollections, DeleteBill, RemoveCollection } from '@/features/bills/bill-parts';
 import { MarkPaidForm } from '@/features/catalog/company-parts';
 import { STORE_ID } from '@/lib/app-config';
@@ -21,9 +23,9 @@ const rupees = (paise: number) => (paise / 100).toFixed(2).replace(/\.00$/, '');
 
 /**
  * One bill (owner's feedback 2026-11-21): number, bill date and the day it was
- * entered, each company's amount / paid / due (Mark paid), the collections on it
- * (take one off, or + Add collections), the collections' value against the
- * bill's total; Edit and Delete at the end.
+ * entered, each company's amount / paid / due (Mark paid), the goods laid out
+ * like the paper bill (S.N · goods · qty · rate · amount), the collections on it
+ * (take one off, or + Add collections); Edit and Delete at the end.
  */
 async function BillDetail({ id }: { id: string }) {
   await requirePermission('costs');
@@ -87,6 +89,13 @@ async function BillDetail({ id }: { id: string }) {
         </table>
         {bill.note && <p className={`text-sm ${muted}`}>{bill.note}</p>}
       </section>
+
+      {bill.list.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className={sectionTitle}>{t('bills.sheet.title')}</h2>
+          <BillSheet parts={sheetParts(bill.companies.map((c) => ({ id: c.supplierId, name: c.name })), bill.list)} />
+        </section>
+      )}
 
       <section className="flex flex-col gap-2">
         <h2 className={sectionTitle}>{t('bills.collections')}</h2>

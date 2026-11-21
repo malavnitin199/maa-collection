@@ -38,7 +38,12 @@ export type Collection = {
   valuePaise: number;
   estimated: boolean;
   billId: string | null;
+  /** The lines as a paper bill has them: one per item name and purchase rate. */
+  lines: BillLine[];
 };
+
+/** One line of a bill: description, sizes, quantity (pieces), rate (purchase price per piece), amount. */
+export type BillLine = { name: string; sizes: string[]; pieces: number; ratePaise: number; amountPaise: number };
 
 export type BillCompany = { supplierId: string; name: string; amountPaise: number; paidPaise: number; duePaise: number };
 export type BillRow = {
@@ -94,7 +99,7 @@ export async function listCollections(
         unbilled ? isNull(billCollections.billId) : undefined,
       ),
     )
-    .orderBy(desc(stockReceipts.createdAt));
+    .orderBy(desc(stockReceipts.createdAt), stockMovements.createdAt, products.sku);
   const byId = new Map<string, Collection & { products: Set<string>; at: number }>();
   for (const row of rows) {
     let c = byId.get(row.receiptId);
@@ -113,6 +118,7 @@ export async function listCollections(
         valuePaise: 0,
         estimated: false,
         billId: row.billId,
+        lines: [],
         products: new Set(),
         at: row.createdAt.getTime(),
       };
@@ -123,7 +129,13 @@ export async function listCollections(
     if (!c.names.includes(row.name)) c.names.push(row.name);
     if (!c.sizes.includes(row.size)) c.sizes.push(row.size);
     c.pieces += pieces;
-    c.valuePaise += pieces * Number(row.unitCost ?? 0);
+    const rate = Number(row.unitCost ?? 0);
+    c.valuePaise += pieces * rate;
+    let line = c.lines.find((l) => l.name === row.name && l.ratePaise === rate);
+    if (!line) c.lines.push((line = { name: row.name, sizes: [], pieces: 0, ratePaise: rate, amountPaise: 0 }));
+    if (!line.sizes.includes(row.size)) line.sizes.push(row.size);
+    line.pieces += pieces;
+    line.amountPaise += pieces * rate;
     if (row.snapshot === null && row.unitCost !== null) c.estimated = true;
   }
   return [...byId.values()]
@@ -131,6 +143,7 @@ export async function listCollections(
     .map((c) => ({
       receiptId: c.receiptId, supplierId: c.supplierId, supplierName: c.supplierName, date: c.date, refNumber: c.refNumber, names: c.names,
       sizes: sortSizes(c.sizes), items: c.products.size, pieces: c.pieces, valuePaise: c.valuePaise, estimated: c.estimated, billId: c.billId,
+      lines: c.lines.map((l) => ({ ...l, sizes: sortSizes(l.sizes) })),
     }));
 }
 

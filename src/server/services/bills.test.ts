@@ -4,6 +4,7 @@ import { createPgliteDb, type Db } from '@/db/client';
 import { STORE_ID } from '@/lib/app-config';
 import { billsSummary, createBill, deleteBill, getBill, listBills, listCollections, setBillCollections, updateBill } from './bills';
 import { createSupplier, listCategories } from './catalog';
+import { sheetParts } from '@/features/bills/sheet-parts';
 import { addPayment } from './company';
 import { createDesign } from './products';
 import { listStaff } from './staff';
@@ -56,8 +57,26 @@ describe('collections', () => {
     const mine = waiting.find((c) => c.receiptId === jeans.receipt.id)!;
     expect(mine).toMatchObject({ supplierName: 'Surat Silks', names: ['Slim Jeans'], items: 6, pieces: 12, valuePaise: 480000, billId: null });
     expect(mine.sizes).toEqual(['28', '30', '32', '34', '36', '38']);
+    // As the paper bill: one line per name and rate, qty × rate = amount.
+    expect(mine.lines).toEqual([{ name: 'Slim Jeans', sizes: ['28', '30', '32', '34', '36', '38'], pieces: 12, ratePaise: 40000, amountPaise: 480000 }]);
     await createBill(db, STORE_ID, base([jeans.receipt.id]));
     expect((await listCollections(db, STORE_ID, { unbilled: true })).some((c) => c.receiptId === jeans.receipt.id)).toBe(false);
+  });
+});
+
+describe('paper-bill lines (sheetParts)', () => {
+  it('per company, oldest collection first; the same name and rate from two collections is one line', async () => {
+    const a = await collection(surat, 'Jacket', ['M', 'L']); // 4 pcs × ₹400
+    const b = await collection(surat, 'Suit', ['S']); // 2 pcs × ₹400
+    const c = await collection(surat, 'Jacket', ['XL']); // 2 pcs × ₹400 — same name and rate as a
+    const m = await collection(mumbai, 'Pajama', ['M']);
+    const list = await listCollections(db, STORE_ID, { receiptIds: [a, b, c, m].map((x) => x.receipt.id) });
+    const parts = sheetParts([{ id: surat, name: 'Surat Silks' }, { id: mumbai, name: 'Mumbai Mills' }], list);
+    expect(parts.map((p) => [p.name, p.pieces, p.totalPaise])).toEqual([['Surat Silks', 8, 320000], ['Mumbai Mills', 2, 80000]]);
+    expect(parts[0].lines.map((l) => [l.name, l.sizes.join(' '), l.pieces, l.ratePaise, l.amountPaise])).toEqual([
+      ['Jacket', 'M L XL', 6, 40000, 240000],
+      ['Suit', 'S', 2, 40000, 80000],
+    ]);
   });
 });
 

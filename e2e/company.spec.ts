@@ -89,7 +89,6 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await expect(page).toHaveURL(/\/admin\/bills$/);
   await page.getByRole('link', { name: '+ New bill' }).click();
   const billForm = page.getByTestId('bill-form');
-  await billForm.getByLabel('Bill no. (optional)').fill(`INV-${run}`);
   await billForm.getByRole('combobox', { name: /^Company/ }).click();
   await page.getByRole('listbox').getByRole('option', { name, exact: true }).click();
   await expect(billForm.getByTestId('bill-company')).toContainText(name);
@@ -97,6 +96,8 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await expect(billForm.getByRole('checkbox', { name: `Chikan Kurta ${run}` })).toHaveAttribute('aria-checked', 'true');
   await expect(billForm.getByTestId('bill-total')).toHaveText('₹2,400.00');
   await expect(billForm.getByTestId('bill-company')).toContainText('1 collections ticked · ₹2,400.00');
+  await billForm.getByRole('button', { name: 'Next: check bill' }).click();
+  await billForm.getByLabel('Bill no. (optional)').fill(`INV-${run}`);
   await billForm.getByRole('button', { name: 'Save bill' }).click();
   await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);
   await page.keyboard.press('Escape');
