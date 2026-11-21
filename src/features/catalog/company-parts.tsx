@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { errorBox, input, okBox, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useOperationId } from '@/features/catalog/small-forms';
 import { useFormDone } from '@/features/feedback/effects';
@@ -32,7 +32,7 @@ function usePaymentDone(action: Action) {
       title: t('done.paymentSaved'),
       amount: `₹${field(fd, 'amount')}`,
       lines: [
-        { label: t('done.line.bill'), value: field(fd, 'billNumber') || t('done.line.account') },
+        { label: t('done.line.bill'), value: field(fd, 'billLabel') || t('done.line.account') },
         { label: t('done.line.day'), value: field(fd, 'paidOn') },
         { label: t('done.line.note'), value: field(fd, 'note') },
       ].filter((line) => line.value),
@@ -40,7 +40,9 @@ function usePaymentDone(action: Action) {
   });
 }
 
-export function PaymentForm({ action, openBills, today }: { action: Action; openBills: { number: string; dueRupees: string }[]; today: string }) {
+/** `openBills`: this company's unpaid bills from the Bills section (id, a short label, what is still due). */
+export function PaymentForm({ action, openBills, today }: { action: Action; openBills: { id: string; label: string; dueRupees: string }[]; today: string }) {
+  const [billLabel, setBillLabel] = useState('');
   const t = useT();
   const op = useOperationId();
   const done = usePaymentDone(action);
@@ -63,14 +65,15 @@ export function PaymentForm({ action, openBills, today }: { action: Action; open
       </div>
       <label className="flex flex-col gap-1 text-sm font-medium">
         {t('cat.acc.pay.bill')}
-        <select name="billNumber" defaultValue="" className={input}>
+        <select name="billId" defaultValue="" onChange={(e) => setBillLabel(e.target.selectedOptions[0]?.dataset.label ?? '')} className={input}>
           <option value="">{t('cat.acc.pay.account')}</option>
           {openBills.map((bill) => (
-            <option key={bill.number} value={bill.number}>
-              {bill.number} · ₹{bill.dueRupees}
+            <option key={bill.id} value={bill.id} data-label={bill.label}>
+              {bill.label} · ₹{bill.dueRupees}
             </option>
           ))}
         </select>
+        <input type="hidden" name="billLabel" value={billLabel} />
       </label>
       <label className="flex flex-col gap-1 text-sm font-medium">
         {t('cat.acc.pay.note')}
@@ -85,7 +88,7 @@ export function PaymentForm({ action, openBills, today }: { action: Action; open
 }
 
 /** One tap on an open bill: records a payment of what is still due on it, dated today. */
-export function MarkPaidForm({ action, billNumber, dueRupees, today }: { action: Action; billNumber: string; dueRupees: string; today: string }) {
+export function MarkPaidForm({ action, billId, billLabel, dueRupees, today }: { action: Action; billId: string; billLabel: string; dueRupees: string; today: string }) {
   const t = useT();
   const op = useOperationId();
   const done = usePaymentDone(action);
@@ -98,7 +101,8 @@ export function MarkPaidForm({ action, billNumber, dueRupees, today }: { action:
       {done.node}
       <input type="hidden" name="amount" value={dueRupees} />
       <input type="hidden" name="paidOn" value={today} />
-      <input type="hidden" name="billNumber" value={billNumber} />
+      <input type="hidden" name="billId" value={billId} />
+      <input type="hidden" name="billLabel" value={billLabel} />
       <button type="submit" disabled={pending || !!state.message} className={`${secondaryButton} px-3 py-1.5 text-xs`}>
         {pending ? t('common.saving') : t('cat.acc.markPaid')}
       </button>

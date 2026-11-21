@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { IconTag } from '@/components/ui/icons';
+import { IconRupee, IconTag } from '@/components/ui/icons';
 import { card, muted } from '@/components/ui/styles';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
@@ -7,6 +7,7 @@ import { can } from '@/lib/permissions';
 import type { CurrentStaff } from '@/server/auth';
 import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
+import { billsSummary } from '@/server/services/bills';
 import { companiesOverview } from '@/server/services/company';
 
 /**
@@ -30,7 +31,7 @@ export async function CompaniesOverview({ me }: { me: CurrentStaff }) {
       <span className="min-w-0 flex-1">
         <span className="block font-semibold">{t('own.co.title')}</span>
         <span data-testid="home-companies-line" className={`block truncate text-xs ${muted}`}>
-          {t('own.co.short', { n: totals.companies, bills: totals.bills })}
+          {t('own.co.short', { n: totals.companies })}
           {showMoney && totals.duePaise ? ` · ${t('own.co.due', { amount: formatPaise(totals.duePaise) })}` : ''}
         </span>
       </span>
@@ -40,3 +41,27 @@ export async function CompaniesOverview({ me }: { me: CurrentStaff }) {
     </Link>
   );
 }
+
+/** Home's Bills line (owner's feedback 2026-11-21): just the way in — how many bills, how many open, the dues on them. */
+export async function BillsLine() {
+  const [t, db] = await Promise.all([getT(), requestDb()]);
+  const summary = await billsSummary(db, STORE_ID);
+  return (
+    <Link href="/admin/bills" data-testid="home-bills" className={`${card} rise-in flex items-center gap-3 py-3 active:bg-zinc-50 dark:active:bg-zinc-900`}>
+      <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-300 [&>svg]:h-4.5 [&>svg]:w-4.5">
+        <IconRupee />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">{t('nav.bills')}</span>
+        <span data-testid="home-bills-line" className={`block truncate text-xs ${muted}`}>
+          {summary.bills === 0 ? t('bills.homeNone') : t('bills.home', { n: summary.bills, open: summary.open })}
+          {summary.duePaise > 0 ? ` · ${t('own.co.due', { amount: formatPaise(summary.duePaise) })}` : ''}
+        </span>
+      </span>
+      <span aria-hidden className={muted}>
+        ›
+      </span>
+    </Link>
+  );
+}
+

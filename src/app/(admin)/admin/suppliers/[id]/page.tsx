@@ -19,7 +19,7 @@ import { requirePermission } from '@/server/auth';
 import { getT, getLocale } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { getSupplier } from '@/server/services/catalog';
-import { companyReport, type BillStatus } from '@/server/services/company';
+import { companyReport } from '@/server/services/company';
 import { listProducts, shopToday } from '@/server/services/products';
 
 type Search = { period?: string; from?: string; to?: string };
@@ -31,22 +31,23 @@ const PERIOD_KEY: Record<CompanyPeriodKey, MessageKey> = {
   year: 'cat.acc.period.year',
   custom: 'cat.acc.period.custom',
 };
-/** The owner's cap (2026-11-20): a company's page lists its newest 100 bills, ten at a time. */
+/** The owner's cap (2026-11-20): a company's page lists its newest 100 bills (and collections), ten at a time. */
 const MAX_BILLS = 100;
-const STATUS_TONE: Record<BillStatus, string> = {
+const STATUS_TONE = {
   open: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
-  closed: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
-  noPrice: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
-};
+  paid: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
+} as const;
 const rupees = (paise: number) => (paise / 100).toFixed(2).replace(/\.00$/, '');
 
 /**
  * The company page (company accounts, owner's feedback 2026-11-20): the figures
- * on top — bills (open / paid), purchases, dues now, pieces, collections, last
+ * on top — bills (open / paid), billed, dues now, pieces, collections, last
  * bill — for the chosen period (all time · this month · last 30 days · this
  * year · own dates); two small buttons (New item, Receive more); then top tabs
- * Bills · Payments · Products · By type · Details. Amounts and payments only
- * with the purchase-price right; dues are always all-time.
+ * Bills · Collections · Payments · Products · By type · Details. Since
+ * 2026-11-21 bills are the real ones from the Bills section and a delivery is a
+ * collection; dues = bill amounts − payments. Amounts and payments only with
+ * the purchase-price right; dues are always all-time.
  */
 async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Search> }) {
   const [me, t] = await Promise.all([requirePermission('catalog'), getT()]);
@@ -69,14 +70,18 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
   const money = (paise: number | null) => (paise === null ? '—' : formatPaise(paise));
   const periodHref = (key: CompanyPeriodKey) =>
     key === 'custom' ? `/admin/suppliers/${id}?period=custom&from=${today.slice(0, 7)}-01&to=${today}` : `/admin/suppliers/${id}?period=${key}`;
+  const billLabel = (bill: { billNumber: string | null; billDate: string }) => [bill.billNumber ? t('cat.bill', { number: bill.billNumber }) : null, day(bill.billDate)].filter(Boolean).join(' · ');
   const openBills = report.bills
-    .filter((bill) => bill.status === 'open' && bill.billNumber && bill.duePaise)
-    .map((bill) => ({ number: bill.billNumber!, dueRupees: rupees(bill.duePaise!) }));
+    .filter((bill) => bill.status === 'open' && bill.duePaise)
+    .map((bill) => ({ id: bill.id, label: billLabel(bill), dueRupees: rupees(bill.duePaise!) }));
   const payAction = addSupplierPaymentAction.bind(null, supplier.id);
   const contactBits = [supplier.location, supplier.contactName].filter(Boolean).join(' · ');
 
   const billsTab = (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
+      <Link href="/admin/bills/new" className={`text-sm ${link}`}>
+        {t('bills.new')}
+      </Link>
       {report.bills.length === 0 ? (
         <p className={`text-sm ${muted}`}>{t('cat.acc.noBills')}</p>
       ) : (
@@ -84,32 +89,72 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
           testId="company-bills"
           className="flex flex-col gap-2"
           items={report.bills.slice(0, MAX_BILLS).map((bill) => (
-            <li key={bill.key} className={`${card} flex flex-col gap-2 py-3 text-sm`}>
+            <li key={bill.id} className={`${card} flex flex-col gap-2 py-3 text-sm`}>
               <div className="flex items-start justify-between gap-3">
-                <span className="min-w-0">
-                  <span className="font-medium">
-                    {day(bill.date)} · {bill.billNumber ? t('cat.bill', { number: bill.billNumber }) : t('cat.acc.noNumber')}
-                  </span>
+                <Link href={`/admin/bills/${bill.id}`} className="min-w-0">
+                  <span className={`font-medium ${link}`}>{billLabel(bill)}</span>
                   <span className={`block text-xs ${muted}`}>
-                    {t('cat.acc.billLine', { items: bill.items, pieces: bill.pieces })}
-                    {bill.amountPaise !== null && ` · ${t('cat.purchase', { amount: formatPaise(bill.amountPaise) })}`}
-                    {bill.estimated && bill.amountPaise !== null && ` ${t('cat.acc.estimatedMark')}`}
+                    {t('bills.count', { n: bill.collections })}
+                    {bill.amountPaise !== null && ` · ${formatPaise(bill.amountPaise)}`}
+                    {bill.others.length > 0 && ` · + ${bill.others.join(', ')}`}
                   </span>
-                </span>
+                </Link>
                 {showMoney && (
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_TONE[bill.status]}`}>
-                    {bill.status === 'open' ? t('cat.acc.status.open', { amount: formatPaise(bill.duePaise ?? 0) }) : t(`cat.acc.status.${bill.status}`)}
+                    {bill.status === 'open' ? t('cat.acc.status.open', { amount: formatPaise(bill.duePaise ?? 0) }) : t('cat.acc.status.closed')}
                   </span>
                 )}
               </div>
+              {showMoney && bill.status === 'open' && (
+                <div className="flex justify-end">
+                  <MarkPaidForm action={payAction} billId={bill.id} billLabel={billLabel(bill)} dueRupees={rupees(bill.duePaise ?? 0)} today={today} />
+                </div>
+              )}
+            </li>
+          ))}
+        />
+      )}
+    </div>
+  );
+
+  const collectionsTab = (
+    <div className="flex flex-col gap-4">
+      {report.deliveries.length === 0 ? (
+        <p className={`text-sm ${muted}`}>{t('cat.acc.noCollections')}</p>
+      ) : (
+        <Paged
+          testId="company-collections-list"
+          className="flex flex-col gap-2"
+          items={report.deliveries.slice(0, MAX_BILLS).map((d) => (
+            <li key={d.receiptId} className={`${card} flex flex-col gap-2 py-3 text-sm`}>
+              <div className="flex items-start justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="font-medium">
+                    {day(d.date)}
+                    {d.refNumber && ` · ${t('bills.ref', { ref: d.refNumber })}`}
+                  </span>
+                  <span className={`block text-xs ${muted}`}>
+                    {t('cat.acc.billLine', { items: d.items, pieces: d.pieces })}
+                    {d.amountPaise !== null && ` · ${t('cat.purchase', { amount: formatPaise(d.amountPaise) })}`}
+                    {d.estimated && d.amountPaise !== null && ` ${t('cat.acc.estimatedMark')}`}
+                  </span>
+                </span>
+                {d.billId ? (
+                  <Link href={`/admin/bills/${d.billId}`} className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                    {t('bills.onBill')}
+                  </Link>
+                ) : (
+                  <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{t('cat.acc.noBillYet')}</span>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <Link href={`/admin/labels/print?receipt=${bill.receiptIds[0]}`} className={`text-xs ${link}`}>
+                <Link href={`/admin/labels/print?receipt=${d.receiptId}`} className={`text-xs ${link}`}>
                   {t('nav.labels')}
                 </Link>
                 <details className="text-xs">
                   <summary className={`cursor-pointer ${link}`}>{t('cat.acc.lines')}</summary>
                   <ul className="mt-1 flex flex-col gap-0.5">
-                    {bill.lines.map((line, i) => (
+                    {d.lines.map((line, i) => (
                       <li key={`${line.productId}-${i}`} className="flex justify-between gap-3">
                         <Link href={`/admin/products/${line.productId}`} className={`min-w-0 truncate ${link}`}>
                           {line.name} · {line.size}
@@ -123,17 +168,11 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
                     ))}
                   </ul>
                 </details>
-                {showMoney && bill.status === 'open' && bill.billNumber && (
-                  <span className="ml-auto">
-                    <MarkPaidForm action={payAction} billNumber={bill.billNumber} dueRupees={rupees(bill.duePaise ?? 0)} today={today} />
-                  </span>
-                )}
               </div>
             </li>
           ))}
         />
       )}
-      {report.bills.length > MAX_BILLS && <p className={`text-xs ${muted}`}>{t('cat.acc.newest100')}</p>}
       {report.months.length > 1 && (
         <section className="flex flex-col gap-1">
           <h3 className={sectionTitle}>{t('cat.acc.months')}</h3>
@@ -142,7 +181,7 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
               <li key={m.month} className="flex items-center justify-between gap-3 border-b border-zinc-100 py-1.5 dark:border-zinc-900">
                 <span>{formatDate(locale, `${m.month}-01T00:00:00+05:30`, 'month')}</span>
                 <span className={`tabular-nums ${muted}`}>
-                  {t('cat.acc.monthLine', { bills: m.bills, pieces: m.pieces })}
+                  {t('cat.acc.monthLine', { bills: m.collections, pieces: m.pieces })}
                   {m.amountPaise !== null && ` · ${formatPaise(m.amountPaise)}`}
                 </span>
               </li>
@@ -172,7 +211,7 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
               <span className="min-w-0">
                 <span className="font-medium">{day(p.paidOn)}</span>
                 <span className={`block text-xs ${muted}`}>
-                  {p.billNumber ? t('cat.acc.pay.forBill', { number: p.billNumber }) : t('cat.acc.pay.onAccount')}
+                  {p.billId ? (p.billNumber ? t('cat.acc.pay.forBill', { number: p.billNumber }) : t('cat.acc.pay.forABill')) : t('cat.acc.pay.onAccount')}
                   {p.note && ` · ${p.note}`} · {t('cat.byName', { name: p.staffName })}
                 </span>
               </span>
@@ -331,23 +370,21 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
           sub={showMoney ? t('cat.acc.billsSub', { open: report.totals.openBills, closed: report.totals.closedBills }) : undefined}
           testId="company-bills-count"
         />
-        {showMoney && (
-          <StatTile
-            label={t('cat.acc.purchases')}
-            value={money(report.totals.amountPaise)}
-            sub={report.totals.estimated ? t('cat.acc.estimated') : undefined}
-            testId="company-purchases"
-          />
-        )}
+        {showMoney && <StatTile label={t('cat.acc.billed')} value={money(report.totals.billedPaise)} testId="company-purchases" />}
         {showMoney && (
           <StatTile label={t('cat.acc.dues')} value={money(report.account.duePaise)} sub={t('cat.acc.duesSub', { amount: money(report.account.paidPaise) })} testId="company-dues" />
         )}
         <StatTile label={t('cat.acc.pieces')} value={String(report.totals.pieces)} sub={t('cat.acc.piecesSub', { items: report.totals.items })} testId="company-pieces" />
-        <StatTile label={t('cat.acc.collections')} value={String(report.totals.designs)} sub={t('cat.acc.collectionsSub', { types: report.totals.types })} testId="company-collections" />
+        <StatTile
+          label={t('cat.acc.collections')}
+          value={String(report.totals.designs)}
+          sub={showMoney && report.totals.amountPaise !== null ? t('bills.valueOf', { value: formatPaise(report.totals.amountPaise) }) + (report.totals.estimated ? ` ${t('cat.acc.estimatedMark')}` : '') : t('cat.acc.collectionsSub', { types: report.totals.types })}
+          testId="company-collections"
+        />
         <StatTile
           label={t('cat.acc.lastBill')}
-          value={report.account.lastDate ? day(report.account.lastDate) : '—'}
-          sub={report.account.firstDate ? t('cat.acc.since', { date: day(report.account.firstDate) }) : undefined}
+          value={report.account.lastBillDate ? day(report.account.lastBillDate) : '—'}
+          sub={report.account.lastDate ? t('cat.acc.lastCollection', { date: day(report.account.lastDate) }) : undefined}
         />
       </div>
 
@@ -364,6 +401,7 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
         idPrefix="company"
         tabs={[
           { id: 'bills', label: t('cat.acc.tab.bills'), content: billsTab, tone: 'sky' },
+          { id: 'collections', label: t('cat.acc.tab.collections'), content: collectionsTab, tone: 'slate' },
           { id: 'payments', label: t('cat.acc.tab.payments'), content: paymentsTab, tone: 'amber' },
           { id: 'products', label: t('cat.acc.tab.products'), content: productsTab, tone: 'slate' },
           { id: 'types', label: t('cat.acc.tab.types'), content: typesTab, tone: 'sky' },

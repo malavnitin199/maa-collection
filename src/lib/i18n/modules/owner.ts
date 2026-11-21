@@ -37,7 +37,7 @@ export const ownerEn = {
   'own.co.spend': 'Total spend',
   'own.co.dues': 'Dues now',
   'own.co.due': 'due {amount}',
-  'own.co.short': '{n} companies · {bills} bills',
+  'own.co.short': '{n} companies',
 
   // Reports
   'own.rep.subtitle': "What sells, what doesn't, and who sells it. Times are Indian time.",
@@ -176,7 +176,7 @@ export const ownerHi: Record<keyof typeof ownerEn, string> = {
   'own.co.spend': 'कुल खरीद',
   'own.co.dues': 'अभी बकाया',
   'own.co.due': 'बकाया {amount}',
-  'own.co.short': '{n} कंपनियाँ · {bills} बिल',
+  'own.co.short': '{n} कंपनियाँ',
 
   'own.rep.subtitle': 'क्या बिकता है, क्या नहीं, और कौन बेचता है। समय भारत का है।',
   'own.rep.loading': 'हिसाब लगाया जा रहा है…',

@@ -1,9 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 
 /**
- * Company accounts (owner's feedback 2026-11-20): the company page shows the
- * figures on top (bills, purchases, dues, pieces, collections), a period, and
- * tabs Bills · Payments · Products · By type · Details; a payment closes a bill.
+ * Company accounts (owner's feedback 2026-11-20; real bills 2026-11-21): the
+ * company page shows the figures on top (bills, billed, dues, pieces,
+ * collections), a period, and tabs Bills · Collections · Payments · Products ·
+ * By type · Details; a collection is not a bill; a bill made in the Bills
+ * section carries the dues; a payment closes it.
  * Companies page (2026-11-21): search, Location dropdown, Summary folded; Home
  * has one small Companies line.
  */
@@ -19,7 +21,7 @@ async function loginOwner(page: Page) {
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
 }
 
-test('company page: figures, bills by number, a payment closes the bill, dues, location, period', async ({ page }) => {
+test('company page: a collection is not a bill; a bill from the Bills section carries the dues; payments close it; location, period', async ({ page }) => {
   await loginOwner(page);
   const name = `Surat Silks ${run}`;
 
@@ -60,13 +62,14 @@ test('company page: figures, bills by number, a payment closes the bill, dues, l
   await page.getByRole('button', { name: 'Save 2 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
-  // The figures.
+  // The figures: a collection is not a bill (owner, 2026-11-21) — nothing billed or due yet.
   await page.goto(companyUrl);
-  await expect(page.getByTestId('company-bills-count')).toHaveText('1');
-  await expect(page.getByTestId('company-purchases')).toHaveText('₹2,400.00');
-  await expect(page.getByTestId('company-dues')).toHaveText('₹2,400.00');
+  await expect(page.getByTestId('company-bills-count')).toHaveText('0');
+  await expect(page.getByTestId('company-purchases')).toHaveText('₹0.00');
+  await expect(page.getByTestId('company-dues')).toHaveText('₹0.00');
   await expect(page.getByTestId('company-pieces')).toHaveText('6');
   await expect(page.getByTestId('company-collections')).toHaveText('1');
+  await expect(page.getByTestId('company-figures')).toContainText('value ₹2,400.00');
   // Details: the owner's working-since day and the day it was added here are two different things.
   await page.getByRole('tab', { name: 'Details', exact: true }).click();
   const details = page.getByRole('tabpanel', { name: 'Details' });
@@ -74,24 +77,55 @@ test('company page: figures, bills by number, a payment closes the bill, dues, l
   await expect(details).toContainText('1 Apr 2019');
   await expect(details).toContainText('Added on');
   await expect(details).not.toContainText('Added on 1 Apr 2019');
-  await page.getByRole('tab', { name: 'Bills', exact: true }).click();
+  await page.getByRole('tab', { name: 'Collections', exact: true }).click();
+  const delivery = page.getByTestId('company-collections-list').locator('li').first();
+  await expect(delivery).toContainText(`ref INV-${run}`);
+  await expect(delivery).toContainText('2 items · 6 pcs · purchase ₹2,400.00');
+  await expect(delivery).toContainText('No bill yet');
+
+  // The bill, from Home → Bills → + New bill: this company, ₹2,500 (freight on top), this collection ticked.
+  await page.goto('/admin/dashboard');
+  await page.getByTestId('home-bills').click();
+  await expect(page).toHaveURL(/\/admin\/bills$/);
+  await page.getByRole('link', { name: '+ New bill' }).click();
+  const billForm = page.getByTestId('bill-form');
+  await billForm.getByLabel('Bill no. (optional)').fill(`INV-${run}`);
+  await billForm.getByRole('combobox', { name: /^Company/ }).click();
+  await page.getByRole('listbox').getByRole('option', { name, exact: true }).click();
+  await billForm.getByLabel('Bill amount ₹').fill('2500');
+  await billForm.getByTestId('collection-option').filter({ hasText: `Chikan Kurta ${run}` }).getByRole('checkbox').check();
+  await expect(billForm.getByTestId('bill-picked')).toContainText('1 collections · 6 pcs · value ₹2,400.00');
+  await expect(billForm.getByTestId('bill-picked')).toContainText('= ₹100.00');
+  await billForm.getByRole('button', { name: 'Save bill' }).click();
+  await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('bill-detail-total')).toHaveText('₹2,500.00');
+  await expect(page.getByTestId('bill-collection-list')).toContainText(`Chikan Kurta ${run}`);
+
+  // Back on the company: 1 bill, billed and due ₹2,500; the collection is on a bill.
+  await page.goto(companyUrl);
+  await expect(page.getByTestId('company-bills-count')).toHaveText('1');
+  await expect(page.getByTestId('company-purchases')).toHaveText('₹2,500.00');
+  await expect(page.getByTestId('company-dues')).toHaveText('₹2,500.00');
   const bill = page.getByTestId('company-bills').locator('li').first();
   await expect(bill).toContainText(`bill INV-${run}`);
-  await expect(bill).toContainText('2 items · 6 pcs · purchase ₹2,400.00');
-  await expect(bill).toContainText('Due ₹2,400.00');
+  await expect(bill).toContainText('Due ₹2,500.00');
+  await page.getByRole('tab', { name: 'Collections', exact: true }).click();
+  await expect(delivery).toContainText('on a bill');
 
   // Part payment against the bill from the Payments tab; then Mark paid closes it.
   await page.getByRole('tab', { name: 'Payments', exact: true }).click();
   const form = page.getByTestId('payment-form');
   await form.getByLabel('Amount paid ₹').fill('1000');
-  await form.getByLabel('For bill no.').selectOption({ label: `INV-${run} · ₹2400` });
+  await form.getByLabel('For bill no.').selectOption({ index: 1 });
   await form.getByLabel('Note (optional)').fill('cash');
   await form.getByRole('button', { name: 'Save payment' }).click();
   await expect(page.getByRole('status')).toContainText('Payment saved.');
   await expect(page.getByTestId('company-payments')).toContainText('₹1,000.00');
-  await expect(page.getByTestId('company-dues')).toHaveText('₹1,400.00');
+  await expect(page.getByTestId('company-payments')).toContainText(`bill INV-${run}`);
+  await expect(page.getByTestId('company-dues')).toHaveText('₹1,500.00');
   await page.getByRole('tab', { name: 'Bills', exact: true }).click();
-  await expect(bill).toContainText('Due ₹1,400.00');
+  await expect(bill).toContainText('Due ₹1,500.00');
   await bill.getByRole('button', { name: 'Mark paid' }).click();
   await expect(bill).toContainText('Paid');
   await expect(bill).not.toContainText('Due ₹');
@@ -131,7 +165,7 @@ test('company page: figures, bills by number, a payment closes the bill, dues, l
 
   // Home: one small Companies line that opens the Companies page.
   await page.goto('/admin/dashboard');
-  await expect(page.getByTestId('home-companies-line')).toContainText(/\d+ companies · \d+ bills/);
+  await expect(page.getByTestId('home-companies-line')).toContainText(/\d+ companies/);
   await page.getByTestId('home-companies').click();
   await expect(page).toHaveURL(/\/admin\/suppliers$/);
 });
