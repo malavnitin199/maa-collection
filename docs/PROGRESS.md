@@ -36,6 +36,7 @@ v0.8.0 (plan v18): **selling without internet** (scan from the phone's copy, sel
 - [x] **Companies: Delete instead of Hide, ticks beside rows, two-line search (owner's feedback 2026-11-21, ADR-043)** — select mode ticks sit beside rows (names visible); bulk **Delete** with a confirmation, only for companies with nothing linked (others kept with counts); search + mic on line 1, place · Summary · Select on a small line 2 (DONE 2026-11-21)
 - [x] **Bills section (owner's feedback 2026-11-21, ADR-044)** — Home → Bills; + New bill (bill no., bill date, companies with amounts, collections ticked from the waiting list, value vs total); bill page (Mark paid per company, take off / add collections, edit, delete); company page: Bills (real) · Collections tabs; dues = bill amounts − payments; migration **0013** (DONE 2026-11-21)
 - [x] **Bills: amounts worked out, companies one under the other, clean collection list (owner's feedback 2026-11-21, ADR-045)** — no amount typed; each company's part = its ticked collections' value; companies numbered 1, 2, … above *Add another company*; collections grouped per company with one round tick; no overlap (DONE 2026-11-21)
+- [x] **Bills: check with the paper bill (owner's feedback 2026-11-21, ADR-046)** — New bill step 2 laid out like the company's paper bill (Party, bill no., date; S.N · Description · Qty · Rate · Amount; Total + units); same table on the bill page; back one step (DONE 2026-11-21)
 - [ ] Remaining work: see `docs/TASK_BACKLOG.md` and the open decisions in `docs/DECISIONS.md`
 
 All other tasks are tracked in `docs/TASK_BACKLOG.md`.
@@ -589,3 +590,4 @@ Owner request (chat, while away; photo of a fashion-store hang tag): tags with a
 
 ## Next session handoff
 Read `CLAUDE.md`, `docs/PROJECT_CONTEXT.md`, `docs/PROGRESS.md`, and `docs/TASK_BACKLOG.md`. The latest implemented milestone is v0.2.0; choose the next task from the remaining backlog and open owner decisions. Inspect the actual repo before modifying anything.
+| 2026-11-21 | Bills paper layout (ADR-046) | `pnpm lint && pnpm typecheck && pnpm test && pnpm build`; Playwright full suite on a fresh `next start -p 3217` (`pglite:memory`, `--workers=3`); phone screenshots 390 × 844 | PASS | 221 unit tests (new: bill lines, `sheetParts` merge); 126 passed, 4 skipped; steps 1 and 2 checked on the phone |
