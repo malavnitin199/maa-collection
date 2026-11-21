@@ -852,3 +852,10 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Screens | `/admin/bills` (list, `Paged`), `/admin/bills/new` (`?supplier=` preselects), `/admin/bills/[id]`; `src/features/bills/bill-form.tsx` (`BillForm`, `CollectionRow`), `bill-parts.tsx` (`RemoveCollection`, `AddCollections`, `DeleteBill`); Home `BillsLine` (`home-bills`) under the Companies line (which no longer counts bills). Company page tabs **Bills · Collections · Payments · Products · By type · Details**; figures Bills · Billed · Dues now · Pieces · Collections (value) · Last bill. `PaymentForm` / `MarkPaidForm` post `billId` (+ `billLabel` for the Done card). Words `modules/bills.ts`. |
 | Tests | `bills.test.ts`, `company.test.ts` (rewritten), `e2e/bills.spec.ts` (two companies, two collections, take off / add back, list, delete), `e2e/company.spec.ts` (collection ≠ bill; bill from Home → Bills; payment + Mark paid) | |
 
+### 39a. Bills: amounts worked out, companies one under the other (2026-11-21, ADR-045)
+
+| Part | Notes |
+|---|---|
+| Service | `BillInput.companies` is a list of supplier ids; `receiptIds` required (`bill.err.noCollection`); each collection must be one of the bill's companies' (`bill.err.otherCompany`). `recompute(billId)` sets each `bill_companies.amount_paise` = value of that company's collections on the bill (`listCollections`: cost snapshot else today's cost) after create, `setBillCollections` and `updateBill`. `updateBill({ companies: string[] })` removes a dropped company and its collections (refused if it has payments on the bill), adds new ones at ₹0. No schema change. |
+| Form | `bill-form.tsx`: chosen companies as numbered rows (`bill-company`: name, *n collections ticked · ₹*, ✕) above the `CompanyPicker` (*Add another company*); `CompanyCollections` per company (`company-collections-group`, *Select all*); `CollectionRow` is one `role="checkbox"` button with a round tick (no native checkbox, no inner scroll). Footer: *n collections · pcs* + **Bill total** (auto). Edit mode: companies only, no collections, no amounts. `AddCollections` on the bill page is grouped by the bill's companies. |
+
