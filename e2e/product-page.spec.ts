@@ -1,4 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+
+/** The company box is a compact dropdown (2026-11-21), not a <select>: open it and tap the name. */
+async function choose(box: Locator, label: string) {
+  await box.click();
+  await box.page().getByRole('listbox').getByRole('option', { name: label, exact: true }).click();
+}
 
 /**
  * The product page's clean-up (owner's feedback 2026-11-20): figures on top for
@@ -24,7 +30,7 @@ test('product page: figures, period, Sales and Purchases tabs, Hindi / English b
   await page.goto('/admin/stock/form');
   await page.getByLabel('Product name').fill(`Figure Kurta ${run}`);
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
-  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
+  await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   await page.getByLabel('Sale price (MRP) ₹').fill('1299');
   await page.getByLabel('Purchase price ₹', { exact: true }).fill('400');
   await page.getByRole('tab', { name: 'Colours', exact: true }).click();

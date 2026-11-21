@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
 import { ResumeSheet } from '@/features/forms/resume-sheet';
 import { useDone } from '@/features/feedback/effects';
@@ -129,6 +129,40 @@ export function NewItemWizard({
     setFresh(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  /** One step back (the arrow, and the phone's back button): Check → Details → What → Who → start. */
+  const stepBack = () => go(stepIndex <= 0 ? 'start' : FLOW[stepIndex - 1]);
+  const stepBackRef = useRef(stepBack);
+  useEffect(() => {
+    stepBackRef.current = stepBack;
+  });
+  // The phone's back button goes back one step, not off the page (owner, 2026-11-21): past the start
+  // screen one extra history entry stands guard; going back pops it, and the screen steps back.
+  const guarded = useRef(false);
+  const skipPop = useRef(false);
+  useEffect(() => {
+    if (step !== 'start' && !guarded.current) {
+      window.history.pushState(window.history.state, '');
+      guarded.current = true;
+    } else if (step === 'start' && guarded.current) {
+      // Back at the start with the arrow: drop the guard so the next back leaves the page.
+      guarded.current = false;
+      skipPop.current = true;
+      window.history.back();
+    }
+  }, [step]);
+  useEffect(() => {
+    const onPop = () => {
+      if (skipPop.current) {
+        skipPop.current = false;
+        return;
+      }
+      if (!guarded.current) return;
+      guarded.current = false;
+      stepBackRef.current();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const pickMode = (next: Mode) => {
     haptic();
     if (next !== mode) {
@@ -298,61 +332,65 @@ export function NewItemWizard({
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3">
       {done.node}
       <ResumeSheet asking={resume.asking} what="collection" onKeep={resume.keep} onFresh={resume.fresh} />
-      {/* Where you are: five steps, then what was chosen (tap a chip to go back to it). */}
-      <div className="flex flex-col gap-3">
-        {(step !== 'start' || dirty) && (
-          <div className="flex justify-end">
-            <StartOver onStartOver={startOver} dirty={dirty} />
-          </div>
-        )}
-        {step !== 'start' && (
-          <ol aria-label={t('ni.steps')} className="grid grid-cols-4 gap-1.5">
-            {FLOW.map((s, i) => (
-              <li key={s} aria-current={s === step ? 'step' : undefined} className="flex flex-col gap-1">
-                <span className={`h-1.5 rounded-full transition-colors duration-300 ${i <= stepIndex ? 'bg-brand-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
-                <span className={`text-[11px] font-semibold ${i === stepIndex ? 'text-brand-700 dark:text-brand-300' : muted}`}>{t(SHORT[s])}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-        <div className="flex items-center gap-2">
-          {step !== 'start' && (
+      {/* A compact top (owner's feedback 2026-11-21): one row with back · New item · Start again,
+          a thin progress bar, then the step's title — so the fields get the screen. */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1">
+          {step === 'start' ? (
+            <Link href="/admin/stock" aria-label={t('stk.item.back')} className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950">
+              <IconBack className="h-5 w-5" />
+            </Link>
+          ) : (
             <button
               type="button"
-              onClick={() => go(stepIndex === 0 ? 'start' : FLOW[stepIndex - 1])}
+              onClick={stepBack}
               aria-label={t('ni.back')}
-              className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-brand-700 transition hover:bg-brand-50 active:scale-90 dark:text-brand-300 dark:hover:bg-brand-950"
+              className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-brand-700 transition hover:bg-brand-50 active:scale-90 dark:text-brand-300 dark:hover:bg-brand-950"
             >
               <IconBack className="h-5 w-5" />
             </button>
           )}
-          <div className="min-w-0">
-            {step !== 'start' && <p className={`text-xs font-semibold tracking-wide uppercase ${muted}`}>{t('ni.progress', { n: stepIndex + 1 })}</p>}
-            <h2 className="text-xl font-bold">{title[step]}</h2>
-          </div>
+          <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">
+            {t('stk.item.title')}
+            {step !== 'start' && <span className={`ml-2 text-[11px] font-semibold tracking-wide uppercase ${muted}`}>{t('ni.progress', { n: stepIndex + 1 })}</span>}
+          </h1>
+          {(step !== 'start' || dirty) && <StartOver onStartOver={startOver} dirty={dirty} />}
         </div>
-        {crumbs.length > 0 && (
-          <div data-testid="wizard-path" className="flex flex-wrap items-center gap-1.5">
+        {step !== 'start' && (
+          <ol aria-label={t('ni.steps')} className="grid grid-cols-4 gap-1">
+            {FLOW.map((s, i) => (
+              <li key={s} aria-current={s === step ? 'step' : undefined} className="flex flex-col gap-0.5">
+                <span className={`h-1 rounded-full transition-colors duration-300 ${i <= stepIndex ? 'bg-brand-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                <span className={`text-[10px] leading-tight font-semibold ${i === stepIndex ? 'text-brand-700 dark:text-brand-300' : muted}`}>{t(SHORT[s])}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h2 className="text-lg leading-tight font-bold">{title[step]}</h2>
+          {crumbs.length > 0 && (
+          <div data-testid="wizard-path" className="flex flex-wrap items-center gap-1">
             {crumbs.map((crumb, i) => (
-              <span key={crumb.step} className="flex items-center gap-1.5">
-                {i > 0 && <IconChevron className="h-3.5 w-3.5 text-zinc-400" />}
+              <span key={crumb.step} className="flex min-w-0 items-center gap-1">
+                {i > 0 && <IconChevron className="h-3 w-3 shrink-0 text-zinc-400" />}
                 <button
                   type="button"
                   onClick={() => go(crumb.step)}
-                  className="rounded-full bg-brand-50 px-3 py-1 text-sm font-semibold text-brand-800 ring-1 ring-brand-200 transition hover:bg-brand-100 active:scale-95 dark:bg-brand-950 dark:text-brand-200 dark:ring-brand-900"
+                  className="max-w-[16rem] truncate rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-800 ring-1 ring-brand-200 transition hover:bg-brand-100 active:scale-95 dark:bg-brand-950 dark:text-brand-200 dark:ring-brand-900"
                 >
                   {crumb.label}
                 </button>
               </span>
             ))}
           </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <div key={step} className={direction === 'next' ? 'step-next' : 'step-back'}>
+      <div key={step} hidden={step === 'details'} className={direction === 'next' ? 'step-next' : 'step-back'}>
         {step === 'start' && (
           <div role="group" aria-label={t('ni.start.title')} className="grid grid-cols-2 gap-3">
             {(['one', 'many'] as const).map((m) => (
@@ -562,23 +600,21 @@ export function NewItemWizard({
                 </label>
               </div>
             </details>
+            {/* Next sits at the end of the card (owner, 2026-11-21: the floating bar covered the fields). */}
+            <div className="flex items-center justify-between gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+              <p data-testid="size-summary" className="text-sm font-semibold">
+                {!detailsOk
+                  ? t('ni.panel.needDetails')
+                  : ordered.length === 0
+                    ? t(mode === 'one' ? 'ni.sizes.pickSingle' : 'ni.sizes.pickOne')
+                    : t('ni.sizes.summary', { sizes: t(ordered.length === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: ordered.length }), pieces: pcs(totalPieces) })}
+              </p>
+              <button type="submit" disabled={!detailsOk || !sizesOk} className={nextButton}>
+                {t('ni.next')}
+                <IconChevron className="h-5 w-5" />
+              </button>
+            </div>
           </form>
-        </div>
-      )}
-
-      {step === 'details' && type && (
-        <div className="sticky bottom-24 z-10 flex items-center justify-between gap-3 rounded-3xl bg-surface/95 p-3 shadow-lg ring-1 ring-brand-100 backdrop-blur sm:bottom-4 dark:ring-brand-900">
-          <p data-testid="size-summary" className="pl-2 text-sm font-semibold">
-            {!detailsOk
-              ? t('ni.panel.needDetails')
-              : ordered.length === 0
-                ? t(mode === 'one' ? 'ni.sizes.pickSingle' : 'ni.sizes.pickOne')
-                : t('ni.sizes.summary', { sizes: t(ordered.length === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: ordered.length }), pieces: pcs(totalPieces) })}
-          </p>
-          <button type="submit" form="ni-details" disabled={!detailsOk || !sizesOk} className={nextButton}>
-            {t('ni.next')}
-            <IconChevron className="h-5 w-5" />
-          </button>
         </div>
       )}
 

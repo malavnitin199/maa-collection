@@ -1,4 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+
+/** The company box is a compact dropdown (2026-11-21), not a <select>: open it and tap the name. */
+async function choose(box: Locator, label: string) {
+  await box.click();
+  await box.page().getByRole('listbox').getByRole('option', { name: label, exact: true }).click();
+}
 
 /** Plan v19 (03a + the swap of 04b): New item, step by step (ADR-034) at /admin/stock/new; the earlier form is at /admin/stock/form. */
 const PIN = '1234';
@@ -44,7 +50,7 @@ test('many items: who → what → details & sizes (one card) → check → save
   const next = page.getByRole('button', { name: 'Next' });
   await expect(next).toBeDisabled();
   await expect(page.getByTestId('size-summary')).toHaveText('Choose the company and type the MRP');
-  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
+  await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await page.getByLabel('Sale price (MRP) ₹').fill('1299');
   await page.getByLabel('Purchase price ₹').fill('700');
@@ -96,7 +102,7 @@ test('many items: who → what → details & sizes (one card) → check → save
   await heading(page, 'What is it?');
   await expect(page.getByTestId('wizard-path')).toHaveText('Men');
   await page.getByRole('button', { name: /^Shirt/ }).click();
-  await expect(page.getByRole('combobox', { name: /^Company/ }).locator('option:checked')).toHaveText('Shree Ganesh Textiles');
+  await expect(page.getByRole('combobox', { name: /^Company/ })).toHaveText('Shree Ganesh Textiles');
   await expect(page.getByLabel('Product name')).toHaveValue('');
 });
 
@@ -131,7 +137,7 @@ test('one item: a new category and a new size on the spot; one size only', async
 
   await heading(page, 'Details & sizes');
   await expect(page.getByTestId('wizard-path')).toHaveText(new RegExp(`Men.*Shorts ${run}`));
-  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Shree Ganesh Textiles' });
+  await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   // No product name: it gets "Shorts … + number" on save.
   await expect(page.getByLabel('Product name (optional)')).toHaveAttribute('placeholder', `Shorts ${run} + number`);
   await page.getByLabel('Sale price (MRP) ₹').fill('899');
@@ -170,7 +176,7 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Women', exact: true }).click();
   await page.getByRole('button', { name: /^Kurti/ }).click();
-  await page.getByRole('combobox', { name: /^Company/ }).selectOption({ label: 'Laxmi Fashion House' });
+  await choose(page.getByRole('combobox', { name: /^Company/ }), 'Laxmi Fashion House');
   await page.getByLabel('Product name').fill(`Anarkali ${run}`);
   await page.getByLabel('Sale price (MRP) ₹').fill('1899');
   await page.getByText('More: counter price, bill no., stock date, brand').click();
@@ -193,7 +199,7 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await expect(page).toHaveURL(/\/admin\/stock\/new$/);
   await page.getByRole('button', { name: /^Saree/ }).click();
   const details = page.getByTestId('details-form');
-  await expect(details.getByRole('combobox', { name: /^Company/ }).locator('option:checked')).toHaveText('Laxmi Fashion House');
+  await expect(details.getByRole('combobox', { name: /^Company/ })).toHaveText('Laxmi Fashion House');
   await expect(details.getByLabel('Bill no.')).toHaveValue(`LF-${run}`);
   await expect(details.getByLabel('Product name')).toHaveValue('');
   await expect(details.getByLabel('Sale price (MRP) ₹')).toHaveValue('');
@@ -213,7 +219,7 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await heading(page, 'Who is it for?'); // no section kept
   await page.getByRole('button', { name: 'Women', exact: true }).click();
   await page.getByRole('button', { name: /^Saree/ }).click();
-  await expect(page.getByTestId('details-form').getByRole('combobox', { name: /^Company/ }).locator('option:checked')).toHaveText('Choose a company…');
+  await expect(page.getByTestId('details-form').getByRole('combobox', { name: /^Company/ })).toHaveText('Choose a company…');
   await expect(page.getByTestId('details-form').getByLabel('Bill no.')).toHaveValue('');
 
   // Both items exist, under their own receipts (each save has its own operation id).
@@ -229,4 +235,42 @@ test('a salesman without the catalog right cannot open it', async ({ page, isMob
   await login(page, 'Vishal', /\/pos$/);
   await page.goto('/admin/stock/new');
   await expect(page).toHaveURL(/\/pos$/);
+});
+
+test('compact top, short company list, Next inside the card, and the phone back button goes one step back', async ({ page }) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  await page.goto('/admin/stock');
+  await page.getByRole('link', { name: /^New item/ }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
+  await page.getByRole('button', { name: /^Many items/ }).click();
+  await page.getByRole('button', { name: 'Women', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurti/ }).click();
+  await heading(page, 'Details & sizes');
+  // The top takes little room: the card starts in the upper part of the screen.
+  const viewport = page.viewportSize()!;
+  const card = page.getByTestId('details-form');
+  expect((await card.boundingBox())!.y).toBeLessThan(viewport.height * 0.45);
+
+  // The company list opens under the box, at most about half the screen tall.
+  const company = page.getByRole('combobox', { name: /^Company/ });
+  await company.click();
+  const list = page.getByRole('listbox');
+  await expect(list).toBeVisible();
+  expect((await list.boundingBox())!.height).toBeLessThanOrEqual(viewport.height * 0.5);
+  await list.getByRole('option', { name: 'Laxmi Fashion House', exact: true }).click();
+  await expect(list).toBeHidden();
+  await expect(company).toHaveText('Laxmi Fashion House');
+
+  // Next is part of the card (no bar floating over the fields).
+  await expect(card.getByRole('button', { name: 'Next' })).toBeVisible();
+
+  // The phone's back button: one step at a time, then off the page.
+  await page.goBack();
+  await heading(page, 'What is it?');
+  await page.goBack();
+  await heading(page, 'Who is it for?');
+  await page.goBack();
+  await heading(page, 'What are you adding?');
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/stock$/);
 });

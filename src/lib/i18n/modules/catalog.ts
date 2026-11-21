@@ -402,6 +402,7 @@ export const catalogEn = {
   'cat.pager.next': 'Next',
   // Companies page search (2026-11-21)
   'cat.find.label': 'Search companies',
+  'cat.company.search': 'Search companies…',
   'cat.find.placeholder': 'Search name, place, phone…',
   'cat.find.location': 'Filter by place',
   'cat.find.anywhere': 'All places',
@@ -808,6 +809,7 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.pager.prev': 'पिछले',
   'cat.pager.next': 'अगले',
   'cat.find.label': 'कंपनी खोजें',
+  'cat.company.search': 'कंपनी खोजें…',
   'cat.find.placeholder': 'नाम, जगह, फ़ोन खोजें…',
   'cat.find.location': 'जगह से छाँटें',
   'cat.find.anywhere': 'सभी जगह',

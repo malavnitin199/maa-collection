@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { input, secondaryButton } from '@/components/ui/styles';
+import { Dropdown } from '@/components/ui/dropdown';
+import { secondaryButton } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
 import { LangText } from '@/features/i18n/lang-text';
 import { useDone } from '@/features/feedback/effects';
@@ -16,6 +17,7 @@ const PREVIOUS = 'previous:';
  * The company box on the add screens (plan v17): the companies in use, then
  * **Previous companies** (hidden ones — tap one to use it again) and
  * **+ New company…** (type a name; an existing name is reused, never doubled).
+ * A compact `Dropdown`, not a <select> (2026-11-21: the phone's list filled the screen).
  * `name` adds a hidden input for forms that post FormData.
  */
 export function CompanyPicker({
@@ -72,43 +74,29 @@ export function CompanyPicker({
   return (
     <div className="flex flex-col gap-2">
       {done.node}
-      <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
-        {label}
-        <select
-          required={required}
-          disabled={disabled || busy}
-          value={value}
-          onChange={(e) => {
-            const choice = e.target.value;
-            setError(null);
-            if (choice === NEW) return setAdding(true);
-            if (choice.startsWith(PREVIOUS)) {
-              const id = choice.slice(PREVIOUS.length);
-              return startBusy(async () => use(await restoreCompanyAction(id)));
-            }
-            setAdding(false);
-            onChange(choice, companies.find((c) => c.id === choice)?.name ?? '');
-          }}
-          className={input}
-        >
-          <option value="">{emptyLabel}</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-          {previous.length > 0 && (
-            <optgroup label={t('cat.company.previous')}>
-              {previous.map((c) => (
-                <option key={c.id} value={`${PREVIOUS}${c.id}`}>
-                  {c.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          <option value={NEW}>{t('cat.company.new')}</option>
-        </select>
-      </label>
+      <Dropdown
+        label={label}
+        value={value}
+        required={required}
+        disabled={disabled || busy}
+        placeholder={emptyLabel}
+        searchPlaceholder={t('cat.company.search')}
+        options={[
+          ...companies.map((c) => ({ value: c.id, label: c.name })),
+          ...previous.map((c) => ({ value: `${PREVIOUS}${c.id}`, label: c.name, group: t('cat.company.previous') })),
+          { value: NEW, label: t('cat.company.new'), tone: 'action' as const },
+        ]}
+        onChange={(choice) => {
+          setError(null);
+          if (choice === NEW) return setAdding(true);
+          if (choice.startsWith(PREVIOUS)) {
+            const id = choice.slice(PREVIOUS.length);
+            return startBusy(async () => use(await restoreCompanyAction(id)));
+          }
+          setAdding(false);
+          onChange(choice, companies.find((c) => c.id === choice)?.name ?? '');
+        }}
+      />
       {name && <input type="hidden" name={name} value={value} />}
       {adding && (
         <div className="flex gap-2">

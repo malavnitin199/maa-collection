@@ -1,6 +1,4 @@
-import Link from 'next/link';
 import { Suspense } from 'react';
-import { IconBack } from '@/components/ui/icons';
 import { NewItemWizard } from '@/features/catalog/new-item-wizard';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
@@ -53,13 +51,8 @@ async function NewItem({ searchParams }: { searchParams: Promise<Search> }) {
 export default async function NewItemPage(props: PageProps<'/admin/stock/new'>) {
   const t = await getT();
   return (
-    <main className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Link href="/admin/stock" aria-label={t('stk.item.back')} className="-ml-2 rounded-full p-2 text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950">
-          <IconBack className="h-5 w-5" />
-        </Link>
-        <h1 className="text-xl font-semibold">{t('stk.item.title')}</h1>
-      </div>
+    // The wizard draws its own compact top row (back · New item · Start again).
+    <main className="flex flex-col">
       <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <NewItem searchParams={props.searchParams as Promise<Search>} />
       </Suspense>

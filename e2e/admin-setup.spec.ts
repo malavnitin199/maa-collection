@@ -1,4 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+
+/** The company box is a compact dropdown (2026-11-21), not a <select>: open it and tap the name. */
+async function choose(box: Locator, label: string) {
+  await box.click();
+  await box.page().getByRole('listbox').getByRole('option', { name: label, exact: true }).click();
+}
 
 const PIN = '1234';
 const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
@@ -153,7 +159,7 @@ test('owner enters a new design from a supplier in sizes × colours, prints labe
 
   // Same entry again is refused (sizes/colours already exist).
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: `Design Co ${run}` });
+  await choose(companyBox(page), `Design Co ${run}`);
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await salePrice(page).fill('1499');
@@ -182,7 +188,7 @@ test('owner gives sizes their own MRP, selling and purchase price; every colour 
   await loginOwner(page);
   const name = `Linen Shirt ${run}`;
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: 'Royal Garments' });
+  await choose(companyBox(page), 'Royal Garments');
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(name);
   await salePrice(page).fill('700');
@@ -406,7 +412,7 @@ test('plan v19: New item refuses a category that is not sorted under a section y
   test.skip(isMobile, 'one shared seed row; the desktop run covers it');
   await loginOwner(page);
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: 'Shree Ganesh Textiles' });
+  await choose(companyBox(page), 'Shree Ganesh Textiles');
   await page.getByLabel('Category').selectOption({ label: 'Dress Material (DM)' });
   await page.getByLabel('Product name').fill(`Cotton Suit Piece ${run}`);
   await salePrice(page).fill('900');
@@ -454,7 +460,7 @@ test('photos while creating tags: one per colour (every size gets it), or the ma
 
   // Sizes × colours: Blue gets its own photo, Red none (and there is no main photo).
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: 'Royal Garments' });
+  await choose(companyBox(page), 'Royal Garments');
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(`Photo Kurta ${run}`);
   await salePrice(page).fill('999');
@@ -491,7 +497,7 @@ test('photos while creating tags: one per colour (every size gets it), or the ma
   await page.goto('/admin/stock/quick');
   await expect(page).toHaveURL(/\/admin\/stock\/form$/);
   const box = page.getByTestId('item-photo');
-  await companyBox(page).selectOption({ label: 'Shree Ganesh Textiles' });
+  await choose(companyBox(page), 'Shree Ganesh Textiles');
   await page.getByLabel('Category').selectOption({ label: 'Saree (SA)' });
   await page.getByLabel('Product name').fill(`Photo Saree ${run}`);
   await salePrice(page).fill('1500');
@@ -513,16 +519,18 @@ test('company box: add a company on the spot, the same name is reused, a hidden 
   const fresh = `Fresh Co ${run}`;
   // New item: "+ New company…" adds it and chooses it.
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: '+ New company…' });
+  await choose(companyBox(page), '+ New company…');
   await page.getByLabel('New company name').fill(fresh);
   await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(companyBox(page).locator('option:checked')).toHaveText(fresh);
+  await expect(companyBox(page)).toHaveText(fresh);
   // The same name again (other letters case) is reused, never doubled.
-  await companyBox(page).selectOption({ label: '+ New company…' });
+  await choose(companyBox(page), '+ New company…');
   await page.getByLabel('New company name').fill(fresh.toLowerCase());
   await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(companyBox(page).locator('option:checked')).toHaveText(fresh);
-  await expect(companyBox(page).locator('option', { hasText: fresh })).toHaveCount(1);
+  await expect(companyBox(page)).toHaveText(fresh);
+  await companyBox(page).click();
+  await expect(page.getByRole('listbox').getByRole('option', { name: fresh, exact: true })).toHaveCount(1);
+  await page.keyboard.press('Escape');
 
   // Hide it: Suppliers → the company → untick Active.
   await page.goto('/admin/suppliers');
@@ -536,16 +544,22 @@ test('company box: add a company on the spot, the same name is reused, a hidden 
   // Tag old stock: it is under "Previous companies"; choosing it brings it back.
   await page.goto('/admin/stock/old');
   const box = page.getByRole('combobox', { name: /^Company/ });
-  const previous = box.locator('optgroup[label="Previous companies"] option', { hasText: fresh });
-  await expect(previous).toHaveCount(1);
-  await box.selectOption({ label: fresh });
-  await expect(box.locator('option:checked')).toHaveText(fresh);
-  await expect(previous).toHaveCount(0);
+  const option = page.getByRole('listbox').getByRole('option', { name: fresh, exact: true });
+  await box.click();
+  await expect(option).toHaveAttribute('data-group', 'Previous companies');
+  await option.click();
+  await expect(box).toHaveText(fresh);
+  await box.click();
+  await expect(option).not.toHaveAttribute('data-group', 'Previous companies');
+  await page.keyboard.press('Escape');
   // A normal company again everywhere.
   await page.goto('/admin/products/new');
   const single = page.getByRole('combobox', { name: /^Supplier/ });
-  await expect(single.locator('option', { hasText: fresh })).toHaveCount(1);
-  await expect(single.locator('optgroup option', { hasText: fresh })).toHaveCount(0);
+  await single.click();
+  const again = page.getByRole('listbox').getByRole('option', { name: fresh, exact: true });
+  await expect(again).toHaveCount(1);
+  await expect(again).not.toHaveAttribute('data-group', 'Previous companies');
+  await page.keyboard.press('Escape');
 });
 
 test('staff: owner adds a salesman, removes them (gone from the login screen), and brings them back', async ({ page }) => {
@@ -608,7 +622,7 @@ test('Products → Select: rename, For / Age, prices, print, hide and bring back
   await loginOwner(page);
   const name = `Bulk Tee ${run}`;
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: 'Royal Garments' });
+  await choose(companyBox(page), 'Royal Garments');
   await page.getByLabel('Category').selectOption({ label: 'T-Shirt (TS)' });
   await page.getByLabel('Product name').fill(name);
   await salePrice(page).fill('600');
@@ -738,7 +752,9 @@ test('Companies and All tags → Select: hide companies at once; print chosen ta
   await page.getByTestId('company-search').fill(a);
   await expect(page.getByTestId('supplier-list').getByRole('listitem').filter({ hasText: a })).toContainText('(inactive)');
   await page.goto('/admin/stock/form');
-  await expect(companyBox(page).locator('optgroup[label="Previous companies"] option', { hasText: a })).toHaveCount(1);
+  await companyBox(page).click();
+  await expect(page.getByRole('listbox').getByRole('option', { name: a, exact: true })).toHaveAttribute('data-group', 'Previous companies');
+  await page.keyboard.press('Escape');
 
   // All tags: tick two tags and print only those.
   await page.goto('/admin/labels?q=MAA-TS-00&show=tags');
@@ -840,7 +856,7 @@ test('new item: one plain item with MRP, purchase and pieces on top → labels �
   await page.goto('/admin/stock');
   await page.getByRole('link', { name: /^Old form/ }).click();
   await expect(page).toHaveURL(/\/admin\/stock\/form$/);
-  await companyBox(page).selectOption({ label: 'Shree Ganesh Textiles' });
+  await choose(companyBox(page), 'Shree Ganesh Textiles');
   await page.getByLabel('Category').selectOption({ label: 'Saree (SA)' });
   await page.getByLabel('Product name').fill(`Georgette Saree ${run}`);
   await salePrice(page).fill('2500');
@@ -865,7 +881,7 @@ test('new item: one plain item with MRP, purchase and pieces on top → labels �
   await page.getByRole('button', { name: /^Saree/ }).click();
   // Scoped to the steps' form: Next keeps the earlier form's page alive (hidden) behind this one.
   const steps = page.getByTestId('details-form');
-  await expect(steps.getByRole('combobox', { name: /^Company/ }).locator('option:checked')).toHaveText('Shree Ganesh Textiles');
+  await expect(steps.getByRole('combobox', { name: /^Company/ })).toHaveText('Shree Ganesh Textiles');
   await expect(steps.getByLabel('Product name')).toHaveValue('');
   await steps.getByLabel('Product name').fill(`Cotton Saree ${run}`);
   await steps.getByLabel('Sale price (MRP) ₹').fill('1200');
@@ -905,7 +921,7 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
 
   // One bill from that company, entered as two items: a saree with 2 pieces and one with none left.
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: company });
+  await choose(companyBox(page), company);
   await page.getByLabel('Category').selectOption({ label: 'Saree (SA)' });
   await page.getByLabel('Product name').fill(`Silk TagLib ${run}`);
   await salePrice(page).fill('2000');
@@ -916,7 +932,7 @@ test('all tags: grouped by date, company or delivery; filters; grid or sideways 
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   // The second item of the bill through the earlier form again (this test is about All tags).
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: company });
+  await choose(companyBox(page), company);
   await page.getByLabel('Category').selectOption({ label: 'Saree (SA)' });
   await page.getByLabel('Product name').fill(`Net TagLib ${run}`);
   await salePrice(page).fill('1500');
@@ -1007,7 +1023,7 @@ test('combined view: one card per design (name + company + MRP) on Products and 
 
   // One design in 2 sizes × 2 colours = 4 items, 2 pieces each.
   await page.goto('/admin/stock/form');
-  await companyBox(page).selectOption({ label: company });
+  await choose(companyBox(page), company);
   await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
   await page.getByLabel('Product name').fill(name);
   await salePrice(page).fill('1499');
