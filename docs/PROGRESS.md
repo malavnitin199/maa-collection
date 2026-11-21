@@ -76,7 +76,7 @@ All other tasks are tracked in `docs/TASK_BACKLOG.md`.
 
 Owner: *after creating a new category don't move to the next step — stay and highlight it; combine steps 3 and 4 with expand / collapse, both open at first; when adding a type, pick one or many sizes (S, S–M, S–XL …) and choose among them per item; product name not mandatory, a default name with an ID.* Default name format confirmed by the owner (category + number).
 
-- **4 steps**: who → what → details & sizes → check. Two `Panel`s (Item details, Which sizes?), ✓ when done, summary when closed; the bottom bar says what is missing.
+- **4 steps**: who → what → details & sizes → check. Follow-up the same day (owner): no separate panels — one card with company, name, prices, then **small size chips** and a − n + row per chosen size, then More; the bottom bar says what is missing.
 - **Stay after adding** a section or category: chosen, *New* badge, green glow, scrolled into view.
 - **Size chips** in the add-category sheet: letters, waist, kids (age), Free; quick ranges; other sizes typed.
 - **Optional name**: blank → `"<category> <SKU number>"` (`defaultDesignName`), shown on the Done card and tags.
