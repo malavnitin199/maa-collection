@@ -824,3 +824,12 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Optional name | `createDesign` (`products.ts`), `defaultDesignName` | Blank name → `"<category name> <next SKU number, 3 digits>"` (the first SKU it gets: *Pajama 013* ↔ MAA-PJ-013). Over 120 characters still refused. `createDesignAction` returns each item's `name`, so the Done card shows the final name. Wizard: label *Product name (optional)*, placeholder *<category> + number*. The old form still requires a name on the client. |
 | Tests | `design.test.ts` (default name and the next one), `e2e/new-item-wizard.spec.ts` (panels, collapse / expand, back keeps all; new category stays with *New*; chips + range; blank name → `Shorts … 001`), `e2e/admin-setup.spec.ts` (one Next for a Free-size item) | |
 
+## 37. Compact dropdown, compact New item top, Next in the card, back one step (2026-11-21, ADR-042)
+
+| Part | Where | Notes |
+|---|---|---|
+| Dropdown | `src/components/ui/dropdown.tsx` `Dropdown({ label, value, options, placeholder, onChange, required, searchPlaceholder })` | A `role="combobox"` button (name = label + value) opening a `listbox` under it, `max-h-[min(45vh,18rem)]`, search line above 8 options, group headings (`option.group`, also `data-group` on the option), action options (`tone: 'action'`). Keys: ↑ ↓ Enter Escape; closes on an outside tap. `required` adds an invisible required input so posting forms still refuse an empty choice. Used by `CompanyPicker` (New item, old form, Tag old stock, Add product). Other `<select>`s are unchanged. Tests: helper `choose(box, label)`; `toHaveText` on the combobox for the chosen name. |
+| Top | `new-item-wizard.tsx` (the page no longer draws its own title) | One row: ← (start: link to Add stock; else `stepBack`) · h1 *New item* + *Step n of 4* · *Start again*; a 1px-tall progress bar with 10px labels; h2 + choice chips on one wrapping row. The empty step wrapper is `hidden` on the details step. |
+| Next | same | Inside the details card's last row (`size-summary` + submit); no sticky bar. |
+| Back | same | `stepBack` = one step back. Phone / browser back: past the start screen one guard entry (`history.pushState(history.state, '')`) is kept; `popstate` pops it and calls `stepBack`, and the guard is pushed again while not at the start; back at the start with the arrow, the guard is consumed (`skipPop`). Test: `goBack()` four times → What is it? → Who is it for? → start → `/admin/stock`. |
+
