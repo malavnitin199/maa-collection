@@ -246,7 +246,7 @@ export async function addSupplierPaymentAction(supplierId: string, _prev: FormSt
       supplierId,
       amountPaise: amountPaise ?? 0,
       paidOn: text(formData, 'paidOn') || null,
-      billNumber: text(formData, 'billNumber') || null,
+      billId: text(formData, 'billId') || null,
       note: text(formData, 'note') || null,
       staffId: me.id,
     });
@@ -278,7 +278,7 @@ export async function deleteCompaniesAction(ids: string[]): Promise<{ ok: true; 
     const t = await getT();
     const parts = [];
     if (result.deleted.length) parts.push(t(result.deleted.length === 1 ? 'bulk.deleted.one' : 'bulk.deleted.other', { n: result.deleted.length }));
-    for (const k of result.kept) parts.push(t('bulk.cantDelete', { name: k.name, items: k.items, bills: k.bills, payments: k.payments }));
+    for (const k of result.kept) parts.push(t('bulk.cantDelete', { name: k.name, items: k.items, collections: k.collections, bills: k.bills, payments: k.payments }));
     return { ok: true, deleted: result.deleted.length, message: parts.join(' ') };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };

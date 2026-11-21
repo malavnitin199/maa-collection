@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
-import { categories, productImages, products, sections, staff, stockMovements, stockReceipts, supplierPayments, suppliers, type Category, type Supplier } from '@/db/schema';
+import { billCompanies, categories, productImages, products, sections, staff, stockMovements, stockReceipts, supplierPayments, suppliers, type Category, type Supplier } from '@/db/schema';
 import { cleanSizeList, MAX_SIZES } from '@/lib/size-lists';
 import { STORE_TIMEZONE } from '@/lib/app-config';
 import { DomainError, isUniqueViolation } from './errors';
@@ -293,11 +293,11 @@ export async function setSuppliersActive(db: Db, storeId: string, ids: readonly 
   return changed.length;
 }
 
-export type CompanyDeleteResult = { deleted: string[]; kept: { name: string; items: number; bills: number; payments: number }[] };
+export type CompanyDeleteResult = { deleted: string[]; kept: { name: string; items: number; collections: number; bills: number; payments: number }[] };
 
 /**
  * Companies → Select → Delete (owner's feedback 2026-11-21, after a confirmation):
- * a company with nothing linked — no items, deliveries or payments — is removed
+ * a company with nothing linked — no items, collections, bills or payments — is removed
  * for good. One with any of those is kept as it is (its purchase history and
  * dues depend on it) and reported with its counts.
  */
@@ -311,20 +311,25 @@ export async function deleteUnusedSuppliers(db: Db, storeId: string, ids: readon
         .from(table)
         .where(and(eq(table.storeId, storeId), inArray(table.supplierId, unique)))
         .groupBy(table.supplierId);
+    const onBills = await tx
+      .select({ id: billCompanies.supplierId, n: sql<number>`count(*)`.mapWith(Number) })
+      .from(billCompanies)
+      .where(inArray(billCompanies.supplierId, unique))
+      .groupBy(billCompanies.supplierId);
     const rows = await tx
       .select({ id: suppliers.id, name: suppliers.name })
       .from(suppliers)
       .where(and(eq(suppliers.storeId, storeId), inArray(suppliers.id, unique)));
     const items = await count(products);
-    const bills = await count(stockReceipts);
+    const deliveries = await count(stockReceipts);
     const payments = await count(supplierPayments);
     const of = (list: { id: string | null; n: number }[], id: string) => list.find((r) => r.id === id)?.n ?? 0;
     const kept = rows
-      .map((r) => ({ name: r.name, id: r.id, items: of(items, r.id), bills: of(bills, r.id), payments: of(payments, r.id) }))
-      .filter((r) => r.items + r.bills + r.payments > 0);
+      .map((r) => ({ name: r.name, id: r.id, items: of(items, r.id), collections: of(deliveries, r.id), bills: of(onBills, r.id), payments: of(payments, r.id) }))
+      .filter((r) => r.items + r.collections + r.bills + r.payments > 0);
     const free = rows.filter((r) => !kept.some((k) => k.id === r.id)).map((r) => r.id);
     if (free.length) await tx.delete(suppliers).where(and(eq(suppliers.storeId, storeId), inArray(suppliers.id, free)));
-    return { deleted: free, kept: kept.map(({ name, items: i, bills: b, payments: p }) => ({ name, items: i, bills: b, payments: p })) };
+    return { deleted: free, kept: kept.map(({ name, items: i, collections: c, bills: b, payments: p }) => ({ name, items: i, collections: c, bills: b, payments: p })) };
   });
 }
 

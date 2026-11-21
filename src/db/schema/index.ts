@@ -87,6 +87,8 @@ export const supplierPayments = pgTable(
     operationId: text('operation_id').notNull(),
     supplierId: uuid('supplier_id').notNull().references(() => suppliers.id),
     billNumber: text('bill_number'),
+    /** Bills section (2026-11-21): the bill this payment is for (that company's part of it); null = running account. */
+    billId: uuid('bill_id').references(() => bills.id),
     amountPaise: integer('amount_paise').notNull(),
     /** The day the money was paid, as the owner gave it. */
     paidOn: date('paid_on', { mode: 'string' }).notNull(),
@@ -211,6 +213,64 @@ export const stockReceipts = pgTable(
     uniqueIndex('stock_receipts_store_operation_uq').on(t.storeId, t.operationId),
     index('stock_receipts_supplier_idx').on(t.supplierId, t.createdAt),
   ],
+);
+
+/**
+ * Bills section (owner's feedback 2026-11-21): a company's paper bill, entered by
+ * the owner. A bill has one or more companies, each with its part of the amount
+ * (dues come from these), and the collections (stock receipts, one per New item
+ * save) it covers. A delivery is no longer called a bill.
+ */
+export const bills = pgTable(
+  'bills',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storeId: text('store_id').notNull().references(() => stores.id),
+    /** Idempotency key from the form: a double tap makes one bill. */
+    operationId: text('operation_id').notNull(),
+    billNumber: text('bill_number'),
+    /** The day printed on the bill, as the owner gave it (may be earlier than created_at). */
+    billDate: date('bill_date', { mode: 'string' }).notNull(),
+    note: text('note'),
+    staffId: uuid('staff_id').notNull().references(() => staff.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('bills_store_operation_uq').on(t.storeId, t.operationId), index('bills_store_date_idx').on(t.storeId, t.billDate)],
+);
+
+/** A company on a bill and its part of the amount. The bill's total is the sum of its parts. */
+export const billCompanies = pgTable(
+  'bill_companies',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    billId: uuid('bill_id')
+      .notNull()
+      .references(() => bills.id, { onDelete: 'cascade' }),
+    supplierId: uuid('supplier_id')
+      .notNull()
+      .references(() => suppliers.id),
+    amountPaise: integer('amount_paise').notNull(),
+  },
+  (t) => [
+    uniqueIndex('bill_companies_bill_supplier_uq').on(t.billId, t.supplierId),
+    index('bill_companies_supplier_idx').on(t.supplierId),
+    check('bill_companies_amount_nonnegative', sql`${t.amountPaise} >= 0`),
+  ],
+);
+
+/** A collection (stock receipt) on a bill. A collection is on at most one bill. */
+export const billCollections = pgTable(
+  'bill_collections',
+  {
+    billId: uuid('bill_id')
+      .notNull()
+      .references(() => bills.id, { onDelete: 'cascade' }),
+    receiptId: uuid('receipt_id')
+      .notNull()
+      .references(() => stockReceipts.id),
+    addedAt: timestamp('added_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('bill_collections_receipt_uq').on(t.receiptId), index('bill_collections_bill_idx').on(t.billId)],
 );
 
 export const stockMovements = pgTable(
@@ -387,6 +447,7 @@ export type Category = typeof categories.$inferSelect;
 export type Section = typeof sections.$inferSelect;
 export type StockReceipt = typeof stockReceipts.$inferSelect;
 export type SupplierPayment = typeof supplierPayments.$inferSelect;
+export type Bill = typeof bills.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Sale = typeof sales.$inferSelect;
 export type Exchange = typeof exchanges.$inferSelect;
