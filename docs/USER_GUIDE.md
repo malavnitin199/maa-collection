@@ -147,6 +147,8 @@ Good to know:
 
 **Items that come in a box** (e.g. boys' sandos, 10 or 12 a box): in the details card set **Comes as → Box**, tap **6 / 10 / 12** (or type the number), type the **MRP of one piece** and, if the box sells for less, the **Whole box MRP** (empty = MRP × pieces). For the purchase price choose **Per piece** or **Whole box** — with *Whole box* the app shows the price of one piece (₹500 ÷ 12 = ₹41.67). Under the sizes, count **boxes** (3 boxes of 12 = 36 pieces in stock). **One tag is printed per box**; it says *BOX OF 12* and the box price.
 
+**No size?** In New item's *Which sizes?* you can leave every size untapped: a **No size? Just the pieces:** box appears — set the pieces (− / +, or type) and tap Next. It is saved as one item with no size.
+
 ### Companies and Collections (owner, 2026-11-22)
 
 - The app says **Company** everywhere (never *supplier*). A company is **optional** on an item: leave the company box empty, or pick **No company** to clear it.

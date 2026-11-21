@@ -907,3 +907,11 @@ Schema notes: `sales_item_or_manual` CHECK (an item and MRP, or `manual`), `sale
 | Optional company | `DesignInput.supplierId: string \| null`; `createDesignAction` sends null for empty; wizard `detailsOk` no longer needs it; `CompanyPicker` not `required` there and in the Old form, and offers *No company* (`__none`) when a company is chosen and the box is optional. |
 | Collections | `sections.ts`: `collectionsOverview` (categories, items, pieces per collection), `renameSection`, `deleteSection` (refuses with items: `sec.err.hasItems`; deletes its categories). Actions `renameCollectionAction`, `deleteCollectionAction` (owner). Home: `CollectionsLine` → `src/features/catalog/collections-panel.tsx` (`home-collections`, `collection-row`, `collection-count`, `confirm-delete-collection`). e2e `companies-collections.spec.ts`; unit `collections.test.ts`, `company.test.ts` (deleteCompanies). |
 
+## 44. New item with no size (2026-11-22, ADR-052)
+
+| Part | Notes |
+|---|---|
+| Server | `DesignInput.noSize` (and `DesignActionInput.noSize`) → sizes = `['']`; pieces from `quantities['']`. Without it an empty size list is still refused (`stk.err.pickSize`). |
+| Wizard | `noSize = ordered.length === 0`; its count lives in `pieces['']` (default 1); `sizesOk = totalPieces > 0`; `SizeStep` shows `no-size-pieces` (aria *Pieces with no size* / *Boxes with no size*, *One less* / *One more*); `size-summary` *No size · n pcs*; `review-sizes` *No size × n*. |
+| Counter | `product-card` hides the size chip when empty; `pos-screen` messages use *No size* (`ni.noSize`). |
+
