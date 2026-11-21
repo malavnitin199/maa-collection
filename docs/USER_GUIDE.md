@@ -147,6 +147,12 @@ Good to know:
 
 **Items that come in a box** (e.g. boys' sandos, 10 or 12 a box): in the details card set **Comes as → Box**, tap **6 / 10 / 12** (or type the number), type the **MRP of one piece** and, if the box sells for less, the **Whole box MRP** (empty = MRP × pieces). For the purchase price choose **Per piece** or **Whole box** — with *Whole box* the app shows the price of one piece (₹500 ÷ 12 = ₹41.67). Under the sizes, count **boxes** (3 boxes of 12 = 36 pieces in stock). **One tag is printed per box**; it says *BOX OF 12* and the box price.
 
+### Companies and Collections (owner, 2026-11-22)
+
+- The app says **Company** everywhere (never *supplier*). A company is **optional** on an item: leave the company box empty, or pick **No company** to clear it.
+- **Delete a company**: on its page tap **Delete this company** (or Companies → Select → Delete). It asks first. Its items stay, just with no company. **Bills are never changed**: a bill keeps the company's name (shown *(deleted)*), its amounts and payments; edit the bill yourself if you want to change it. Deleting items does not change bills either.
+- **Collections** are the groups every item must belong to (on the shop now: Men, Women, Box, RAmDOm — New item's first step, *Which collection?*). **Home → Collections** lists each with *items · pcs*: change a name in its box and tap **Save**; the 🗑 appears only for a collection with **no items** and asks before deleting (its empty categories go too). In Bills, what used to be called *collections* (what came in on one New item save) is now called **stock entries**.
+
 ### Deleting items (owner)
 
 **Products → Select** → tick items → **Delete**, or open an item → **Delete this item** at the bottom (choose *Yes, delete it* for this size, or *Delete all N sizes of this design*). The app asks first; it cannot be undone. The item's tags, photos and stock entries go; **past sales stay** with their name, price and amount (reports and profit do not change; in *by category / company* they count under *Other*). If its delivery is on a bill, the bill amount goes down. An item that was part of an exchange is kept (the message says so). Prefer **Hide** for items you may bring back.
@@ -160,7 +166,7 @@ Good to know:
   - **Products**: **Hide** (asks once; hidden items leave the counter and the lists, their sales stay — *Show → Hidden items* → **Bring back**), **Rename** (one new name for all), **Company**, **Category**, **For / Age**, **Prices** (a new MRP and / or selling price for all; refused if a selling price would be above an MRP), **Print tags**.
   - **Approvals**: **Approve n** (green) or **Reject** (red; choose one reason for all).
   - **All tags**: **Print n selected**.
-  - **Companies**: **Delete** only. It asks first (*Delete 2 companies?* → **Yes, delete** / **Cancel**) and cannot be undone. A company that has items, bills or payments is **not** deleted — the message says *Can’t delete … it has n items, n bills, n payments* — because its purchase history depends on it. (To hide a company instead, untick **Active** in its **Edit supplier details**.)
+  - **Companies** (owner): **Delete** only. It asks first (*Delete 2 companies?* → **Yes, delete** / **Cancel**) and cannot be undone. Any company can be deleted: its items **stay**, with no company; its **bills and payments stay exactly as they were**, still showing its name (marked *(deleted)*). (Earlier rule, replaced: a company that has items, bills or payments is **not** deleted — the message says *Can’t delete … it has n items, n bills, n payments* — because its purchase history depends on it. (To hide a company instead, untick **Active** in its **Edit company details**.)
 
 ### The product page (Products → tap an item)
 
@@ -176,7 +182,7 @@ Good to know:
 
 ### The Companies page
 
-Home has one small **Companies** line under Today (how many companies, bills, dues); tap it, or **Suppliers**, to open the Companies page. There: the **search** box with its **microphone** on one line (name, place, contact or phone; English or Hindi); on a second, small line the **place** filter (all the locations you have typed), **Summary ▸**, **Select** (and *n of N* while filtering) (tap to see companies, bills and open bills, collections and pieces, total spend, dues now), and the companies ten at a time (**Previous / Next**): name, location · contact · phone, *bills · dues* and collections. The latest activity comes first (a new bill, or a company you just added); hidden companies last. **+ Add supplier** (top right) opens the add form.
+Home has one small **Companies** line under Today (how many companies, bills, dues); tap it, or **Companies**, to open the Companies page. There: the **search** box with its **microphone** on one line (name, place, contact or phone; English or Hindi); on a second, small line the **place** filter (all the locations you have typed), **Summary ▸**, **Select** (and *n of N* while filtering) (tap to see companies, bills and open bills, collections and pieces, total spend, dues now), and the companies ten at a time (**Previous / Next**): name, location · contact · phone, *bills · dues* and collections. The latest activity comes first (a new bill, or a company you just added); hidden companies last. **+ Add supplier** (top right) opens the add form.
 
 When you add or edit a company, give **Working since** — the day you started buying from them, even years ago. It is separate from the day the company was added in the app; both show under **Details**. Company name is required; location and the date are optional.
 
@@ -190,7 +196,7 @@ A **collection** is what you add in New item (one save, e.g. Jeans in 6 sizes) o
 - **A bill's page**: each company's amount and **due**, with **Mark paid**; **As on the paper bill** (the same table); the collections on it (**Take off** one, or **+ Add collections** — grouped by company); the amounts follow the collections. **Edit bill** (number, date, note, companies — taking a company off takes its collections off; one with payments on this bill stays); **Delete bill** (asks first; not when it has payments; its collections go back to waiting).
 - **Dues** of a company = all its bill amounts − all its payments. A payment can name one of its bills (*For bill no.*), or go to the running account.
 
-### A company's page (Suppliers → tap a company)
+### A company's page (Companies → tap a company)
 
 The figures on top, for the period you pick (**All time · This month · Last 30 days · This year · Dates…**): **Bills** (how many are still open and how many paid), **Purchases**, **Dues now** (what you still owe, all time), **Pieces** (and items), **Collections** (designs bought) and the **Last bill**. Purchases and dues show only to people with the *Purchase price* right. Below: **+ New item** and **Receive more**, then tabs:
 
@@ -198,9 +204,9 @@ The figures on top, for the period you pick (**All time · This month · Last 30
 - **Payments** — **Record a payment**: amount, day, **for bill no.** (pick the bill; or *Running account* for an advance / a lump sum), note. A bill shows *Paid* once the payments against its number cover it. Dues = all purchases − all payments.
 - **Products** — the company's collections with sizes, MRP and pieces in stock; **View all** and **Company tags**.
 - **By type** — what you bought from them by section › category.
-- **Details** — contact, phone, **location**, **Working since**, **Added on**, GSTIN, notes; **Edit supplier details**.
+- **Details** — contact, phone, **location**, **Working since**, **Added on**, GSTIN, notes; **Edit company details**.
 
-The Suppliers list shows each company's bills and dues too.
+The Companies list shows each company's bills and dues too.
 
 ### Other ways to add stock
 
