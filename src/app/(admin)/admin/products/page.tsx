@@ -4,11 +4,12 @@ import { card, input, muted, okBox, primaryButton, secondaryButton, sectionTitle
 import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
 import { ProductDeleteAction } from '@/features/catalog/bulk-actions';
 import { DesignCard } from '@/features/catalog/design-card';
+import { StockValueLine, StockValueStrip } from '@/features/catalog/stock-value';
 import { LOW_STOCK_THRESHOLD, STORE_ID } from '@/lib/app-config';
 import { groupDesigns } from '@/lib/design-groups';
 import type { T } from '@/lib/i18n';
-import { formatPaise } from '@/lib/money';
 import { can } from '@/lib/permissions';
+import { stockValue } from '@/lib/stock-value';
 import { appOrigin } from '@/server/app-origin';
 import { requireAnyPermission } from '@/server/auth';
 import { getT } from '@/server/i18n';
@@ -32,10 +33,13 @@ function listHref(params: { q: string; supplierId?: string; categoryId?: string 
   return query ? `/admin/products?${query}` : '/admin/products';
 }
 
-/** One item (one size × colour) as a row: photo, name, prices, pieces. `selectable`: it can be ticked (plan v17). */
+/**
+ * One item (one size × colour) as a row: photo, name, then pieces × purchase price = total
+ * (ADR-057; only the pieces without the Costs right). `selectable`: it can be ticked (plan v17).
+ */
 function ProductRow({ p, photo, showCost, t, selectable = false }: { p: ProductListRow; photo?: string; showCost: boolean; t: T; selectable?: boolean }) {
   const row = (
-      <Link href={`/admin/products/${p.id}`} className={`${card} flex items-center justify-between gap-3 py-3 active:bg-zinc-50 dark:active:bg-zinc-900`}>
+      <Link href={`/admin/products/${p.id}`} className={`${card} flex items-center gap-3 py-3 active:bg-zinc-50 dark:active:bg-zinc-900`}>
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element -- our own resized photos
           <img src={photo} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-cover" />
@@ -53,18 +57,13 @@ function ProductRow({ p, photo, showCost, t, selectable = false }: { p: ProductL
             {p.supplierName && ` · ${p.supplierName}`}
             {!p.active && ` · ${t('cat.inactive')}`}
           </span>
-          <span className="block text-xs">
-            {formatPaise(p.pricePaise)} <span className={muted}>· MRP {formatPaise(p.mrpPaise)}</span>
-            {showCost && p.costPaise !== null && <span className={muted}> · {t('cat.purchase', { amount: formatPaise(p.costPaise) })}</span>}
-          </span>
-        </span>
-        <span
-          className={`shrink-0 text-right text-lg font-semibold tabular-nums ${
-            p.stock <= 0 ? 'text-red-600 dark:text-red-400' : p.stock <= LOW_STOCK_THRESHOLD ? 'text-amber-600' : ''
-          }`}
-        >
-          {p.stock}
-          <span className={`block text-xs font-normal ${muted}`}>{t('cat.pcs')}</span>
+          <StockValueLine
+            stock={p.stock}
+            costPaise={p.costPaise}
+            showCost={showCost}
+            t={t}
+            tone={p.stock <= 0 ? 'text-red-600 dark:text-red-400' : p.stock <= LOW_STOCK_THRESHOLD ? 'text-amber-600' : ''}
+          />
         </span>
       </Link>
   );
@@ -202,6 +201,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
                 qrValue={`${origin}/admin/products/${d.items[0].id}`}
                 printHref={canPrint ? `/admin/labels/print?${new URLSearchParams({ list: '1', design: d.key })}` : null}
                 expandLabel={t(d.items.length === 1 ? 'cat.design.showItems.one' : 'cat.design.showItems.other', { n: d.items.length })}
+                value={<StockValueStrip value={stockValue(d.items)} showCost={showCost} t={t} />}
               >
                 <ul data-testid="design-items" className="flex flex-col gap-2">
                   {d.items.map((p) => (

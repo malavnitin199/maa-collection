@@ -333,7 +333,9 @@ test('purchase price first; an empty sale price is purchase + 50% (the % can be 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.keyboard.press('Escape');
   await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await expect(page.getByTestId('product-list').getByRole('listitem').first()).toContainText('MRP ₹980.00');
+  await expect(page.getByTestId('product-list').getByRole('listitem').first()).toContainText('× ₹700.00 ='); // purchase per piece (ADR-057)
+  await page.getByTestId('product-list').getByRole('link').first().click();
+  await expect(page.getByTestId('product-must-haves')).toContainText('MRP ₹980.00');
   // The % is remembered on this phone for the next item.
   await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: /^One item/ }).click();
