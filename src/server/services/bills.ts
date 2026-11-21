@@ -215,7 +215,7 @@ async function attach(db: Db, storeId: string, billId: string, receiptIds: strin
  * at the price on the day they arrived. Stored, so later price changes do not
  * move a bill.
  */
-async function recompute(db: Db, storeId: string, billId: string) {
+export async function recompute(db: Db, storeId: string, billId: string) {
   const links = await db.select({ receiptId: billCollections.receiptId }).from(billCollections).where(eq(billCollections.billId, billId));
   const list = await listCollections(db, storeId, { receiptIds: links.map((l) => l.receiptId), limit: 10_000 });
   const parts = await db.select({ id: billCompanies.id, supplierId: billCompanies.supplierId }).from(billCompanies).where(eq(billCompanies.billId, billId));

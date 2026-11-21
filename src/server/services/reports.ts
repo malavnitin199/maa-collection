@@ -326,18 +326,20 @@ export async function salesReport(db: Db, storeId: string, period: ReportPeriod,
       .from(exchanges)
       .where(and(eq(exchanges.storeId, storeId), gte(exchanges.createdAt, from), lte(exchanges.createdAt, at), exchangeApproved)),
     db
-      .select({ label: products.category, units, revenuePaise: revenue, profitPaise: profit })
+      // Left join: a sale whose item was deleted later (ADR-050) still counts, under Other / No company.
+      // Hand-entered sales stay out of these two, as before.
+      .select({ label: sql<string>`coalesce(${products.category}, 'Other')`, units, revenuePaise: revenue, profitPaise: profit })
       .from(sales)
-      .innerJoin(products, eq(products.id, sales.productId))
-      .where(inPeriod)
+      .leftJoin(products, eq(products.id, sales.productId))
+      .where(and(inPeriod, eq(sales.manual, false)))
       .groupBy(products.category)
       .orderBy(desc(revenue)),
     db
       .select({ label: sql<string>`coalesce(${suppliers.name}, 'No company')`, units, revenuePaise: revenue, profitPaise: profit })
       .from(sales)
-      .innerJoin(products, eq(products.id, sales.productId))
+      .leftJoin(products, eq(products.id, sales.productId))
       .leftJoin(suppliers, eq(suppliers.id, products.supplierId))
-      .where(inPeriod)
+      .where(and(inPeriod, eq(sales.manual, false)))
       .groupBy(suppliers.name)
       .orderBy(desc(revenue)),
     db

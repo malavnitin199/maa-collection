@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { card, input, muted, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
+import { card, input, muted, okBox, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
 import { ProductBulkActions } from '@/features/catalog/bulk-actions';
 import { DesignCard } from '@/features/catalog/design-card';
@@ -17,7 +17,7 @@ import { listCategories, listSuppliers } from '@/server/services/catalog';
 import { listProducts, type ProductListRow } from '@/server/services/products';
 import { imageSrc, mainImages } from '@/server/services/images';
 
-type Search = { q?: string; supplier?: string; category?: string; show?: string };
+type Search = { q?: string; supplier?: string; category?: string; show?: string; deleted?: string };
 const uuid = (v?: string) => (v && /^[0-9a-f-]{36}$/i.test(v) ? v : undefined);
 
 /** This page with the same search and filters, combined (default) or every item. */
@@ -110,6 +110,12 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
 
   return (
     <>
+      {/* After Delete on a product page (ADR-050): what happened. */}
+      {params.deleted && (
+        <p role="status" data-testid="deleted-note" className={okBox}>
+          {params.deleted.slice(0, 300)}
+        </p>
+      )}
       <form className="flex flex-col gap-2" role="search">
         {show !== 'combined' && <input type="hidden" name="show" value={show} />}
         <div className="flex gap-2">
@@ -210,6 +216,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
           canCatalog={can(me, 'catalog')}
           canPrices={can(me, 'prices')}
           canPrint={canPrint}
+          canDelete={me.role === 'admin'}
           hiddenView={show === 'hidden'}
         />
       </SelectionBar>

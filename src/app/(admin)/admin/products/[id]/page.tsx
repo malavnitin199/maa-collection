@@ -7,6 +7,7 @@ import { card, link, muted, okBox, secondaryButton, sectionTitle } from '@/compo
 import { HangTag } from '@/features/catalog/hang-tag';
 import { DesignTagsForm, ItemTabs } from '@/features/catalog/item-parts';
 import { PrintButton } from '@/features/catalog/print-button';
+import { DeleteItemButton } from '@/features/catalog/delete-products';
 import { ProductForm } from '@/features/catalog/product-form';
 import { DesignRatesForm, StockInForm } from '@/features/catalog/small-forms';
 import { StatTile } from '@/features/reports/widgets';
@@ -483,6 +484,8 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
           { id: 'other', label: t('cat.tab.other'), content: other, tone: 'slate' },
         ]}
       />
+      {/* Owner only (ADR-050): delete for good, after a confirmation. */}
+      {me.role === 'admin' && <DeleteItemButton id={product.id} designIds={variants.map((v) => v.id)} />}
     </main>
   );
 }

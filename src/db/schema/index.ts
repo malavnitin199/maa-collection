@@ -329,6 +329,11 @@ export const sales = pgTable(
     /** Entered without scanning (tag would not scan): the owner looks at each of these himself. */
     manual: boolean('manual').notNull().default(false),
     manualNote: text('manual_note'),
+    /**
+     * The item was deleted later (owner, 2026-11-22, ADR-050): the sale keeps its name,
+     * size, MRP, price, cost and amount, but `product_id` is empty.
+     */
+    itemDeleted: boolean('item_deleted').notNull().default(false),
     quantity: integer('quantity').notNull(),
     unitPricePaise: integer('unit_price_paise').notNull(),
     totalPaise: integer('total_paise').notNull(),
@@ -348,8 +353,8 @@ export const sales = pgTable(
     index('sales_product_idx').on(t.productId, t.createdAt),
     check('sales_quantity_positive', sql`${t.quantity} > 0`),
     check('sales_price_le_mrp', sql`${t.unitPricePaise} > 0 AND (${t.mrpPaise} IS NULL OR ${t.unitPricePaise} <= ${t.mrpPaise})`),
-    // A sale without an item is only possible as a manual sale; a scanned sale always has its item and MRP.
-    check('sales_item_or_manual', sql`(${t.productId} IS NOT NULL AND ${t.mrpPaise} IS NOT NULL) OR ${t.manual}`),
+    // A sale without an item is a manual sale, or one whose item was deleted later; a scanned sale has its item and MRP.
+    check('sales_item_or_manual', sql`(${t.productId} IS NOT NULL AND ${t.mrpPaise} IS NOT NULL) OR ${t.manual} OR ${t.itemDeleted}`),
   ],
 );
 

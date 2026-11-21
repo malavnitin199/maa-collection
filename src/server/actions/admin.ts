@@ -10,6 +10,7 @@ import { codeFromScan } from '@/lib/item-link';
 import { sizeFieldName, type SizeRates } from '@/lib/size-prices';
 import { isValidEan13 } from '@/features/scanning/ean13';
 import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
+import { deleteProducts } from '@/server/services/delete-products';
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getLocale, getT } from '@/server/i18n';
 import { localName } from '@/lib/sections';
@@ -279,6 +280,28 @@ export async function deleteCompaniesAction(ids: string[]): Promise<{ ok: true; 
     const parts = [];
     if (result.deleted.length) parts.push(t(result.deleted.length === 1 ? 'bulk.deleted.one' : 'bulk.deleted.other', { n: result.deleted.length }));
     for (const k of result.kept) parts.push(t('bulk.cantDelete', { name: k.name, items: k.items, collections: k.collections, bills: k.bills, payments: k.payments }));
+    return { ok: true, deleted: result.deleted.length, message: parts.join(' ') };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/**
+ * Products → Select → Delete, and Delete on the product page (owner only, ADR-050):
+ * items go for good after a confirmation; sales keep their figures. Items in an
+ * exchange are kept and named in the message.
+ */
+export async function deleteProductsAction(ids: string[]): Promise<{ ok: true; deleted: number; message: string } | { ok: false; error: string }> {
+  await requireAdmin();
+  try {
+    const list = (Array.isArray(ids) ? ids : []).map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500);
+    const result = await deleteProducts(await getDb(), STORE_ID, list);
+    revalidatePath('/admin', 'layout');
+    revalidatePath('/pos');
+    const t = await getT();
+    const parts = [];
+    if (result.deleted.length) parts.push(t(result.deleted.length === 1 ? 'prod.deleted.one' : 'prod.deleted.other', { n: result.deleted.length }));
+    for (const k of result.kept) parts.push(t('prod.keptExchange', { name: k.name, size: k.size }));
     return { ok: true, deleted: result.deleted.length, message: parts.join(' ') };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };

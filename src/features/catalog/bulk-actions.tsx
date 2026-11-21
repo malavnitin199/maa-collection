@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { IconBuilding, IconEye, IconEyeOff, IconLayers, IconPeople, IconPriceTag, IconPrint, IconRename, IconTrash } from '@/components/ui/icons';
 import { ActionGrid, ActionSheet, ActionTile, sheetDanger, sheetPrimary, sheetSecondary, useSelection } from '@/components/ui/selection';
 import { input } from '@/components/ui/styles';
+import { DeleteProductsSheet } from '@/features/catalog/delete-products';
 import { TagChooser } from '@/features/catalog/item-parts';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
@@ -13,7 +14,7 @@ import { PRINT_MAX } from '@/lib/selection-limits';
 import { bulkProductsAction, deleteCompaniesAction, type BulkProductInput } from '@/server/actions/admin';
 
 type Option = { id: string; name: string };
-type Sheet = 'hide' | 'rename' | 'company' | 'category' | 'tags' | 'prices';
+type Sheet = 'hide' | 'rename' | 'company' | 'category' | 'tags' | 'prices' | 'delete';
 
 const fieldLabel = 'flex flex-col gap-1.5 text-sm font-semibold';
 
@@ -27,6 +28,7 @@ export function ProductBulkActions({
   canCatalog,
   canPrices,
   canPrint,
+  canDelete = false,
   hiddenView,
 }: {
   companies: Option[];
@@ -35,6 +37,8 @@ export function ProductBulkActions({
   canCatalog: boolean;
   canPrices: boolean;
   canPrint: boolean;
+  /** Owner only (ADR-050): delete the chosen items for good, after a confirmation. */
+  canDelete?: boolean;
   /** Showing hidden items: the action is Bring back. */
   hiddenView: boolean;
 }) {
@@ -112,6 +116,7 @@ export function ProductBulkActions({
           .map((tile) => (
             <ActionTile key={tile.id} icon={tile.icon} label={t(tile.label)} disabled={none || busy} onClick={() => open(tile.id)} />
           ))}
+        {canDelete && <ActionTile icon={<IconTrash />} label={t('prod.delete')} tone="danger" disabled={none || busy} onClick={() => open('delete')} />}
         {canPrint && !hiddenView && (
           <ActionTile
             icon={<IconPrint />}
@@ -125,6 +130,18 @@ export function ProductBulkActions({
         )}
       </ActionGrid>
 
+      {sheet === 'delete' && (
+        <DeleteProductsSheet
+          ids={selected}
+          onClose={close}
+          onDone={(result) => {
+            setSheet(null);
+            notify(result.ok ? 'ok' : 'error', result.message);
+            clear();
+            router.refresh();
+          }}
+        />
+      )}
       {sheet === 'hide' && (
         <ActionSheet title={title('bulk.hide')} onClose={close}>
           <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('bulk.hideConfirm', { n })}</p>

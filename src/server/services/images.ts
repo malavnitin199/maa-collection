@@ -205,3 +205,28 @@ export async function deleteImage(db: Db, storeId: string, imageId: string) {
     await tx.delete(productImages).where(eq(productImages.id, imageId));
   });
 }
+
+/**
+ * Before items' photos are deleted (ADR-050): a photo stored once and shared by
+ * other items (their rows point at it) is handed to the first of those, so their
+ * photos keep working. Then every photo row of the deleted items goes.
+ */
+export async function dropImagesOf(db: Db, storeId: string, productIds: string[]): Promise<void> {
+  if (productIds.length === 0) return;
+  const holders = await db
+    .select({ id: productImages.id, data: productImages.data })
+    .from(productImages)
+    .where(and(eq(productImages.storeId, storeId), inArray(productImages.productId, productIds), sql`${productImages.data} IS NOT NULL`));
+  for (const holder of holders) {
+    const users = await db
+      .select({ id: productImages.id })
+      .from(productImages)
+      .where(and(eq(productImages.storeId, storeId), eq(productImages.url, ownSrc(holder.id)), sql`${productImages.productId} NOT IN (${sql.join(productIds.map((id) => sql`${id}`), sql`, `)})`))
+      .orderBy(asc(productImages.createdAt));
+    if (users.length === 0) continue;
+    const [heir, ...rest] = users;
+    await db.update(productImages).set({ data: holder.data, url: null }).where(eq(productImages.id, heir.id));
+    if (rest.length) await db.update(productImages).set({ url: ownSrc(heir.id) }).where(inArray(productImages.id, rest.map((r) => r.id)));
+  }
+  await db.delete(productImages).where(and(eq(productImages.storeId, storeId), inArray(productImages.productId, productIds)));
+}
