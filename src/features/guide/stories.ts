@@ -521,7 +521,7 @@ export const STORIES: Story[] = [
     id: 'item',
     audience: 'stock',
     title: { en: 'The item page', hi: 'आइटम का पेज' },
-    goal: { en: 'One product: stock, sizes, details.', hi: 'एक प्रोडक्ट: स्टॉक, साइज़, जानकारी।' },
+    goal: { en: 'One product: photo, stock, sizes, details.', hi: 'एक प्रोडक्ट: फ़ोटो, स्टॉक, साइज़, जानकारी।' },
     steps: [
       {
         scene: {
@@ -536,6 +536,15 @@ export const STORIES: Story[] = [
         say: {
           en: 'Open Products and tap a product. On top: pieces in stock, pieces sold and what the stock is worth.',
           hi: 'प्रोडक्ट खोलें और किसी प्रोडक्ट पर टैप करें। ऊपर: स्टॉक के पीस, बिके पीस और स्टॉक की कीमत।',
+        },
+      },
+      {
+        // ADR-068: one photo for every size; tap the box to add or change it.
+        scene: { kind: 'photo' },
+        text: { en: 'Tap the **photo** box', hi: '**फ़ोटो** वाले बॉक्स पर टैप करें' },
+        say: {
+          en: 'Tap the photo box at the top to add a photo. One photo shows on every size. Tap it again to change it.',
+          hi: 'फ़ोटो जोड़ने के लिए ऊपर फ़ोटो वाले बॉक्स पर टैप करें। एक फ़ोटो हर साइज़ पर दिखती है। बदलने के लिए फिर टैप करें।',
         },
       },
       {

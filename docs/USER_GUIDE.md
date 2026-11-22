@@ -161,7 +161,8 @@ Good to know:
 ### The item page (Products → tap a product; since 2026-11-22)
 
 A short page to read at a glance and act on:
-- **Top:** ← Products and **🧾 Make bill** (opens New bill with this product's sizes already on it — see Bills). Then the photo (or N/A), the name and coloured labels: **company** (orange; tap it to open the company), category, For / Age.
+- **Top:** ← Products and **🧾 Make bill** (opens New bill with this product's sizes already on it — see Bills). Then the **photo box**, the name and coloured labels: **company** (orange; tap it to open the company), category, For / Age.
+- **Photo** (since 2026-11-23): a product has many sizes but **one photo**. No photo yet → the box says **Add photo**; tap it → **📷 Take photo** or **🖼 Gallery**. With a photo, tap it (the small ✎) → the big photo, a new **📷 / 🖼** photo replaces it on every size, or **Remove photo** (it asks once more: *Remove the photo from all n sizes?*). A size added later with **+ Add size** shows the same photo. Needs the Catalog right; others can tap to see it big.
 - **Three figures:** **In stock** (pieces), **Sold** (approved sales), **Stock value** (pieces × purchase price; people without the purchase-price right see the **Last sale** day instead). Then **MRP · Selling · Purchase** (a range when sizes differ).
 - **Sizes & pieces:** each size (and colour) with its pieces and *sold n*.
   - **+ Add** — new pieces came in: *How many came in?* **− n +** → **Add n pieces**. It is a stock entry at the item's purchase price, under its company.
@@ -178,6 +179,10 @@ A short page to read at a glance and act on:
 **Products → Select** → tick cards (a card stands for all its sizes) → **Delete**, or open an item → **Delete this item** at the bottom (choose *Yes, delete it* for this size, or *Delete all N sizes of this design*). The app asks first; it cannot be undone. The item's tags, photos and stock entries go; **past sales stay** with their name, price and amount (reports and profit do not change; in *by category / company* they count under *Other*). If its delivery is on a bill, the bill amount goes down. An item that was part of an exchange is kept (the message says so). Prefer hiding for items you may bring back: open the item → **✎ Edit** → untick **Active**.
 
 ### Selecting many (Products, Approvals, All tags, Companies)
+
+**Coming back starts plain** (owner, 2026-11-23): once you open another screen (or press the phone's back button), the cards you ticked are no longer ticked when you return. In the same way, searches and filters clear: the Companies search and place, All tags' search and filters (an open group stays), the period on Reports, Team and a company's page, and the search in a bill's item list (the bill's lines stay).
+
+On **Products** the **whole card** opens the product (the round **›** on the right); tap anywhere on it.
 
 - **Start**: tap **Select** above the list — or **press and hold any card** for half a second (the phone gives a small buzz). On **Products** only the owner can select (its one action, Delete, is the owner's).
 - **Tick**: tap anywhere on a card; a round tick fills in and the card gets a coloured ring. In the Companies and Products lists the rows slide right and the tick sits beside each row, so names stay readable. A design card stands for all its items.
@@ -230,7 +235,7 @@ The Companies list shows each company's bills and dues too.
 
 - **New item / Old form**: the main photo (right of the name) goes on every item.
 - **Tag old stock**: 1–4 photos, as before.
-- If a photo fails (e.g. weak signal), the items are still saved; the labels page says so — add it later on the item's page → Photos.
+- If a photo fails (e.g. weak signal), the items are still saved; the labels page says so — add it later on the item's page: tap the photo box.
 
 ### Categories: collections and their categories (plan v19; owner, 2026-11-22)
 
@@ -261,7 +266,7 @@ Every piece gets a **hang tag, 40 × 60 mm**: shop name, **QR code**, the **size
 
 ### Photos of a product
 
-Add the photos while making the item (**New item**, **Tag old stock**): the first one is the **main** photo, shown at the counter and on the item page. (Since 2026-11-22 the item page no longer adds, changes or deletes photos.)
+Add the photo while making the item (**New item**, **Tag old stock**), or later on the item page: tap the **photo box** at the top (since 2026-11-23). One photo for the whole product — every size, the Products card and the counter show it. Tap the box again to change it or **Remove photo**.
 
 ## 5a. Sales team dashboard (owner)
 

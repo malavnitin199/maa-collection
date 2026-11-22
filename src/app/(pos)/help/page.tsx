@@ -81,7 +81,7 @@ const HI = {
   more: [
     <><strong>कंपनी से आया नया माल</strong> → होम → <strong>नया स्टॉक जोड़ें</strong> (या स्टॉक जोड़ें → <strong>नया आइटम</strong>): <strong>कलेक्शन</strong> चुनें, फिर <strong>क्या है</strong>; <strong>कंपनी</strong>, <strong>प्रोडक्ट का नाम</strong>, <strong>खरीद दाम</strong> और <strong>बिक्री दाम</strong> भरें (<strong>%</strong> से निकालें); <strong>साइज़ और बाकी</strong> खोलकर साइज़ दबाएँ और उनके पीस लिखें; फिर <strong>सेव करें और टैग प्रिंट करें</strong> (या उसी बिल के लिए <strong>सेव करें और अगला जोड़ें</strong>)।</>,
     <><strong>जो आइटम पहले से हैं, उनके और पीस</strong> → स्टॉक जोड़ें → पहले से मौजूद आइटम के और पीस (<em>स्टॉक</em> अधिकार चाहिए)। वही टैग फिर स्कैन करने पर एक पीस और जुड़ता है। या आइटम खोलें → साइज़ के पास <strong>+ जोड़ें</strong>।</>,
-    <><strong>प्रोडक्ट बदलें</strong> → प्रोडक्ट → उस पर टैप करें: साइज़ के पास <strong>+ जोड़ें</strong> से पीस, गिनती के बाद पीस ठीक करने को साइज़ पर टैप करें, और नाम, कंपनी, कैटेगरी, दाम के लिए <strong>✎ जानकारी बदलें</strong>। (फ़ोटो आइटम बनाते समय जुड़ती हैं।)</>,
+    <><strong>प्रोडक्ट बदलें</strong> → प्रोडक्ट → उस पर टैप करें: साइज़ के पास <strong>+ जोड़ें</strong> से पीस, गिनती के बाद पीस ठीक करने को साइज़ पर टैप करें, और नाम, कंपनी, कैटेगरी, दाम के लिए <strong>✎ जानकारी बदलें</strong>। ऊपर <strong>फ़ोटो</strong> वाले बॉक्स पर टैप करें: प्रोडक्ट की एक फ़ोटो जोड़ें, बदलें या हटाएँ — हर साइज़ पर वही दिखती है।</>,
     <><strong>क्या ठीक करना बाकी है?</strong> → कैटलॉग → <strong>ध्यान दें</strong>: बिना फ़ोटो, कंपनी या स्टॉक वाले आइटम।</>,
   ],
   owner: [
@@ -244,7 +244,7 @@ export default async function HelpPage() {
             <>
               <li><strong>New stock from a company</strong> → Home → <strong>Add new stock</strong> (or Add stock → <strong>New item</strong>): pick the <strong>collection</strong>, then <strong>what it is</strong>; fill <strong>Company</strong>, <strong>Product name</strong>, <strong>Purchase price</strong> and <strong>Sale price</strong> (<strong>%</strong> works it out); open <strong>Sizes &amp; more</strong> to tap the sizes and set their pieces; then <strong>Save &amp; print tags</strong> (or <strong>Save &amp; add next</strong> for the same bill).</li>
               <li><strong>More pieces of items you already have</strong> → Add stock → More pieces of an existing item (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece. Or open the item → <strong>+ Add</strong> next to its size.</li>
-              <li><strong>Change a product</strong> → Products → tap it: <strong>+ Add</strong> pieces to a size, tap a size to correct its pieces after a count, and <strong>✎ Edit details</strong> for the name, company, category and prices. (Photos are added while making the item.)</li>
+              <li><strong>Change a product</strong> → Products → tap it: <strong>+ Add</strong> pieces to a size, tap a size to correct its pieces after a count, and <strong>✎ Edit details</strong> for the name, company, category and prices. Tap the <strong>photo</strong> box at the top to add, change or remove the product&apos;s one photo — every size shows it.</li>
               <li><strong>What&apos;s left to fix?</strong> → Catalog → <strong>Needs attention</strong>: items without photo, company or stock.</li>
             </>
           )}
