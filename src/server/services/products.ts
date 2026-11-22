@@ -1270,14 +1270,17 @@ export async function bulkUpdateProducts(db: Db, storeId: string, ids: readonly 
   }
 }
 
-/** The chosen items, in name / colour / size order (for printing their tags). */
-export async function productsByIds(db: Db, storeId: string, ids: readonly string[]): Promise<Product[]> {
+/**
+ * The chosen items, in name / colour / size order (for printing their tags). Hidden items are
+ * left out, unless `hidden` (Stocks → a card's label sheet shows every item's tag, ADR-070).
+ */
+export async function productsByIds(db: Db, storeId: string, ids: readonly string[], { hidden = false }: { hidden?: boolean } = {}): Promise<Product[]> {
   const unique = [...new Set(ids)].slice(0, BULK_MAX);
   if (unique.length === 0) return [];
   return db
     .select()
     .from(products)
-    .where(and(eq(products.storeId, storeId), eq(products.active, true), inArray(products.id, unique)))
+    .where(and(eq(products.storeId, storeId), hidden ? undefined : eq(products.active, true), inArray(products.id, unique)))
     .orderBy(asc(products.name), asc(products.color), asc(products.size));
 }
 

@@ -203,6 +203,8 @@ describe('many items at once (plan v17, Products → Select)', () => {
     expect((await listProducts(db, STORE_ID, { search: 'Bulk Kurta', active: false })).map((p) => p.size).sort()).toEqual(['L', 'M']);
     expect(await findProductByCode(db, STORE_ID, made[0].barcode)).toBeNull(); // not at the counter
     expect((await productsByIds(db, STORE_ID, ids)).map((p) => p.size)).toEqual(['XL']); // not printed
+    // …but Stocks → a card's label sheet still shows every item's tag (ADR-070).
+    expect((await productsByIds(db, STORE_ID, ids, { hidden: true })).map((p) => p.size).sort()).toEqual(['L', 'M', 'XL']);
     expect(await bulkUpdateProducts(db, STORE_ID, ids, { kind: 'show' })).toBe(3);
     expect((await rowsOf(ids)).every((p) => p.active && p.stock === 2)).toBe(true);
   });

@@ -1073,10 +1073,16 @@ test('owner makes a salesman a catalog person; they get catalog screens but not 
   const firstCard = page.getByTestId('design-list').getByTestId('product-card').first();
   await expect(firstCard).toBeVisible();
   await expect(page.getByTestId('select-products')).toHaveCount(0);
-  // Cards show company, items and pieces only — no purchase line, no ₹ at all (ADR-057/058).
+  // Cards show the pieces and the MRP — no purchase price per piece (ADR-057/070, invariant 4).
   await expect(firstCard.getByTestId('card-pieces')).toHaveText(/^\d+ pcs$/);
-  await expect(page.getByTestId('stock-value')).toHaveCount(0);
-  await expect(page.getByTestId('design-list')).not.toContainText('₹');
+  await expect(firstCard.getByTestId('card-mrp')).toHaveText(/^MRP ₹[\d,.]+$/);
+  await expect(page.getByTestId('card-cost')).toHaveCount(0);
+  await expect(page.getByTestId('design-list')).not.toContainText('/pc');
+  // With the catalog / stock right, the QR button shows the label too (ADR-070).
+  await firstCard.getByTestId('card-label').click();
+  await expect(page.getByTestId('label-view').getByTestId('hang-tag')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('action-sheet')).toHaveCount(0);
   for (const path of ['/admin/dashboard', '/admin/staff', '/admin/settings', '/admin/activity']) {
     await page.goto(path);
     await expect(page, `${path} is owner-only`).toHaveURL(/\/pos$/);
