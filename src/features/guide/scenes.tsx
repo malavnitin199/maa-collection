@@ -658,7 +658,7 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
             </span>
             <span className={`${pill} border border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300`}>{say(PHOTO_CLOSE)}</span>
             {/* On the button's lower edge, so its words stay readable. */}
-            <Tap x={44} y={64} />
+            <Tap x={42} y={58} />
           </div>
         </Phone>
       );
@@ -699,7 +699,7 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
             </div>
           </div>
           {/* On the action's lower-right corner, so its words stay readable. */}
-          <Tap x={93} y={99} />
+          <Tap x={88} y={95} />
         </Phone>
       );
 
