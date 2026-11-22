@@ -6,8 +6,10 @@ import { useScreenVisits } from './fresh-on-return';
 
 /**
  * The browser's name for this place in the history list. Back / Forward land on the same
- * place (same key); a tap on a link or a Delete makes a new place (new key), and a replace
- * keeps it. Null where the browser has no Navigation API — then nothing is removed.
+ * place (same key); a tap on a link makes a new place (new key); a replace keeps the place it
+ * replaces — so Delete, which replaces the product page with the list, lands on the product
+ * page's place, not the one the list was last seen on. Null where the browser has no
+ * Navigation API — then nothing is removed.
  */
 function historyKey(): string | null {
   const nav = (window as unknown as { navigation?: { currentEntry?: { key?: string } | null } }).navigation;

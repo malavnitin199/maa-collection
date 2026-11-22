@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { unstable_rethrow, useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { IconCamera, IconPencil } from '@/components/ui/icons';
 import { ActionSheet, sheetDanger, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
@@ -69,8 +69,10 @@ export function ProductPhoto({ productId, src, name, sizes, canEdit }: { product
         const result = await setProductPhotoAction(productId, photoForm(photo));
         if (!result.ok) return failed(result.error);
         finish(t(src ? 'ied.photo.changed' : 'ied.photo.added'), [{ label: t('ied.photo.sizes'), value: String(result.sizes) }]);
-      } catch {
-        failed(t('ied.photo.noNet')); // the request never reached the server (weak signal)
+      } catch (error) {
+        unstable_rethrow(error); // Next's own moves (e.g. to Log in) are not a lost connection
+        failed(t('ied.photo.noNet')); // weak signal: the request or its answer was lost
+        router.refresh(); // in case it did reach the shop
       }
     });
   };
@@ -81,8 +83,10 @@ export function ProductPhoto({ productId, src, name, sizes, canEdit }: { product
         const result = await removeProductPhotoAction(productId);
         if (!result.ok) return failed(result.error);
         finish(t('ied.photo.removed'));
-      } catch {
+      } catch (error) {
+        unstable_rethrow(error);
         failed(t('ied.photo.noNet'));
+        router.refresh();
       }
     });
   const picker = usePhotoPicker({ label: t('ied.photo.this'), photo: picked, onChange: save });
