@@ -624,10 +624,10 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
     }
 
     case 'photobox':
-      // First the page top with the dashed Add photo box being tapped, then the sheet it opens.
+      // The page top with the dashed Add photo box; the finger taps it, then the sheet slides over the page.
       return (
         <Phone>
-          <div className="st-a absolute inset-x-3 top-3 flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <div className="flex gap-2 rounded-2xl bg-surface p-2 shadow-sm ring-1 ring-black/5 dark:ring-white/10">
               <span className="st-target flex h-14 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950 dark:text-brand-200">
                 <IconCamera className="h-4 w-4" />
@@ -644,17 +644,21 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
                 <span key={i} className="h-9 rounded-lg bg-brand-50 dark:bg-brand-950" />
               ))}
             </div>
-            <Tap x={22} y={22} />
           </div>
+          <span className="st-a">
+            <Tap x={24} y={17} />
+          </span>
+          <span className="st-b absolute inset-0 bg-slate-950/25" />
           <div className="st-b absolute inset-x-0 bottom-0 flex flex-col gap-1.5 rounded-t-2xl bg-surface p-2.5 shadow-[0_-6px_16px_rgb(0_0_0/0.15)] ring-1 ring-black/5 dark:ring-white/10">
             <span className="mx-auto h-1 w-8 rounded-full bg-zinc-300 dark:bg-zinc-600" />
             <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{say(PHOTO_TITLE)}</span>
             <span className="grid grid-cols-2 gap-1.5">
-              <span className={`${pill} st-target bg-brand-600 px-1 text-white`}>{say(PHOTO_CAMERA)}</span>
-              <span className={`${pill} border border-zinc-300 px-1 text-zinc-700 dark:border-zinc-600 dark:text-zinc-200`}>{say(PHOTO_GALLERY)}</span>
+              <span className={`${pill} st-target bg-brand-600 px-1 text-[10px] whitespace-nowrap text-white`}>{say(PHOTO_CAMERA)}</span>
+              <span className={`${pill} border border-zinc-300 px-1 text-[10px] whitespace-nowrap text-zinc-700 dark:border-zinc-600 dark:text-zinc-200`}>{say(PHOTO_GALLERY)}</span>
             </span>
             <span className={`${pill} border border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300`}>{say(PHOTO_CLOSE)}</span>
-            <Tap x={27} y={50} />
+            {/* On the button's lower edge, so its words stay readable. */}
+            <Tap x={44} y={64} />
           </div>
         </Phone>
       );
@@ -688,13 +692,14 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
           </div>
           <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-slate-900 px-2 pt-1.5 pb-2 text-white">
             <p className="text-center text-[9px] font-bold">{say(SEL_COUNT)}</p>
-            <div className="mt-1 grid grid-cols-3 gap-1 text-center text-[8px] leading-tight font-bold">
-              <span className="rounded-lg bg-white/10 px-1 py-1.5">{say(SEL_ALL)}</span>
-              <span className="rounded-lg bg-white/10 px-1 py-1.5">{say(SEL_CANCEL)}</span>
-              <span className={`st-target rounded-lg px-1 py-1.5 ${scene.danger ? 'bg-red-600' : 'bg-emerald-600'}`}>{say(scene.action)}</span>
+            <div className="mt-1 grid grid-cols-[1fr_1fr_1.7fr] gap-1 text-center text-[8px] leading-tight font-bold">
+              <span className="flex items-center justify-center rounded-lg bg-white/10 px-1 py-1.5">{say(SEL_ALL)}</span>
+              <span className="flex items-center justify-center rounded-lg bg-white/10 px-1 py-1.5">{say(SEL_CANCEL)}</span>
+              <span className={`st-target flex items-center justify-center rounded-lg px-1 py-1.5 ${scene.danger ? 'bg-red-600' : 'bg-emerald-600'}`}>{say(scene.action)}</span>
             </div>
           </div>
-          <Tap x={83} y={92} />
+          {/* On the action's lower-right corner, so its words stay readable. */}
+          <Tap x={93} y={99} />
         </Phone>
       );
 
