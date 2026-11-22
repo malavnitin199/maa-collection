@@ -36,7 +36,8 @@ async function addProduct(
   await expect(status).toContainText('Product added');
   const barcode = (await status.innerText()).match(/barcode (\d{13})/)?.[1];
   expect(barcode).toMatch(/^200\d{10}$/);
-  await expect(page.getByRole('img', { name: `Barcode ${barcode} for MAA-KU-`, exact: false })).toBeVisible();
+  // The item page draws its tag only for Print tag (ADR-059).
+  await expect(page.getByTestId('item-print-tag').getByRole('img', { name: `Barcode ${barcode} for MAA-KU-`, exact: false, includeHidden: true })).toHaveCount(1);
   return barcode as string;
 }
 
@@ -195,13 +196,14 @@ test('admin adds a product with a generated barcode, receives stock; salesman se
   await login(page, 'Owner');
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
   const barcode = await addProduct(page, { name: `Test Kurta ${run}`, size: 'M', mrp: '1299', price: '1199', stock: '2', tags: { for: 'Boys', age: 'Child' } });
-  // The product page shows the tags it was added with.
-  await expect(page.getByTestId('item-pills')).toContainText('Boys');
-  await expect(page.getByTestId('item-pills')).toContainText('Child');
-
-  await page.getByLabel('Pieces received').fill('3');
-  await page.getByRole('button', { name: 'Add stock' }).click();
-  await expect(page.getByText('Stock is now 5')).toBeVisible();
+  // The item page shows the tags it was added with; its pieces go from 2 to 5 (a count correction, ADR-059).
+  await expect(page.getByTestId('item-chips')).toContainText('Boys');
+  await expect(page.getByTestId('item-chips')).toContainText('Child');
+  const editor = page.getByTestId('item-editor');
+  await expect(editor.getByLabel('Pieces of M')).toHaveValue('2');
+  await editor.getByLabel('Pieces of M').fill('5');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('item-pieces')).toHaveText('5 pcs');
 
   // Nitin sells 2, credited to Vishal.
   await login(page, 'Nitin');

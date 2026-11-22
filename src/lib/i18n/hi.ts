@@ -9,6 +9,7 @@ import { doneHi } from './modules/done.ts';
 import { billHi } from './modules/bill.ts';
 import { billsHi } from './modules/bills.ts';
 import { packsHi } from './modules/packs.ts';
+import { itemEditHi } from './modules/itemedit.ts';
 import { catalogHi } from './modules/catalog.ts';
 import { helpHi } from './modules/help.ts';
 import { ownerHi } from './modules/owner.ts';
@@ -296,4 +297,4 @@ const base = {
   'login.backspace': 'आखिरी अंक मिटाएँ',
 };
 
-export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi, ...offlineHi, ...sectionsHi, ...newItemHi, ...typingHi, ...doneHi, ...billHi, ...billsHi, ...packsHi };
+export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi, ...offlineHi, ...sectionsHi, ...newItemHi, ...typingHi, ...doneHi, ...billHi, ...billsHi, ...packsHi, ...itemEditHi };

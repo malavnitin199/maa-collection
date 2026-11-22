@@ -4,14 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPgliteDb, getDb, type Db } from '@/db/client';
 import { products } from '@/db/schema';
 import { STORE_ID } from '@/lib/app-config';
-import { sizeFieldName } from '@/lib/size-prices';
-import { requirePermission, type CurrentStaff } from '@/server/auth';
+import { requireAnyPermission, requirePermission, type CurrentStaff } from '@/server/auth';
 import { createSupplier, listCategories } from '@/server/services/catalog';
 import { listStaff } from '@/server/services/staff';
-import { createDesignAction, updateDesignRatesAction } from './admin';
+import { createDesignAction, saveItemAction } from './admin';
 
 // The actions run as a chosen person against an in-memory database.
-vi.mock('@/server/auth', () => ({ requirePermission: vi.fn(), requireAdmin: vi.fn() }));
+vi.mock('@/server/auth', () => ({ requirePermission: vi.fn(), requireAnyPermission: vi.fn(), requireAdmin: vi.fn() }));
 vi.mock('@/db/client', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/db/client')>()), getDb: vi.fn() }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 // Messages in English (the person's language comes from the request in the app).
@@ -83,32 +82,36 @@ describe('new design with prices by size (server action)', () => {
   });
 });
 
-describe('rates by size on the product page (server action)', () => {
-  function rateForm(fields: Record<string, string>, sizes: Record<string, { mrp?: string; price?: string; cost?: string }>) {
-    const form = new FormData();
-    for (const [k, v] of Object.entries(fields)) form.set(k, v);
-    for (const [size, own] of Object.entries(sizes)) {
-      form.append('rateSize', size);
-      for (const field of ['mrp', 'price', 'cost'] as const) form.set(sizeFieldName(field, size), own[field] ?? '');
-    }
-    return form;
-  }
-
-  it('changes one size; without "costs" the purchase prices stay as they were', async () => {
+describe('the item page Save (server action, ADR-059)', () => {
+  it('uses only what the person may change: no purchase price without Costs, no pieces without Stock', async () => {
     vi.mocked(requirePermission).mockResolvedValue(owner);
-    await createDesignAction(await designInput('Rates Shirt'));
-    const [first] = await rows('Rates Shirt');
+    await createDesignAction(await designInput('Save Shirt'));
+    const [first] = await rows('Save Shirt');
 
-    vi.mocked(requirePermission).mockResolvedValue(catalogPerson);
-    const state = await updateDesignRatesAction(
-      first.id,
-      {},
-      rateForm({ mrp: '700', price: '500', cost: '1' }, { M: {}, L: { price: '520', cost: '1' }, XL: { mrp: '750', price: '600', cost: '1' } }),
-    );
-    expect(state).toEqual({ message: 'Rates updated for 6 items.' });
-    expect(bySize(await rows('Rates Shirt'))).toEqual({
-      'Black M': [70000, 50000, 30000], 'Black L': [70000, 52000, 33000], 'Black XL': [75000, 60000, 36000],
-      'White M': [70000, 50000, 30000], 'White L': [70000, 52000, 33000], 'White XL': [75000, 60000, 36000],
-    });
+    // Catalog + Prices, no Costs, no Stock: name and prices change; purchase price and pieces sent anyway do not.
+    vi.mocked(requireAnyPermission).mockResolvedValue(catalogPerson);
+    const result = await saveItemAction(first.id, { name: 'Save Shirt Two', mrp: '800', price: '700', cost: '1', counts: { [first.id]: 99 } });
+    expect(result).toEqual({ ok: true, counted: 0, added: 0 });
+    const after = await rows('Save Shirt Two');
+    expect(after).toHaveLength(6);
+    expect(new Set(after.map((p) => `${p.mrpPaise}/${p.pricePaise}`))).toEqual(new Set(['80000/70000']));
+    expect(new Set(after.map((p) => p.costPaise))).toEqual(new Set([30000, 33000, 36000])); // each size keeps its own purchase price
+    expect(after.find((p) => p.id === first.id)!.stock).toBe(1);
+
+    // Stock only: the pieces change; a new name sent anyway does not.
+    vi.mocked(requireAnyPermission).mockResolvedValue({ ...catalogPerson, permissions: ['stock'] });
+    expect(await saveItemAction(first.id, { name: 'Not Mine', counts: { [first.id]: 4 } })).toEqual({ ok: true, counted: 1, added: 0 });
+    expect((await rows('Save Shirt Two')).find((p) => p.id === first.id)!.stock).toBe(4);
+    expect(await rows('Not Mine')).toHaveLength(0);
+  });
+
+  it('a bad rupee amount is refused with a message, and nothing changes', async () => {
+    vi.mocked(requirePermission).mockResolvedValue(owner);
+    await createDesignAction(await designInput('Bad Shirt'));
+    const [first] = await rows('Bad Shirt');
+    vi.mocked(requireAnyPermission).mockResolvedValue(owner);
+    const result = await saveItemAction(first.id, { name: 'Bad Shirt Renamed', mrp: 'abc' });
+    expect(result.ok).toBe(false);
+    expect(await rows('Bad Shirt Renamed')).toHaveLength(0);
   });
 });

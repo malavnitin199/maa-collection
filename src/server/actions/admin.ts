@@ -7,9 +7,9 @@ import { rupeesToPaise } from '@/features/inventory/inventory';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
 import { codeFromScan } from '@/lib/item-link';
-import { sizeFieldName, type SizeRates } from '@/lib/size-prices';
+import { type SizeRates } from '@/lib/size-prices';
 import { isValidEan13 } from '@/features/scanning/ean13';
-import { requireAdmin, requirePermission, type CurrentStaff } from '@/server/auth';
+import { requireAdmin, requireAnyPermission, requirePermission, type CurrentStaff } from '@/server/auth';
 import { deleteCompanies } from '@/server/services/delete-companies';
 import { deleteProducts } from '@/server/services/delete-products';
 import type { MessageKey } from '@/lib/i18n';
@@ -26,20 +26,17 @@ import {
   createDesign,
   createProductsBatch,
   findProductByCode,
-  getProduct,
   createProduct,
   listProducts,
   receiveStock,
   bulkUpdateProducts,
   type BulkProductChange,
+  saveDesign,
+  type DesignEdit,
   setDesignTags,
-  addDesignSizes,
-  stockIn,
-  updateDesignRates,
-  updateProduct,
   type ProductInput,
 } from '@/server/services/products';
-import { addPhotoToProducts, addProductImage, deleteImage, makeMainImage } from '@/server/services/images';
+import { addPhotoToProducts, addProductImage } from '@/server/services/images';
 import { updatePriceCode } from '@/server/services/settings';
 import { createStaff, setStaffActive, setStaffPermissions, setStaffPin, verifyLogin } from '@/server/services/staff';
 
@@ -146,49 +143,6 @@ export async function createProductAction(_prev: FormState, formData: FormData):
   }
   revalidatePath('/admin', 'layout');
   redirect(`/admin/products/${createdId}?created=1`);
-}
-
-export async function updateProductAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  const me = await requirePermission('catalog');
-  try {
-    const db = await getDb();
-    const current = await getProduct(db, STORE_ID, productId);
-    if (!current) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
-    const input = productInput(formData);
-    await updateProduct(db, STORE_ID, productId, {
-      ...input,
-      // Without the "prices" right the current rates stay; without "costs" the purchase price stays.
-      mrpPaise: can(me, 'prices') ? input.mrpPaise : current.mrpPaise,
-      pricePaise: can(me, 'prices') ? input.pricePaise : current.pricePaise,
-      costPaise: can(me, 'costs') ? input.costPaise : current.costPaise,
-      active: formData.get('active') === 'on',
-    });
-  } catch (error) {
-    return failure(error);
-  }
-  revalidatePath('/admin', 'layout');
-  return { message: (await getT())('act.saved') };
-}
-
-export async function stockInAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  const admin = await requirePermission('stock');
-  try {
-    const raw = text(formData, 'quantity');
-    if (!/^\d+$/.test(raw)) throw new DomainError('Quantity must be a whole number.', { key: 'act.err.quantityWhole' });
-    const updated = await stockIn(await getDb(), STORE_ID, {
-      operationId: text(formData, 'operationId'),
-      productId,
-      quantity: Number(raw),
-      staffId: admin.id,
-      note: text(formData, 'note'),
-    });
-    revalidatePath('/admin', 'layout');
-    const t = await getT();
-    if (updated.duplicate) return { message: t('act.stockAlready', { stock: updated.stock }) };
-    return { message: t('act.stockAdded', { qty: raw, stock: updated.stock }) };
-  } catch (error) {
-    return failure(error);
-  }
 }
 
 export async function createStaffAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -689,6 +643,68 @@ export async function bulkProductsAction(ids: string[], input: BulkProductInput)
   }
 }
 
+/** What the item page sends on Save (ADR-059): rupees as typed; an empty price keeps each size's own. */
+export type ItemSaveInput = {
+  name?: string;
+  supplierId?: string;
+  categoryId?: string;
+  mrp?: string;
+  price?: string;
+  cost?: string;
+  /** Item id → pieces now. */
+  counts?: Record<string, number>;
+  /** Item id → its size and colour, corrected. */
+  items?: Record<string, { size?: string; color?: string }>;
+  newSizes?: { size: string; pieces: number }[];
+  operationId?: string;
+};
+
+/**
+ * The item page's Save (owner's feedback 2026-11-22, ADR-059): only what this person may
+ * change is used — name, company, category and new sizes with Catalog, MRP / selling with
+ * Prices, purchase with Costs, pieces with Stock; anything else sent is left out.
+ */
+export async function saveItemAction(
+  productId: string,
+  input: ItemSaveInput,
+): Promise<{ ok: true; counted: number; added: number } | { ok: false; error: string }> {
+  const me = await requireAnyPermission(['catalog', 'prices', 'stock']);
+  try {
+    if (!/^[0-9a-f-]{36}$/i.test(String(productId))) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+    const rupees = (raw: string | undefined, label: MoneyLabel) => {
+      if (!String(raw ?? '').trim()) return null;
+      const paise = rupeesToPaise(String(raw));
+      if (paise === null) throw new DomainError(`Enter a valid ${label} in rupees.`, { key: RUPEES_KEY[label] });
+      return paise;
+    };
+    const edit: DesignEdit = { staffId: me.id };
+    if (can(me, 'catalog')) {
+      if (input.name !== undefined) edit.name = String(input.name);
+      if (input.supplierId !== undefined) edit.supplierId = String(input.supplierId) || null;
+      if (input.categoryId) edit.categoryId = String(input.categoryId);
+      if (input.items && typeof input.items === 'object') {
+        edit.items = Object.fromEntries(
+          Object.entries(input.items)
+            .slice(0, 200)
+            .map(([id, c]) => [String(id), { size: c?.size === undefined ? undefined : String(c.size), color: c?.color === undefined ? undefined : String(c.color) }]),
+        );
+      }
+      const sizes = (Array.isArray(input.newSizes) ? input.newSizes : []).slice(0, 30).map((n) => ({ size: String(n?.size ?? ''), pieces: Number(n?.pieces) }));
+      if (sizes.length) Object.assign(edit, { newSizes: sizes, operationId: String(input.operationId ?? '') });
+    }
+    if (can(me, 'prices')) Object.assign(edit, { mrpPaise: rupees(input.mrp, 'MRP'), pricePaise: rupees(input.price, 'selling price') });
+    if (can(me, 'costs')) edit.costPaise = rupees(input.cost, 'purchase price');
+    if (can(me, 'stock') && input.counts && typeof input.counts === 'object') {
+      edit.counts = Object.fromEntries(Object.entries(input.counts).slice(0, 200).map(([id, n]) => [String(id), Number(n)]));
+    }
+    const result = await saveDesign(await getDb(), STORE_ID, productId, edit);
+    revalidatePath('/admin', 'layout');
+    return { ok: true, counted: result.counted, added: result.added };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
 /** Plan v17: "For" and "Age" tags on every size and colour of this product's design (catalog right). */
 export async function updateDesignTagsAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requirePermission('catalog');
@@ -696,33 +712,6 @@ export async function updateDesignTagsAction(productId: string, _prev: FormState
     const count = await setDesignTags(await getDb(), STORE_ID, productId, { forGender: text(formData, 'forGender'), ageGroup: text(formData, 'ageGroup') });
     revalidatePath('/admin', 'layout');
     return { message: (await getT())(count === 1 ? 'act.tagsUpdated.one' : 'act.tagsUpdated.other', { n: count }) };
-  } catch (error) {
-    return failure(error);
-  }
-}
-
-export async function updateDesignRatesAction(productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  const me = await requirePermission('prices');
-  try {
-    const sizes = formData.getAll('rateSize').map(String);
-    const count = await updateDesignRates(await getDb(), STORE_ID, productId, {
-      mrpPaise: money(formData, 'mrp', 'MRP') as number,
-      // Empty = each size sells at its own MRP.
-      pricePaise: money(formData, 'price', 'selling price', { optional: true }),
-      // undefined = keep each item's purchase price (no "costs" right).
-      costPaise: can(me, 'costs') ? money(formData, 'cost', 'cost price', { optional: true }) : undefined,
-      sizeRates: sizeRatesInput(
-        sizes.map((size) => ({
-          size,
-          mrp: text(formData, sizeFieldName('mrp', size)),
-          price: text(formData, sizeFieldName('price', size)),
-          cost: text(formData, sizeFieldName('cost', size)),
-        })),
-        me,
-      ),
-    });
-    revalidatePath('/admin', 'layout');
-    return { message: (await getT())(count === 1 ? 'act.ratesUpdated.one' : 'act.ratesUpdated.other', { n: count }) };
   } catch (error) {
     return failure(error);
   }
@@ -779,20 +768,6 @@ async function readPhoto(file: FormDataEntryValue | null): Promise<Uint8Array | 
   return new Uint8Array(await file.arrayBuffer());
 }
 
-export async function uploadProductImageAction(productId: string, formData: FormData): Promise<FormState> {
-  const me = await requirePermission('catalog');
-  try {
-    const bytes = await readPhoto(formData.get('photo'));
-    if (!bytes) throw new DomainError('Choose a photo first.', { key: 'act.err.choosePhoto' });
-    const size = (key: string) => (/^\d+$/.test(text(formData, key)) ? Number(text(formData, key)) : null);
-    await addProductImage(await getDb(), STORE_ID, { productId, bytes, width: size('width'), height: size('height'), staffId: me.id });
-    revalidatePath('/admin', 'layout');
-    return { message: (await getT())('act.photoAdded') };
-  } catch (error) {
-    return failure(error);
-  }
-}
-
 /** Optional photo taken while creating tags: one photo for the given items (e.g. every size of a colour). */
 export async function addPhotoToItemsAction(productIds: string[], formData: FormData): Promise<FormState> {
   const me = await requirePermission('catalog');
@@ -804,28 +779,6 @@ export async function addPhotoToItemsAction(productIds: string[], formData: Form
     await addPhotoToProducts(await getDb(), STORE_ID, { productIds: ids, bytes, width: size('width'), height: size('height'), staffId: me.id });
     revalidatePath('/admin', 'layout');
     return { message: (await getT())('act.photoAdded') };
-  } catch (error) {
-    return failure(error);
-  }
-}
-
-export async function makeMainImageAction(imageId: string): Promise<FormState> {
-  await requirePermission('catalog');
-  try {
-    await makeMainImage(await getDb(), STORE_ID, imageId);
-    revalidatePath('/admin', 'layout');
-    return { message: (await getT())('act.mainPhoto') };
-  } catch (error) {
-    return failure(error);
-  }
-}
-
-export async function deleteImageAction(imageId: string): Promise<FormState> {
-  await requirePermission('catalog');
-  try {
-    await deleteImage(await getDb(), STORE_ID, imageId);
-    revalidatePath('/admin', 'layout');
-    return { message: (await getT())('act.photoDeleted') };
   } catch (error) {
     return failure(error);
   }
@@ -964,28 +917,6 @@ export async function deleteCollectionAction(id: string): Promise<{ ok: true; me
     const result = await deleteSection(await getDb(), STORE_ID, String(id));
     revalidatePath('/admin', 'layout');
     return { ok: true, message: (await getT())('col.deleted', { name: result.name }) };
-  } catch (error) {
-    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
-  }
-}
-
-/** Product page → + Add sizes (ADR-054): new sizes of the design with their pieces. */
-export async function addDesignSizesAction(
-  productId: string,
-  input: { operationId: string; sizes: string[]; quantities: Record<string, number> },
-): Promise<{ ok: true; created: number; receiptId: string } | { ok: false; error: string }> {
-  const me = await requirePermission('catalog');
-  try {
-    const sizes = (Array.isArray(input.sizes) ? input.sizes : []).map((s) => String(s).slice(0, 20)).slice(0, 40);
-    const quantities: Record<string, number> = {};
-    for (const [size, n] of Object.entries(input.quantities ?? {})) {
-      const value = Number(n);
-      if (!Number.isInteger(value) || value < 0 || value > 10_000) throw new DomainError('Pieces must be a whole number.', { key: 'act.err.piecesWhole' });
-      quantities[String(size).slice(0, 20)] = value;
-    }
-    const result = await addDesignSizes(await getDb(), STORE_ID, String(productId), { operationId: String(input.operationId).slice(0, 100), sizes, quantities, staffId: me.id });
-    revalidatePath('/admin', 'layout');
-    return { ok: true, created: result.products.length, receiptId: result.receipt.id };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }

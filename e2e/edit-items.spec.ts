@@ -31,33 +31,38 @@ test('edit an item made with no brand and no size; add sizes; add pieces', async
 
   await openProduct(page, name);
 
-  // Edit sits at the top of Details: give it size M and a new MRP.
-  const edit = page.getByTestId('edit-item');
-  await edit.getByText('Edit this item').click();
-  await edit.getByLabel('Size', { exact: true }).fill('M');
-  await edit.getByLabel('MRP (₹)').fill('650');
-  await edit.getByLabel('Selling price (₹)').fill('650');
-  await edit.getByRole('button', { name: 'Save changes' }).click();
-  await expect(edit.getByRole('status')).toContainText('Saved');
-  await expect(page.getByTestId('hang-tag').getByTestId('tag-size')).toHaveText('M');
-
-  // + Add sizes: L (2 pieces) and XL (1).
-  const add = page.getByTestId('add-sizes-card');
-  await add.getByText('+ Add sizes').click();
-  await add.getByRole('button', { name: 'Size L', exact: true }).click();
-  await add.getByRole('button', { name: 'Size XL', exact: true }).click();
-  await add.getByRole('button', { name: 'One more of size L' }).click();
-  await add.getByRole('button', { name: 'Add 2 sizes' }).click();
-  await expect(page.getByText('2 new sizes added')).toBeVisible();
+  // The item page's editor (ADR-059): the no-size item shows N/A; ✎ gives it size M and a colour; a new MRP.
+  const editor = page.getByTestId('item-editor');
+  await expect(editor.getByTestId('size-row')).toHaveCount(1);
+  await expect(editor.getByTestId('size-row')).toContainText('N/A');
+  await editor.getByRole('button', { name: 'Change size or colour: N/A' }).click();
+  await editor.getByLabel('Size', { exact: true }).fill('M');
+  await editor.getByLabel('Colour', { exact: true }).fill('Blue');
+  await editor.getByLabel('MRP ₹').fill('650');
+  await editor.getByLabel('Selling ₹').fill('650');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('Saved');
   await page.keyboard.press('Escape');
-  await page.getByRole('tab', { name: 'Colours', exact: true }).click();
-  await expect(page.getByTestId('design-variants').getByRole('link')).toHaveCount(3);
-  await expect(page.getByTestId('design-variants').getByRole('link', { name: 'L: 2 in stock' })).toBeVisible();
+  await expect(editor.getByTestId('size-row').first()).toContainText('M · Blue');
+  await expect(editor.getByLabel('MRP ₹')).toHaveValue('650');
 
-  // Add pieces to this size (M): 1 → 4.
-  await page.getByRole('tab', { name: 'Details', exact: true }).click();
-  await page.getByLabel('Pieces received').fill('3');
-  await page.getByRole('button', { name: 'Add stock' }).click();
+  // + Add size: L (2 pieces) and XL (1).
+  await editor.getByRole('button', { name: '+ Add size' }).click();
+  await editor.getByLabel('New size', { exact: true }).fill('L');
+  await editor.getByRole('button', { name: 'One more: L' }).click();
+  await editor.getByRole('button', { name: '+ Add size' }).click();
+  await editor.getByLabel('New size', { exact: true }).nth(1).fill('XL');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('2 new sizes added');
+  await page.keyboard.press('Escape');
+  await expect(editor.getByTestId('size-row')).toHaveCount(3);
+  await expect(editor.getByLabel('Pieces of L · Blue')).toHaveValue('2');
+
+  // Pieces of this size (M): 1 → 4, counted.
+  await editor.getByLabel('Pieces of M · Blue').fill('4');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('Pieces corrected for 1 size');
+  await page.keyboard.press('Escape');
   // The design now holds M 4 + L 2 + XL 1 = 7 pieces.
-  await expect(page.getByTestId('product-stock')).toContainText('7');
+  await expect(page.getByTestId('item-pieces')).toHaveText('7 pcs');
 });

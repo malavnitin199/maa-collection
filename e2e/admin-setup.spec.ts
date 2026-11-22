@@ -20,10 +20,10 @@ async function loginOwner(page: Page) {
 }
 
 /**
- * New item and the product page (plan v17): top tabs Details (open first) · Sizes (old form) / Colours (product page) · Other details.
+ * The earlier New item form (plan v17): top tabs Details (open first) · Sizes · Other details. The item page has no tabs (ADR-059).
  * New item's must-haves: company, sale price (MRP) and purchase price.
  */
-const tab = (page: Page, name: 'Details' | 'Sizes' | 'Colours' | 'Other details') => page.getByRole('tab', { name, exact: true }).click();
+const tab = (page: Page, name: 'Details' | 'Sizes' | 'Other details') => page.getByRole('tab', { name, exact: true }).click();
 // The old form's sizes tab (no colours since 2026-11-22: colour lives on the product page only).
 const showVariants = (page: Page) => tab(page, 'Sizes');
 const companyBox = (page: Page) => page.getByRole('combobox', { name: /^Company/ });
@@ -138,28 +138,27 @@ test('owner enters a new design from a supplier in sizes, prints labels; salesma
   const barcode = (await labels.first().getAttribute('aria-label'))?.match(/Barcode (\d{13})/)?.[1];
   expect(barcode).toMatch(/^200\d{10}$/);
 
-  // Product page (the one place colour stays): header tags; Colours shows every size with its pieces.
+  // Item page (ADR-059): the For / Age labels on top; every size with its pieces in the editor.
   await page.getByTestId('receipt-lines').getByRole('link').first().click();
-  await expect(page.getByTestId('item-pills')).toContainText('Girls');
-  await expect(page.getByTestId('item-pills')).toContainText('Adult');
-  await tab(page, 'Colours');
-  await expect(page.getByTestId('design-variants').getByRole('link')).toHaveCount(2);
-  await expect(page.getByTestId('design-variants').getByRole('link', { name: 'L: 2 in stock' })).toBeVisible();
-  // Other details: change "for whom" for the whole design.
-  await tab(page, 'Other details');
+  await expect(page.getByTestId('item-chips')).toContainText('Girls');
+  await expect(page.getByTestId('item-chips')).toContainText('Adult');
+  const itemEditor = page.getByTestId('item-editor');
+  await expect(itemEditor.getByTestId('size-row')).toHaveCount(2);
+  await expect(itemEditor.getByLabel(/^Pieces of L/)).toHaveValue('2');
+  // More: change "for whom" for the whole design.
+  await page.getByTestId('item-more').locator('summary').click();
   await page.getByRole('group', { name: 'For' }).getByRole('button', { name: 'Both' }).click();
   await page.getByRole('button', { name: 'Save tags' }).click();
   await expect(page.getByText('Tags saved for 2 items.')).toBeVisible();
-  // Rates for the whole design (Details).
-  await tab(page, 'Details');
-  const rates = page.locator('section', { has: page.getByRole('heading', { name: 'Rates for the whole design' }) });
-  await rates.getByLabel('MRP (₹)').fill('1599');
-  await rates.getByLabel('Price (₹)').fill('1499');
-  await rates.getByRole('button', { name: 'Apply to all 2 sizes/colours' }).click();
-  await expect(page.getByText('Rates updated for 2 items.')).toBeVisible();
+  // New prices for the whole design (both sizes), in one Save.
+  await itemEditor.getByLabel('MRP ₹').fill('1599');
+  await itemEditor.getByLabel('Selling ₹').fill('1499');
+  await itemEditor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('Saved');
+  await page.keyboard.press('Escape');
   await page.reload();
-  await expect(page.getByTestId('product-must-haves')).toContainText('MRP ₹1,599.00');
-  await expect(page.getByTestId('product-must-haves')).toContainText('₹1,499.00');
+  await expect(itemEditor.getByLabel('MRP ₹')).toHaveValue('1599');
+  await expect(itemEditor.getByLabel('Selling ₹')).toHaveValue('1499');
 
   // Same entry again is refused (the size already exists).
   await page.goto('/admin/stock/form');
@@ -243,31 +242,40 @@ test('owner gives sizes their own MRP, selling and purchase price', async ({ pag
   await expect(mAndL).toHaveCount(1);
   await expect(cards.filter({ hasText: '× ₹360.00 =' })).toHaveCount(1);
 
-  // Product page: rates by size, filled with today's prices; change only L.
+  // Item page (ADR-059): sizes with different prices show empty boxes marked "By size"; left empty,
+  // each size keeps its own; a typed price goes to every size.
   await mAndL.getByRole('link', { name, exact: true }).click();
-  const rates = page.locator('section', { has: page.getByRole('heading', { name: 'Rates for the whole design' }) });
-  await expect(rates.getByLabel('MRP (₹)')).toHaveValue('700');
-  await expect(rates.getByTestId('size-rates')).toHaveAttribute('open', '');
-  await expect(rates.getByLabel('Size XL MRP')).toHaveValue('750');
-  await expect(rates.getByLabel('Size M selling price')).toHaveValue('');
-  await rates.getByLabel('Size L selling price').fill('520');
-  await rates.getByRole('button', { name: 'Apply to all 3 sizes/colours' }).click();
-  await expect(page.getByText('Rates updated for 3 items.')).toBeVisible();
-  // Only L's selling price changed; every size keeps its own.
-  await page.reload();
-  await expect(rates.getByLabel('Size L selling price')).toHaveValue('520');
-  await expect(rates.getByLabel('Size XL selling price')).toHaveValue('600');
-  await expect(rates.getByLabel('Size M selling price')).toHaveValue('');
-  await expect(rates.getByLabel('Size XL MRP')).toHaveValue('750');
+  const itemEditor = page.getByTestId('item-editor');
+  for (const box of ['MRP ₹', 'Selling ₹', 'Purchase ₹']) {
+    await expect(itemEditor.getByLabel(box)).toHaveValue('');
+    await expect(itemEditor.getByLabel(box)).toHaveAttribute('placeholder', 'By size');
+  }
+  await itemEditor.getByLabel(/^Pieces of M/).fill('5');
+  await itemEditor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('Saved');
+  await page.keyboard.press('Escape');
   await page.goto('/admin/products');
   await expect(mAndL).toHaveCount(1); // purchase prices untouched
+  await expect(cards.filter({ hasText: '× ₹360.00 =' })).toHaveCount(1);
+  // One selling price for every size; MRP stays by size.
+  await mAndL.getByRole('link', { name, exact: true }).click();
+  await itemEditor.getByLabel('Selling ₹').fill('550');
+  await itemEditor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('Saved');
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await expect(itemEditor.getByLabel('Selling ₹')).toHaveValue('550');
+  await expect(itemEditor.getByLabel('MRP ₹')).toHaveAttribute('placeholder', 'By size');
 });
 
 test('hang tags: QR code, size boxed, the design\'s sizes with this one highlighted; the QR link opens the item', async ({ page }) => {
   await loginOwner(page);
   // Anarkali Kurta M Blue (MAA-KU-001); the design also has L.
   await openProduct(page, 'Anarkali Kurta'); // its first size, M = MAA-KU-001
-  const tag = page.getByTestId('hang-tag');
+  const productUrl = page.url();
+  // The tag as it prints: the item page draws it only for Print tag (ADR-059); the print page shows it.
+  await page.goto(`/admin/labels/print?items=${productUrl.split('/').pop()}&each=item`); // one tag, whatever the stock
+  const tag = page.getByTestId('hang-tag').first();
   await expect(tag.getByRole('img', { name: 'QR code for MAA-KU-001' })).toBeVisible();
   await expect(tag.getByRole('img', { name: 'Barcode 8902222000016 for MAA-KU-001' })).toBeVisible();
   await expect(tag.getByTestId('tag-size')).toHaveText('M');
@@ -279,7 +287,6 @@ test('hang tags: QR code, size boxed, the design\'s sizes with this one highligh
   await expect(tag).toContainText('MRP ₹1,299.00');
   const box = await tag.boundingBox();
   expect([Math.round(box!.width), Math.round(box!.height)]).toEqual([151, 227]); // 40 × 60 mm
-  const productUrl = page.url();
 
   // The QR holds /i/<barcode>: the owner lands on the product page…
   await page.goto('/i/8902222000016');
@@ -483,8 +490,7 @@ test('photos while creating tags: the main photo goes on every size of a new ite
 
   // L (not the first item) shows the photo too.
   await page.getByTestId('receipt-lines').getByRole('link', { name: `Photo Kurta ${run} · L` }).click();
-  await tab(page, 'Colours'); // photos sit with the colours on the product page
-  const photo = page.getByRole('img', { name: 'Product photo 1' });
+  const photo = page.getByTestId('item-head').getByRole('img', { name: `Photo Kurta ${run}` }); // the item page's photo (ADR-059)
   await expect(photo).toBeVisible();
   await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
@@ -504,9 +510,7 @@ test('photos while creating tags: the main photo goes on every size of a new ite
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
   await expect(page.getByRole('alert').filter({ hasText: 'photo could not be saved' })).toHaveCount(0);
   await page.getByTestId('receipt-lines').getByRole('link', { name: new RegExp(`^Photo Saree ${run}`) }).click();
-  await expect(page.getByRole('img', { name: `Photo Saree ${run}` })).toBeVisible(); // header photo
-  await tab(page, 'Colours');
-  await expect(page.getByRole('img', { name: 'Product photo 1' })).toBeVisible();
+  await expect(page.getByTestId('item-head').getByRole('img', { name: `Photo Saree ${run}` })).toBeVisible(); // the item page's photo
 });
 
 test('company box: add a company on the spot, the same name is reused, a hidden company comes back from "Previous companies"', async ({ page }) => {
@@ -1363,10 +1367,13 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   // Still one item with that barcode, now size L, MRP 1,099, 2 pieces.
   await page.getByRole('link', { name: /Open item/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Chikan Kurta Long ${run}`);
-  await expect(page.getByTestId('item-pills')).toContainText('Girls');
-  await expect(page.getByTestId('item-pills')).toContainText('Child');
-  await expect(page.getByTestId('item-pills')).not.toContainText('Adult');
-  await expect(page.getByText(barcode!).first()).toBeVisible();
+  await expect(page.getByTestId('item-chips')).toContainText('Girls');
+  await expect(page.getByTestId('item-chips')).toContainText('Child');
+  await expect(page.getByTestId('item-chips')).not.toContainText('Adult');
+  await expect(page.getByTestId('item-editor').getByTestId('size-row')).toHaveText([/^L/]);
+  await expect(page.getByTestId('item-editor').getByLabel('MRP ₹')).toHaveValue('1099');
+  // The tag Print tag prints (drawn only for printing) still carries the same barcode.
+  await expect(page.getByTestId('item-print-tag').getByRole('img', { name: new RegExp(`^Barcode ${barcode}`), includeHidden: true })).toHaveCount(1);
   await page.goto('/admin/products'); // still exactly one item with that name
   await expect(productCard(page, `Chikan Kurta Long ${run}`).getByTestId('card-items')).toHaveText(['Items: 1']);
 });

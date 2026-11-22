@@ -3,19 +3,11 @@ import { muted } from '@/components/ui/styles';
 import type { DesignGroup } from '@/lib/design-groups';
 import type { T } from '@/lib/i18n';
 import { stockValue } from '@/lib/stock-value';
+import { chip, chipTone as tone } from './chips';
 import { StockValueLine } from './stock-value';
 
 type Item = { id: string; active: boolean; stock: number; costPaise: number | null };
 
-const chip = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold';
-/** The company in the theme's accent colour, items and pieces in its brand colour (each theme has both). */
-const tone = {
-  company:
-    'bg-zari/10 text-[color-mix(in_oklab,var(--zari)_72%,black)] ring-1 ring-zari/35 ring-inset dark:text-[color-mix(in_oklab,var(--zari)_55%,white)]',
-  items: 'bg-brand-50 text-brand-800 ring-1 ring-brand-200 ring-inset dark:bg-brand-950 dark:text-brand-100 dark:ring-brand-800',
-  pieces: 'bg-brand-600 text-white',
-  hidden: 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
-};
 const sizeChip = (out: boolean) =>
   `inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
     out ? 'border-zinc-200 text-zinc-400 line-through dark:border-zinc-800 dark:text-zinc-500' : 'border-brand-200 bg-brand-50 text-brand-900 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-100'

@@ -1323,3 +1323,145 @@ export async function addDesignSizes(
     staffId: input.staffId,
   });
 }
+
+/**
+ * The item page's one Save (owner's feedback 2026-11-22, ADR-059): for every size of the
+ * design — the name, company, category and prices; each size's pieces; and new sizes.
+ * Fields left out stay as they are; a price left out (null) keeps each size's own.
+ * Pieces are a count correction: a 'counted' stock entry with the difference, who and
+ * when (never an overwrite — the ledger still explains every number). New stock from a
+ * company still comes in through + Add stock. Everything is checked first and applied in
+ * one transaction, so a bad value changes nothing.
+ */
+export type DesignEdit = {
+  name?: string;
+  supplierId?: string | null;
+  categoryId?: string;
+  mrpPaise?: number | null;
+  pricePaise?: number | null;
+  costPaise?: number | null;
+  /** Item id → the pieces there are now; only this design's items. */
+  counts?: Record<string, number>;
+  /** Item id → its size and / or colour, corrected (empty size = no size). */
+  items?: Record<string, { size?: string; color?: string }>;
+  /** New sizes and their pieces (one new stock entry, like + Add sizes). */
+  newSizes?: { size: string; pieces: number }[];
+  operationId?: string;
+  staffId: string;
+};
+
+export const COUNT_MAX = 100_000;
+
+export async function saveDesign(
+  db: Db,
+  storeId: string,
+  productId: string,
+  edit: DesignEdit,
+): Promise<{ items: number; counted: number; added: number }> {
+  const variants = await listDesignVariants(db, storeId, productId);
+  if (variants.length === 0) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  const ids = variants.map((v) => v.id);
+
+  // 1. Check everything first.
+  let name: string | undefined;
+  if (edit.name !== undefined) {
+    name = edit.name.trim().replace(/\s+/g, ' ');
+    if (!name) throw new DomainError('Enter the product name.', { key: 'stk.err.enter.name' });
+    if (name.length > 120) throw new DomainError('The name is too long (up to 120 letters).', { key: 'stk.err.nameTooLong' });
+  }
+  if (edit.supplierId) await resolveSupplier(db, storeId, edit.supplierId);
+  const category = edit.categoryId !== undefined ? await resolveCategory(db, storeId, edit.categoryId) : null;
+  const prices = variants.map((v) => ({
+    id: v.id,
+    sku: v.sku,
+    mrpPaise: edit.mrpPaise ?? v.mrpPaise,
+    pricePaise: edit.pricePaise ?? v.pricePaise,
+    costPaise: edit.costPaise ?? v.costPaise,
+  }));
+  const pricesChanged = edit.mrpPaise != null || edit.pricePaise != null || edit.costPaise != null;
+  if (pricesChanged) {
+    const above = prices.filter((r) => r.pricePaise > r.mrpPaise).map((r) => r.sku);
+    if (above.length > 0) {
+      const list = above.slice(0, 5).join(', ') + (above.length > 5 ? '…' : '');
+      throw new DomainError(`Selling price would be above MRP for ${list}.`, { key: 'stk.err.bulkAboveMrp', vars: { list } });
+    }
+    for (const r of prices) validatePrices(r);
+  }
+  const counts = Object.entries(edit.counts ?? {});
+  for (const [id, count] of counts) {
+    if (!ids.includes(id)) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+    if (!Number.isInteger(count) || count < 0 || count > COUNT_MAX) throw new DomainError('Pieces must be 0 or more.', { key: 'stk.err.pieces' });
+  }
+  const renames = Object.entries(edit.items ?? {}).map(([id, change]) => {
+    if (!ids.includes(id)) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+    const size = change.size === undefined ? undefined : change.size.trim().replace(/\s+/g, ' ');
+    const color = change.color === undefined ? undefined : change.color.trim().replace(/\s+/g, ' ');
+    if ((size?.length ?? 0) > 20 || (color?.length ?? 0) > 40) throw new DomainError('The size or colour is too long.', { key: 'stk.err.sizeTooLong' });
+    return { id, size, color };
+  });
+  // Each size × colour once in the design, after the corrections.
+  const seen = new Set<string>();
+  for (const v of variants) {
+    const change = renames.find((r) => r.id === v.id);
+    const size = change?.size ?? v.size;
+    const pair = `${size.toLowerCase()}\u0000${(change?.color ?? v.color).toLowerCase()}`;
+    if (seen.has(pair)) throw new DomainError(`This design already has ${size || 'no size'}.`, { key: 'stk.err.sizeTaken', vars: { size: size || '—' } });
+    seen.add(pair);
+  }
+  const newSizes = (edit.newSizes ?? []).map((n) => ({ size: n.size.trim(), pieces: n.pieces }));
+  if (newSizes.length > 0) {
+    if (!edit.operationId || edit.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
+    if (newSizes.some((n) => !n.size)) throw new DomainError('Enter the size.', { key: 'stk.err.enter.size' });
+  }
+
+  // 2. Apply, all or nothing.
+  return db.transaction(async (tx) => {
+    const t = tx as unknown as Db;
+    const mine = and(eq(products.storeId, storeId), inArray(products.id, ids));
+    const fields: Partial<typeof products.$inferInsert> = {};
+    if (name !== undefined) fields.name = name;
+    if (edit.supplierId !== undefined) fields.supplierId = edit.supplierId;
+    if (category) Object.assign(fields, { categoryId: category.id, category: category.name });
+    if (Object.keys(fields).length > 0) await tx.update(products).set(fields).where(mine);
+    for (const r of renames) {
+      const change: Partial<typeof products.$inferInsert> = {};
+      if (r.size !== undefined) change.size = r.size;
+      if (r.color !== undefined) change.color = r.color;
+      if (Object.keys(change).length) await tx.update(products).set(change).where(and(eq(products.storeId, storeId), eq(products.id, r.id)));
+    }
+    if (pricesChanged) {
+      for (const r of prices) {
+        await tx
+          .update(products)
+          .set({ mrpPaise: r.mrpPaise, pricePaise: r.pricePaise, costPaise: r.costPaise })
+          .where(and(eq(products.storeId, storeId), eq(products.id, r.id)));
+      }
+    }
+    let counted = 0;
+    if (counts.length > 0) {
+      const held = await tx
+        .select({ id: products.id, stock: products.stock })
+        .from(products)
+        .where(and(eq(products.storeId, storeId), inArray(products.id, counts.map(([id]) => id))))
+        .for('update');
+      for (const [id, count] of counts) {
+        const now = held.find((h) => h.id === id)?.stock ?? count;
+        if (now === count) continue;
+        await tx.insert(stockMovements).values({ storeId, productId: id, quantityChange: count - now, reason: 'counted', staffId: edit.staffId, note: 'Count corrected' });
+        await tx.update(products).set({ stock: count }).where(and(eq(products.storeId, storeId), eq(products.id, id)));
+        counted += 1;
+      }
+    }
+    let added = 0;
+    if (newSizes.length > 0) {
+      const result = await addDesignSizes(t, storeId, productId, {
+        operationId: edit.operationId as string,
+        sizes: newSizes.map((n) => n.size),
+        quantities: Object.fromEntries(newSizes.map((n) => [n.size, n.pieces])),
+        staffId: edit.staffId,
+      });
+      added = result.products.length;
+    }
+    return { items: ids.length, counted, added };
+  });
+}

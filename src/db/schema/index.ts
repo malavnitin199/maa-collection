@@ -310,7 +310,8 @@ export const stockMovements = pgTable(
     reason: text('reason', {
       // 'cleared' = the owner set this item's count to 0 (Settings → Clear stock).
       // 'sale_rejected' / 'exchange_rejected' = the owner rejected an entry, so its stock change is undone by a new row.
-      enum: ['opening', 'stock_in', 'sale', 'exchange_return', 'exchange_issue', 'cleared', 'sale_rejected', 'exchange_rejected'],
+      // 'counted' = the pieces were corrected on the item page (ADR-059): the difference, who and when.
+      enum: ['opening', 'stock_in', 'sale', 'exchange_return', 'exchange_issue', 'cleared', 'sale_rejected', 'exchange_rejected', 'counted'],
     }).notNull(),
     refId: uuid('ref_id'),
     staffId: uuid('staff_id').references(() => staff.id),
