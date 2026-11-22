@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /**
  * Products (ADR-058) lists every design as one card, with no search: find a card by the
@@ -12,4 +12,5 @@ export function productCard(page: Page, name: string) {
 export async function openProduct(page: Page, name: string) {
   await page.goto('/admin/products');
   await productCard(page, name).getByRole('link', { name, exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
 }
