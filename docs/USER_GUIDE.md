@@ -37,6 +37,7 @@ Live app: https://maa-collection-pi.vercel.app
 ## 1c. Listen to the Guide, and practise
 
 - Open **Guide** (top of the screen, or "New here?" on the login page). Pick your part — **Everyone**, **Selling**, **Stock & tags** or **Owner** — and tap a lesson.
+- The 22 lessons follow today's app (updated 2026-11-23): **Selling** has *Many items, one bill*; **Stock & tags** has *New item* (collection → what it is → the four boxes with % → *Sizes & more* → *Save & print tags*) and *The item page*; **Owner** starts with *Companies*, *Company bills* and *Collections and categories*, and *Prices* shows ✎ Edit details.
 - A lesson plays like a story: one step at a time, a moving picture of the phone, a few words, and the phone's voice in your language (Hindi or English). It moves on by itself; or tap **Next** / **Back**, or swipe. The speaker button turns the voice off.
 - At the end: **Got it ✓** ticks the lesson. In **Sell an item** you can also try a **practice sale** — nothing is saved.
 - Hearing nothing? Turn the volume up. For Hindi, the phone needs its Hindi voice: Settings → Text-to-speech → Google → install Hindi (most Android phones have it already).
@@ -62,7 +63,7 @@ Spellings made from English letters are phonetic; for an exact Hindi spelling, s
 | **Owner (admin)** | Everything: dashboard, staff & permissions, settings, reports, all catalog and stock work |
 | **Salesman** | Sell (also on behalf of a colleague), exchanges, own sales |
 | **Salesman + Catalog** (catalog / QC person) | Add and edit products, photos, names, sizes, colours, categories, companies; tag old stock; generate barcodes; print labels |
-| **+ Prices** | Change MRP and selling prices (also "rates for the whole design", by size) |
+| **+ Prices** | Change MRP and selling prices (on an item's page: **✎ Edit details**) |
 | **+ Stock** | Receive stock: deliveries, restocks, counts |
 | **+ Purchase price** | See and enter the purchase (code) price. Trusted staff only |
 
@@ -299,7 +300,7 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 | When | Required | Optional |
 |---|---|---|
 | Tag old stock | Category, name, MRP, pieces | Photo (recommended), For / Age, size (= Free), company, selling price (= MRP), purchase price |
-| New item (steps) | Who it is for, what it is, company, product name, sale price (MRP), purchase price (with the *Purchase price* right), at least one size | Pieces per size (= 1), counter price (= MRP), bill no., stock date (= today), brand (= none) |
+| New item (steps) | Collection, what it is, the purchase or the sale price | Company, product name (= category + number), sizes (= no size), pieces per size (= 1), counter price (= MRP), bill no., stock date (= today), brand (= none) |
 | Old form | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), brand (= company) |
 | Sale | Scan, quantity, price | Credit to a colleague |
 | Company | Name | Contact, phone, GSTIN, notes |
