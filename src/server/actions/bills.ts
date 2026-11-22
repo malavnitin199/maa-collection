@@ -5,7 +5,9 @@ import { getDb } from '@/db/client';
 import { STORE_ID } from '@/lib/app-config';
 import { requirePermission } from '@/server/auth';
 import { errorText, getT } from '@/server/i18n';
-import { createBill, deleteBill, setBillCollections, updateBill } from '@/server/services/bills';
+import { BILL_ITEMS_MAX, createBill, deleteBill, setBillCollections, updateBill } from '@/server/services/bills';
+import { listProducts } from '@/server/services/products';
+import { codeFromScan } from '@/lib/item-link';
 import { DomainError } from '@/server/services/errors';
 
 /**
@@ -20,7 +22,12 @@ export type BillFormInput = {
   /** The companies chosen, in order. The amounts are worked out from the collections. */
   companies: string[];
   receiptIds?: string[];
+  /** A bill with no company (ADR-060): the shop's items and how many of each. */
+  items?: { productId: string; quantity: number }[];
 };
+
+/** An item the bill's search finds (ADR-060): what the line will show, and its purchase price now. */
+export type BillItemOption = { id: string; name: string; size: string; color: string; sku: string; stock: number; costPaise: number | null };
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
 async function fail(error: unknown): Promise<{ ok: false; error: string }> {
@@ -49,6 +56,10 @@ export async function createBillAction(input: BillFormInput): Promise<Result<{ i
       note: String(input.note ?? ''),
       companies: companies(input),
       receiptIds: ids(input.receiptIds),
+      items: (Array.isArray(input.items) ? input.items : [])
+        .slice(0, BILL_ITEMS_MAX + 1)
+        .filter((i) => uuid(i?.productId))
+        .map((i) => ({ productId: String(i.productId), quantity: Number(i.quantity) })),
       staffId: me.id,
     });
     refresh();
@@ -97,4 +108,17 @@ export async function deleteBillAction(id: string): Promise<Result> {
   } catch (error) {
     return fail(error);
   }
+}
+
+/**
+ * New bill → items (ADR-060): the shop's items by name, code, barcode or colour (a scanned
+ * code finds just its item), with today's purchase price for the line. Purchase-price right only.
+ */
+export async function searchBillItemsAction(term: string): Promise<BillItemOption[]> {
+  await requirePermission('costs');
+  const query = codeFromScan(String(term ?? '')).trim().slice(0, 64);
+  if (!query) return [];
+  const rows = await listProducts(await getDb(), STORE_ID, { search: query });
+  const exact = rows.filter((p) => p.barcode === query || p.sku.toUpperCase() === query.toUpperCase());
+  return (exact.length > 0 ? exact : rows).slice(0, 12).map((p) => ({ id: p.id, name: p.name, size: p.size, color: p.color, sku: p.sku, stock: p.stock, costPaise: p.costPaise }));
 }

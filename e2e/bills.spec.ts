@@ -55,7 +55,8 @@ test('a bill with two companies and two collections; take one off and add it bac
   await page.getByTestId('home-bills').click();
   await page.getByRole('link', { name: '+ New bill' }).click();
   const form = page.getByTestId('bill-form');
-  await expect(form.getByText('Choose a company to see its stock entries.')).toBeVisible();
+  // No company yet: the shop's items can be added instead (ADR-060); a company shows its stock entries.
+  await expect(form.getByTestId('bill-items')).toBeVisible();
   await expect(form.getByLabel(/amount/i)).toHaveCount(0);
   for (const company of [a, b]) {
     await form.getByRole('combobox', { name: /^(Company|Add another company)/ }).click();
@@ -155,4 +156,77 @@ test('a company added from New bill: it is chosen, the "added" card shows, and N
   await page.goto('/admin/bills/new');
   await form.getByRole('combobox', { name: /^Company/ }).click();
   await expect(page.getByRole('listbox').getByRole('option', { name: fresh, exact: true })).toHaveCount(1);
+});
+
+test('a bill with no company, from the shop\'s items one by one; it keeps its copy when the item changes (ADR-060)', async ({ page }) => {
+  await loginOwner(page);
+  const name = `Bill Item ${run}`;
+  // An item with no company: sizes M and L, purchase ₹400 (the old form).
+  await page.goto('/admin/stock/form');
+  await page.getByLabel('Product name').fill(name);
+  await page.getByLabel('Category').selectOption({ label: 'Kurta (KU)' });
+  await page.getByLabel('Sale price (MRP) ₹').fill('999');
+  await page.getByLabel('Purchase price ₹', { exact: true }).fill('400');
+  await page.getByRole('tab', { name: 'Sizes', exact: true }).click();
+  await page.getByRole('button', { name: 'Size M' }).click();
+  await page.getByRole('button', { name: 'Size L' }).click();
+  await page.getByRole('tab', { name: 'Details', exact: true }).click();
+  await page.getByLabel('Pieces each').fill('3');
+  await page.getByRole('button', { name: 'Save 2 items' }).click();
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
+
+  // New bill, no company: find the item, add M twice and L once.
+  await page.goto('/admin/bills/new');
+  const form = page.getByTestId('bill-form');
+  const search = form.getByLabel('Search an item: name, code or barcode');
+  await search.fill(name);
+  await form.getByRole('button', { name: `Add ${name} · M` }).click();
+  await expect(search).toHaveValue('');
+  await form.getByRole('button', { name: `One more: ${name} · M` }).click();
+  await search.fill(name);
+  await form.getByRole('button', { name: `Add ${name} · L` }).click();
+  const lines = form.getByTestId('bill-item-line');
+  await expect(lines).toHaveCount(2);
+  await expect(lines.first()).toContainText('2 × ₹400.00 = ₹800.00');
+  await expect(form.getByTestId('bill-total')).toHaveText('₹1,200.00');
+  await expect(form.getByTestId('bill-picked')).toHaveText('2 items · 3 pcs');
+  // With items on it, there is no company box; a company would have its stock entries instead.
+  await expect(form.getByRole('combobox', { name: /^Company/ })).toHaveCount(0);
+
+  // Check like the paper, then save.
+  await form.getByRole('button', { name: 'Next: check bill' }).click();
+  await expect(form.getByTestId('bill-party')).toContainText('No company');
+  await expect(form.getByTestId('bill-sheet-line')).toHaveCount(2);
+  await expect(form.getByTestId('bill-sheet-total')).toHaveText('1,200.00');
+  await form.getByLabel('Bill no. (optional)').fill(`IT-${run}`);
+  await form.getByRole('button', { name: 'Save bill' }).click();
+  await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);
+  const billUrl = page.url();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('bill-detail-total')).toHaveText('₹1,200.00');
+  await expect(page.getByTestId('bill-no-company')).toHaveText('No company');
+  await expect(page.getByTestId('bill-companies')).toHaveCount(0);
+  await expect(page.getByTestId('bill-sheet-line')).toHaveCount(2);
+  await expect(page.getByTestId('bill-sheet-line').first()).toContainText(name);
+
+  // The item is renamed and repriced afterwards: the bill keeps its own copy.
+  await page.goto('/admin/products');
+  await page.getByTestId('product-card').filter({ has: page.getByRole('link', { name, exact: true }) }).getByRole('link', { name, exact: true }).click();
+  const editor = page.getByTestId('item-editor');
+  await editor.getByLabel('Name').fill(`${name} Renamed`);
+  await editor.getByLabel('Purchase ₹').fill('450');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${name} Renamed`);
+  await page.goto(billUrl);
+  await expect(page.getByTestId('bill-detail-total')).toHaveText('₹1,200.00');
+  await expect(page.getByTestId('bill-sheet-line').first()).toContainText(name);
+  await expect(page.getByTestId('bill-sheet-line').first()).not.toContainText('Renamed');
+
+  // The Bills list: no company, its items, its total; nothing due.
+  await page.goto('/admin/bills');
+  const row = page.getByTestId('bill-list').getByRole('link').filter({ hasText: `bill IT-${run}` });
+  await expect(row).toContainText('No company');
+  await expect(row).toContainText('2 items · 3 pcs');
+  await expect(row).toContainText('₹1,200.00');
+  await expect(row).not.toContainText('Due');
 });

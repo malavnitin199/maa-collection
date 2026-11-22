@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
-import { billCollections, billCompanies, bills, products, stockMovements, stockReceipts, supplierPayments, suppliers } from '@/db/schema';
+import { billCollections, billCompanies, billItems, bills, products, stockMovements, stockReceipts, supplierPayments, suppliers } from '@/db/schema';
 import { STORE_TIMEZONE } from '@/lib/app-config';
 import { packOf } from '@/lib/packs';
 import { sortSizes } from '@/lib/size-prices';
@@ -16,6 +16,11 @@ import { cleanStockDate, shopToday } from './products';
  * New item save (a design in its sizes) or one Receive stock entry — and is on
  * at most one bill. Dues come from bill amounts minus payments; a payment may
  * name a bill (that company's part of it).
+ *
+ * A bill stands on its own (owner's feedback 2026-11-22, ADR-060): with no company it
+ * is made from items of the shop's stock, added one by one — each line the bill's own
+ * copy (name, size, quantity, the purchase price then, amount). Such a bill is a record:
+ * its total, no dues. With a company it works as above, and the company's page lists it.
  */
 
 const ARRIVALS = ['opening', 'stock_in'] as const;
@@ -48,7 +53,10 @@ export type Collection = {
  * (pieces; boxes for box packs), the rate for that quantity (per piece; per box for
  * box packs, ADR-047) and the amount.
  */
-export type BillLine = { name: string; sizes: string[]; pieces: number; qty: number; pack: number | null; ratePaise: number; amountPaise: number };
+export type BillLine = { name: string; sizes: string[]; pieces: number; qty: number; pack: number | null; ratePaise: number; amountPaise: number; noRate?: boolean };
+
+/** A line of a bill made from items (ADR-060), as the bill keeps it. `ratePaise` null = no purchase price (N/A). */
+export type BillItemLine = { productId: string | null; name: string; size: string; color: string; sku: string; qty: number; ratePaise: number | null; amountPaise: number };
 
 /** `deleted`: the company was deleted (ADR-051); the bill keeps its name and amounts. */
 export type BillCompany = { supplierId: string; name: string; deleted: boolean; amountPaise: number; paidPaise: number; duePaise: number };
@@ -63,12 +71,15 @@ export type BillRow = {
   totalPaise: number;
   paidPaise: number;
   duePaise: number;
-  status: 'open' | 'paid';
+  /** 'record': a bill with no company (ADR-060) — its total, nothing owed. */
+  status: 'open' | 'paid' | 'record';
   collections: number;
+  /** Lines added from the shop's items (a bill with no company). */
+  items: number;
   pieces: number;
   valuePaise: number;
 };
-export type BillDetail = BillRow & { list: Collection[]; hasPayments: boolean };
+export type BillDetail = BillRow & { list: Collection[]; itemLines: BillItemLine[]; hasPayments: boolean };
 
 /** Collections with their figures: by id, or the ones on no bill yet (newest first). */
 export async function listCollections(
@@ -168,8 +179,74 @@ export type BillInput = {
   companies: string[];
   /** The collections on it; each must be one of the chosen companies' and on no other bill. */
   receiptIds: string[];
+  /** A bill with no company (ADR-060): the shop's items and how many of each, in order. */
+  items?: { productId: string; quantity: number }[];
   staffId: string;
 };
+
+export const BILL_ITEMS_MAX = 200;
+
+/** The items as asked: known ids, whole quantities from 1, the same item once (quantities added). */
+function cleanItems(items: { productId: string; quantity: number }[] | undefined): { productId: string; quantity: number }[] {
+  const out: { productId: string; quantity: number }[] = [];
+  for (const item of items ?? []) {
+    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100_000) {
+      throw new DomainError('Quantity must be a whole number, at least 1.', { key: 'stk.err.quantity' });
+    }
+    const same = out.find((o) => o.productId === item.productId);
+    if (same) same.quantity += item.quantity;
+    else out.push({ productId: item.productId, quantity: item.quantity });
+  }
+  if (out.length > BILL_ITEMS_MAX) throw new DomainError(`Up to ${BILL_ITEMS_MAX} items on one bill.`, { key: 'bill.err.tooManyItems', vars: { n: BILL_ITEMS_MAX } });
+  return out;
+}
+
+/** Puts the items on the bill as its own copy: what they are and cost today (ADR-060). */
+async function addItems(db: Db, storeId: string, billId: string, items: { productId: string; quantity: number }[]) {
+  const ids = items.map((i) => i.productId);
+  const rows = await db
+    .select({ id: products.id, name: products.name, size: products.size, color: products.color, sku: products.sku, costPaise: products.costPaise, company: suppliers.name })
+    .from(products)
+    .leftJoin(suppliers, eq(suppliers.id, products.supplierId))
+    .where(and(eq(products.storeId, storeId), inArray(products.id, ids)));
+  if (rows.length !== new Set(ids).size) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  await db.insert(billItems).values(
+    items.map((item, i) => {
+      const p = rows.find((r) => r.id === item.productId)!;
+      const amountPaise = p.costPaise === null ? 0 : p.costPaise * item.quantity;
+      if (amountPaise > MAX_PART) throw new DomainError('The bill amount is too large.', { key: 'bill.err.amount' });
+      return {
+        billId,
+        productId: p.id,
+        position: i + 1,
+        quantity: item.quantity,
+        ratePaise: p.costPaise,
+        amountPaise,
+        snapshot: { name: p.name, size: p.size, color: p.color, sku: p.sku, companyName: p.company ?? null },
+      };
+    }),
+  );
+}
+
+/** A bill's item lines as it keeps them, in order. */
+async function itemLinesOf(db: Db, billIds: string[]): Promise<(BillItemLine & { billId: string })[]> {
+  if (billIds.length === 0) return [];
+  const rows = await db.select().from(billItems).where(inArray(billItems.billId, billIds)).orderBy(billItems.billId, billItems.position);
+  return rows.map((r) => {
+    const copy = r.snapshot as { name?: string; size?: string; color?: string; sku?: string };
+    return {
+      billId: r.billId,
+      productId: r.productId,
+      name: copy.name ?? '',
+      size: copy.size ?? '',
+      color: copy.color ?? '',
+      sku: copy.sku ?? '',
+      qty: r.quantity,
+      ratePaise: r.ratePaise,
+      amountPaise: r.amountPaise,
+    };
+  });
+}
 
 function cleanCompanyIds(companies: string[]): string[] {
   const out = [...new Set((companies ?? []).filter(Boolean))];
@@ -263,10 +340,13 @@ export async function createBill(db: Db, storeId: string, input: BillInput): Pro
   if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
   const [existing] = await db.select({ id: bills.id }).from(bills).where(and(eq(bills.storeId, storeId), eq(bills.operationId, input.operationId))).limit(1);
   if (existing) return { id: existing.id, duplicate: true };
-  const companies = cleanCompanyIds(input.companies);
-  if (!input.receiptIds?.length) throw new DomainError('Tick at least one collection.', { key: 'bill.err.noCollection' });
+  const items = cleanItems(input.items);
+  const companies = [...new Set((input.companies ?? []).filter(Boolean))];
+  if (companies.length === 0 && items.length === 0) throw new DomainError('Choose a company, or add items.', { key: 'bill.err.nothing' });
+  if (companies.length > 0 && items.length > 0) throw new DomainError('Items go on a bill with no company.', { key: 'bill.err.itemsNoCompany' });
+  if (companies.length > 0 && !input.receiptIds?.length) throw new DomainError('Tick at least one collection.', { key: 'bill.err.noCollection' });
   const billDate = cleanBillDate(input.billDate);
-  await checkCompanies(db, storeId, companies);
+  if (companies.length > 0) await checkCompanies(db, storeId, companies);
   return db.transaction(async (tx) => {
     const t = tx as unknown as Db;
     const [bill] = await tx
@@ -280,6 +360,10 @@ export async function createBill(db: Db, storeId: string, input: BillInput): Pro
         staffId: input.staffId,
       })
       .returning({ id: bills.id });
+    if (items.length > 0) {
+      await addItems(t, storeId, bill.id, items);
+      return { id: bill.id, duplicate: false };
+    }
     await tx.insert(billCompanies).values(await companyParts(t, bill.id, companies));
     await attach(t, storeId, bill.id, input.receiptIds, companies);
     await recompute(t, storeId, bill.id);
@@ -308,8 +392,17 @@ export async function updateBill(
   input: { billNumber?: string | null; billDate?: string | null; note?: string | null; companies: string[] },
 ): Promise<void> {
   await ownBill(db, storeId, id);
-  const companies = cleanCompanyIds(input.companies);
   const billDate = cleanBillDate(input.billDate);
+  // A bill made from items (ADR-060) keeps no company: only its number, date and note change.
+  const [anItem] = await db.select({ id: billItems.id }).from(billItems).where(eq(billItems.billId, id)).limit(1);
+  if (anItem) {
+    await db
+      .update(bills)
+      .set({ billNumber: input.billNumber?.trim().slice(0, 40) || null, billDate, note: input.note?.trim().slice(0, 200) || null })
+      .where(eq(bills.id, id));
+    return;
+  }
+  const companies = cleanCompanyIds(input.companies);
   await checkCompanies(db, storeId, companies);
   const paidCompanies = await db.selectDistinct({ id: supplierPayments.supplierId }).from(supplierPayments).where(eq(supplierPayments.billId, id));
   if (paidCompanies.some((p) => !companies.includes(p.id))) {
@@ -381,7 +474,7 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
     .orderBy(desc(bills.billDate), desc(bills.createdAt));
   if (billRows.length === 0) return [];
   const billIds = billRows.map((b) => b.id);
-  const [parts, paid, links] = await Promise.all([
+  const [parts, paid, links, lines] = await Promise.all([
     db
       .select({
         billId: billCompanies.billId,
@@ -400,6 +493,7 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
       .where(inArray(supplierPayments.billId, billIds))
       .groupBy(supplierPayments.billId, supplierPayments.supplierId),
     billCopies(db, storeId, billIds),
+    itemLinesOf(db, billIds),
   ]);
   return billRows.map((b) => {
     const companies = parts
@@ -410,7 +504,9 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
       })
       .sort((a, c) => a.name.localeCompare(c.name));
     const mine = links.filter((l) => l.billId === b.id).map((l) => l.entry);
-    const totalPaise = companies.reduce((n, c) => n + c.amountPaise, 0);
+    const itemsOf = lines.filter((l) => l.billId === b.id);
+    const itemsPaise = itemsOf.reduce((n, l) => n + l.amountPaise, 0);
+    const totalPaise = companies.reduce((n, c) => n + c.amountPaise, 0) + itemsPaise;
     const paidPaise = companies.reduce((n, c) => n + c.paidPaise, 0);
     const duePaise = companies.reduce((n, c) => n + c.duePaise, 0);
     return {
@@ -423,10 +519,11 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
       totalPaise,
       paidPaise,
       duePaise,
-      status: duePaise > 0 ? 'open' : 'paid',
+      status: companies.length === 0 ? 'record' : duePaise > 0 ? 'open' : 'paid',
       collections: mine.length,
-      pieces: mine.reduce((n, c) => n + c.pieces, 0),
-      valuePaise: mine.reduce((n, c) => n + c.valuePaise, 0),
+      items: itemsOf.length,
+      pieces: mine.reduce((n, c) => n + c.pieces, 0) + itemsOf.reduce((n, l) => n + l.qty, 0),
+      valuePaise: mine.reduce((n, c) => n + c.valuePaise, 0) + itemsPaise,
     };
   });
 }
@@ -436,7 +533,12 @@ export async function getBill(db: Db, storeId: string, id: string): Promise<Bill
   if (!row) return null;
   const [payment] = await db.select({ id: supplierPayments.id }).from(supplierPayments).where(eq(supplierPayments.billId, id)).limit(1);
   // The bill's own copy of its entries (ADR-054), never today's items.
-  return { ...row, list: (await billCopies(db, storeId, [id])).map((r) => r.entry), hasPayments: Boolean(payment) };
+  return {
+    ...row,
+    list: (await billCopies(db, storeId, [id])).map((r) => r.entry),
+    itemLines: await itemLinesOf(db, [id]),
+    hasPayments: Boolean(payment),
+  };
 }
 
 /** Home's Bills line: how many bills, how many still open, and the dues on them. */

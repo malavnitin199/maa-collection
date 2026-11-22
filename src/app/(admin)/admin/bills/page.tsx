@@ -38,14 +38,17 @@ async function BillList() {
                   {day(b.billDate)}
                   {b.billNumber && ` · ${t('cat.bill', { number: b.billNumber })}`}
                 </span>
-                <span className={`block truncate text-xs ${muted}`}>{b.companies.map((c) => c.name).join(', ')}</span>
-                <span className={`block text-xs ${muted}`}>{t('bills.count', { n: b.collections })}</span>
+                {/* A bill with no company (ADR-060): made from items. */}
+                <span className={`block truncate text-xs ${muted}`}>{b.status === 'record' ? t('bills.noCompany') : b.companies.map((c) => c.name).join(', ')}</span>
+                <span className={`block text-xs ${muted}`}>{b.status === 'record' ? t('bills.itemsFooter', { n: b.items, pcs: b.pieces }) : t('bills.count', { n: b.collections })}</span>
               </span>
               <span className="shrink-0 text-right text-sm tabular-nums">
                 <span className="block font-semibold">{formatPaise(b.totalPaise)}</span>
-                <span className={`block text-xs ${b.status === 'open' ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
-                  {b.status === 'open' ? t('bills.status.open', { amount: formatPaise(b.duePaise) }) : t('bills.status.paid')}
-                </span>
+                {b.status !== 'record' && (
+                  <span className={`block text-xs ${b.status === 'open' ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                    {b.status === 'open' ? t('bills.status.open', { amount: formatPaise(b.duePaise) }) : t('bills.status.paid')}
+                  </span>
+                )}
               </span>
             </Link>
           </li>

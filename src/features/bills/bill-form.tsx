@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, muted, primaryButton } from '@/components/ui/styles';
 import { BillSheet } from '@/features/bills/bill-sheet';
-import { sheetParts } from '@/features/bills/sheet-parts';
+import { BillItemsPicker, type PickedItem } from '@/features/bills/bill-items';
+import { itemsPart, sheetParts } from '@/features/bills/sheet-parts';
 import { CompanyPicker } from '@/features/catalog/company-picker';
 import { useDone } from '@/features/feedback/effects';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
@@ -110,6 +111,9 @@ export function CompanyCollections({ id, name, list, picked, onChange }: { id?: 
  *    no., date, then S.N · goods · qty · rate · amount and the total — to check
  *    against the paper and save. Nothing is typed as an amount: the total is the
  *    value of the ticked collections. Edit bill: number, date, companies, note.
+ * A bill without a company (ADR-060): step 1 adds the shop's items one by one instead
+ * (quantity × purchase price); choosing a company hides them, adding items hides the
+ * company box. Editing such a bill changes its number, date and note.
  */
 export function BillForm({
   suppliers,
@@ -118,6 +122,7 @@ export function BillForm({
   today,
   initial,
   billId,
+  itemsBill = false,
 }: {
   suppliers: Option[];
   previous: Option[];
@@ -125,6 +130,8 @@ export function BillForm({
   today: string;
   initial?: { billNumber: string; billDate: string; note: string; companies: Option[] };
   billId?: string;
+  /** Editing a bill made from items: no company box. */
+  itemsBill?: boolean;
 }) {
   const t = useT();
   const router = useRouter();
@@ -134,6 +141,7 @@ export function BillForm({
   const [note, setNote] = useState(initial?.note ?? '');
   const [companies, setCompanies] = useState<Option[]>(initial?.companies ?? []);
   const [picked, setPicked] = useState<string[]>([]);
+  const [items, setItems] = useState<PickedItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'pick' | 'check'>('pick');
   const [saving, startSaving] = useTransition();
@@ -142,8 +150,11 @@ export function BillForm({
   const of = (id: string) => collections.filter((c) => c.supplierId === id);
   const pickedRows = collections.filter((c) => picked.includes(c.receiptId));
   const value = (rows: Collection[]) => rows.reduce((n, c) => n + c.valuePaise, 0);
-  const total = value(pickedRows);
-  const pieces = pickedRows.reduce((n, c) => n + c.pieces, 0);
+  const byItems = companies.length === 0;
+  const itemLines = items.map((i) => ({ name: i.name, size: i.size, color: i.color, qty: i.qty, ratePaise: i.costPaise, amountPaise: (i.costPaise ?? 0) * i.qty }));
+  const total = byItems ? itemLines.reduce((n, l) => n + l.amountPaise, 0) : value(pickedRows);
+  const pieces = byItems ? items.reduce((n, i) => n + i.qty, 0) : pickedRows.reduce((n, c) => n + c.pieces, 0);
+  const footer = byItems ? t('bills.itemsFooter', { n: items.length, pcs: pieces }) : t('bills.footer', { n: picked.length, pcs: pieces });
   const touched = () => (operationId.current = null);
 
   const addCompany = (id: string, name: string) => {
@@ -192,7 +203,15 @@ export function BillForm({
   const save = () => {
     setError(null);
     operationId.current ??= crypto.randomUUID();
-    const input = { operationId: operationId.current, billNumber, billDate, note, companies: companies.map((c) => c.id), receiptIds: picked };
+    const input = {
+      operationId: operationId.current,
+      billNumber,
+      billDate,
+      note,
+      companies: companies.map((c) => c.id),
+      receiptIds: byItems ? [] : picked,
+      items: byItems ? items.map((i) => ({ productId: i.id, quantity: i.qty })) : [],
+    };
     startSaving(async () => {
       const result = billId ? await updateBillAction(billId, input) : await createBillAction(input);
       if (!result.ok) {
@@ -205,8 +224,10 @@ export function BillForm({
         lines: [
           { label: t('bills.number'), value: billNumber.trim() },
           { label: t('bills.date'), value: billDate },
-          { label: t('bills.companies'), value: companies.map((c) => c.name).join(', ') },
-          { label: t('bills.collections'), value: billId ? '' : t('bills.picked', { n: picked.length, pcs: pieces, value: formatPaise(total) }) },
+          { label: t('bills.companies'), value: byItems ? t('bills.noCompany') : companies.map((c) => c.name).join(', ') },
+          byItems
+            ? { label: t('bills.items'), value: billId ? '' : footer }
+            : { label: t('bills.collections'), value: billId ? '' : t('bills.picked', { n: picked.length, pcs: pieces, value: formatPaise(total) }) },
         ].filter((line) => line.value),
       });
       if (billId) return router.refresh();
@@ -216,6 +237,7 @@ export function BillForm({
       operationId.current = null;
       setStep('pick');
       setPicked([]);
+      setItems([]);
       setCompanies(initial?.companies ?? []);
       setBillNumber('');
       setBillDate(today);
@@ -224,7 +246,7 @@ export function BillForm({
     });
   };
 
-  const canSave = !saving && companies.length > 0 && (Boolean(billId) || picked.length > 0);
+  const canSave = !saving && (billId ? itemsBill || companies.length > 0 : byItems ? items.length > 0 : picked.length > 0);
   const numberAndDate = (
     <div className="grid grid-cols-2 gap-3">
       <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
@@ -252,7 +274,7 @@ export function BillForm({
   );
   const totals = (
     <p className="min-w-0 text-sm">
-      <span data-testid="bill-picked" className={`block text-xs ${muted}`}>{t('bills.footer', { n: picked.length, pcs: pieces })}</span>
+      <span data-testid="bill-picked" className={`block text-xs ${muted}`}>{footer}</span>
       <span className="font-semibold">
         {t('bills.total')}: <span data-testid="bill-total" className="text-lg font-bold tabular-nums">{formatPaise(total)}</span>
       </span>
@@ -274,13 +296,14 @@ export function BillForm({
       {done.node}
       {!billId && (
         <p className={`text-xs font-semibold ${muted}`}>
-          {t('bills.step', { n: step === 'pick' ? 1 : 2 })} · {step === 'pick' ? t('bills.step.pick') : t('bills.step.check')}
+          {t('bills.step', { n: step === 'pick' ? 1 : 2 })} ·{' '}
+          {step === 'check' ? t('bills.step.check') : !byItems ? t('bills.step.pick') : items.length ? t('bills.step.pickItems') : t('bills.step.pickAny')}
         </p>
       )}
 
       {billId && numberAndDate}
 
-      {(billId || step === 'pick') && (
+      {(billId ? !itemsBill : step === 'pick' && items.length === 0) && (
         // Companies: chosen ones one under the other, then the box to add the next.
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold">{t('bills.companies')}</p>
@@ -326,9 +349,10 @@ export function BillForm({
 
       {!billId && step === 'pick' && (
         <div className="flex flex-col gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-          <p className="text-sm font-semibold">{t('bills.collections')}</p>
+          {companies.length > 0 && <p className="text-sm font-semibold">{t('bills.collections')}</p>}
           {companies.length === 0 ? (
-            <p className={`text-sm ${muted}`}>{t('bills.pickCompanyFirst')}</p>
+            // No company: the shop's items, one by one (ADR-060).
+            <BillItemsPicker items={items} onChange={(next) => (touched(), setItems(next))} />
           ) : (
             companies.map((c) => <CompanyCollections key={c.id} id={c.id} name={c.name} list={of(c.id)} picked={picked} onChange={(next) => (touched(), setPicked(next))} />)
           )}
@@ -340,10 +364,10 @@ export function BillForm({
         <div className="rise-in flex flex-col gap-3">
           <div data-testid="bill-party" className="flex flex-col gap-0.5">
             <span className={`text-xs font-medium ${muted}`}>{t('bills.sheet.party')}</span>
-            <span className="text-sm font-semibold">{companies.map((c) => c.name).join(', ')}</span>
+            <span className="text-sm font-semibold">{byItems ? t('bills.noCompany') : companies.map((c) => c.name).join(', ')}</span>
           </div>
           {numberAndDate}
-          <BillSheet parts={sheetParts(companies, pickedRows)} />
+          <BillSheet parts={byItems ? itemsPart(itemLines) : sheetParts(companies, pickedRows)} />
         </div>
       )}
 

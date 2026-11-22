@@ -46,14 +46,14 @@ export function BillSheet({ parts }: { parts: SheetPart[] }) {
               </tr>
             )}
             {part.lines.map((line, i) => (
-              <tr key={`${line.name}\u0000${line.ratePaise}`} data-testid="bill-sheet-line" className="border-t border-zinc-200 align-top dark:border-zinc-800">
+              <tr key={`${i}\u0000${line.name}\u0000${line.ratePaise}`} data-testid="bill-sheet-line" className="border-t border-zinc-200 align-top dark:border-zinc-800">
                 <td className={`${cell} text-xs ${muted}`}>{i + 1}.</td>
                 <td className={cell}>
                   <span className="block font-medium break-words">{line.pack ? t('pack.goods', { name: line.name, n: line.pack }) : line.name}</span>
                   {line.sizes.length > 0 && <span className={`block text-xs break-words ${muted}`}>{line.sizes.join(' ')}</span>}
                 </td>
                 <td className={`${cell} text-right`}>{qty(line.qty)}</td>
-                <td className={`${cell} text-right`}>{amount(line.ratePaise)}</td>
+                <td className={`${cell} text-right`}>{line.noRate ? t('common.na') : amount(line.ratePaise)}</td>
                 <td className={`${cell} text-right font-medium`}>{amount(line.amountPaise)}</td>
               </tr>
             ))}

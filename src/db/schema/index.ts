@@ -300,6 +300,38 @@ export const billCollections = pgTable(
   (t) => [uniqueIndex('bill_collections_receipt_uq').on(t.receiptId), index('bill_collections_bill_idx').on(t.billId)],
 );
 
+/**
+ * An item from the shop's stock put on a bill one by one (owner's feedback 2026-11-22, ADR-060):
+ * a bill made without a company, from existing products. Each line is the bill's own copy —
+ * name, size, colour, code, quantity, rate (the purchase price then) and amount — so later
+ * changes to the item, or deleting it, never change the bill.
+ */
+export const billItems = pgTable(
+  'bill_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    billId: uuid('bill_id')
+      .notNull()
+      .references(() => bills.id, { onDelete: 'cascade' }),
+    /** The item while it exists; deleting it leaves the line (the copy is in `snapshot`). */
+    productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+    /** Order on the bill, from 1. */
+    position: integer('position').notNull(),
+    quantity: integer('quantity').notNull(),
+    /** Purchase price per piece when it was put on the bill; null = none entered (N/A, amount 0). */
+    ratePaise: integer('rate_paise'),
+    amountPaise: integer('amount_paise').notNull(),
+    /** The item as it was: name, size, colour, sku, company name. */
+    snapshot: jsonb('snapshot').$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('bill_items_bill_idx').on(t.billId),
+    check('bill_items_quantity_positive', sql`${t.quantity} > 0`),
+    check('bill_items_amount_nonnegative', sql`${t.amountPaise} >= 0`),
+  ],
+);
+
 export const stockMovements = pgTable(
   'stock_movements',
   {

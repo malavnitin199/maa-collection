@@ -98,6 +98,7 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await billForm.getByLabel('Bill no. (optional)').fill(`INV-${run}`);
   await billForm.getByRole('button', { name: 'Save bill' }).click();
   await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);
+  const billUrl = page.url();
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('bill-detail-total')).toHaveText('₹2,400.00');
   await expect(page.getByTestId('bill-collection-list')).toContainText(`Chikan Kurta ${run}`);
@@ -110,6 +111,11 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   const bill = page.getByTestId('company-bills').locator('li').first();
   await expect(bill).toContainText(`bill INV-${run}`);
   await expect(bill).toContainText('Due ₹2,400.00');
+  // The bill number opens that exact bill (owner, 2026-11-22, ADR-060).
+  await bill.getByRole('link').first().click();
+  await expect(page).toHaveURL(billUrl);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(`bill INV-${run}`);
+  await page.goto(companyUrl);
   await page.getByRole('tab', { name: 'Stock entries', exact: true }).click();
   await expect(delivery).toContainText('on a bill');
 

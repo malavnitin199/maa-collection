@@ -5,7 +5,7 @@ import { IconBack } from '@/components/ui/icons';
 import { card, link, muted, sectionTitle } from '@/components/ui/styles';
 import { BillForm } from '@/features/bills/bill-form';
 import { BillSheet } from '@/features/bills/bill-sheet';
-import { sheetParts } from '@/features/bills/sheet-parts';
+import { itemsPart, sheetParts } from '@/features/bills/sheet-parts';
 import { AddCollections, DeleteBill, RemoveCollection } from '@/features/bills/bill-parts';
 import { MarkPaidForm } from '@/features/catalog/company-parts';
 import { STORE_ID } from '@/lib/app-config';
@@ -37,6 +37,8 @@ async function BillDetail({ id }: { id: string }) {
   const today = shopToday();
   const day = (value: string) => formatDate(locale, `${value}T00:00:00+05:30`, 'date');
   const label = [bill.billNumber ? t('cat.bill', { number: bill.billNumber }) : null, day(bill.billDate)].filter(Boolean).join(' · ');
+  // A bill made from items, with no company (ADR-060): its lines and total; no dues, no stock entries.
+  const byItems = bill.status === 'record';
 
   return (
     <div className="flex flex-col gap-4">
@@ -50,11 +52,18 @@ async function BillDetail({ id }: { id: string }) {
             <p data-testid="bill-detail-total" className="text-xl font-bold tabular-nums">
               {formatPaise(bill.totalPaise)}
             </p>
-            <p className={`text-xs font-semibold ${bill.status === 'open' ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
-              {bill.status === 'open' ? t('bills.status.open', { amount: formatPaise(bill.duePaise) }) : t('bills.status.paid')}
-            </p>
+            {!byItems && (
+              <p className={`text-xs font-semibold ${bill.status === 'open' ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                {bill.status === 'open' ? t('bills.status.open', { amount: formatPaise(bill.duePaise) }) : t('bills.status.paid')}
+              </p>
+            )}
           </div>
         </div>
+        {byItems ? (
+          <p data-testid="bill-no-company" className={`text-sm ${muted}`}>
+            {t('bills.noCompany')}
+          </p>
+        ) : (
         <table data-testid="bill-companies" className="w-full text-sm">
           <thead className={`text-left text-xs ${muted}`}>
             <tr>
@@ -93,8 +102,19 @@ async function BillDetail({ id }: { id: string }) {
             ))}
           </tbody>
         </table>
+        )}
         {bill.note && <p className={`text-sm ${muted}`}>{bill.note}</p>}
       </section>
+
+      {byItems && (
+        <section className="flex flex-col gap-2">
+          <h2 className={sectionTitle}>{t('bills.sheet.title')}</h2>
+          <BillSheet parts={itemsPart(bill.itemLines)} />
+          <p data-testid="bill-value" className="text-sm">
+            {t('bills.itemsFooter', { n: bill.items, pcs: bill.pieces })}
+          </p>
+        </section>
+      )}
 
       {bill.list.length > 0 && (
         <section className="flex flex-col gap-2">
@@ -103,6 +123,7 @@ async function BillDetail({ id }: { id: string }) {
         </section>
       )}
 
+      {!byItems && (
       <section className="flex flex-col gap-2">
         <h2 className={sectionTitle}>{t('bills.collections')}</h2>
         <p data-testid="bill-value" className="text-sm">
@@ -127,12 +148,14 @@ async function BillDetail({ id }: { id: string }) {
         )}
         <AddCollections billId={bill.id} collections={waiting} companies={bill.companies.map((c) => ({ id: c.supplierId, name: c.name }))} />
       </section>
+      )}
 
       <details className={card}>
         <summary className="cursor-pointer font-medium">{t('bills.editTitle')}</summary>
         <div className="mt-3">
           <BillForm
             billId={bill.id}
+            itemsBill={byItems}
             suppliers={companies.filter((c) => c.active).map(({ id: sid, name }) => ({ id: sid, name }))}
             previous={companies.filter((c) => !c.active).map(({ id: sid, name }) => ({ id: sid, name }))}
             today={today}
