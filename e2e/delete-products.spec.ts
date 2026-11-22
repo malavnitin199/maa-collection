@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openProduct, productCard } from './products';
 
 // Delete items (owner, 2026-11-22, ADR-050): Products → Select → Delete, and Delete on the product page,
 // both after a confirmation; the owner only.
@@ -37,12 +38,14 @@ test('owner deletes items: several from Products → Select, a whole design from
   await addItem(page, one);
   await addItem(page, two);
 
-  // Products → Select → Delete: a confirmation first; Cancel keeps them.
-  await page.goto(`/admin/products?q=${encodeURIComponent(one)}&show=items`);
-  const rows = page.getByTestId('product-list').getByRole('listitem');
-  await expect(rows).toHaveCount(2);
+  // Products → Select → tick the design's card (both its sizes) → Delete: a confirmation first; Cancel keeps them.
+  // (Never Select all here: every product of the shared test shop is on the page.)
+  await page.goto('/admin/products');
+  const card = productCard(page, one);
+  await expect(card.getByTestId('card-items')).toHaveText('Items: 2');
   await page.getByTestId('select-products').click();
-  await page.getByRole('checkbox', { name: 'Select all', exact: true }).click();
+  await page.getByRole('checkbox', { name: `Select ${one}`, exact: true }).click();
+  await expect(page.getByTestId('selected-count')).toHaveText('2 selected');
   const bar = page.getByTestId('selection-bar');
   const sheet = page.getByTestId('action-sheet');
   await bar.getByRole('button', { name: 'Delete' }).click();
@@ -53,25 +56,22 @@ test('owner deletes items: several from Products → Select, a whole design from
   await bar.getByRole('button', { name: 'Delete' }).click();
   await sheet.getByTestId('confirm-delete-items').click();
   await expect(page.getByTestId('selection-toast')).toContainText('2 items deleted.');
-  await expect(rows).toHaveCount(0);
+  await expect(card).toHaveCount(0);
 
   // Product page → Delete this item → "all 2 sizes of this design".
-  await page.goto(`/admin/products?q=${encodeURIComponent(two)}&show=items`);
-  await page.getByTestId('product-list').getByRole('link').first().click();
+  await openProduct(page, two);
   await page.getByTestId('delete-item').click();
   await expect(page.getByTestId('action-sheet')).toHaveAccessibleName('Delete this item?');
   await page.getByTestId('confirm-delete-design').click();
   await expect(page).toHaveURL(/\/admin\/products\?deleted=/);
   await expect(page.getByTestId('deleted-note')).toHaveText('2 items deleted.');
-  await page.goto(`/admin/products?q=${encodeURIComponent(two)}&show=items`);
-  await expect(page.getByTestId('product-list').getByRole('listitem')).toHaveCount(0);
+  await expect(productCard(page, two)).toHaveCount(0);
 });
 
 test('a salesman never sees Delete on a product page', async ({ page }) => {
   await login(page, 'Owner');
   // Seeded item: open its page as the owner (Delete shown), then as a salesman (no Delete).
-  await page.goto('/admin/products?q=MAA-KU-001&show=items');
-  await page.getByTestId('product-list').getByRole('link').first().click();
+  await openProduct(page, 'Anarkali Kurta'); // MAA-KU-001, its first size
   await expect(page.getByTestId('delete-item')).toBeVisible();
   const url = page.url();
   await login(page, 'Vishal');

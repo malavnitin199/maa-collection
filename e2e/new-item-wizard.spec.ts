@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
+import { productCard } from './products';
 
 /** The company box is a compact dropdown (2026-11-21), not a <select>: open it and tap the name. */
 async function choose(box: Locator, label: string) {
@@ -224,11 +225,9 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await expect(page.getByTestId('details-form').getByLabel('Bill no.')).toHaveValue('');
 
   // Both items exist, under their own receipts (each save has its own operation id).
-  await page.goto(`/admin/products?q=${run}&show=items`);
-  const list = page.getByTestId('product-list').or(page.getByTestId('design-list'));
-  await expect(list).toContainText(`Anarkali ${run}`);
-  await expect(list).toContainText(`Banarasi ${run}`);
-  await expect(list.getByRole('listitem').filter({ hasText: `Anarkali ${run}` })).toHaveCount(4);
+  await page.goto('/admin/products');
+  await expect(productCard(page, `Banarasi ${run}`)).not.toHaveCount(0);
+  await expect(productCard(page, `Anarkali ${run}`).getByTestId('card-items')).toHaveText(['Items: 4']);
 });
 
 test('a salesman without the catalog right cannot open it', async ({ page, isMobile }) => {
@@ -296,10 +295,11 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await expect(page.getByTestId('review-sizes')).toHaveText('No size × 3');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.keyboard.press('Escape');
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  const rows = page.getByTestId('product-list').getByRole('listitem');
-  await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText('3');
+  await page.goto('/admin/products');
+  const card = productCard(page, name);
+  await expect(card.getByTestId('card-items')).toHaveText('Items: 1');
+  await expect(card.getByTestId('card-pieces')).toHaveText('3 pcs');
+  await expect(card.getByTestId('design-sizes')).toHaveText('N/A · 3'); // no size → N/A (ADR-058)
   // Tapping a size hides the pieces box again.
   await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: /^Many items/ }).click();
@@ -332,9 +332,9 @@ test('purchase price first; an empty sale price is purchase + 50% (the % can be 
   await expect(page.getByTestId('review-card')).toContainText('MRP ₹980.00');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.keyboard.press('Escape');
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await expect(page.getByTestId('product-list').getByRole('listitem').first()).toContainText('× ₹700.00 ='); // purchase per piece (ADR-057)
-  await page.getByTestId('product-list').getByRole('link').first().click();
+  await page.goto('/admin/products');
+  await expect(productCard(page, name).getByTestId('value-per-piece')).toHaveText('₹700.00'); // purchase per piece (ADR-057)
+  await productCard(page, name).getByRole('link', { name, exact: true }).click();
   await expect(page.getByTestId('product-must-haves')).toContainText('MRP ₹980.00');
   // The % is remembered on this phone for the next item.
   await page.goto('/admin/stock/new');

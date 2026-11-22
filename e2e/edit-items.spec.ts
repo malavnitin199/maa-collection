@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { openProduct } from './products';
 
 // Owner, 2026-11-22 (ADR-054): edit an item at the top of its page (even one with no brand or size),
 // add more sizes to its design, add pieces; bills keep their own copy (unit tests: bill-copy.test.ts).
@@ -28,8 +29,7 @@ test('edit an item made with no brand and no size; add sizes; add pieces', async
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.keyboard.press('Escape');
 
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await page.getByTestId('product-list').getByRole('link').first().click();
+  await openProduct(page, name);
 
   // Edit sits at the top of Details: give it size M and a new MRP.
   const edit = page.getByTestId('edit-item');

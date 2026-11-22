@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
+import { openProduct, productCard } from './products';
 
 /** The company box is a compact dropdown (2026-11-21), not a <select>: open it and tap the name. */
 async function choose(box: Locator, label: string) {
@@ -79,7 +80,7 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
   await page.getByRole('link', { name: /Categories/ }).click();
   await expect(page).toHaveURL(/\/admin\/categories$/);
   await tabs.getByRole('link', { name: 'Products' }).click();
-  await expect(page.getByTestId('design-list')).toContainText('Classic Crew Tee'); // combined view by default (plan v14)
+  await expect(page.getByTestId('design-list')).toContainText('Classic Crew Tee'); // every product, one card per design (ADR-058)
   await expect(tabs.getByRole('link', { name: 'Products' })).toHaveAttribute('aria-current', 'page');
 });
 
@@ -233,16 +234,17 @@ test('owner gives sizes their own MRP, selling and purchase price', async ({ pag
   await expect(labels.filter({ hasText: 'MRP ₹750.00' })).toHaveCount(1);
   await expect(labels.filter({ hasText: 'MRP ₹700.00' })).toHaveCount(2);
 
-  const list = page.getByTestId('product-list').getByRole('listitem');
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await expect(list).toHaveCount(3);
-  // Each row: pieces × its own purchase price = total (ADR-057).
-  await expect(list.filter({ hasText: '× ₹300.00 =' })).toHaveCount(1);
-  await expect(list.filter({ hasText: '× ₹330.00 =' })).toHaveCount(1);
-  await expect(list.filter({ hasText: '× ₹360.00 =' })).toHaveCount(1);
+  // Products: XL has its own MRP, so it is a card of its own (same name, company and MRP = one card);
+  // each card: pieces × its sizes' own purchase prices = total (ADR-057).
+  await page.goto('/admin/products');
+  const cards = productCard(page, name);
+  await expect(cards).toHaveCount(2);
+  const mAndL = cards.filter({ hasText: '× ₹300.00–₹330.00 =' });
+  await expect(mAndL).toHaveCount(1);
+  await expect(cards.filter({ hasText: '× ₹360.00 =' })).toHaveCount(1);
 
   // Product page: rates by size, filled with today's prices; change only L.
-  await page.getByTestId('product-list').getByRole('link').first().click();
+  await mAndL.getByRole('link', { name, exact: true }).click();
   const rates = page.locator('section', { has: page.getByRole('heading', { name: 'Rates for the whole design' }) });
   await expect(rates.getByLabel('MRP (₹)')).toHaveValue('700');
   await expect(rates.getByTestId('size-rates')).toHaveAttribute('open', '');
@@ -257,15 +259,14 @@ test('owner gives sizes their own MRP, selling and purchase price', async ({ pag
   await expect(rates.getByLabel('Size XL selling price')).toHaveValue('600');
   await expect(rates.getByLabel('Size M selling price')).toHaveValue('');
   await expect(rates.getByLabel('Size XL MRP')).toHaveValue('750');
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  await expect(list.filter({ hasText: '× ₹330.00 =' })).toHaveCount(1); // purchase prices untouched
+  await page.goto('/admin/products');
+  await expect(mAndL).toHaveCount(1); // purchase prices untouched
 });
 
 test('hang tags: QR code, size boxed, the design\'s sizes with this one highlighted; the QR link opens the item', async ({ page }) => {
   await loginOwner(page);
   // Anarkali Kurta M Blue (MAA-KU-001); the design also has L.
-  await page.goto('/admin/products?q=MAA-KU-001&show=items');
-  await page.getByTestId('product-list').getByRole('link').first().click();
+  await openProduct(page, 'Anarkali Kurta'); // its first size, M = MAA-KU-001
   const tag = page.getByTestId('hang-tag');
   await expect(tag.getByRole('img', { name: 'QR code for MAA-KU-001' })).toBeVisible();
   await expect(tag.getByRole('img', { name: 'Barcode 8902222000016 for MAA-KU-001' })).toBeVisible();
@@ -626,39 +627,43 @@ test('Products → Select (owner, ADR-057): one bar at the bottom — Select all
   await page.getByRole('button', { name: 'Save 3 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-  const rows = page.getByTestId('product-list').getByRole('listitem');
-  await expect(rows).toHaveCount(3);
-  // A long-press on a row starts selecting with that row ticked (and does not open it).
-  const first = await rows.first().boundingBox();
-  await page.mouse.move(first!.x + first!.width / 2, first!.y + first!.height / 2);
+  await page.goto('/admin/products');
+  const card = productCard(page, name);
+  await expect(card.getByTestId('card-items')).toHaveText('Items: 3');
+  // A long-press on a card starts selecting with that card — all 3 of its items — ticked (and does not open it).
+  await card.scrollIntoViewIfNeeded();
+  const box = await card.boundingBox();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height - 12);
   await page.mouse.down();
   await page.waitForTimeout(700);
   await page.mouse.up();
-  await expect(page.getByTestId('selected-count')).toHaveText('1 selected');
-  await expect(page).toHaveURL(/show=items/);
   const bar = page.getByTestId('selection-bar');
   // Everything sits in the bottom bar: Select all, Cancel and Delete — no Hide, Rename, Company,
   // Category, For / Age, Prices or Print tags, and no bar at the top (the header stays).
-  await expect(bar.getByTestId('selected-count')).toHaveText('1 selected');
+  await expect(bar.getByTestId('selected-count')).toHaveText('3 selected');
+  await expect(page).toHaveURL(/\/admin\/products$/);
   const selectAll = bar.getByRole('checkbox', { name: 'Select all', exact: true });
   await expect(bar.getByRole('button')).toHaveText(['Cancel', 'Delete']);
   await expect(page.getByTestId('selection-top')).toHaveCount(0);
   await expect(page.getByRole('banner')).toBeInViewport();
+  // Select all: every item of the shop (only ticked here, never deleted — other tests share the shop).
   await selectAll.click();
-  await expect(page.getByTestId('selected-count')).toHaveText('3 selected');
   await expect(selectAll).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('selected-count')).toHaveText(/^\d+ selected$/);
+  await expect(page.getByTestId('selected-count')).not.toHaveText('3 selected');
   // Select all again: nothing ticked.
   await selectAll.click();
   await expect(page.getByTestId('selected-count')).toHaveText('Select items');
   await expect(selectAll).toHaveAttribute('aria-checked', 'false');
-  // Cancel leaves selection mode; the Select button is back.
-  await rows.nth(1).click();
-  await expect(page.getByTestId('selected-count')).toHaveText('1 selected');
+  // A tap on the card ticks it (a layer over the card takes the tap while selecting); Cancel leaves
+  // selection mode and the Select button is back.
+  const tapAt = (await card.boundingBox())!;
+  await page.mouse.click(tapAt.x + tapAt.width / 2, tapAt.y + tapAt.height - 12);
+  await expect(page.getByTestId('selected-count')).toHaveText('3 selected');
   await bar.getByRole('button', { name: 'Cancel' }).click();
   await expect(bar).toBeHidden();
   await expect(page.getByTestId('select-products')).toBeVisible();
-  await expect(page).toHaveURL(/show=items/); // a tap while selecting ticks, it never opens the item
+  await expect(page).toHaveURL(/\/admin\/products$/); // a tap while selecting ticks, it never opens the item
 });
 
 test('selecting on a long list: the bottom bar (Select all, Cancel, actions) stays on screen while scrolling', async ({ page }) => {
@@ -763,8 +768,8 @@ test('owner restocks existing items by scanning each piece and by name search', 
   await expect(page.getByLabel('Company bill no. (optional)')).toHaveValue('');
 
   // Stock went up by exactly 3.
-  await page.goto('/admin/products?q=MAA-SH-001&show=items');
-  await expect(page.getByTestId('product-list')).toContainText(String(Number(before) + 3));
+  await page.goto('/admin/products');
+  await expect(productCard(page, 'Oxford Shirt').getByTestId('design-sizes')).toContainText(`40 · ${Number(before) + 3}`); // MAA-SH-001
 });
 
 test('a salesman cannot add companies, categories, products, stock or change rates', async ({ page }) => {
@@ -799,8 +804,7 @@ test('owner sets a code word; labels print the purchase price in code and the de
   await expect(page.getByTestId('decoded')).toHaveText('= ₹299');
 
   // Classic Crew Tee M Black: purchase ₹299 → "LSS" on its label.
-  await page.goto('/admin/products?q=MAA-TS-001&show=items');
-  await page.getByTestId('product-list').getByRole('link').first().click();
+  await openProduct(page, 'Classic Crew Tee'); // its first size, M = MAA-TS-001
   await expect(page.getByTestId('price-code')).toHaveText('LSS');
 });
 
@@ -998,31 +1002,26 @@ test('combined view: one card per design (name + company + MRP) on Products and 
   await page.getByRole('button', { name: 'Save 4 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
-  // Products: one card for the 4 items, with every size and its pieces (no colour row).
-  await page.goto(`/admin/products?q=${encodeURIComponent(name)}`);
-  const cards = page.getByTestId('design-list').getByTestId('design-card');
-  await expect(cards).toHaveCount(1);
-  const designCard = cards.first();
-  await expect(designCard).toContainText(name);
-  await expect(designCard).toContainText(`${company} · Items: 4`);
-  // The highlight (ADR-057): pieces × purchase price per piece = total — no MRP on the card.
-  const strip = designCard.getByTestId('stock-value');
-  await expect(strip.getByTestId('value-pieces')).toHaveText('8 pcs');
-  await expect(strip.getByTestId('value-per-piece')).toHaveText('₹800.00');
-  await expect(strip.getByTestId('value-total')).toHaveText('₹6,400.00');
-  await expect(designCard).not.toContainText('MRP');
-  await expect(designCard.getByTestId('design-sizes')).toHaveText('M · 2L · 2XL · 2XXL · 2');
-  await expect(designCard.getByTestId('design-colours')).toHaveCount(0);
-  await expect(designCard.getByRole('img', { name: `Design QR for ${name}` })).toBeVisible();
-  const items = designCard.getByTestId('design-items').getByRole('listitem');
-  await expect(items.first()).toBeHidden();
-  await designCard.getByText('Show 4 items').click();
-  await expect(items).toHaveCount(4);
-  await expect(items.first()).toBeVisible();
-  // Every item: the old one-row-per-item list.
-  await page.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: 'Every item' }).click();
-  await expect(page).toHaveURL(/show=items/);
-  await expect(page.getByTestId('product-list').getByRole('listitem')).toHaveCount(4);
+  // Products (ADR-058): every product, one compact card for the 4 items — company, items and pieces
+  // as coloured chips, the purchase line (ADR-057), every size with its pieces; no MRP, QR code,
+  // folding list or print link, and no search, filters or view switch on the page.
+  await page.goto('/admin/products');
+  const card = productCard(page, name);
+  await expect(card).toHaveCount(1);
+  await expect(card.getByTestId('card-company')).toHaveText(company);
+  await expect(card.getByTestId('card-items')).toHaveText('Items: 4');
+  await expect(card.getByTestId('card-pieces')).toHaveText('8 pcs');
+  const line = card.getByTestId('stock-value');
+  await expect(line.getByTestId('value-pieces')).toHaveText('8 pcs');
+  await expect(line.getByTestId('value-per-piece')).toHaveText('₹800.00');
+  await expect(line.getByTestId('value-total')).toHaveText('₹6,400.00');
+  await expect(card.getByTestId('design-sizes')).toHaveText('M · 2L · 2XL · 2XXL · 2');
+  await expect(card).not.toContainText('MRP');
+  await expect(card.getByRole('img')).toHaveCount(0);
+  await expect(card).not.toContainText(/Show \d|Print tags/);
+  await expect(page.getByRole('search')).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Show' })).toHaveCount(0);
+  await expect(page.getByTestId('products-summary')).toContainText(/^Designs: \d+ · Items: \d+ · In stock: \d+ pcs$/);
 
   // All tags: the same card; its 4 real tags fold out; Every tag shows them all at once.
   await page.goto(`/admin/labels?q=${encodeURIComponent(name)}`);
@@ -1091,13 +1090,13 @@ test('owner makes a salesman a catalog person; they get catalog screens but not 
   await expect(page.getByLabel(/purchase price/i)).toHaveCount(0);
   // Products: Select (its only action, Delete, is the owner's) is not offered.
   await page.goto('/admin/products');
-  await expect(page.getByTestId('design-list').getByTestId('design-card').first()).toBeVisible();
+  const firstCard = page.getByTestId('design-list').getByTestId('product-card').first();
+  await expect(firstCard).toBeVisible();
   await expect(page.getByTestId('select-products')).toHaveCount(0);
-  // Cards and rows show the pieces only — no purchase price, no total (ADR-057).
-  await expect(page.getByTestId('stock-value').first()).toHaveText(/^\d+ pcs in stock$/);
-  await expect(page.getByTestId('value-total')).toHaveCount(0);
-  await page.goto('/admin/products?show=items');
-  await expect(page.getByTestId('row-value').first()).toHaveText(/^-?\d+ pcs$/);
+  // Cards show company, items and pieces only — no purchase line, no ₹ at all (ADR-057/058).
+  await expect(firstCard.getByTestId('card-pieces')).toHaveText(/^\d+ pcs$/);
+  await expect(page.getByTestId('stock-value')).toHaveCount(0);
+  await expect(page.getByTestId('design-list')).not.toContainText('₹');
   for (const path of ['/admin/dashboard', '/admin/staff', '/admin/settings', '/admin/activity']) {
     await page.goto(path);
     await expect(page, `${path} is owner-only`).toHaveURL(/\/pos$/);
@@ -1368,9 +1367,8 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   await expect(page.getByTestId('item-pills')).toContainText('Child');
   await expect(page.getByTestId('item-pills')).not.toContainText('Adult');
   await expect(page.getByText(barcode!).first()).toBeVisible();
-  await page.goto(`/admin/products?q=${run}&show=items`); // one row per item: still exactly one
-  await expect(page.getByText(`Chikan Kurta Long ${run}`)).toHaveCount(1);
-  await expect(page.getByText(`Chikan Kurta ${run}`, { exact: true })).toHaveCount(0);
+  await page.goto('/admin/products'); // still exactly one item with that name
+  await expect(productCard(page, `Chikan Kurta Long ${run}`).getByTestId('card-items')).toHaveText(['Items: 1']);
 });
 
 test('clear stock: owner only, two steps, and a wrong PIN changes nothing', async ({ page }) => {

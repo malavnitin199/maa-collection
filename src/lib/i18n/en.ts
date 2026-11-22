@@ -136,6 +136,7 @@ const base = {
   'common.cancel': 'Cancel',
   'common.saving': 'Saving…',
   'common.loading': 'Loading…',
+  'common.na': 'N/A',
 
   // Completion card
   'done.sale': 'Sale done',

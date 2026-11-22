@@ -226,9 +226,6 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
   const productsTab = (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-        <Link href={`/admin/products?supplier=${supplier.id}`} className={link}>
-          {t('cat.sup.viewAll', { n: items.length })}
-        </Link>
         <Link href={`/admin/labels?supplier=${supplier.id}&group=delivery`} className={link}>
           {t('stk.lib.companyTags')}
         </Link>

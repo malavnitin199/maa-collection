@@ -131,6 +131,7 @@ const base = {
   'common.cancel': 'रद्द करें',
   'common.saving': 'सेव हो रहा है…',
   'common.loading': 'लोड हो रहा है…',
+  'common.na': 'N/A',
 
   'done.sale': 'बिक्री हो गई',
   'done.exchange': 'एक्सचेंज हो गया',

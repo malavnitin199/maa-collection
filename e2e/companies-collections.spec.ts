@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { productCard } from './products';
 
 // Owner's feedback 2026-11-22 (ADR-051): "Companies" everywhere; any company can be deleted after a
 // confirmation (its items stay, with no company); the company is optional on items; Home → Collections.
@@ -78,11 +79,10 @@ test('a company with an item is deleted from its page; the item stays with no co
   await expect(page.getByTestId('bill-detail-total')).toHaveText(total);
   await expect(page.getByTestId('bill-companies')).toContainText(`${company} (deleted)`);
 
-  // Both items are still there.
-  for (const name of [`Kept Kurta ${tag}`, `Free Kurta ${tag}`]) {
-    await page.goto(`/admin/products?q=${encodeURIComponent(name)}&show=items`);
-    await expect(page.getByTestId('product-list').getByRole('listitem')).toHaveCount(1);
-  }
+  // Both items are still there; the kept one has no company now (N/A).
+  await page.goto('/admin/products');
+  for (const name of [`Kept Kurta ${tag}`, `Free Kurta ${tag}`]) await expect(productCard(page, name)).toHaveCount(1);
+  await expect(productCard(page, `Kept Kurta ${tag}`).getByTestId('card-company')).toHaveText('N/A');
 });
 
 test('Home → Collections: items in each, rename in place, delete only an empty one after a confirmation', async ({ page }, info) => {

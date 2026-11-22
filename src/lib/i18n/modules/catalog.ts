@@ -5,9 +5,6 @@
  */
 export const catalogEn = {
   // Shared bits
-  'cat.supplier': 'Company',
-  'cat.allSuppliers': 'All companies',
-  'cat.allCategories': 'All categories',
   'cat.inactive': 'inactive',
   'cat.inactiveParen': '(inactive)',
   'cat.purchase': 'purchase {amount}',
@@ -22,16 +19,12 @@ export const catalogEn = {
   'cat.mrpRupees': 'MRP (₹)',
 
   // Products list
-  'cat.products.searchPlaceholder': 'Search name, SKU, barcode',
-  'cat.products.search': 'Search',
   'cat.products.noPhoto': 'no photo',
   'cat.products.none': 'No products found.',
   // Combined view (plan v14): one card per design = same name, company and MRP
   'cat.view.show': 'Show',
   'cat.view.combined': 'Combined',
-  'cat.view.items': 'Every item',
   'cat.design.summary': 'Designs: {designs} · Items: {items} · In stock: {pcs} pcs',
-  'cat.design.hint': 'Items with the same name, company and MRP are shown together. Each piece keeps its own tag and barcode.',
   'cat.design.sizes': 'Sizes',
   'cat.design.colours': 'Colours',
   'cat.design.count': 'Items: {items} · In stock: {pcs} pcs',
@@ -40,15 +33,11 @@ export const catalogEn = {
   'cat.design.sellingRange': 'selling {min}–{max}',
   // Products (ADR-057): pieces × purchase price per piece = total, in place of the MRP
   'cat.design.items': 'Items: {items}',
-  'cat.value.pieces': 'Pieces',
-  'cat.value.perPiece': 'Per piece',
-  'cat.value.total': 'Total',
   'cat.value.pcs': '{pcs} pcs',
-  'cat.value.inStock': '{pcs} pcs in stock',
-  'cat.value.noCost': 'No purchase price',
   'cat.value.missing': '{pcs} pcs have no purchase price',
-  'cat.design.showItems.one': 'Show 1 item',
-  'cat.design.showItems.other': 'Show {n} items',
+  // Products cards (ADR-058): a hidden design (or some of its items) stays in the list, marked
+  'cat.card.hidden': 'Hidden',
+  'cat.card.hiddenN': '{n} hidden',
   'cat.design.showTags.one': 'Show 1 tag',
   'cat.design.showTags.other': 'Show {n} tags',
   'cat.design.printTags': 'Print tags',
@@ -89,8 +78,6 @@ export const catalogEn = {
   'bulk.sheet': '{action} · {n} selected',
   'bulk.printN': 'Print {n} selected',
   'bulk.printMax': 'Up to {n} items at a time for printing.',
-  'cat.view.hidden': 'Hidden items',
-  'cat.products.noneHidden': 'No hidden items.',
   'cat.company.previous': 'Previous companies',
   'cat.company.new': '+ New company…',
   'cat.company.newName': 'New company name',
@@ -246,7 +233,6 @@ export const catalogEn = {
   'cat.sup.receiptLine': '{lines} items · {units} pcs',
   'cat.sup.productsFrom': 'Products from {name}',
   'cat.sup.noneYet': 'None yet.',
-  'cat.sup.viewAll': 'View all {n} products →',
   'cat.sup.edit': 'Edit company details',
   'cat.sup.loading': 'Loading company…',
   // Company page — accounts (2026-11-20)
@@ -345,7 +331,6 @@ export const catalogEn = {
   'cat.cat.sizesNotSet': 'not set',
   'cat.cat.edit': 'Edit',
   'cat.cat.save': 'Save category',
-  'cat.cat.viewProducts': 'View its products →',
   'cat.cat.subtitle': 'The kinds of items you sell. Each has a short code used in SKUs and the sizes it comes in.',
 
   // Needs attention (catalog check)
@@ -444,9 +429,6 @@ export const catalogEn = {
 
 export const catalogHi: Record<keyof typeof catalogEn, string> = {
   // Shared bits
-  'cat.supplier': 'कंपनी',
-  'cat.allSuppliers': 'सभी कंपनियाँ',
-  'cat.allCategories': 'सभी कैटेगरी',
   'cat.inactive': 'बंद',
   'cat.inactiveParen': '(बंद)',
   'cat.purchase': 'खरीद दाम {amount}',
@@ -461,16 +443,12 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.mrpRupees': 'MRP (₹)',
 
   // Products list
-  'cat.products.searchPlaceholder': 'नाम, SKU, बारकोड से खोजें',
-  'cat.products.search': 'खोजें',
   'cat.products.noPhoto': 'फ़ोटो नहीं',
   'cat.products.none': 'कोई प्रोडक्ट नहीं मिला।',
   // एक साथ (plan v14): एक ही नाम, कंपनी और MRP = एक डिज़ाइन कार्ड
   'cat.view.show': 'दिखाएँ',
   'cat.view.combined': 'एक साथ',
-  'cat.view.items': 'हर आइटम',
   'cat.design.summary': 'डिज़ाइन: {designs} · आइटम: {items} · स्टॉक में: {pcs} पीस',
-  'cat.design.hint': 'एक ही नाम, कंपनी और MRP वाले आइटम एक साथ दिखते हैं। हर पीस का अपना टैग और बारकोड रहता है।',
   'cat.design.sizes': 'साइज़',
   'cat.design.colours': 'रंग',
   'cat.design.count': 'आइटम: {items} · स्टॉक में: {pcs} पीस',
@@ -479,15 +457,11 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.design.sellingRange': 'बिक्री दाम {min}–{max}',
   // प्रोडक्ट (ADR-057): पीस × प्रति पीस खरीद दाम = कुल, MRP की जगह
   'cat.design.items': 'आइटम: {items}',
-  'cat.value.pieces': 'पीस',
-  'cat.value.perPiece': 'प्रति पीस',
-  'cat.value.total': 'कुल',
   'cat.value.pcs': '{pcs} पीस',
-  'cat.value.inStock': 'स्टॉक में {pcs} पीस',
-  'cat.value.noCost': 'खरीद दाम नहीं',
   'cat.value.missing': '{pcs} पीस का खरीद दाम नहीं',
-  'cat.design.showItems.one': '1 आइटम दिखाएँ',
-  'cat.design.showItems.other': '{n} आइटम दिखाएँ',
+  // प्रोडक्ट कार्ड (ADR-058): छिपा डिज़ाइन (या उसके कुछ आइटम) सूची में रहता है, निशान के साथ
+  'cat.card.hidden': 'छिपा',
+  'cat.card.hiddenN': '{n} छिपे',
   'cat.design.showTags.one': '1 टैग दिखाएँ',
   'cat.design.showTags.other': '{n} टैग दिखाएँ',
   'cat.design.printTags': 'टैग प्रिंट करें',
@@ -527,8 +501,6 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'bulk.sheet': '{action} · {n} चुने हुए',
   'bulk.printN': 'चुने हुए {n} प्रिंट करें',
   'bulk.printMax': 'प्रिंट के लिए एक बार में {n} आइटम तक।',
-  'cat.view.hidden': 'छिपे आइटम',
-  'cat.products.noneHidden': 'कोई छिपा आइटम नहीं।',
   'cat.company.previous': 'पहले की कंपनियाँ',
   'cat.company.new': '+ नई कंपनी…',
   'cat.company.newName': 'नई कंपनी का नाम',
@@ -683,7 +655,6 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.sup.receiptLine': '{lines} आइटम · {units} पीस',
   'cat.sup.productsFrom': '{name} के प्रोडक्ट',
   'cat.sup.noneYet': 'अभी कोई नहीं।',
-  'cat.sup.viewAll': 'सभी {n} प्रोडक्ट देखें →',
   'cat.sup.edit': 'कंपनी की जानकारी बदलें',
   'cat.sup.loading': 'कंपनी लोड हो रही है…',
   // Company page — accounts (2026-11-20)
@@ -782,7 +753,6 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.cat.sizesNotSet': 'तय नहीं',
   'cat.cat.edit': 'बदलें',
   'cat.cat.save': 'कैटेगरी सेव करें',
-  'cat.cat.viewProducts': 'इसके प्रोडक्ट देखें →',
   'cat.cat.subtitle': 'आप जिस तरह का सामान बेचते हैं। हर कैटेगरी का एक छोटा कोड होता है जो SKU में लगता है, और उसके साइज़।',
 
   // Needs attention (catalog check)

@@ -21,7 +21,6 @@ export function DesignCard({
   qrValue,
   printHref,
   expandLabel,
-  value,
   children,
 }: {
   design: DesignGroup<{ id: string }>;
@@ -33,11 +32,6 @@ export function DesignCard({
   qrValue: string | null;
   printHref: string | null;
   expandLabel: string;
-  /**
-   * Products (ADR-057): the highlighted strip — pieces × purchase price = total — in place of
-   * the MRP and count lines. All tags passes none and keeps them.
-   */
-  value?: ReactNode;
   /** The separate items or tags, shown when opened. */
   children: ReactNode;
 }) {
@@ -69,24 +63,14 @@ export function DesignCard({
           <Link href={href} className="block leading-tight font-semibold hover:underline">
             {design.name}
           </Link>
-          {value ? (
-            <p className={`mt-0.5 text-xs ${muted}`}>
-              {design.supplierName ?? t('stk.lib.noCompany')} · {t('cat.design.items', { items: design.items.length })}
-            </p>
-          ) : (
-            <>
-              <p className={`mt-0.5 text-xs ${muted}`}>
-                {design.supplierName ?? t('stk.lib.noCompany')} · {t('cat.design.mrp', { mrp: formatPaise(design.mrpPaise) })}
-                {selling && ` · ${selling}`}
-              </p>
-              <p className={`text-xs ${muted}`}>{t('cat.design.count', { items: design.items.length, pcs: design.pieces })}</p>
-            </>
-          )}
+          <p className={`mt-0.5 text-xs ${muted}`}>
+            {design.supplierName ?? t('stk.lib.noCompany')} · {t('cat.design.mrp', { mrp: formatPaise(design.mrpPaise) })}
+            {selling && ` · ${selling}`}
+          </p>
+          <p className={`text-xs ${muted}`}>{t('cat.design.count', { items: design.items.length, pcs: design.pieces })}</p>
         </div>
         {qrValue && <QrCode value={qrValue} label={t('cat.design.qr', { name: design.name })} className="h-14 w-14 shrink-0 rounded bg-white p-0.5" />}
       </div>
-
-      {value}
 
       <dl className="flex flex-col gap-1.5">
         <div className="flex items-baseline gap-2">

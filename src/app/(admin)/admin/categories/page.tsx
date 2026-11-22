@@ -130,11 +130,6 @@ function CategoryItem({ c, t, locale, choices, move }: { c: CategoryRow; t: T; l
           </summary>
           <div className="mt-3 flex flex-col gap-3">
             <CategoryForm action={updateCategoryAction.bind(null, c.id)} initial={c} submitLabel={t('cat.cat.save')} sections={move ? undefined : choices} />
-            {c.productCount > 0 && (
-              <Link href={`/admin/products?category=${c.id}`} className={`text-sm ${link}`}>
-                {t('cat.cat.viewProducts')}
-              </Link>
-            )}
           </div>
         </details>
         {move && choices.length > 0 && <MoveTypeForm action={moveTypeAction.bind(null, c.id)} sections={choices} typeName={localName(c, locale)} />}
