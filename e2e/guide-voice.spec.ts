@@ -120,7 +120,7 @@ test('the New item lesson follows today’s steps: collection, category, four bo
   const story = page.getByRole('dialog', { name: 'New item' });
   const text = story.getByTestId('story-text');
   await expect(story.getByTestId('story-count')).toHaveText('1 of 5');
-  await expect(text).toHaveText('Add new stock → pick the collection');
+  await expect(text).toHaveText('New item → pick the collection'); // staff: Catalog → New item; the owner: Home → Add new stock
   await story.getByRole('button', { name: 'Next step' }).click();
   await expect(text).toHaveText('What is it? Tap the category');
   await story.getByRole('button', { name: 'Next step' }).click();
@@ -131,6 +131,24 @@ test('the New item lesson follows today’s steps: collection, category, four bo
   await expect(text).toHaveText('Sizes & more → tap each size');
   await story.getByRole('button', { name: 'Next step' }).click();
   await expect(text).toHaveText('Save & print tags');
+});
+
+test('the Guide shows the newest screens: the photo box, selecting a few (ADR-068 / 069)', async ({ page }) => {
+  await fakeVoice(page);
+  await page.goto('/guide#item');
+  const item = page.getByRole('dialog', { name: 'The item page' });
+  await expect(item.getByTestId('story-count')).toHaveText('1 of 4');
+  await item.getByRole('button', { name: 'Next step' }).click();
+  await expect(item.getByTestId('story-text')).toHaveText('Tap the photo box');
+  // The picture is the real photo box and its sheet, not a camera.
+  for (const label of ['Add photo', '📷 Take photo', '🖼 Gallery']) await expect(item.getByText(label, { exact: true })).toBeVisible();
+
+  await page.goto('/guide#print');
+  const print = page.getByRole('dialog', { name: 'Print tags' });
+  await expect(print.getByTestId('story-count')).toHaveText('1 of 5');
+  await print.getByRole('button', { name: 'Next step' }).click();
+  await expect(print.getByTestId('story-text')).toHaveText('Only some? Select → tick → Print');
+  for (const label of ['2 selected', 'Select all', 'Cancel', 'Print 2 selected']) await expect(print.getByText(label, { exact: true })).toBeVisible();
 });
 
 test('practice sale at the end of the Sell lesson: above MRP is refused, then "Sale done" — nothing saved', async ({ page }) => {

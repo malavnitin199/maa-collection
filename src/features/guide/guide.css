@@ -190,3 +190,16 @@
   from { opacity: 0; transform: translateX(18px) scale(0.98); }
   to { opacity: 1; transform: none; }
 }
+
+/* Hara (ADR-063): the guide phone's top band looks like the real header — white, the name in
+   green, a green MC square, light-green round buttons (the tapped one solid green). The app's own
+   .header-* classes are not reused: they are sized for the real header. Other themes keep the
+   dyed band. */
+[data-theme="hara"] .st-band { background: var(--surface); color: var(--foreground); box-shadow: 0 1px 0 var(--line); }
+[data-theme="hara"] .st-brand { color: var(--b-600); }
+[data-theme="hara"] .st-badge { background: var(--b-600); color: #fff; --tw-ring-color: transparent; }
+[data-theme="hara"] .st-head-btn { background: var(--b-50); color: var(--b-700); box-shadow: inset 0 0 0 1px var(--line); }
+[data-theme="hara"] .st-head-btn.st-head-btn-on { background: var(--b-600); color: #fff; box-shadow: none; }
+[data-mode="dark"][data-theme="hara"] .st-brand { color: var(--b-300); }
+[data-mode="dark"][data-theme="hara"] .st-head-btn { background: rgb(47 158 72 / 0.14); color: var(--b-200); }
+[data-mode="dark"][data-theme="hara"] .st-head-btn.st-head-btn-on { background: var(--b-500); color: #fff; }

@@ -85,14 +85,16 @@ const HI = {
     <><strong>क्या ठीक करना बाकी है?</strong> → कैटलॉग → <strong>ध्यान दें</strong>: बिना फ़ोटो, कंपनी या स्टॉक वाले आइटम।</>,
   ],
   owner: [
-    <><strong>कंपनियाँ</strong>: होम → <strong>कंपनियाँ</strong> वाली लाइन → खोजें और कंपनी खोलें: किसी भी समय के उसके बिल, खरीद, <strong>अभी बकाया</strong> और पीस। पैसे दिए? <strong>भुगतान → भुगतान दर्ज करें</strong>। <strong>यह कंपनी हटाएँ</strong> करने पर भी उसके आइटम और बिल बने रहते हैं।</>,
-    <><strong>बिल</strong>: होम → <strong>बिल</strong> → <strong>+ नया बिल</strong> (या प्रोडक्ट पर <strong>🧾 बिल बनाएँ</strong>): कंपनी ज़रूरी नहीं; हर प्रोडक्ट के साइज़ दबाएँ या उसके टैग <strong>स्कैन</strong> करें; <strong>मात्रा</strong> और <strong>खरीद ₹</strong> कागज़ के बिल से मिलाएँ → <strong>आगे: बिल जाँचें</strong> → बिल नंबर और तारीख → <strong>बिल सेव करें</strong>। पैसे देने पर <strong>चुकता करें</strong>।</>,
+    <><strong>कंपनियाँ</strong>: होम → <strong>कंपनियाँ</strong> वाली लाइन → खोजें और कंपनी खोलें: किसी भी समय के उसके बिल, खरीद, <strong>अभी बकाया</strong> और पीस। पैसे दिए? <strong>भुगतान</strong> → रकम → <strong>भुगतान सेव करें</strong>। <strong>यह कंपनी हटाएँ</strong> करने पर भी उसके आइटम और बिल बने रहते हैं।</>,
+    <><strong>बिल</strong>: होम → <strong>बिल</strong> → <strong>+ नया बिल</strong> (या प्रोडक्ट पर <strong>🧾 बिल बनाएँ</strong>): कंपनी ज़रूरी नहीं; हर प्रोडक्ट के साइज़ दबाएँ या उसके टैग <strong>स्कैन</strong> करें; <strong>मात्रा</strong> और <strong>खरीद ₹</strong> कागज़ के बिल से मिलाएँ → <strong>आगे: बिल जाँचें</strong> → बिल नंबर और तारीख → <strong>बिल सेव करें</strong>। बाद में <strong>✎ बिल बदलें</strong> से बदल सकते हैं। पैसे देने पर <strong>चुकता करें</strong>।</>,
     <><strong>कलेक्शन और कैटेगरी</strong>: होम → <strong>कलेक्शन</strong> से कैटेगरी खुलती है: हर कलेक्शन उसके प्रोडक्ट के साथ, उसके आँकड़े (कैटेगरी, प्रोडक्ट, पीस, स्टॉक की कीमत), और हर कैटेगरी पर <strong>✎</strong> (नाम, कोड, साइज़) और <strong>🗑</strong> (सिर्फ़ जब उसमें कोई आइटम न हो)। पुरुष, महिला, जीन्स, जैकेट और शर्ट हमेशा रहते हैं (🔒)। <strong>+ कैटेगरी जोड़ें</strong>, <strong>+ कलेक्शन जोड़ें</strong>।</>,
     <><strong>स्टाफ़ और अधिकार</strong>: हर व्यक्ति को PIN के साथ जोड़ें। हर सेल्समैन के लिए और अधिकार टिक करें: <em>कैटलॉग</em> (प्रोडक्ट, फ़ोटो, लेबल), <em>दाम</em> (MRP/बिक्री दाम बदलना), <em>स्टॉक</em> (स्टॉक प्राप्त करना), <em>खरीद दाम</em> (कोड दाम देखना — सिर्फ़ भरोसेमंद स्टाफ़)। जो चला गया उसे <strong>हटाएँ</strong>; उसकी पुरानी बिक्री बनी रहती है।</>,
     <><strong>कोड दाम</strong>: सेटिंग → 10 अक्षरों का एक शब्द चुनें; फिर लेबल पर खरीद दाम ऐसे अक्षरों में दिखेगा जो सिर्फ़ आपका स्टाफ़ पढ़ सके।</>,
     <><strong>दाम</strong>: प्रोडक्ट खोलें → <strong>✎ जानकारी बदलें</strong> → MRP, बिक्री, खरीद: हर साइज़ के लिए एक दाम (<em>साइज़ के हिसाब से</em> लिखा बॉक्स खाली छोड़ें तो हर साइज़ का अपना दाम रहता है)। नए आइटम में बिक्री दाम के पास <strong>%</strong> दाम निकालता है। पुरानी बिक्री के दाम नहीं बदलते।</>,
+    <><strong>मंज़ूरी</strong>: होम → <strong>मंज़ूरी</strong> (<em>n एंट्री बाकी</em>) → हर दाम MRP से मिलाएँ → <strong>मंज़ूर</strong>, <strong>इस दिन की सब मंज़ूर करें</strong> या <strong>सब कुछ मंज़ूर करें</strong>। लाल कार्ड मतलब खरीद दाम से कम में बिका। गलत है? <strong>नामंज़ूर</strong> → कारण चुनें → <strong>एंट्री नामंज़ूर करें</strong> (स्कैन वाली बिक्री के पीस वापस स्टॉक में चले जाते हैं)। सिर्फ़ मंज़ूर एंट्री ही कुल में गिनी जाती हैं; आपकी अपनी एंट्री तुरंत गिनी जाती हैं।</>,
     <><strong>नज़र रखें</strong>: होम पर आज की बिक्री और आपकी मंज़ूरी के लिए बाकी एंट्री दिखती हैं; रिपोर्ट में महीना, मुनाफ़ा और हर सेल्समैन; गतिविधि में हर बिक्री और एक्सचेंज की सूची है।</>,
     <><strong>रिपोर्ट</strong>: सबसे ज़्यादा बिकने वाले, जो नहीं बिक रहा, किसी भी समय की कैटेगरी / कंपनी / सेल्समैन के हिसाब से बिक्री, और अकाउंटेंट के लिए <strong>CSV डाउनलोड</strong> (बिक्री, स्टॉक)।</>,
+    <><strong>एक साथ कई</strong>: <strong>चुनें</strong> दबाएँ (या किसी कार्ड को दबाकर रखें) → कार्ड टिक करें → नीचे की पट्टी: <strong>सब चुनें</strong> · <strong>रद्द करें</strong> · उस स्क्रीन का काम — प्रोडक्ट: <strong>हटाएँ</strong> (मालिक; पुरानी बिक्री बनी रहती है); सारे टैग: <strong>चुने हुए n प्रिंट करें</strong>; कंपनियाँ: <strong>हटाएँ</strong>; मंज़ूरी: <strong>n मंज़ूर करें</strong> / <strong>नामंज़ूर करें</strong>। हटाएँ और नामंज़ूर पहले पूछते हैं। दूसरी स्क्रीन खोलते ही टिक हट जाते हैं।</>,
   ],
   plan: [
     <><strong>एक-एक शेल्फ़</strong> करके चलें (एक बार में एक कैटेगरी) — ऐप अगले आइटम के लिए कैटेगरी याद रखता है।</>,
@@ -257,14 +259,16 @@ export default async function HelpPage() {
             hi
               ? HI.owner
               : [
-                  <><strong>Companies</strong>: Home → the <strong>Companies</strong> line → search and open a company: its bills, purchases, <strong>dues now</strong> and pieces for any period. Paid them? <strong>Payments → Record a payment</strong>. <strong>Delete this company</strong> keeps its items and bills.</>,
-                  <><strong>Bills</strong>: Home → <strong>Bills</strong> → <strong>+ New bill</strong> (or <strong>🧾 Make bill</strong> on a product): the company is optional; tap each product&apos;s sizes or <strong>Scan</strong> its tags; match <strong>Qty</strong> and <strong>Purchase ₹</strong> to the paper bill → <strong>Next: check bill</strong> → bill no. and date → <strong>Save bill</strong>. <strong>Mark paid</strong> when you pay it.</>,
+                  <><strong>Companies</strong>: Home → the <strong>Companies</strong> line → search and open a company: its bills, purchases, <strong>dues now</strong> and pieces for any period. Paid them? <strong>Payments</strong> → amount → <strong>Save payment</strong>. <strong>Delete this company</strong> keeps its items and bills.</>,
+                  <><strong>Bills</strong>: Home → <strong>Bills</strong> → <strong>+ New bill</strong> (or <strong>🧾 Make bill</strong> on a product): the company is optional; tap each product&apos;s sizes or <strong>Scan</strong> its tags; match <strong>Qty</strong> and <strong>Purchase ₹</strong> to the paper bill → <strong>Next: check bill</strong> → bill no. and date → <strong>Save bill</strong>. Later, <strong>✎ Edit bill</strong> changes it. <strong>Mark paid</strong> when you pay it.</>,
                   <><strong>Collections & categories</strong>: Home → <strong>Collections</strong> opens Categories: each collection with its products, its figures (categories, products, pieces, stock value), and every category with <strong>✎</strong> (name, code, sizes) and <strong>🗑</strong> (only when it has no items). Men, Women, Jeans, Jacket and Shirt always stay (🔒). <strong>+ Add category</strong>, <strong>+ Add collection</strong>.</>,
                   <><strong>Staff & permissions</strong>: add each person with a PIN. Tick extra rights per salesman: <em>Catalog</em> (products, photos, labels), <em>Prices</em> (change MRP/selling price), <em>Stock</em> (receive stock), <em>Purchase price</em> (see the code price — trusted staff only). <strong>Remove</strong> someone who left; their past sales stay.</>,
                   <><strong>Code price</strong>: Settings → choose a 10-letter word; labels then show the purchase price in letters only your staff can read.</>,
                   <><strong>Prices</strong>: open a product → <strong>✎ Edit details</strong> → MRP, Selling, Purchase: one price for every size (a box marked <em>By size</em> left empty keeps each size&apos;s own price). In New item, <strong>%</strong> beside the sale price works it out. Past sales keep their prices.</>,
+                  <><strong>Approvals</strong>: Home → <strong>Approvals</strong> (<em>n entries waiting</em>) → check each price against the MRP → <strong>Approve</strong>, <strong>Approve all for this day</strong> or <strong>Approve everything</strong>. A red card was sold below the purchase price. Wrong? <strong>Reject</strong> → choose a reason → <strong>Reject entry</strong> (a scanned sale&apos;s pieces go back into stock). Only approved entries count in the totals; your own count at once.</>,
                   <><strong>Track</strong>: Home shows today&apos;s sales and what is waiting for you; Reports has the month, profit and each salesperson; Activity lists every sale and exchange.</>,
                   <><strong>Reports</strong>: best sellers, what is not selling, sales by category / company / salesperson for any period, and <strong>CSV downloads</strong> (sales, stock) for your accountant.</>,
+                  <><strong>Many at once</strong>: tap <strong>Select</strong> (or press and hold a card) → tick the cards → the bar at the bottom: <strong>Select all</strong> · <strong>Cancel</strong> · the screen&apos;s action — Products: <strong>Delete</strong> (owner; past sales stay); All tags: <strong>Print n selected</strong>; Companies: <strong>Delete</strong>; Approvals: <strong>Approve n</strong> / <strong>Reject</strong>. Delete and Reject ask first. Opening another screen clears the ticks.</>,
                 ]
           }
         />
@@ -342,11 +346,14 @@ export default async function HelpPage() {
             [
               ['help.faq.camera', 'help.faq.camera.fix'],
               ['help.faq.read', 'help.faq.read.fix'],
+              ['help.faq.byHand', 'help.faq.byHand.fix'],
               ['help.faq.notFound', 'help.faq.notFound.fix'],
               ['help.faq.onlyLeft', 'help.faq.onlyLeft.fix'],
+              ['help.faq.offline', 'help.faq.offline.fix'],
               ['help.faq.noRight', 'help.faq.noRight.fix'],
               ['help.faq.pin', 'help.faq.pin.fix'],
               ['help.faq.photo', 'help.faq.photo.fix'],
+              ['help.faq.plain', 'help.faq.plain.fix'],
             ] as const
           ).map(([q, a]) => (
             <div key={q}>

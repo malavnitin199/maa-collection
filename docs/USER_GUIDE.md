@@ -220,7 +220,7 @@ A **collection** is what you add in New item (one save, e.g. Jeans in 6 sizes) o
 The figures on top, for the period you pick (**All time · This month · Last 30 days · This year · Dates…**): **Bills** (how many are still open and how many paid), **Purchases**, **Dues now** (what you still owe, all time), **Pieces** (and items), **Collections** (designs bought) and the **Last bill**. Purchases and dues show only to people with the *Purchase price* right. Below: **+ New item** and **Receive more**, then tabs:
 
 - **Bills** — every bill (deliveries with the same bill no. are one bill), newest first, **ten at a time** (Previous / Next; the newest 100): date, bill no., items · pieces · purchase, and **Due ₹…** / **Paid**. Open a bill's items, print its tags, or tap **Mark paid** when you have paid it in full. *(est.)* means the purchase price was not recorded on the day of that delivery, so today's price is used.
-- **Payments** — **Record a payment**: amount, day, **for bill no.** (pick the bill; or *Running account* for an advance / a lump sum), note. A bill shows *Paid* once the payments against its number cover it. Dues = all purchases − all payments.
+- **Payments** — the **Record a payment** form, then **Save payment**: amount, day, **for bill no.** (pick the bill; or *Running account* for an advance / a lump sum), note. A bill shows *Paid* once the payments against its number cover it. Dues = all purchases − all payments.
 - **Products** — the company's collections with sizes, MRP and pieces in stock; **Company tags**.
 - **By type** — what you bought from them by section › category.
 - **Details** — contact, phone, **location**, **Working since**, **Added on**, GSTIN, notes; **Edit company details**.
@@ -270,7 +270,7 @@ Add the photo while making the item (**New item**, **Tag old stock**), or later 
 
 ## 5a. Sales team dashboard (owner)
 
-**Team** in the menu: number of salesmen; **share of sales** per seller (bar, amount, %); **each seller day by day** (small chart per person, same scale — tap a day for its amount; "below MRP" = how much they bargain down on average); and a table with every number. Pick Today / 7 days / 30 days / This month. A sale counts for the person chosen in *Credit sale to*; exchanges are included.
+**Team** in the menu: number of salesmen; **share of sales** per seller (bar, amount, %); **each seller day by day** (small chart per person, same scale — the best day and its amount under each chart; "below MRP" = how much they bargain down on average); and a table with every number. Pick Today / 7 days / 30 days / This month. A sale counts for the person chosen in *Credit sale to*; exchanges are included.
 
 ## 5b. Clear stock (owner)
 
@@ -308,7 +308,7 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 | New item (steps) | Collection, what it is, the purchase or the sale price | Company, product name (= category + number), sizes (= no size), pieces per size (= 1), counter price (= MRP), bill no., stock date (= today), brand (= none) |
 | Old form | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), brand (= company) |
 | Sale | Scan, quantity, price | Credit to a colleague |
-| Company | Name | Contact, phone, GSTIN, notes |
+| Company | Name | Contact, phone, GSTIN, location, working since, notes |
 
 ## 7. Tips for moving all old stock into the app
 
@@ -329,5 +329,5 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 | "Only N left in stock" | Stock in the app is lower than on the shelf; someone with *Stock* receives the missing pieces |
 | I can't see Catalog / Prices | Ask the owner to tick that right for you |
 | Wrong PIN | Check your name is selected; the owner can set a new PIN |
-| Photo won't upload | Better signal or a smaller photo; max 8 photos per product |
+| Photo won't upload | Better signal; photos are made small automatically. On a product's page a new photo replaces the old one on every size |
 | Printing from a phone | Labels page → Print → your printer, or "Save as PDF" |

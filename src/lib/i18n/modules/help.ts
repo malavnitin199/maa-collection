@@ -28,7 +28,8 @@ export const helpEn = {
   'help.sell.sellItem': 'Sell an item',
   'help.sell.bill': 'Many items, one bill',
   'help.sell.exchange': 'Exchange',
-  'help.sell.tip': '“My sales” shows your totals for today and this month, including sales you entered for others.',
+  'help.sell.tip':
+    '“My sales” shows your totals for today and this month, and the sales you entered for others. Your sales and exchanges count once the owner approves them; until then they are marked “Waiting”.',
   'help.catalog.title': 'Catalog & old stock (catalog / QC person)',
   'help.catalog.intro': 'Photos, details, barcodes and labels — including stock already in the shop.',
   'help.catalog.tagOne': 'Tag one item (about 30 seconds)',
@@ -37,7 +38,7 @@ export const helpEn = {
   'help.catalog.tipEnd': ': one entry creates all of them, each with its own barcode.',
   'help.catalog.more': 'New deliveries and more stock',
   'help.owner.title': 'For the owner',
-  'help.owner.intro': 'Companies, bills, collections, staff, prices and reports.',
+  'help.owner.intro': 'Companies, bills, collections, staff, prices, approvals and reports.',
 
   // Required vs optional table
   'help.req.title': 'What is required and what is optional',
@@ -57,7 +58,7 @@ export const helpEn = {
   'help.req.sale.optional': 'Credit to a colleague',
   'help.req.company': 'Company',
   'help.req.company.required': 'Name',
-  'help.req.company.optional': 'Contact, phone, GSTIN, notes',
+  'help.req.company.optional': 'Contact, phone, GSTIN, location, working since, notes',
 
   // Tips
   'help.tips.title': 'Tips & suggestions',
@@ -67,22 +68,29 @@ export const helpEn = {
 
   // Problems & fixes
   'help.faq.title': 'Problems & fixes',
-  'help.faq.intro': 'Camera, scanner, PIN, printing.',
+  'help.faq.intro': 'Camera, scanner, internet, PIN, printing.',
   'help.faq.camera': 'The camera does not open',
   'help.faq.camera.fix': 'Allow the camera for this site in the browser settings and reload. It only works on the https:// address.',
   'help.faq.read': 'The camera does not read the barcode',
   'help.faq.read.fix':
     'Hold the label flat in the green box, 15–20 cm away, in good light, and wait a second for focus. You can always type the number under the barcode.',
+  'help.faq.byHand': 'The tag is torn or missing',
+  'help.faq.byHand.fix': "On Sell tap “Tag won't scan? Enter by hand”: type the item name and the price the customer paid → Record sale. Stock does not change; the owner checks it.",
   'help.faq.notFound': '"No item found"',
   'help.faq.notFound.fix': 'This item has no label in the app yet. A catalog person can tag it with Tag old stock.',
   'help.faq.onlyLeft': '"Only N left in stock"',
   'help.faq.onlyLeft.fix': 'Stock in the app is lower than on the shelf. Ask a person with the Stock right to receive the missing pieces.',
+  'help.faq.offline': 'No internet at the counter',
+  'help.faq.offline.fix':
+    'Keep selling: sales are saved on this phone and sent by themselves when internet is back (or tap the strip under the shop’s name → Send now). Stay logged in on this phone. Exchange needs internet.',
   'help.faq.noRight': 'I cannot see Catalog or Prices',
   'help.faq.noRight.fix': 'The owner has not given you that right. Ask them to tick it in Staff & permissions.',
   'help.faq.pin': 'Wrong PIN',
   'help.faq.pin.fix': 'Check your name is selected. The owner can set a new PIN.',
   'help.faq.photo': 'Photo will not upload',
-  'help.faq.photo.fix': 'Try a smaller photo or better signal; photos are reduced automatically. Up to 8 photos per product.',
+  'help.faq.photo.fix': 'Try better signal; photos are made small automatically. On a product’s page, a new photo replaces the old one on every size.',
+  'help.faq.plain': 'My ticks, search or filter are gone',
+  'help.faq.plain.fix': 'This is normal: a screen starts plain when you come back to it. Ticks, searches and filters clear, and lists go back to page 1. Set them again.',
 
   // Bottom
   'help.stillStuck': 'Still stuck? Tell the owner what you tapped and what you saw.',
@@ -113,7 +121,8 @@ export const helpHi: Record<keyof typeof helpEn, string> = {
   'help.sell.sellItem': 'आइटम बेचें',
   'help.sell.bill': 'कई आइटम, एक बिल',
   'help.sell.exchange': 'एक्सचेंज',
-  'help.sell.tip': '“मेरी बिक्री” में आज और इस महीने का आपका कुल दिखता है, दूसरों के लिए आपकी दर्ज की हुई बिक्री भी।',
+  'help.sell.tip':
+    '“मेरी बिक्री” में आज और इस महीने का आपका कुल दिखता है, और दूसरों के लिए आपकी दर्ज की हुई बिक्री भी। आपकी बिक्री और एक्सचेंज मालिक के मंज़ूर करने के बाद गिने जाते हैं; तब तक उन पर “बाकी” लिखा रहता है।',
   'help.catalog.title': 'कैटलॉग और पुराना स्टॉक (कैटलॉग / QC वाले)',
   'help.catalog.intro': 'फ़ोटो, जानकारी, बारकोड और लेबल — दुकान में पहले से रखे स्टॉक के भी।',
   'help.catalog.tagOne': 'एक आइटम टैग करें (लगभग 30 सेकंड)',
@@ -122,7 +131,7 @@ export const helpHi: Record<keyof typeof helpEn, string> = {
   'help.catalog.tipEnd': ' खोलें: एक बार भरने से सब बन जाते हैं, हर एक का अपना बारकोड।',
   'help.catalog.more': 'नया माल और स्टॉक बढ़ाना',
   'help.owner.title': 'मालिक के लिए',
-  'help.owner.intro': 'कंपनियाँ, बिल, कलेक्शन, स्टाफ़, दाम और रिपोर्ट।',
+  'help.owner.intro': 'कंपनियाँ, बिल, कलेक्शन, स्टाफ़, दाम, मंज़ूरी और रिपोर्ट।',
 
   'help.req.title': 'क्या ज़रूरी है और क्या नहीं',
   'help.req.intro': 'ताकि जो खाने छोड़ सकते हैं उन पर समय बर्बाद न हो।',
@@ -140,7 +149,7 @@ export const helpHi: Record<keyof typeof helpEn, string> = {
   'help.req.sale.optional': 'किसी साथी के नाम बिक्री',
   'help.req.company': 'कंपनी',
   'help.req.company.required': 'नाम',
-  'help.req.company.optional': 'संपर्क, फ़ोन, GSTIN, नोट',
+  'help.req.company.optional': 'संपर्क, फ़ोन, GSTIN, जगह, कब से काम कर रहे हैं, नोट',
 
   'help.tips.title': 'काम के सुझाव',
   'help.tips.intro': 'दुकान का सारा पुराना स्टॉक जल्दी से ऐप में कैसे डालें।',
@@ -148,22 +157,29 @@ export const helpHi: Record<keyof typeof helpEn, string> = {
   'help.tips.habits': 'अच्छी आदतें',
 
   'help.faq.title': 'समस्याएँ और हल',
-  'help.faq.intro': 'कैमरा, स्कैनर, PIN, प्रिंटिंग।',
+  'help.faq.intro': 'कैमरा, स्कैनर, इंटरनेट, PIN, प्रिंटिंग।',
   'help.faq.camera': 'कैमरा नहीं खुलता',
   'help.faq.camera.fix': 'ब्राउज़र की सेटिंग में इस साइट को कैमरा की अनुमति दें और पेज फिर से खोलें। कैमरा सिर्फ़ https:// वाले पते पर चलता है।',
   'help.faq.read': 'कैमरा बारकोड नहीं पढ़ता',
   'help.faq.read.fix':
     'लेबल को हरे बॉक्स में सीधा रखें, 15–20 सेमी दूर, अच्छी रोशनी में, और फ़ोकस के लिए एक सेकंड रुकें। बारकोड के नीचे लिखा नंबर आप हमेशा डाल सकते हैं।',
+  'help.faq.byHand': 'टैग फटा है या है ही नहीं',
+  'help.faq.byHand.fix': 'बेचें टैब पर “टैग स्कैन नहीं हो रहा? हाथ से दर्ज करें” दबाएँ: आइटम का नाम और ग्राहक का दिया दाम लिखें → बिक्री दर्ज करें। स्टॉक नहीं बदलता; मालिक बाद में जाँचेंगे।',
   'help.faq.notFound': '"कोई आइटम नहीं मिला"',
   'help.faq.notFound.fix': 'इस आइटम का ऐप में अभी कोई लेबल नहीं है। कैटलॉग वाले इसे “पुराने स्टॉक पर टैग लगाएँ” से टैग कर सकते हैं।',
   'help.faq.onlyLeft': '"स्टॉक में सिर्फ़ N बचे हैं"',
   'help.faq.onlyLeft.fix': 'ऐप में स्टॉक शेल्फ़ से कम है। स्टॉक अधिकार वाले व्यक्ति से कहें कि कम पड़े पीस प्राप्त करें।',
+  'help.faq.offline': 'काउंटर पर इंटरनेट नहीं',
+  'help.faq.offline.fix':
+    'बेचते रहें: बिक्री इस फ़ोन में सेव होती है और इंटरनेट आते ही अपने आप दुकान को चली जाती है (या दुकान के नाम के नीचे की पट्टी दबाएँ → अभी भेजें)। इसी फ़ोन पर लॉग इन रहें। एक्सचेंज के लिए इंटरनेट चाहिए।',
   'help.faq.noRight': 'मुझे कैटलॉग या दाम नहीं दिखते',
   'help.faq.noRight.fix': 'मालिक ने आपको यह अधिकार नहीं दिया है। उनसे कहें कि “स्टाफ़ और अधिकार” में इसे टिक करें।',
   'help.faq.pin': 'PIN गलत है',
   'help.faq.pin.fix': 'देखें कि आपका ही नाम चुना है। मालिक नया PIN दे सकते हैं।',
   'help.faq.photo': 'फ़ोटो अपलोड नहीं हो रही',
-  'help.faq.photo.fix': 'छोटी फ़ोटो या अच्छे नेटवर्क में कोशिश करें; फ़ोटो अपने आप छोटी हो जाती है। एक प्रोडक्ट पर 8 फ़ोटो तक।',
+  'help.faq.photo.fix': 'अच्छे नेटवर्क में फिर कोशिश करें; फ़ोटो अपने आप छोटी हो जाती है। प्रोडक्ट के पेज पर नई फ़ोटो हर साइज़ पर पुरानी फ़ोटो की जगह ले लेती है।',
+  'help.faq.plain': 'मेरे टिक, खोज या फ़िल्टर हट गए',
+  'help.faq.plain.fix': 'यह सामान्य है: किसी स्क्रीन पर लौटने पर वह साफ़ खुलती है। टिक, खोज और फ़िल्टर हट जाते हैं, और सूची पहले पेज पर आ जाती है। ज़रूरत हो तो दोबारा चुनें।',
 
   'help.stillStuck': 'अब भी अटके हैं? मालिक को बताएँ कि आपने क्या दबाया और क्या दिखा।',
   'help.backToSelling': 'वापस बिक्री पर',

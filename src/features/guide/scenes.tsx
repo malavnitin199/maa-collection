@@ -48,8 +48,8 @@ const pill = 'flex items-center justify-center rounded-full px-3 py-2 text-[11px
 function Phone({ children, band, dock }: { children: React.ReactNode; band?: React.ReactNode; dock?: React.ReactNode }) {
   return (
     <div className="st-root relative flex h-[330px] w-[208px] flex-col overflow-hidden rounded-[2rem] border-[6px] border-zinc-800 bg-[var(--background)] shadow-xl dark:border-zinc-600">
-      <div className="bg-brand-800 px-3 pt-2 pb-1 text-white dark:bg-brand-950">
-        {band ?? <p className="font-display text-[11px]">Maa Collection</p>}
+      <div className="st-band bg-brand-800 px-3 pt-2 pb-1 text-white dark:bg-brand-950">
+        {band ?? <p className="st-brand font-display text-[11px]">Maa Collection</p>}
         <div className="zari mt-1 !h-1.5 opacity-90" />
       </div>
       <div className="relative flex flex-1 flex-col gap-2 p-3">{children}</div>
@@ -89,6 +89,17 @@ function TagScene({ part }: { part: TagPart }) {
 /** New item's closed fold under the four boxes (ADR-065). */
 const MORE: L = { en: 'Sizes & more', hi: 'साइज़ और बाकी' };
 const TOTAL: L = { en: 'Total', hi: 'कुल' };
+
+/** The product page's photo box and sheet (ADR-068), in the app's own words. */
+const PHOTO_ADD: L = { en: 'Add photo', hi: 'फ़ोटो जोड़ें' };
+const PHOTO_TITLE: L = { en: 'Product photo', hi: 'प्रोडक्ट की फ़ोटो' };
+const PHOTO_CAMERA: L = { en: '📷 Take photo', hi: '📷 फ़ोटो खींचें' };
+const PHOTO_GALLERY: L = { en: '🖼 Gallery', hi: '🖼 गैलरी' };
+const PHOTO_CLOSE: L = { en: 'Close', hi: 'बंद करें' };
+/** The selecting bar (ADR-057). */
+const SEL_COUNT: L = { en: '2 selected', hi: '2 चुने' };
+const SEL_ALL: L = { en: 'Select all', hi: 'सब चुनें' };
+const SEL_CANCEL: L = { en: 'Cancel', hi: 'रद्द करें' };
 
 const RIGHTS: L[] = [
   { en: 'Catalog', hi: 'कैटलॉग' },
@@ -165,18 +176,19 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
     case 'header': {
       // Finger positions (% of the phone) over the header's two buttons: अ · ⋯ (plan v17).
       const at = { lang: 72, menu: 87 }[scene.tap];
-      const on = 'st-target bg-white/30';
+      // st-head-btn(-on): drawn like the real header's round buttons in Hara (guide.css).
+      const on = 'st-target st-head-btn-on bg-white/30';
       return (
         <Phone
           band={
             <div className="flex items-center justify-between gap-1">
               <div className="flex items-center gap-1">
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/15 text-[7px] font-bold ring-1 ring-white/30">MC</span>
-                <p className="font-display text-[10px]">Maa Collection</p>
+                <span className="st-badge flex h-5 w-5 items-center justify-center rounded-md bg-white/15 text-[7px] font-bold ring-1 ring-white/30">MC</span>
+                <p className="st-brand font-display text-[10px]">Maa Collection</p>
               </div>
               <div className="flex items-center gap-1">
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${scene.tap === 'lang' ? on : 'bg-white/10'}`}>अ</span>
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full ${scene.tap === 'menu' ? on : 'bg-white/10'}`}>
+                <span className={`st-head-btn flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${scene.tap === 'lang' ? on : 'bg-white/10'}`}>अ</span>
+                <span className={`st-head-btn flex h-6 w-6 items-center justify-center rounded-full ${scene.tap === 'menu' ? on : 'bg-white/10'}`}>
                   <IconDots className="h-3.5 w-3.5" />
                 </span>
               </div>
@@ -261,8 +273,8 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
             <span className="flex flex-1 flex-col gap-1.5 pt-0.5">
               <span className={`${row} w-full`} />
               <span className="flex gap-1 text-[9px] font-bold">
+                {/* Size only, like the counter card: colour is shown on the product page alone (ADR-049). */}
                 <span className="rounded bg-brand-100 px-1.5 py-0.5 text-brand-900 dark:bg-brand-900 dark:text-brand-100">L</span>
-                <span className="rounded bg-brand-100 px-1.5 py-0.5 text-brand-900 dark:bg-brand-900 dark:text-brand-100">Blue</span>
                 <span className="st-pop text-brand-600">✓</span>
               </span>
               <span className={`${row} w-2/3`} />
@@ -460,8 +472,8 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
               <span key={i} className={`st-growy flex-1 rounded-t bg-brand-600 ${i === 5 ? 'st-target' : ''}`} style={{ height: `${h}%`, ...delay(i * 0.1) }} />
             ))}
           </div>
+          {/* No finger: a tap on a day shows nothing; the best day is written under each chart. */}
           <div className={`${row} w-2/3`} />
-          <Tap x={73} y={30} />
         </Phone>
       );
 
@@ -610,6 +622,81 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
         </Phone>
       );
     }
+
+    case 'photobox':
+      // First the page top with the dashed Add photo box being tapped, then the sheet it opens.
+      return (
+        <Phone>
+          <div className="st-a absolute inset-x-3 top-3 flex flex-col gap-2">
+            <div className="flex gap-2 rounded-2xl bg-surface p-2 shadow-sm ring-1 ring-black/5 dark:ring-white/10">
+              <span className="st-target flex h-14 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950 dark:text-brand-200">
+                <IconCamera className="h-4 w-4" />
+                <span className="px-0.5 text-center text-[7px] leading-tight font-bold">{say(PHOTO_ADD)}</span>
+              </span>
+              <span className="flex flex-1 flex-col gap-1.5 pt-1">
+                <span className={`${row} w-full`} />
+                <span className={`${row} w-2/3`} />
+                <span className="h-3 w-10 rounded-full bg-brand-100 dark:bg-brand-900" />
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="h-9 rounded-lg bg-brand-50 dark:bg-brand-950" />
+              ))}
+            </div>
+            <Tap x={22} y={22} />
+          </div>
+          <div className="st-b absolute inset-x-0 bottom-0 flex flex-col gap-1.5 rounded-t-2xl bg-surface p-2.5 shadow-[0_-6px_16px_rgb(0_0_0/0.15)] ring-1 ring-black/5 dark:ring-white/10">
+            <span className="mx-auto h-1 w-8 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+            <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">{say(PHOTO_TITLE)}</span>
+            <span className="grid grid-cols-2 gap-1.5">
+              <span className={`${pill} st-target bg-brand-600 px-1 text-white`}>{say(PHOTO_CAMERA)}</span>
+              <span className={`${pill} border border-zinc-300 px-1 text-zinc-700 dark:border-zinc-600 dark:text-zinc-200`}>{say(PHOTO_GALLERY)}</span>
+            </span>
+            <span className={`${pill} border border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300`}>{say(PHOTO_CLOSE)}</span>
+            <Tap x={27} y={50} />
+          </div>
+        </Phone>
+      );
+
+    case 'select':
+      // Cards with round ticks (two chosen), and the one bar at the bottom with the screen's own button.
+      return (
+        <Phone>
+          <div className="mt-1 flex flex-col gap-1.5">
+            {[0, 1, 2].map((i) => {
+              const chosen = i < 2;
+              return (
+                <span
+                  key={i}
+                  className={`relative flex items-center gap-2 rounded-xl p-1.5 pl-7 ring-1 ${chosen ? 'bg-brand-50 ring-2 ring-brand-500 dark:bg-brand-950' : 'bg-surface ring-black/5 dark:ring-white/10'}`}
+                >
+                  <span
+                    className={`absolute left-1.5 flex h-4 w-4 items-center justify-center rounded-full border-2 text-[8px] font-bold ${chosen ? 'st-pop border-brand-600 bg-brand-600 text-white' : 'border-zinc-300 dark:border-zinc-600'}`}
+                    style={delay(i * 0.3)}
+                  >
+                    {chosen ? '✓' : ''}
+                  </span>
+                  <span className="h-7 w-6 rounded bg-brand-100 dark:bg-brand-900" />
+                  <span className="flex flex-1 flex-col gap-1">
+                    <span className={`${row} w-full`} />
+                    <span className={`${row} w-1/2`} />
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-slate-900 px-2 pt-1.5 pb-2 text-white">
+            <p className="text-center text-[9px] font-bold">{say(SEL_COUNT)}</p>
+            <div className="mt-1 grid grid-cols-3 gap-1 text-center text-[8px] leading-tight font-bold">
+              <span className="rounded-lg bg-white/10 px-1 py-1.5">{say(SEL_ALL)}</span>
+              <span className="rounded-lg bg-white/10 px-1 py-1.5">{say(SEL_CANCEL)}</span>
+              <span className={`st-target rounded-lg px-1 py-1.5 ${scene.danger ? 'bg-red-600' : 'bg-emerald-600'}`}>{say(scene.action)}</span>
+            </div>
+          </div>
+          <Tap x={83} y={92} />
+        </Phone>
+      );
 
     case 'list':
       return (

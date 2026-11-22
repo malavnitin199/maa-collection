@@ -52,4 +52,14 @@ describe('Guide stories stay short, complete and in both languages', () => {
     // Rates by size went with ADR-061, the One / Many start with ADR-064; Staff says Remove (ADR-029).
     for (const gone of ['Rates for the whole design', 'Price by size', 'Deactivate', 'One item', 'Many items?']) expect(all, gone).not.toContain(gone);
   });
+
+  it('follows ADR-068: the photo box, selecting a few, size only, today’s words (ADR-069)', () => {
+    const lesson = (id: string) => STORIES.find((s) => s.id === id)!;
+    expect(lesson('item').steps.map((s) => s.scene.kind)).toContain('photobox');
+    for (const id of ['print', 'approve']) expect(lesson(id).steps.some((s) => s.scene.kind === 'select'), id).toBe(true);
+    const all = STORIES.flatMap((s) => [s.title.en, s.goal.en, s.tip?.en ?? '', ...s.steps.flatMap((step) => [step.text.en, step.say.en])]).join(' ');
+    // Colour lives on the product page (ADR-049); the waiting strip is not yellow online; a day column is not tappable;
+    // Record a payment is a heading, the button is Save payment.
+    for (const gone of ['colour, MRP', 'yellow strip', 'Tap a day', 'tap Record a payment']) expect(all, gone).not.toContain(gone);
+  });
 });

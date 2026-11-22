@@ -45,7 +45,12 @@ export type Scene =
   /** List rows with ✎ / 🗑 (or a 🔒); the finger taps `tap` on row `at`. */
   | { kind: 'rows'; items: { name: string; note: L; lock?: boolean }[]; at: number; tap: 'edit' | 'delete' }
   /** A bill as a table, the item in the first column; the "Total" row comes last (`total` = its cells after the word Total). */
-  | { kind: 'bill'; head: L[]; rows: string[][]; total: string[] };
+  | { kind: 'bill'; head: L[]; rows: string[][]; total: string[] }
+  // 2026-11-23 (ADR-068): the product page's photo box, and selecting many.
+  /** The item page's dashed Add photo box being tapped, then its sheet (📷 Take photo · 🖼 Gallery). */
+  | { kind: 'photobox' }
+  /** Cards with round ticks and the one bar at the bottom: Select all · Cancel · `action` (red when `danger`). */
+  | { kind: 'select'; action: L; danger?: boolean };
 
 export type StoryStep = { text: L; say: L; scene: Scene };
 export type Story = {
@@ -185,12 +190,18 @@ export const STORIES: Story[] = [
       {
         scene: { kind: 'field', label: { en: 'Sale price (₹)', hi: 'बिक्री दाम (₹)' }, value: '1299', note: { en: 'MRP ₹1,499', hi: 'MRP ₹1,499' } },
         text: { en: 'Type the **agreed price**', hi: '**तय दाम** लिखें' },
-        say: { en: 'Type the price you agreed with the customer. It can never be above MRP.', hi: 'ग्राहक से तय हुआ दाम लिखें। यह MRP से ज़्यादा कभी नहीं हो सकता।' },
+        say: {
+          en: 'Type the price you agreed with the customer. It can never be above MRP. Selling a whole box? Tap Whole boxes; price is per box.',
+          hi: 'ग्राहक से तय हुआ दाम लिखें। यह MRP से ज़्यादा कभी नहीं हो सकता। पूरा डिब्बा बेच रहे हैं? पूरे डिब्बे दबाएँ, दाम एक डिब्बे का।',
+        },
       },
       {
         scene: { kind: 'done', title: { en: 'Sale done', hi: 'बिक्री हो गई' }, amount: '₹1,299' },
         text: { en: '**Record sale** ✓', hi: '**बिक्री दर्ज करें** ✓' },
-        say: { en: 'Tap Record sale. Done! Stock goes down on every phone.', hi: 'बिक्री दर्ज करें दबाएँ। हो गया! स्टॉक हर फ़ोन पर घट जाता है।' },
+        say: {
+          en: 'Tap Record sale. Done! Stock goes down on every phone. The owner checks it; see it in My sales.',
+          hi: 'बिक्री दर्ज करें दबाएँ। हो गया! स्टॉक हर फ़ोन पर घट जाता है। मालिक इसे जाँचेंगे; यह मेरी बिक्री में दिखेगी।',
+        },
       },
       {
         scene: { kind: 'buttons', items: [{ en: 'Enter by hand', hi: 'हाथ से दर्ज करें' }], tap: 0 },
@@ -282,8 +293,8 @@ export const STORIES: Story[] = [
         scene: { kind: 'buttons', items: [{ en: 'Send now', hi: 'अभी भेजें' }], tap: 0 },
         text: { en: 'Internet back: **sent by itself**', hi: 'इंटरनेट आया: **अपने आप गई**' },
         say: {
-          en: 'When internet is back, the sales go to the shop by themselves. Or tap the yellow strip, then Send now.',
-          hi: 'इंटरनेट आते ही बिक्री अपने आप दुकान को चली जाती है। या पीली पट्टी दबाकर अभी भेजें दबाएँ।',
+          en: 'When internet is back, the sales go to the shop by themselves. Or tap the strip under the shop’s name, then Send now.',
+          hi: 'इंटरनेट आते ही बिक्री अपने आप दुकान को चली जाती है। या दुकान के नाम के नीचे की पट्टी दबाकर अभी भेजें दबाएँ।',
         },
       },
     ],
@@ -353,10 +364,10 @@ export const STORIES: Story[] = [
           ],
           tap: 0,
         },
-        text: { en: '**Add new stock** → pick the collection', hi: '**नया स्टॉक जोड़ें** → कलेक्शन चुनें' },
+        text: { en: '**New item** → pick the collection', hi: '**नया आइटम** → कलेक्शन चुनें' },
         say: {
-          en: 'On Home, tap Add new stock. Pick the collection, like Men or Women. Men and Women always stay.',
-          hi: 'होम पर नया स्टॉक जोड़ें दबाएँ। कलेक्शन चुनें, जैसे पुरुष या महिला। पुरुष और महिला हमेशा रहते हैं।',
+          en: 'Open Catalog, then New item; the owner taps Add new stock on Home. Pick the collection. Men and Women always stay.',
+          hi: 'कैटलॉग में नया आइटम खोलें; मालिक होम पर नया स्टॉक जोड़ें दबाते हैं। कलेक्शन चुनें। पुरुष और महिला हमेशा रहते हैं।',
         },
       },
       {
@@ -428,7 +439,7 @@ export const STORIES: Story[] = [
       {
         scene: { kind: 'field', label: { en: 'MRP (₹)', hi: 'MRP (₹)' }, value: '999' },
         text: { en: 'Name, size, **MRP**, pieces', hi: 'नाम, साइज़, **MRP**, पीस' },
-        say: { en: 'Fill in the name, size, colour, MRP and the pieces you counted.', hi: 'नाम, साइज़, रंग, MRP और गिने हुए पीस भरें।' },
+        say: { en: 'Pick the category, then fill in the name, size, MRP and the pieces you counted.', hi: 'कैटेगरी चुनें, फिर नाम, साइज़, MRP और गिने हुए पीस भरें।' },
       },
       {
         scene: { kind: 'buttons', items: [{ en: 'Save and get barcode', hi: 'सेव करें और बारकोड पाएँ' }], tap: 0 },
@@ -467,6 +478,15 @@ export const STORIES: Story[] = [
         },
       },
       {
+        // ADR-057/068: only some tags — Select (or press and hold), tick, Print n selected.
+        scene: { kind: 'select', action: { en: 'Print 2 selected', hi: 'चुने हुए 2 प्रिंट करें' } },
+        text: { en: 'Only some? **Select** → tick → **Print**', hi: 'कुछ ही? **चुनें** → टिक → **प्रिंट**' },
+        say: {
+          en: 'Only some tags? Tap Select, or press and hold a card. Tick the ones you want, then Print selected at the bottom.',
+          hi: 'कुछ ही टैग चाहिए? चुनें दबाएँ, या किसी कार्ड को दबाकर रखें। जो चाहिए उन्हें टिक करें, फिर नीचे चुने हुए प्रिंट करें दबाएँ।',
+        },
+      },
+      {
         scene: {
           kind: 'buttons',
           items: [
@@ -501,7 +521,10 @@ export const STORIES: Story[] = [
       {
         scene: { kind: 'scan' },
         text: { en: '**Scan** each piece', hi: 'हर पीस **स्कैन** करें' },
-        say: { en: 'Open Stock, More pieces of an existing item, and scan each new piece. The same tag again adds one more.', hi: 'मौजूदा आइटम के और पीस खोलें और हर नया पीस स्कैन करें। वही टैग दोबारा स्कैन करें तो एक और जुड़ता है।' },
+        say: {
+          en: 'In the Catalog or More tab, open Receive stock. Scan each new piece; the same tag again adds one more.',
+          hi: 'कैटलॉग या ‘और’ टैब में स्टॉक प्राप्त करें खोलें। हर नया पीस स्कैन करें; वही टैग दोबारा स्कैन करें तो एक और जुड़ता है।',
+        },
       },
       {
         scene: { kind: 'count' },
@@ -534,13 +557,13 @@ export const STORIES: Story[] = [
         },
         text: { en: '**Products** → tap a product', hi: '**प्रोडक्ट** → प्रोडक्ट पर टैप करें' },
         say: {
-          en: 'Open Products and tap a product. On top: pieces in stock, pieces sold and what the stock is worth.',
-          hi: 'प्रोडक्ट खोलें और किसी प्रोडक्ट पर टैप करें। ऊपर: स्टॉक के पीस, बिके पीस और स्टॉक की कीमत।',
+          en: 'Open Products and tap a product. On top: pieces in stock, pieces sold, and the stock’s worth or the last sale.',
+          hi: 'प्रोडक्ट खोलें और किसी प्रोडक्ट पर टैप करें। ऊपर: स्टॉक के पीस, बिके पीस, और स्टॉक की कीमत या आख़िरी बिक्री।',
         },
       },
       {
         // ADR-068: one photo for every size; tap the box to add or change it.
-        scene: { kind: 'photo' },
+        scene: { kind: 'photobox' },
         text: { en: 'Tap the **photo** box', hi: '**फ़ोटो** वाले बॉक्स पर टैप करें' },
         say: {
           en: 'Tap the photo box at the top to add a photo. One photo shows on every size. Tap it again to change it.',
@@ -608,14 +631,14 @@ export const STORIES: Story[] = [
       },
       {
         scene: { kind: 'field', label: { en: 'Amount paid ₹', hi: 'चुकाई रकम ₹' }, value: '12500' },
-        text: { en: 'Paid them? **Record a payment**', hi: 'पैसे दिए? **भुगतान दर्ज करें**' },
+        text: { en: 'Paid them? Payments → **Save payment**', hi: 'पैसे दिए? भुगतान → **भुगतान सेव करें**' },
         say: {
-          en: 'Paid them? Open Payments, tap Record a payment, type the amount and pick the bill it was for.',
-          hi: 'पैसे दिए? भुगतान खोलें, भुगतान दर्ज करें दबाएँ, रकम लिखें और वह बिल चुनें जिसके लिए दिए।',
+          en: 'Paid them? Open Payments, type the amount, pick the bill it was for, then tap Save payment.',
+          hi: 'पैसे दिए? भुगतान खोलें, रकम लिखें, जिस बिल के लिए दिए वह चुनें, फिर भुगतान सेव करें दबाएँ।',
         },
       },
     ],
-    tip: { en: 'Deleting a company keeps its items and bills.', hi: 'कंपनी हटाने पर उसके आइटम और बिल बने रहते हैं।' },
+    tip: { en: 'Select, tick, Delete: their items and bills stay.', hi: 'चुनें, टिक करें, हटाएँ: उनके आइटम और बिल बने रहते हैं।' },
     open: { href: '/admin/companies', label: { en: 'Companies', hi: 'कंपनियाँ' } },
   },
   {
@@ -667,8 +690,8 @@ export const STORIES: Story[] = [
         scene: { kind: 'done', title: { en: 'Bill saved', hi: 'बिल सेव हुआ' }, amount: '₹2,250' },
         text: { en: 'Check it, then **Save bill**', hi: 'जाँचें, फिर **बिल सेव करें**' },
         say: {
-          en: 'Tap Next: check bill, add the bill number and date, then Save bill. Tap Mark paid once you pay it.',
-          hi: 'आगे: बिल जाँचें दबाएँ, बिल नंबर और तारीख डालें, फिर बिल सेव करें। पैसे देने पर चुकता करें दबाएँ।',
+          en: 'Tap Next: check bill, add the bill number and date, then Save bill. Edit bill changes it later; Mark paid when you pay.',
+          hi: 'आगे: बिल जाँचें दबाएँ, बिल नंबर और तारीख डालें, फिर बिल सेव करें। बदलना हो तो बिल बदलें दबाएँ; पैसे देने पर चुकता करें।',
         },
       },
     ],
@@ -859,7 +882,7 @@ export const STORIES: Story[] = [
       {
         scene: { kind: 'columns' },
         text: { en: 'Sales **day by day**', hi: '**रोज़** की बिक्री' },
-        say: { en: 'Below, each person’s sales day by day. Tap a day to see its amount.', hi: 'नीचे हर व्यक्ति की रोज़ की बिक्री। रकम देखने के लिए दिन पर टैप करें।' },
+        say: { en: 'Below, each person’s sales day by day. Under each chart, their best day and its amount.', hi: 'नीचे हर व्यक्ति की रोज़ की बिक्री। हर चार्ट के नीचे सबसे ज़्यादा बिक्री का दिन और उसकी रकम।' },
       },
     ],
     open: { href: '/admin/team', label: { en: 'Sales team', hi: 'बिक्री टीम' } },
@@ -878,12 +901,24 @@ export const STORIES: Story[] = [
       {
         scene: { kind: 'card', button: { en: 'Approve', hi: 'मंज़ूर' } },
         text: { en: 'Check price, **Approve**', hi: 'दाम देखें, **मंज़ूर** करें' },
-        say: { en: 'Check the price against the MRP and the usual price. Tap Approve, or approve the whole day at once.', hi: 'दाम को MRP और आम दाम से मिलाएँ। मंज़ूर दबाएँ, या पूरे दिन को एक साथ मंज़ूर करें।' },
+        say: {
+          en: 'Check the price against the MRP and usual price. Red means sold below the purchase price. Tap Approve, or approve the whole day at once.',
+          hi: 'दाम को MRP और आम दाम से मिलाएँ। लाल मतलब खरीद दाम से कम में बिका। मंज़ूर दबाएँ, या पूरा दिन एक साथ मंज़ूर करें।',
+        },
       },
       {
         scene: { kind: 'buttons', items: [{ en: 'Reject', hi: 'नामंज़ूर' }], tap: 0 },
         text: { en: 'Wrong? **Reject** with a reason', hi: 'गलत? कारण के साथ **नामंज़ूर**' },
         say: { en: 'Something wrong? Reject it with a reason. The pieces go back into stock and the sale leaves the totals.', hi: 'कुछ गलत है? कारण के साथ नामंज़ूर करें। पीस वापस स्टॉक में जाते हैं और बिक्री कुल से हट जाती है।' },
+      },
+      {
+        // ADR-057/068: several at once — Select (or press and hold), tick, the bottom bar.
+        scene: { kind: 'select', action: { en: 'Approve 2', hi: '2 मंज़ूर करें' } },
+        text: { en: 'Only some? **Select**, tick, then **Approve**', hi: 'सिर्फ़ कुछ? **चुनें**, टिक, फिर **मंज़ूर**' },
+        say: {
+          en: 'Only some? Tap Select, or press and hold an entry. Tick the ones you want, then Approve or Reject in the bottom bar.',
+          hi: 'सिर्फ़ कुछ? चुनें दबाएँ, या एंट्री को दबाकर रखें। जो चाहिए उन्हें टिक करें, फिर नीचे की पट्टी में मंज़ूर या नामंज़ूर दबाएँ।',
+        },
       },
     ],
     tip: { en: 'Entries marked “By hand” need a closer look.', hi: '“हाथ से” वाली एंट्री ध्यान से देखें।' },
