@@ -155,7 +155,7 @@ Good to know:
 
 - The app says **Company** everywhere (never *supplier*). A company is **optional** on an item: leave the company box empty, or pick **No company** to clear it.
 - **Delete a company** (Catalog right): on its page tap **Delete this company** at the bottom (or Companies → Select → Delete). It asks first. Its items stay, just with no company. **Bills are never changed**: a bill keeps the company's name (shown *(deleted)*), its amounts and payments; edit the bill yourself if you want to change it. Deleting items does not change bills either.
-- **Collections** are the groups every item must belong to (New item's first step, *Which collection?*). **Men and Women are fixed** (🔒, owner, 2026-11-22): always listed, never deleted, renamed or hidden — only their Hindi name and picture can change (Categories). **Home → Collections** lists each with *items · pcs*: for the others change a name in its box and tap **Save**; the 🗑 appears only for a collection with **no items** and asks before deleting (its empty categories go too). The same ✎ / 🗑 are on the collection tiles in New item. In Bills, what used to be called *collections* (what came in on one New item save) is now called **stock entries**.
+- **Collections** are the groups every item must belong to (New item's first step, *Which collection?*). **Men and Women are fixed** (🔒, owner, 2026-11-22): always listed, never deleted, renamed or hidden — only their Hindi name and picture can change (Categories). **Home → Collections** is one line (collections · categories · products) that opens **Categories** (below). The other collections are renamed (✎) and deleted (🗑, only with **no items**, asks first; its empty categories go too) on the collection tiles in New item. In Bills, what used to be called *collections* (what came in on one New item save) is now called **stock entries**.
 
 ### The item page (Products → tap a product; since 2026-11-22)
 
@@ -231,14 +231,15 @@ The Companies list shows each company's bills and dues too.
 - **Tag old stock**: 1–4 photos, as before.
 - If a photo fails (e.g. weak signal), the items are still saved; the labels page says so — add it later on the item's page → Photos.
 
-### Categories: Men, Women, Boys, Girls (plan v19)
+### Categories: collections and their categories (plan v19; owner, 2026-11-22)
 
-**Menu → Categories.** The shop's items are sorted two ways: first **who it is for** (a *section*: **Men, Women, Boys, Girls** — you can add more, e.g. *Kids*), then **what it is** (a *category*: Jeans, Shirt, Kurti, Saree …). The New item screens will ask these two questions first.
+**Home → Collections** (the line under Today, like Companies and Bills: *collections · categories · products*) or **Menu → Categories**. The shop's items are sorted two ways: first the **collection** (**Men, Women** — always there — and any you add, e.g. *Kids*), then **what it is** (a *category*: Jeans, Shirt, Kurti, Saree …). New item asks these two questions first.
 
-- **The tiles on top** are the sections, in your shop's order, each with its picture and how many categories it has. Tap one to see its categories. The first tile opens by itself.
-- **The section card**: ▲ / ▼ move it up or down in the order; **Edit section** → English name, **Hindi name** (shown when the phone is in Hindi), **picture**, and **Shown in New item** — untick it to hide a section (its categories and items stay; tick again to bring it back).
-- **+ Add category** adds one under the tile you are on (the **Under** box lets you pick another section). Give it a **Hindi name** too if you like. Tap a category → **Edit** for its name, code, sizes and section.
-- **+ Add section** at the bottom: name, Hindi name, picture.
+- **The tiles on top** are the collections, each with its picture and **how many products** it has. Tap one to see its categories; the first opens by itself. If Women (or Men) was deleted before, its tile is still there: tapping it brings it back.
+- **The figures** under the tiles, for the collection you are on: **Categories**, **Products**, **Pieces in stock** and, with the *Purchase price* right, **Stock value** (pieces × purchase price).
+- **Each category** shows its products · items · pieces (and what they are worth), its code and its sizes. **✎** opens its form (name, code, sizes, Hindi name, collection); **🗑** (owner) asks first and deletes it — only when it has **no items** (the sheet says how many are left otherwise). **Jeans, Jacket and Shirt** carry a 🔒: they always stay and keep their name (their sizes can still be added in New item with *+ Add size*).
+- **+ Add category** adds one under the tile you are on (the **Under** box lets you pick another collection). Give it a **Hindi name** too if you like.
+- **+ Add collection** at the bottom: name, Hindi name, picture. Collections are renamed or deleted on New item's *Which collection?* tiles (✎ / 🗑).
 - **Needs sorting**: this tile appears only while some categories are under no section yet (your old categories after the update). On each row choose **Move under → Women** (for example) and tap **Move**; the row leaves the list and the tile disappears when everything is sorted. **Until a category is sorted, New item will not accept it** — it says *Sort this category under Men, Women, Boys or Girls first*. Sorting takes a couple of minutes once.
 
 ### Sizes of each category
