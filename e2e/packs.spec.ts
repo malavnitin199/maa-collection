@@ -31,7 +31,6 @@ test('a box of 12: New item by the box, one tag per box, sell 2 pieces and a who
 
   // New item: a new company from the company box, then "Comes as: Box", 12 a box, box prices.
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByRole('combobox', { name: /^Company/ }).click();

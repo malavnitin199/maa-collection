@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { getDb } from '@/db/client';
+import { getDb, type Db } from '@/db/client';
 import { rupeesToPaise } from '@/features/inventory/inventory';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
@@ -14,8 +14,22 @@ import { deleteCompanies } from '@/server/services/delete-companies';
 import { deleteProducts } from '@/server/services/delete-products';
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getLocale, getT } from '@/server/i18n';
-import { localName } from '@/lib/sections';
-import { addTypeSize, backfillSections, createSection, createType, deleteSection, moveSection, moveType, renameSection, updateSection } from '@/server/services/sections';
+import { asSectionIcon, fixedSectionKey, localName, type SectionIcon } from '@/lib/sections';
+import {
+  addTypeSize,
+  backfillSections,
+  createSection,
+  createType,
+  deleteSection,
+  ensureFixedSection,
+  listSections,
+  moveSection,
+  moveType,
+  renameSection,
+  toPickSection,
+  updateSection,
+  type PickSection,
+} from '@/server/services/sections';
 import { addPayment } from '@/server/services/company';
 import { DomainError } from '@/server/services/errors';
 import { addOrRestoreSupplier, createCategory, createSupplier, listSuppliers, restoreSupplier,
@@ -426,17 +440,77 @@ export async function moveTypeAction(categoryId: string, _prev: FormState, formD
 
 // ------------------------------- plan v19 (03a): "+ Add" on the New item steps
 
-export type SectionResult = { ok: true; section: { id: string; name: string; icon: string } } | { ok: false; error: string };
+export type SectionResult = { ok: true; section: PickSection } | { ok: false; error: string };
 export type TypeResult = { ok: true; type: { id: string; name: string; code: string; sizes: string[] } } | { ok: false; error: string };
 export type SizesResult = { ok: true; sizes: string[] } | { ok: false; error: string };
 
-/** New item → "+ Add" on "Who is it for?": a section (e.g. Kids) with a picture; it goes last. */
+/** A collection as New item draws it (names in the person's language, its shown categories). */
+async function pickSection(db: Db, id: string): Promise<PickSection> {
+  const section = (await listSections(db, STORE_ID)).sections.find((s) => s.id === id);
+  if (!section) throw new DomainError('Choose a collection.', { key: 'sec.err.sectionNotFound' });
+  return toPickSection(section, await getLocale());
+}
+
+/**
+ * New item → "+ Add" on "Which collection?": a collection (e.g. Kids) with a picture; it goes
+ * last. Men / Women typed here while the shop lacks them come back in their own place (ADR-064).
+ */
 export async function addSectionAction(input: { name: string; icon: string }): Promise<SectionResult> {
   await requirePermission('catalog');
   try {
-    const section = await createSection(await getDb(), STORE_ID, { name: String(input.name ?? ''), icon: String(input.icon ?? '') });
+    const db = await getDb();
+    const name = String(input.name ?? '');
+    const fixed = fixedSectionKey(name);
+    const shown = fixed ? (await listSections(db, STORE_ID)).sections.some((s) => s.fixed === fixed && s.active) : false;
+    if (shown) throw new DomainError('That name is already in the list.', { key: 'sec.err.exists' });
+    const section = fixed ? await ensureFixedSection(db, STORE_ID, fixed) : await createSection(db, STORE_ID, { name, icon: String(input.icon ?? '') });
     revalidatePath('/admin', 'layout');
-    return { ok: true, section: { id: section.id, name: section.name, icon: section.icon } };
+    return { ok: true, section: await pickSection(db, section.id) };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** New item → Men / Women when the shop lacks one (ADR-064): the tap that picks it makes it (or brings it back). */
+export async function openFixedCollectionAction(key: string): Promise<SectionResult> {
+  await requirePermission('catalog');
+  try {
+    if (key !== 'men' && key !== 'women') throw new DomainError('Choose a collection.', { key: 'sec.err.sectionNotFound' });
+    const db = await getDb();
+    const section = await ensureFixedSection(db, STORE_ID, key);
+    revalidatePath('/admin', 'layout');
+    return { ok: true, section: await pickSection(db, section.id) };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+export type EditCollectionResult = { ok: true; section: { id: string; name: string; icon: SectionIcon } } | { ok: false; error: string };
+
+/**
+ * New item → ✎ on a collection (owner only, ADR-064): the name as the person sees it (the
+ * Hindi name when that is what is shown, else the name — a new name drops the old Hindi one)
+ * and the picture. Men and Women keep their names (`updateSection` refuses).
+ */
+export async function editCollectionAction(input: { id: string; name: string; icon: string }): Promise<EditCollectionResult> {
+  await requireAdmin();
+  try {
+    const db = await getDb();
+    const locale = await getLocale();
+    const current = (await listSections(db, STORE_ID)).sections.find((s) => s.id === String(input.id ?? ''));
+    if (!current) throw new DomainError('Choose a collection.', { key: 'sec.err.sectionNotFound' });
+    const typed = String(input.name ?? '').trim().replace(/\s+/g, ' ');
+    if (!typed) throw new DomainError('Enter a name (up to 30 characters).', { key: 'sec.err.name' });
+    const hindiShown = locale === 'hi' && Boolean(current.nameHi?.trim());
+    const sameName = typed.toLowerCase() === current.name.toLowerCase();
+    const updated = await updateSection(db, STORE_ID, current.id, {
+      name: hindiShown ? current.name : typed,
+      nameHi: hindiShown ? typed : sameName ? current.nameHi : null,
+      icon: String(input.icon ?? ''),
+      active: current.active,
+    });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, section: { id: updated.id, name: localName(updated, locale), icon: asSectionIcon(updated.icon) } };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }

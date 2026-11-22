@@ -29,8 +29,6 @@ type Search = {
   receipt?: string;
   each?: string;
   created?: string;
-  /** Plan v19: the New item steps' one / many choice, carried to "Add next item". */
-  mode?: string;
   mine?: string;
   format?: string;
   photos?: string;
@@ -60,15 +58,14 @@ function hrefWith(params: Search, change: Partial<Search>) {
 
 /**
  * "Add next item" (plan v19, 04b): the New item steps with this bill's company, section,
- * bill no., stock date and one / many choice kept; `n` (the receipt) makes it a fresh entry.
+ * bill no. and stock date kept; `n` (the receipt) makes it a fresh entry.
  */
-function nextItemHref(receipt: { id: string; supplierId: string | null; billNumber: string | null; stockDate: string | null }, sectionId: string | null, mode?: string) {
+function nextItemHref(receipt: { id: string; supplierId: string | null; billNumber: string | null; stockDate: string | null }, sectionId: string | null) {
   const next = new URLSearchParams();
   if (receipt.supplierId) next.set('supplier', receipt.supplierId);
   if (sectionId) next.set('section', sectionId);
   if (receipt.billNumber) next.set('bill', receipt.billNumber);
   if (receipt.stockDate) next.set('date', receipt.stockDate);
-  if (mode === 'one' || mode === 'many') next.set('mode', mode);
   next.set('n', receipt.id);
   return `/admin/stock/new?${next.toString()}`;
 }
@@ -275,7 +272,7 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
               {t(params.created === '1' ? 'stk.labels.created.one' : 'stk.labels.created.other', { n: params.created })}
             </p>
             {/* Plan v19: straight on to the next item of the same bill (company, section, bill no., date kept). */}
-            <Link href={nextItemHref(receipt, nextSection, params.mode)} className={`${secondaryButton} w-fit`}>
+            <Link href={nextItemHref(receipt, nextSection)} className={`${secondaryButton} w-fit`}>
               {t('stk.labels.addNext')}
             </Link>
           </div>

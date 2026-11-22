@@ -21,7 +21,6 @@ async function loginOwner(page: Page) {
 
 async function addCollection(page: Page, company: string, name: string) {
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   const box = page.getByRole('combobox', { name: /^Company/ });

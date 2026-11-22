@@ -18,7 +18,6 @@ async function login(page: Page, name: string) {
 /** New item with two sizes (M, L), 1 piece each. */
 async function addItem(page: Page, name: string) {
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByRole('combobox', { name: /^Company/ }).click();

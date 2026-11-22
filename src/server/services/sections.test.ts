@@ -174,17 +174,17 @@ describe('a new item needs both levels (section + type)', () => {
     ).rejects.toThrow(needsSorting);
     expect(await listProducts(db, STORE_ID, { categoryId: socks.id })).toEqual([]);
 
-    // Sorted under Men: all three ways work.
-    const men = (await listSections(db, STORE_ID)).sections.find((s) => s.name === 'Men')!;
-    await updateCategory(db, STORE_ID, socks.id, { name: 'Socks', code: socks.code, active: true, sectionId: men.id });
+    // Sorted under Boys: all three ways work.
+    const boys = (await listSections(db, STORE_ID)).sections.find((s) => s.name === 'Boys')!;
+    await updateCategory(db, STORE_ID, socks.id, { name: 'Socks', code: socks.code, active: true, sectionId: boys.id });
     const made = await createDesign(db, STORE_ID, design(socks.id, 'ns-3', company.id));
     expect(made.products).toHaveLength(1);
     await createProductsBatch(db, STORE_ID, { operationId: 'ns-4', categoryId: socks.id, staffId: owner, rows: [{ name: 'Old Socks', mrpPaise: 9900, pricePaise: 9900, costPaise: null, quantity: 1 }] });
     await createProduct(db, STORE_ID, { name: 'One Sock', brand: 'B', category: 'Socks', categoryId: socks.id, size: 'Free', color: 'Grey', mrpPaise: 9900, pricePaise: 9900, costPaise: null, openingStock: 1, createdBy: owner });
     expect(await listProducts(db, STORE_ID, { categoryId: socks.id })).toHaveLength(3);
 
-    // A hidden section takes no new items (its items and types stay).
-    await updateSection(db, STORE_ID, men.id, { name: 'Men', active: false });
+    // A hidden section takes no new items (its items and types stay). Men and Women are never hidden (ADR-064).
+    await updateSection(db, STORE_ID, boys.id, { name: 'Boys', active: false });
     await expect(createDesign(db, STORE_ID, { ...design(socks.id, 'ns-5', company.id), name: 'Other Socks' })).rejects.toThrow('This collection is hidden. Bring it back in Categories first.');
     expect(await listProducts(db, STORE_ID, { categoryId: socks.id })).toHaveLength(3);
   });

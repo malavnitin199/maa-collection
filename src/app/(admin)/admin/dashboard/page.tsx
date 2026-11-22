@@ -3,7 +3,7 @@ import { sectionTitle } from '@/components/ui/styles';
 import { requestDb } from '@/server/request-db';
 import { HeroStat } from '@/features/reports/widgets';
 import { TagTile } from '@/components/ui/tag-tile';
-import { IconCheckList, IconRupee, IconStockAdd, IconSun, IconTag } from '@/components/ui/icons';
+import { IconAddStock, IconCheckList, IconRupee, IconSun, IconTag } from '@/components/ui/icons';
 import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
@@ -30,7 +30,8 @@ async function Dashboard() {
         <h1 className="text-2xl font-semibold">{t('nav.dashboard')}</h1>
         <FirstTimeTip id="owner" text={t('own.dash.tip')} helpHref="/guide#for-owner" />
         <div data-testid="quick-actions" className="rise-in grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <TagTile href="/admin/stock" primary icon={<IconStockAdd />} title={t('own.dash.newStock')} />
+          {/* Owner, 2026-11-22 (ADR-064): straight to New item (other ways stay on the Stock tab). */}
+          <TagTile href="/admin/stock/new" primary icon={<IconAddStock />} title={t('own.dash.newStock')} />
           <TagTile href="/admin/companies" icon={<IconTag />} title={t('nav.suppliers')} />
           <TagTile href="/admin/reports" icon={<IconRupee />} title={t('nav.reports')} />
           <TagTile

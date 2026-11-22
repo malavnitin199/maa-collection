@@ -6,7 +6,8 @@ import { useT } from '@/features/i18n/i18n-provider';
 import { LangText } from '@/features/i18n/lang-text';
 import { useFormDone } from '@/features/feedback/effects';
 import type { MessageKey } from '@/lib/i18n';
-import { SECTION_ICONS, type SectionIcon } from '@/lib/sections';
+import { SECTION_ICONS, type FixedSectionKey, type SectionIcon } from '@/lib/sections';
+import { IconLock } from '@/components/ui/icons';
 import { SIZE_PRESETS } from '@/lib/size-lists';
 import { SectionArt } from './section-art';
 import type { FormState } from '@/server/actions/admin';
@@ -254,6 +255,7 @@ function PictureField({ initial }: { initial: SectionIcon }) {
 /**
  * Categories (plan v19): a section's names (English / Hindi), picture and whether
  * New item shows it. Hidden sections keep their categories and items — nothing is deleted.
+ * Men and Women (ADR-064) keep their name and always show: only the Hindi name and picture change.
  */
 export function SectionForm({
   action,
@@ -261,7 +263,7 @@ export function SectionForm({
   submitLabel,
 }: {
   action: Action;
-  initial?: { name: string; nameHi: string | null; icon: SectionIcon; active: boolean };
+  initial?: { name: string; nameHi: string | null; icon: SectionIcon; active: boolean; fixed?: FixedSectionKey | null };
   submitLabel: string;
 }) {
   const t = useT();
@@ -281,11 +283,25 @@ export function SectionForm({
     <form action={formAction} className="flex flex-col gap-3">
       {done.node}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Text label={t('sec.name')} name="name" required defaultValue={initial?.name} maxLength={30} />
+        {initial?.fixed ? (
+          <div className="flex flex-col gap-1 text-sm font-medium">
+            {t('sec.name')}
+            <input type="hidden" name="name" value={initial.name} />
+            <input type="hidden" name="active" value="on" />
+            <span data-testid="fixed-name" className={`${input} flex items-center justify-between gap-2 bg-zinc-50 dark:bg-zinc-900`}>
+              {initial.name}
+              <span title={t('sec.fixed')} className="text-zinc-400">
+                <IconLock className="h-4 w-4" />
+              </span>
+            </span>
+          </div>
+        ) : (
+          <Text label={t('sec.name')} name="name" required defaultValue={initial?.name} maxLength={30} />
+        )}
         <Text label={t('sec.nameHi')} name="nameHi" defaultValue={initial?.nameHi} lang="hi" maxLength={40} />
       </div>
       <PictureField initial={initial?.icon ?? 'hanger'} />
-      {initial && (
+      {initial && !initial.fixed && (
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="active" defaultChecked={initial.active} className="h-5 w-5" />
           {t('sec.inUse')}

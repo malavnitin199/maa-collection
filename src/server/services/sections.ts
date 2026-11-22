@@ -1,7 +1,8 @@
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, products, sections, type Category, type Section } from '@/db/schema';
-import { asSectionIcon, DEFAULT_SECTIONS, STARTER_TYPES, starterKeys, typeKey, type SectionIcon } from '@/lib/sections';
+import type { Locale } from '@/lib/i18n';
+import { asSectionIcon, DEFAULT_SECTIONS, FIXED_SECTIONS, fixedSectionKey, fixedSectionPlace, localName, STARTER_TYPES, starterKeys, typeKey, withFixedSections, type FixedSectionKey, type SectionIcon } from '@/lib/sections';
 import { MAX_SIZES } from '@/lib/size-lists';
 import { sameSize } from '@/lib/size-prices';
 import { assertFreeTypeName, checkedSizes, cleanHindi, createCategory, suggestSectionCode } from './catalog';
@@ -14,7 +15,17 @@ import { DomainError, isUniqueViolation } from './errors';
  * run by the owner's script or the seed) — never a side effect of a page read.
  */
 export type SectionType = { id: string; name: string; nameHi: string | null; code: string; sizes: string[]; active: boolean; productCount: number };
-export type SectionWithTypes = { id: string; name: string; nameHi: string | null; icon: SectionIcon; sort: number; active: boolean; types: SectionType[] };
+export type SectionWithTypes = {
+  id: string;
+  name: string;
+  nameHi: string | null;
+  icon: SectionIcon;
+  sort: number;
+  active: boolean;
+  /** Men / Women (ADR-064): always there, never deleted, renamed or hidden. */
+  fixed: FixedSectionKey | null;
+  types: SectionType[];
+};
 
 const int = (expression: ReturnType<typeof sql>) => sql<number>`${expression}`.mapWith(Number);
 
@@ -125,10 +136,47 @@ export async function listSections(db: Db, storeId: string, { activeOnly = false
       icon: asSectionIcon(s.icon),
       sort: s.sort,
       active: s.active,
+      fixed: fixedSectionKey(s.name),
       types: typeRows.filter((t) => t.sectionId === s.id).map(toType),
     })),
     unsorted: typeRows.filter((t) => !t.sectionId || !sectionRows.some((s) => s.id === t.sectionId)).map(toType),
   };
+}
+
+/** One tile on New item's "Which collection?" (ADR-064). `standIn` = Men / Women the shop lacks, made when tapped. */
+export type PickSection = {
+  id: string;
+  /** In the person's language. */
+  name: string;
+  icon: SectionIcon;
+  fixed: FixedSectionKey | null;
+  /** Items in it (every category, hidden ones too): a collection with items is not deleted. */
+  items: number;
+  standIn?: true;
+  types: { id: string; name: string; code: string; sizes: string[] }[];
+};
+
+export function toPickSection(s: SectionWithTypes, locale: Locale): PickSection {
+  return {
+    id: s.id,
+    name: localName(s, locale),
+    icon: s.icon,
+    fixed: s.fixed,
+    items: s.types.reduce((n, x) => n + x.productCount, 0),
+    types: s.types.filter((x) => x.active).map((x) => ({ id: x.id, name: localName(x, locale), code: x.code, sizes: x.sizes })),
+  };
+}
+
+/** New item's collections: shown ones in shop order, Men and Women always among them (a stand-in when missing or hidden). Never writes. */
+export async function newItemSections(db: Db, storeId: string, locale: Locale): Promise<PickSection[]> {
+  const { sections: rows } = await listSections(db, storeId);
+  return withFixedSections(
+    rows.filter((s) => s.active).map((s) => toPickSection(s, locale)),
+    (key): PickSection => {
+      const fixed = FIXED_SECTIONS.find((f) => f.key === key)!;
+      return { id: `fixed:${key}`, name: localName(fixed, locale), icon: fixed.icon, fixed: key, items: 0, standIn: true, types: [] };
+    },
+  );
 }
 
 /** Categories not sorted under any section yet (the owner's "Needs sorting" list). */
@@ -153,6 +201,23 @@ async function assertFreeSectionName(db: Db, storeId: string, name: string, exce
     .where(and(eq(sections.storeId, storeId), sql`lower(${sections.name}) = lower(${name})`, exceptId ? sql`${sections.id} <> ${exceptId}` : undefined))
     .limit(1);
   if (same) throw new DomainError('That name is already in the list.', { key: 'sec.err.exists' });
+}
+
+/** Owner, 2026-11-22 (ADR-064): Men and Women stay as they are — no new name, never hidden or deleted. */
+function fixedRefusal(name: string): DomainError {
+  return new DomainError(`${name} always stays. It cannot be deleted, renamed or hidden.`, { key: 'sec.err.fixed', vars: { name } });
+}
+
+async function currentSection(db: Db, storeId: string, id: string): Promise<Section> {
+  const [row] = await db.select().from(sections).where(and(eq(sections.storeId, storeId), eq(sections.id, id))).limit(1);
+  if (!row) throw new DomainError('Choose a collection.', { key: 'sec.err.sectionNotFound' });
+  return row;
+}
+
+/** A fixed collection may only change its letter case, its Hindi name and its picture. */
+function assertFixedKept(current: Section, next: { name: string; active?: boolean }) {
+  if (!fixedSectionKey(current.name)) return;
+  if (next.name.toLowerCase() !== current.name.toLowerCase() || next.active === false) throw fixedRefusal(current.name);
 }
 
 /** The owner adds a section (e.g. Kids, Accessories) with a picture and an optional Hindi name; it goes last. */
@@ -180,6 +245,7 @@ export async function updateSection(
   input: { name: string; nameHi?: string | null; icon?: string | null; active: boolean },
 ): Promise<Section> {
   const name = cleanSectionName(input.name);
+  assertFixedKept(await currentSection(db, storeId, id), { name, active: input.active });
   await assertFreeSectionName(db, storeId, name, id);
   const [updated] = await db
     .update(sections)
@@ -277,11 +343,12 @@ export async function sectionOfType(db: Db, storeId: string, categoryId: string 
   return row?.sectionId ?? null;
 }
 
-export type CollectionRow = { id: string; name: string; active: boolean; categories: number; items: number; pieces: number };
+export type CollectionRow = { id: string; name: string; active: boolean; categories: number; items: number; pieces: number; fixed: FixedSectionKey | null };
 
 /**
  * Home → Collections (owner, 2026-11-22, ADR-051): every collection (Men, Women, …)
- * in shop order with its categories, items and pieces in stock.
+ * in shop order with its categories, items and pieces in stock; Men and Women always
+ * among them (ADR-064 — a missing one as an empty stand-in, id `fixed:<key>`).
  */
 export async function collectionsOverview(db: Db, storeId: string): Promise<CollectionRow[]> {
   const rows = await db
@@ -299,12 +366,15 @@ export async function collectionsOverview(db: Db, storeId: string): Promise<Coll
     .where(eq(sections.storeId, storeId))
     .groupBy(sections.id)
     .orderBy(asc(sections.sort), asc(sections.name));
-  return rows;
+  const list = rows.map((row) => ({ ...row, fixed: fixedSectionKey(row.name) }));
+  // Men and Women are always listed (ADR-064); one the shop lacks shows as empty until it is made.
+  return withFixedSections(list, (key) => ({ id: `fixed:${key}`, name: FIXED_SECTIONS.find((f) => f.key === key)!.name, active: true, categories: 0, items: 0, pieces: 0, fixed: key }));
 }
 
 /** Home → Collections: a new name (the Hindi name, picture and hidden state stay). */
 export async function renameSection(db: Db, storeId: string, id: string, rawName: string): Promise<Section> {
   const name = cleanSectionName(rawName);
+  assertFixedKept(await currentSection(db, storeId, id), { name });
   await assertFreeSectionName(db, storeId, name, id);
   try {
     const [updated] = await db.update(sections).set({ name }).where(and(eq(sections.storeId, storeId), eq(sections.id, id))).returning();
@@ -326,6 +396,7 @@ export async function deleteSection(db: Db, storeId: string, id: string): Promis
     const tx = raw as unknown as Db;
     const [section] = await tx.select().from(sections).where(and(eq(sections.storeId, storeId), eq(sections.id, id))).limit(1);
     if (!section) throw new DomainError('Choose a collection.', { key: 'sec.err.sectionNotFound' });
+    if (fixedSectionKey(section.name)) throw fixedRefusal(section.name);
     const [{ items }] = await tx
       .select({ items: int(sql`count(${products.id})`) })
       .from(categories)
@@ -336,4 +407,42 @@ export async function deleteSection(db: Db, storeId: string, id: string): Promis
     await tx.delete(sections).where(eq(sections.id, id));
     return { name: section.name, categories: gone.length };
   });
+}
+
+/**
+ * Men / Women when the shop lacks one (owner, 2026-11-22, ADR-064): New item shows it
+ * anyway, and the tap that picks it lands here — a hidden one is brought back; a missing
+ * one is made (with its Hindi name and picture) right after the fixed one before it
+ * (Women after Men, else first), the others keeping their order. Never from a page read.
+ */
+export async function ensureFixedSection(db: Db, storeId: string, key: FixedSectionKey): Promise<Section> {
+  const fixed = FIXED_SECTIONS.find((s) => s.key === key);
+  if (!fixed) throw new DomainError('Choose a collection.', { key: 'sec.err.sectionNotFound' });
+  try {
+    return await db.transaction(async (raw) => {
+      const tx = raw as unknown as Db;
+      const rows = await tx.select().from(sections).where(eq(sections.storeId, storeId)).orderBy(asc(sections.sort), asc(sections.name));
+      const found = rows.find((s) => fixedSectionKey(s.name) === key);
+      if (found?.active) return found;
+      if (found) {
+        const [shown] = await tx.update(sections).set({ active: true }).where(eq(sections.id, found.id)).returning();
+        return shown;
+      }
+      const [created] = await tx.insert(sections).values({ storeId, name: fixed.name, nameHi: fixed.nameHi, icon: fixed.icon, sort: 0 }).returning();
+      const order = rows.map((r) => r.id);
+      order.splice(fixedSectionPlace(rows.map((r) => ({ fixed: fixedSectionKey(r.name) })), key), 0, created.id);
+      for (const [i, sectionId] of order.entries()) await tx.update(sections).set({ sort: i + 1 }).where(eq(sections.id, sectionId));
+      return { ...created, sort: order.indexOf(created.id) + 1 };
+    });
+  } catch (error) {
+    // Made by another phone at the same moment: theirs is the one.
+    if (!isUniqueViolation(error)) throw error;
+    const [theirs] = await db
+      .select()
+      .from(sections)
+      .where(and(eq(sections.storeId, storeId), sql`lower(${sections.name}) = lower(${fixed.name})`))
+      .limit(1);
+    if (!theirs) throw error;
+    return theirs;
+  }
 }

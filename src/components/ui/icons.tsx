@@ -14,6 +14,8 @@ export const IconHome = ({ className }: IconProps) => base(<><path d="M3.5 10.5 
 /** A hang tag: the app's own tag, with its thread hole. */
 export const IconTag = ({ className }: IconProps) => base(<><path d="M7 3.5h10l2.5 2.5v14.5h-15V6L7 3.5Z" /><circle cx="12" cy="7.5" r="1.3" /><path d="M8.5 12h7M8.5 15.5h4.5" /></>, className);
 export const IconStockAdd = ({ className }: IconProps) => base(<><path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5v-7Z" /><path d="M12 9.5v6M9 12.5h6" /></>, className);
+/** Home → Add new stock (owner, 2026-11-22, ADR-064): a shirt with a plus. */
+export const IconAddStock = ({ className }: IconProps) => base(<><path d="M9 4.5 4.5 6.8 3 10.3l3.2 1.3V20h11.6v-8.4l3.2-1.3-1.5-3.5L15 4.5c-.5 1.4-1.6 2.2-3 2.2s-2.5-.8-3-2.2Z" /><path d="M12 11.5v5M9.5 14h5" /></>, className);
 /** Scan: a barcode inside viewfinder corners. */
 export const IconScan = ({ className }: IconProps) => base(<><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" /><path d="M8 8.5v7M10.5 8.5v7M13.5 8.5v7M16 8.5v7" /></>, className);
 export const IconMenu = ({ className }: IconProps) => base(<><path d="M4.5 7h15M4.5 12h15M4.5 17h15" /></>, className);
@@ -39,6 +41,8 @@ export const IconTruck = ({ className }: IconProps) => base(<><path d="M3.5 6.5h
 export const IconGrid = ({ className }: IconProps) => base(<><rect x="4" y="4" width="6.5" height="6.5" rx="1.2" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2" /></>, className);
 export const IconHelp = ({ className }: IconProps) => base(<><circle cx="12" cy="12" r="8" /><path d="M9.8 9.5a2.3 2.3 0 0 1 4.4.9c0 1.6-2.2 2-2.2 3.4" /><path d="M12 16.8v.2" /></>, className);
 export const IconBoxes = ({ className }: IconProps) => base(<><path d="M4 9.5 12 5l8 4.5-8 4.5-8-4.5Z" /><path d="M4 9.5v5L12 19l8-4.5v-5" /></>, className);
+/** A fixed collection (Men / Women, ADR-064): always there. */
+export const IconLock = ({ className }: IconProps) => base(<><rect x="5.5" y="10.5" width="13" height="9.5" rx="2" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></>, className);
 export const IconPencil = ({ className }: IconProps) => base(<><path d="M14.5 5.5 18.5 9.5 9 19H5v-4l9.5-9.5Z" /><path d="m12.5 7.5 4 4" /></>, className);
 export const IconPlay = ({ className }: IconProps) => base(<path d="M8 5.5v13l10.5-6.5L8 5.5Z" fill="currentColor" />, className);
 export const IconPause = ({ className }: IconProps) => base(<><rect x="7" y="5.5" width="3.2" height="13" rx="1" fill="currentColor" /><rect x="13.8" y="5.5" width="3.2" height="13" rx="1" fill="currentColor" /></>, className);

@@ -8,8 +8,8 @@ import { ResumeSheet } from '@/features/forms/resume-sheet';
 import { useDone } from '@/features/feedback/effects';
 import { StartOver } from '@/features/forms/start-over';
 import { LangText } from '@/features/i18n/lang-text';
-import { IconBack, IconChevron } from '@/components/ui/icons';
-import { ActionSheet, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
+import { IconBack, IconChevron, IconLock, IconPencil, IconTrash } from '@/components/ui/icons';
+import { ActionSheet, sheetDanger, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
 import { backButton, card, errorBox, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { haptic } from '@/features/feedback/sounds';
 import { useT } from '@/features/i18n/i18n-provider';
@@ -20,26 +20,42 @@ import { PACK_CHOICES, packOf, perPiecePaise } from '@/lib/packs';
 import { SECTION_ICONS, type SectionIcon } from '@/lib/sections';
 import { cleanSizeList, MAX_SIZES, orderSizes, SIZE_CHOICES, SIZE_RANGES } from '@/lib/size-lists';
 import { sameSize } from '@/lib/size-prices';
-import { addSectionAction, addTypeAction, addTypeSizeAction, createDesignAction } from '@/server/actions/admin';
+import {
+  addSectionAction,
+  addTypeAction,
+  addTypeSizeAction,
+  createDesignAction,
+  deleteCollectionAction,
+  editCollectionAction,
+  openFixedCollectionAction,
+  type SectionResult,
+} from '@/server/actions/admin';
+import type { PickSection } from '@/server/services/sections';
 import { CompanyPicker } from './company-picker';
 import { SectionArt, TypeArt } from './section-art';
 
 type Option = { id: string; name: string };
 export type WizardType = { id: string; name: string; code: string; sizes: string[] };
-/** Names arrive in the person's language (the page picks English / Hindi). */
-export type WizardSection = { id: string; name: string; icon: SectionIcon; types: WizardType[] };
+/** Names arrive in the person's language (the page picks English / Hindi); Men and Women are always there (ADR-064). */
+export type WizardSection = PickSection;
 
-type Mode = 'one' | 'many';
-/** Owner's feedback 2026-11-21: details and sizes are one step, two panels that open and close. */
-type Step = 'start' | 'who' | 'what' | 'details' | 'review';
-/** The four steps after the start choice (the progress bar). */
-const FLOW: Exclude<Step, 'start'>[] = ['who', 'what', 'details', 'review'];
-const SHORT: Record<Exclude<Step, 'start'>, MessageKey> = { who: 'ni.short.who', what: 'ni.short.what', details: 'ni.short.detailsSizes', review: 'ni.short.review' };
+/**
+ * Owner's feedback 2026-11-21: details and sizes are one step. Owner, 2026-11-22 (ADR-064):
+ * no "One item / Many items" choice any more — every item may have many sizes, and the
+ * screen opens on the collection.
+ */
+type Step = 'who' | 'what' | 'details' | 'review';
+/** The four steps (the progress bar). */
+const FLOW: Step[] = ['who', 'what', 'details', 'review'];
+const SHORT: Record<Step, MessageKey> = { who: 'ni.short.who', what: 'ni.short.what', details: 'ni.short.detailsSizes', review: 'ni.short.review' };
 
 const tile =
   'group relative flex min-h-36 flex-col items-center justify-center gap-2 rounded-3xl bg-surface p-4 text-center shadow-sm ring-1 ring-brand-100 transition duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:ring-brand-900';
 const tileOn = 'ring-2 ring-brand-600 bg-brand-50 dark:bg-brand-950';
 const artCircle = 'flex h-20 w-20 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition group-hover:scale-105 dark:bg-brand-950 dark:text-brand-300';
+/** ✎ / 🗑 in a collection tile's top corners (owner only, ADR-064). */
+const cornerButton =
+  'absolute top-2 flex h-9 w-9 items-center justify-center rounded-full bg-surface shadow-sm ring-1 ring-zinc-200 transition active:scale-90 dark:ring-zinc-700';
 const field = 'flex flex-col gap-1 text-sm font-medium';
 
 /** The markup % this phone used last (ADR-053), or null. Storage may be blocked: then nothing. */
@@ -64,33 +80,36 @@ function sizeRange(sizes: string[]): string {
 }
 
 /**
- * New item, step by step (plan v19 §5.1, ADR-034): a start choice (one item /
- * many items) → who it is for → what it is → details (name, company, MRP,
- * purchase price) → sizes with pieces of each → check and save. Size is the
- * only variant; every size becomes one item with its own barcode. Big picture
- * tiles, a progress bar whose chips go back to a step without losing anything,
- * "+ Add" for a new section, category or size on the spot.
+ * New item, step by step (plan v19 §5.1, ADR-034; ADR-064): which collection →
+ * what it is → details (name, company, MRP, purchase price) with the sizes and
+ * pieces of each → check and save. Size is the only variant; every size becomes
+ * one item with its own barcode. Big picture tiles, a progress bar whose chips go
+ * back to a step without losing anything, "+ Add" for a new collection, category
+ * or size on the spot; the owner edits and deletes collections right on their tiles
+ * (Men and Women always stay).
  */
 export function NewItemWizard({
   sections,
   suppliers,
   previousSuppliers,
   showCost,
+  isOwner,
   initial,
 }: {
   sections: WizardSection[];
   suppliers: Option[];
   previousSuppliers: Option[];
   showCost: boolean;
-  initial: { sectionId?: string; supplierId?: string; billNumber?: string; stockDate?: string; mode?: Mode };
+  /** The owner edits and deletes collections here (ADR-064). */
+  isOwner: boolean;
+  initial: { sectionId?: string; supplierId?: string; billNumber?: string; stockDate?: string };
 }) {
   const t = useT();
   const router = useRouter();
   const [list, setList] = useState(sections);
-  const startSection = list.some((s) => s.id === initial.sectionId) ? initial.sectionId! : '';
-  const [mode, setMode] = useState<Mode>(initial.mode ?? 'many');
+  const startSection = list.some((s) => s.id === initial.sectionId && !s.standIn) ? initial.sectionId! : '';
   // "Add next item" of the same bill: straight to "What is it?" of the same section.
-  const [step, setStep] = useState<Step>(startSection ? 'what' : 'start');
+  const [step, setStep] = useState<Step>(startSection ? 'what' : 'who');
   const [direction, setDirection] = useState<'next' | 'back'>('next');
   const [sectionId, setSectionId] = useState(startSection);
   const [typeId, setTypeId] = useState('');
@@ -126,6 +145,11 @@ export function NewItemWizard({
   const [costAs, setCostAs] = useState<'piece' | 'box'>('piece');
   const [reached, setReached] = useState(startSection ? 1 : 0);
   const [sheet, setSheet] = useState<'section' | 'type' | null>(null);
+  // The owner's ✎ / 🗑 on a collection tile (ADR-064).
+  const [editing, setEditing] = useState<WizardSection | null>(null);
+  const [removing, setRemoving] = useState<WizardSection | null>(null);
+  // Men / Women the shop lacked, being made by the tap that picked it.
+  const [opening, startOpening] = useTransition();
   // Just added on this step (a section or a category): shown chosen with a glow; tap it to go on.
   const [fresh, setFresh] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -137,7 +161,7 @@ export function NewItemWizard({
 
   const section = list.find((s) => s.id === sectionId);
   const type = section?.types.find((x) => x.id === typeId);
-  const stepIndex = step === 'start' ? -1 : FLOW.indexOf(step);
+  const stepIndex = FLOW.indexOf(step);
   // The chosen sizes in the category's order, then any the owner typed.
   const offered = type ? [...type.sizes, ...sizes.filter((s) => !type.sizes.some((x) => sameSize(x, s)))] : [];
   const ordered = offered.filter((size) => sizes.some((s) => sameSize(s, size)));
@@ -178,7 +202,7 @@ export function NewItemWizard({
     .join(' · ');
 
   const go = (next: Step) => {
-    const index = next === 'start' ? -1 : FLOW.indexOf(next);
+    const index = FLOW.indexOf(next);
     setDirection(index < stepIndex ? 'back' : 'next');
     setReached((r) => Math.max(r, index));
     setStep(next);
@@ -186,22 +210,22 @@ export function NewItemWizard({
     setFresh(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  /** One step back (the arrow, and the phone's back button): Check → Details → What → Who → start. */
-  const stepBack = () => go(stepIndex <= 0 ? 'start' : FLOW[stepIndex - 1]);
+  /** One step back (the arrow, and the phone's back button): Check → Details → What → Which collection. */
+  const stepBack = () => go(FLOW[Math.max(0, stepIndex - 1)]);
   const stepBackRef = useRef(stepBack);
   useEffect(() => {
     stepBackRef.current = stepBack;
   });
-  // The phone's back button goes back one step, not off the page (owner, 2026-11-21): past the start
-  // screen one extra history entry stands guard; going back pops it, and the screen steps back.
+  // The phone's back button goes back one step, not off the page (owner, 2026-11-21): past the first
+  // step one extra history entry stands guard; going back pops it, and the screen steps back.
   const guarded = useRef(false);
   const skipPop = useRef(false);
   useEffect(() => {
-    if (step !== 'start' && !guarded.current) {
+    if (step !== 'who' && !guarded.current) {
       window.history.pushState(window.history.state, '');
       guarded.current = true;
-    } else if (step === 'start' && guarded.current) {
-      // Back at the start with the arrow: drop the guard so the next back leaves the page.
+    } else if (step === 'who' && guarded.current) {
+      // Back on the first step with the arrow: drop the guard so the next back leaves the page.
       guarded.current = false;
       skipPop.current = true;
       window.history.back();
@@ -220,25 +244,40 @@ export function NewItemWizard({
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
-  const pickMode = (next: Mode) => {
-    haptic();
-    if (next !== mode) {
-      setMode(next);
-      // One item keeps the first chosen size only.
-      if (next === 'one' && sizes.length > 1) setSizes(sizes.slice(0, 1));
-    }
-    go(sectionId ? 'what' : 'who');
-  };
-  const pickSection = (id: string) => {
-    haptic();
+  const chooseSection = (id: string) => {
     if (id !== sectionId) {
       setSectionId(id);
       setTypeId('');
       setSizes([]);
       setPieces({});
     }
-    go('what');
   };
+  /** Men / Women the shop lacks are made (or brought back) by this tap, then it goes on as usual. */
+  const pickSection = (s: WizardSection) => {
+    haptic();
+    if (!s.standIn) {
+      chooseSection(s.id);
+      go('what');
+      return;
+    }
+    startOpening(async () => {
+      const result = await openFixedCollectionAction(s.fixed ?? '');
+      if (!result.ok) {
+        done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
+        return;
+      }
+      setList((current) => current.map((x) => (x.id === s.id ? result.section : x)));
+      chooseSection(result.section.id);
+      go('what');
+    });
+  };
+  /** A collection just added: in the stand-in's place when it is Men / Women, else last. */
+  const putSection = (added: WizardSection) =>
+    setList((current) => {
+      const at = current.findIndex((x) => x.standIn && x.fixed !== null && x.fixed === added.fixed);
+      if (at < 0) return [...current.filter((x) => x.id !== added.id), added];
+      return current.map((x, i) => (i === at ? added : x));
+    });
   /** Choose a category; `stay` (just added) keeps the person on this step with it highlighted. */
   const chooseType = (next: WizardType) => {
     if (next.id !== typeId) {
@@ -256,8 +295,7 @@ export function NewItemWizard({
   const toggleSize = (size: string) => {
     haptic();
     const on = sizes.some((s) => sameSize(s, size));
-    if (mode === 'one') setSizes(on ? [] : [size]);
-    else setSizes(on ? sizes.filter((s) => !sameSize(s, size)) : [...sizes, size]);
+    setSizes(on ? sizes.filter((s) => !sameSize(s, size)) : [...sizes, size]);
   };
   const addToList = (id: string, change: (s: WizardSection) => WizardSection) => setList((current) => current.map((s) => (s.id === id ? change(s) : s)));
   const toReview = () => {
@@ -281,12 +319,13 @@ export function NewItemWizard({
     setPackMrp('');
     setCostAs('piece');
   };
-  /** Everything back to the first screen (what the address asked for stays: company, section, bill, date, mode). */
+  /** Everything back to the first screen (what the address asked for stays: company, section, bill, date). */
   const startOver = () => {
     clearItem();
     setError(null);
     setSheet(null);
-    setMode(initial.mode ?? 'many');
+    setEditing(null);
+    setRemoving(null);
     setSectionId(startSection);
     setSupplierId(initial.supplierId ?? '');
     setSupplierName(suppliers.find((s) => s.id === initial.supplierId)?.name ?? '');
@@ -294,7 +333,7 @@ export function NewItemWizard({
     setStockDate(initial.stockDate ?? '');
     setReached(startSection ? 1 : 0);
     setDirection('back');
-    setStep(startSection ? 'what' : 'start');
+    setStep(startSection ? 'what' : 'who');
     window.scrollTo({ top: 0 });
   };
   const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || typeId);
@@ -302,7 +341,7 @@ export function NewItemWizard({
   const resume = useFreshOnReturn(startOver, { ask: () => reached >= 2 && Boolean(name.trim() || mrp.trim() || sizes.length) });
   /**
    * Save (plan v19 04a): `print` → the tags page; `next` → the next item of the same bill
-   * ("What is it?", section / company / bill no. / date kept); `done` → the start, everything cleared.
+   * ("What is it?", section / company / bill no. / date kept); `done` → the first step, everything cleared.
    * Next 16 keeps this screen alive, so the form clears itself (Activity rule).
    */
   const save = (after: 'print' | 'next' | 'done') => {
@@ -336,6 +375,8 @@ export function NewItemWizard({
         done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
         return setError(result.error);
       }
+      // The collection has these items now: its 🗑 knows (ADR-064).
+      setList((current) => current.map((x) => (x.id === section.id ? { ...x, items: x.items + result.items.length } : x)));
       const skus = result.items.map((item) => item.sku);
       const finalName = result.items[0]?.name ?? savedName;
       const range = skus.length === 1 ? skus[0] : `${skus[0]} – ${skus[skus.length - 1]}`;
@@ -353,7 +394,7 @@ export function NewItemWizard({
       if (after === 'print') {
         setReached(1);
         setStep('what');
-        router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}&mode=${mode}`);
+        router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}`);
         return;
       }
       done.show({
@@ -371,7 +412,7 @@ export function NewItemWizard({
         setBillNumber('');
         setStockDate('');
         setReached(0);
-        setStep('start');
+        setStep('who');
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
@@ -382,7 +423,6 @@ export function NewItemWizard({
   if (type && stepIndex > 1) crumbs.push({ step: 'what', label: type.name });
   if (stepIndex > 2) crumbs.push({ step: 'details', label: [shownName, sizeLine].filter(Boolean).join(' · ') });
   const title: Record<Step, string> = {
-    start: t('ni.start.title'),
     who: t('ni.step.who'),
     what: t('ni.step.what'),
     details: t('ni.step.detailsSizes'),
@@ -405,8 +445,9 @@ export function NewItemWizard({
           a thin progress bar, then the step's title — so the fields get the screen. */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          {step === 'start' ? (
-            <Link href="/admin/stock" aria-label={t('stk.item.back')} className={backButton}>
+          {step === 'who' ? (
+            // The first step leaves the page: Home for the owner (Add new stock lives there), else Add stock.
+            <Link href={isOwner ? '/admin/dashboard' : '/admin/stock'} aria-label={isOwner ? t('ni.backHome') : t('stk.item.back')} className={backButton}>
               <IconBack className="h-5 w-5" />
             </Link>
           ) : (
@@ -421,20 +462,18 @@ export function NewItemWizard({
           )}
           <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">
             {t('stk.item.title')}
-            {step !== 'start' && <span className={`ml-2 text-[11px] font-semibold tracking-wide uppercase ${muted}`}>{t('ni.progress', { n: stepIndex + 1 })}</span>}
+            <span className={`ml-2 text-[11px] font-semibold tracking-wide uppercase ${muted}`}>{t('ni.progress', { n: stepIndex + 1 })}</span>
           </h1>
-          {(step !== 'start' || dirty) && <StartOver onStartOver={startOver} dirty={dirty} />}
+          {(stepIndex > 0 || dirty) && <StartOver onStartOver={startOver} dirty={dirty} />}
         </div>
-        {step !== 'start' && (
-          <ol aria-label={t('ni.steps')} className="grid grid-cols-4 gap-1">
-            {FLOW.map((s, i) => (
-              <li key={s} aria-current={s === step ? 'step' : undefined} className="flex flex-col gap-0.5">
-                <span className={`h-1 rounded-full transition-colors duration-300 ${i <= stepIndex ? 'bg-brand-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
-                <span className={`text-[10px] leading-tight font-semibold ${i === stepIndex ? 'text-brand-700 dark:text-brand-300' : muted}`}>{t(SHORT[s])}</span>
-              </li>
-            ))}
-          </ol>
-        )}
+        <ol aria-label={t('ni.steps')} className="grid grid-cols-4 gap-1">
+          {FLOW.map((s, i) => (
+            <li key={s} aria-current={s === step ? 'step' : undefined} className="flex flex-col gap-0.5">
+              <span className={`h-1 rounded-full transition-colors duration-300 ${i <= stepIndex ? 'bg-brand-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+              <span className={`text-[10px] leading-tight font-semibold ${i === stepIndex ? 'text-brand-700 dark:text-brand-300' : muted}`}>{t(SHORT[s])}</span>
+            </li>
+          ))}
+        </ol>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <h2 className="text-lg leading-tight font-bold">{title[step]}</h2>
           {crumbs.length > 0 && (
@@ -457,44 +496,43 @@ export function NewItemWizard({
       </div>
 
       <div key={step} hidden={step === 'details'} className={direction === 'next' ? 'step-next' : 'step-back'}>
-        {step === 'start' && (
-          <div role="group" aria-label={t('ni.start.title')} className="grid grid-cols-2 gap-3">
-            {(['one', 'many'] as const).map((m) => (
-              <button key={m} type="button" aria-pressed={m === mode} onClick={() => pickMode(m)} className={`${tile} ${m === mode ? tileOn : ''}`}>
-                <span aria-hidden className={`${artCircle} text-3xl font-bold`}>{m === 'one' ? '1' : '1+'}</span>
-                <span className="text-lg font-bold">{t(m === 'one' ? 'ni.start.one' : 'ni.start.many')}</span>
-                <span className={`text-xs ${muted}`}>{t(m === 'one' ? 'ni.start.oneHint' : 'ni.start.manyHint')}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {step === 'who' && list.length === 0 && (
-          <p className={`mb-3 text-sm ${muted}`}>
-            {t('ni.noSections')}{' '}
-            <Link href="/admin/categories" className="font-semibold text-brand-700 underline-offset-4 hover:underline dark:text-brand-300">
-              {t('ni.goCategories')}
-            </Link>
-          </p>
-        )}
         {step === 'who' && (
-          <div role="group" aria-label={t('ni.step.who')} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div role="group" aria-label={t('ni.step.who')} aria-busy={opening || undefined} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {list.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                aria-pressed={s.id === sectionId}
-                data-new={s.id === fresh || undefined}
-                ref={s.id === fresh ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
-                onClick={() => pickSection(s.id)}
-                className={`${tile} ${s.id === sectionId ? tileOn : ''} ${s.id === fresh ? 'new-glow' : ''}`}
-              >
-                {s.id === fresh && <NewBadge />}
-                <span className={artCircle}>
-                  <SectionArt icon={s.icon} className="h-14 w-14" />
-                </span>
-                <span className="text-lg font-bold">{s.name}</span>
-              </button>
+              // Owner, 2026-11-22 (ADR-064): Men and Women carry a lock (always there); the owner's ✎ / 🗑 sit on the others.
+              <div key={s.id} data-testid="collection-tile" data-fixed={s.fixed ?? undefined} className="relative">
+                <button
+                  type="button"
+                  aria-pressed={s.id === sectionId}
+                  data-new={s.id === fresh || undefined}
+                  disabled={opening}
+                  ref={s.id === fresh ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
+                  onClick={() => pickSection(s)}
+                  className={`${tile} h-full w-full ${isOwner ? 'pt-11' : ''} ${s.id === sectionId ? tileOn : ''} ${s.id === fresh ? 'new-glow' : ''}`}
+                >
+                  {s.id === fresh && <NewBadge className={isOwner ? 'top-2.5 left-1/2 -translate-x-1/2' : undefined} />}
+                  <span className={artCircle}>
+                    <SectionArt icon={s.icon} className="h-14 w-14" />
+                  </span>
+                  <span className="text-lg font-bold">{s.name}</span>
+                </button>
+                {s.fixed ? (
+                  <span title={t('sec.fixed')} className="pointer-events-none absolute top-3 right-3 text-zinc-400 dark:text-zinc-500">
+                    <IconLock className="h-4 w-4" />
+                  </span>
+                ) : (
+                  isOwner && (
+                    <>
+                      <button type="button" aria-label={t('ni.section.edit', { name: s.name })} onClick={() => setEditing(s)} className={`${cornerButton} left-2 text-brand-700 dark:text-brand-300`}>
+                        <IconPencil className="h-4 w-4" />
+                      </button>
+                      <button type="button" aria-label={t('col.delete', { name: s.name })} onClick={() => setRemoving(s)} className={`${cornerButton} right-2 text-red-600 dark:text-red-400`}>
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    </>
+                  )
+                )}
+              </div>
             ))}
             <AddTile label={t('ni.add')} onClick={() => setSheet('section')} />
           </div>
@@ -739,7 +777,6 @@ export function NewItemWizard({
               <div id="ni-sizes" className="flex scroll-mt-28 flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
                 <SizeStep
                   type={type}
-                  single={mode === 'one'}
                   boxes={pack}
                   offered={offered}
                   sizes={sizes}
@@ -794,10 +831,13 @@ export function NewItemWizard({
       )}
 
       {sheet === 'section' && (
-        <AddSectionSheet
+        <SectionSheet
+          title={t('ni.addSection.title')}
+          saveLabel={t('ni.addSection.save')}
+          submit={(name, icon) => addSectionAction({ name, icon })}
           onClose={() => setSheet(null)}
-          onAdded={(added) => {
-            setList((current) => [...current, { ...added, types: [] }]);
+          onDone={(added) => {
+            putSection(added);
             setSheet(null);
             done.show({ title: t('done.sectionAdded'), lines: [{ label: t('done.line.name'), value: added.name }] });
             // Stay on this step: the new section is shown chosen and glowing; tap it to go on.
@@ -806,6 +846,41 @@ export function NewItemWizard({
             setSizes([]);
             setPieces({});
             setFresh(added.id);
+          }}
+        />
+      )}
+      {editing && (
+        <SectionSheet
+          title={t('sec.edit')}
+          saveLabel={t('sec.save')}
+          initial={editing}
+          submit={async (name, icon): Promise<SectionResult> => {
+            const result = await editCollectionAction({ id: editing.id, name, icon });
+            return result.ok ? { ok: true, section: { ...editing, ...result.section } } : result;
+          }}
+          onClose={() => setEditing(null)}
+          onDone={(saved) => {
+            setList((current) => current.map((x) => (x.id === saved.id ? saved : x)));
+            setEditing(null);
+            done.show({ title: t('done.saved'), lines: [{ label: t('done.line.name'), value: saved.name }] });
+          }}
+        />
+      )}
+      {removing && (
+        <DeleteSectionSheet
+          section={removing}
+          onClose={() => setRemoving(null)}
+          onDeleted={(message) => {
+            setList((current) => current.filter((x) => x.id !== removing.id));
+            if (sectionId === removing.id) {
+              setSectionId('');
+              setTypeId('');
+              setSizes([]);
+              setPieces({});
+              setReached(0);
+            }
+            setRemoving(null);
+            done.show({ title: message });
           }}
         />
       )}
@@ -847,9 +922,9 @@ function Segmented({ label, value, options, onChange, small = false }: { label: 
   );
 }
 
-function NewBadge() {
+function NewBadge({ className = 'top-2 right-2' }: { className?: string }) {
   const t = useT();
-  return <span className="absolute top-2 right-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white shadow">{t('ni.new')}</span>;
+  return <span className={`absolute ${className} rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white shadow`}>{t('ni.new')}</span>;
 }
 
 function AddTile({ label, onClick }: { label: string; onClick: () => void }) {
@@ -867,10 +942,9 @@ function AddTile({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
-/** Sizes & pieces: tap the sizes that came (one only for a single item); each gets − pieces +; "+ Add size" keeps a new size on the category. */
+/** Sizes & pieces: tap the sizes that came; each gets − pieces +; "+ Add size" keeps a new size on the category. */
 function SizeStep({
   type,
-  single,
   boxes = null,
   offered,
   sizes,
@@ -881,7 +955,6 @@ function SizeStep({
   onTypeSizes,
 }: {
   type: WizardType;
-  single: boolean;
   /** Box packs: the counts are boxes of this many pieces. */
   boxes?: number | null;
   offered: string[];
@@ -916,8 +989,8 @@ function SizeStep({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">{t(single ? 'ni.step.size' : 'ni.step.sizes')}</p>
-        {!single && offered.length > 1 && (
+        <p className="text-sm font-medium">{t('ni.step.sizes')}</p>
+        {offered.length > 1 && (
           <button type="button" onClick={() => onAll(!allChosen)} className="rounded-full px-2.5 py-1 text-sm font-bold text-brand-700 transition hover:bg-brand-50 active:scale-95 dark:text-brand-300 dark:hover:bg-brand-950">
             {allChosen ? t('ni.sizes.none') : t('ni.sizes.all')}
           </button>
@@ -1021,23 +1094,38 @@ function SizeStep({
   );
 }
 
-function AddSectionSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (section: { id: string; name: string; icon: SectionIcon }) => void }) {
+/** "+ Add" a collection, or ✎ one (owner, ADR-064): its name (Hindi or English) and its picture. */
+function SectionSheet({
+  title,
+  saveLabel,
+  initial,
+  submit,
+  onClose,
+  onDone,
+}: {
+  title: string;
+  saveLabel: string;
+  initial?: { name: string; icon: SectionIcon };
+  submit: (name: string, icon: SectionIcon) => Promise<SectionResult>;
+  onClose: () => void;
+  onDone: (section: WizardSection) => void;
+}) {
   const t = useT();
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState<SectionIcon>('family');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [icon, setIcon] = useState<SectionIcon>(initial?.icon ?? 'family');
   const [error, setError] = useState<string | null>(null);
   const [busy, startBusy] = useTransition();
   return (
-    <ActionSheet title={t('ni.addSection.title')} onClose={onClose}>
+    <ActionSheet title={title} onClose={onClose}>
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
           startBusy(async () => {
-            const result = await addSectionAction({ name, icon });
+            const result = await submit(name, icon);
             if (!result.ok) return setError(result.error);
-            onAdded({ id: result.section.id, name: result.section.name, icon });
+            onDone(result.section);
           });
         }}
       >
@@ -1066,12 +1154,59 @@ function AddSectionSheet({ onClose, onAdded }: { onClose: () => void; onAdded: (
           </p>
         )}
         <button type="submit" disabled={busy} className={sheetPrimary}>
-          {busy ? t('common.saving') : t('ni.addSection.save')}
+          {busy ? t('common.saving') : saveLabel}
         </button>
         <button type="button" onClick={onClose} className={sheetSecondary}>
           {t('common.cancel')}
         </button>
       </form>
+    </ActionSheet>
+  );
+}
+
+/**
+ * 🗑 on a collection (owner, ADR-064): asks first. One that still has items stays
+ * (every item needs its collection) — the sheet says so instead of offering Delete.
+ */
+function DeleteSectionSheet({ section, onClose, onDeleted }: { section: WizardSection; onClose: () => void; onDeleted: (message: string) => void }) {
+  const t = useT();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, startBusy] = useTransition();
+  return (
+    <ActionSheet title={t('col.deleteAsk', { name: section.name })} onClose={onClose}>
+      {section.items > 0 ? (
+        <p role="alert" className={errorBox}>
+          {t('sec.err.hasItems', { name: section.name, n: section.items })}
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('col.deleteNote')}</p>
+          {error && (
+            <p role="alert" className={errorBox}>
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            data-testid="confirm-delete-collection"
+            disabled={busy}
+            onClick={() =>
+              startBusy(async () => {
+                const result = await deleteCollectionAction(section.id);
+                if (!result.ok) return setError(result.error);
+                onDeleted(result.message);
+              })
+            }
+            className={sheetDanger}
+          >
+            <IconTrash className="h-5 w-5" />
+            {busy ? t('common.saving') : t('col.deleteYes')}
+          </button>
+        </>
+      )}
+      <button type="button" onClick={onClose} className={sheetSecondary}>
+        {t('common.cancel')}
+      </button>
     </ActionSheet>
   );
 }

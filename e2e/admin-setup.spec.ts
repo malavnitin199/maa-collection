@@ -826,7 +826,7 @@ test('new item: one plain item with MRP, purchase and pieces on top â†’ labels â
   await expect(page.getByRole('link', { name: /Tag old stock/ })).toBeVisible();
   await page.getByRole('link', { name: /New item/ }).click();
   await expect(page).toHaveURL(/\/admin\/stock\/new$/); // the New item steps (plan v19, new-item-wizard.spec.ts)
-  await expect(page.getByRole('heading', { level: 2, name: 'What are you adding?' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Which collection?' })).toBeVisible(); // no One / Many choice (ADR-064)
   // The rest of this test covers the earlier form, kept under Other ways as "Old form".
   await page.goto('/admin/stock');
   await page.getByRole('link', { name: /^Old form/ }).click();

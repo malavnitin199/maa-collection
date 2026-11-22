@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { IconTrash } from '@/components/ui/icons';
+import { IconLock, IconTrash } from '@/components/ui/icons';
 import { ActionSheet, sheetDanger, sheetSecondary } from '@/components/ui/selection';
 import { card, errorBox, input, link, muted, okBox } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
@@ -13,7 +13,8 @@ import type { CollectionRow } from '@/server/services/sections';
 /**
  * Home → Collections (owner, 2026-11-22, ADR-051): each collection (Men, Women, …)
  * with its items and pieces, its name to edit in place, and Delete — only once it
- * has no items (every item must have a collection).
+ * has no items (every item must have a collection). Men and Women are fixed (ADR-064):
+ * always listed, with a lock instead of the name box and Delete.
  */
 export function CollectionsPanel({ rows }: { rows: CollectionRow[] }) {
   const t = useT();
@@ -47,7 +48,7 @@ function Row({ row, onMessage }: { row: CollectionRow; onMessage: (m: { ok: bool
   const [name, setName] = useState(row.name);
   const [confirm, setConfirm] = useState(false);
   const [busy, startBusy] = useTransition();
-  const changed = name.trim() !== row.name && name.trim().length > 0;
+  const changed = !row.fixed && name.trim() !== row.name && name.trim().length > 0;
   const save = () =>
     startBusy(async () => {
       const result = await renameCollectionAction(row.id, name);
@@ -64,7 +65,15 @@ function Row({ row, onMessage }: { row: CollectionRow; onMessage: (m: { ok: bool
       if (result.ok) router.refresh();
     });
   return (
-    <li data-testid="collection-row" className="flex items-center gap-2 rounded-xl bg-zinc-50 py-1.5 pr-1.5 pl-2 dark:bg-zinc-900">
+    <li data-testid="collection-row" data-fixed={row.fixed ?? undefined} className="flex items-center gap-2 rounded-xl bg-zinc-50 py-1.5 pr-1.5 pl-2 dark:bg-zinc-900">
+      {row.fixed ? (
+        <span className="flex h-9 min-w-0 flex-1 items-center gap-1.5 px-2 text-sm font-semibold">
+          <span className="truncate">{row.name}</span>
+          <span title={t('sec.fixed')} className="shrink-0 text-zinc-400">
+            <IconLock className="h-3.5 w-3.5" />
+          </span>
+        </span>
+      ) : (
       <form
         className="flex min-w-0 flex-1 items-center gap-1.5"
         onSubmit={(e) => {
@@ -85,12 +94,13 @@ function Row({ row, onMessage }: { row: CollectionRow; onMessage: (m: { ok: bool
           </button>
         )}
       </form>
+      )}
       <span data-testid="collection-count" className={`w-[6.5rem] shrink-0 text-right text-xs tabular-nums ${muted}`}>
         {t('col.line', { items: row.items, pcs: row.pieces })}
         {!row.active && ` · ${t('col.hidden')}`}
       </span>
-      {row.items > 0 && <span aria-hidden className="w-9 shrink-0" />}
-      {row.items === 0 && (
+      {(row.fixed || row.items > 0) && <span aria-hidden className="w-9 shrink-0" />}
+      {!row.fixed && row.items === 0 && (
         <button
           type="button"
           aria-label={t('col.delete', { name: row.name })}

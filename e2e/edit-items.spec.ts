@@ -20,7 +20,6 @@ test('edit an item made with no brand and no size; add sizes; add pieces', async
   const name = `Edit Kurta ${run}${info.project.name[0]}`;
   // New item with no size and no brand (both allowed).
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^One item/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByLabel('Product name').fill(name);

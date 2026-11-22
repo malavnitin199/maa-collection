@@ -19,7 +19,6 @@ async function loginOwner(page: Page) {
 test('New item: type a name in Hindi from English letters, change it back, the choice follows to other boxes', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
 
@@ -67,7 +66,8 @@ test('a microphone sits next to name boxes where the browser can listen; it says
 
 test('New item: back after one or two steps starts fresh; after three it asks to continue or start a fresh collection; "Start again" clears on the spot', async ({ page }) => {
   await loginOwner(page);
-  const start = () => expect(page.getByRole('heading', { level: 2, name: 'What are you adding?' })).toBeVisible();
+  // The first step since ADR-064 (no One / Many choice): Which collection?
+  const start = () => expect(page.getByRole('heading', { level: 2, name: 'Which collection?' })).toBeVisible();
   const away = async () => {
     await page.getByRole('link', { name: /^(Home|Dashboard)$/ }).first().click(); // the dock on a phone, the side menu on a desktop
     await expect(page).toHaveURL(/\/admin\/dashboard$/);
@@ -75,14 +75,12 @@ test('New item: back after one or two steps starts fresh; after three it asks to
     await expect(page).toHaveURL(/\/admin\/stock\/new$/);
   };
   const toDetails = async () => {
-    await page.getByRole('button', { name: /^Many items/ }).click();
     await page.getByRole('button', { name: 'Men', exact: true }).click();
     await page.getByRole('button', { name: /^Kurta/ }).click();
   };
 
   // Two steps (who, what) and nothing typed: a fresh start, no question.
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await away();

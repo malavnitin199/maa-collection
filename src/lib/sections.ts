@@ -23,6 +23,40 @@ export const DEFAULT_SECTIONS: readonly { key: DefaultSectionKey; name: string; 
   { key: 'girls', name: 'Girls', nameHi: 'लड़कियाँ', icon: 'girl' },
 ];
 
+/**
+ * Owner, 2026-11-22 (ADR-064): Men and Women are the shop's fixed collections — always
+ * there, never deleted, renamed or hidden. Known by their stored (English) name, any
+ * letter case; every other collection can be edited and deleted.
+ */
+export type FixedSectionKey = 'men' | 'women';
+export const FIXED_SECTIONS = DEFAULT_SECTIONS.filter((s): s is (typeof DEFAULT_SECTIONS)[number] & { key: FixedSectionKey } => s.key === 'men' || s.key === 'women');
+
+/** The fixed collection a stored name is (Men / Women), or null. */
+export function fixedSectionKey(name: string): FixedSectionKey | null {
+  const key = name.trim().toLowerCase();
+  return FIXED_SECTIONS.find((s) => s.name.toLowerCase() === key)?.key ?? null;
+}
+
+/** Where a missing fixed collection goes in a list: right after the fixed one before it (Women after Men), else first. */
+export function fixedSectionPlace(list: readonly { fixed: FixedSectionKey | null }[], key: FixedSectionKey): number {
+  const before = FIXED_SECTIONS.slice(0, FIXED_SECTIONS.findIndex((f) => f.key === key))
+    .map((f) => list.findIndex((s) => s.fixed === f.key))
+    .filter((i) => i >= 0);
+  return before.length > 0 ? Math.max(...before) + 1 : 0;
+}
+
+/**
+ * A list of collections with Men and Women always in it: one the shop lacks (deleted
+ * before ADR-064, or hidden) gets a stand-in in its place, made for real when tapped.
+ */
+export function withFixedSections<T extends { fixed: FixedSectionKey | null }>(list: readonly T[], standIn: (key: FixedSectionKey) => T): T[] {
+  const out = [...list];
+  for (const fixed of FIXED_SECTIONS) {
+    if (!out.some((s) => s.fixed === fixed.key)) out.splice(fixedSectionPlace(out, fixed.key), 0, standIn(fixed.key));
+  }
+  return out;
+}
+
 const JEANS = ['28', '30', '32', '34'];
 const TOPS = ['M', 'L', 'XL', 'XXL'];
 const FREE = ['Free'];

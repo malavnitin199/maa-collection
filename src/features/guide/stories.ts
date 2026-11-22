@@ -275,17 +275,18 @@ export const STORIES: Story[] = [
     id: 'new-design',
     audience: 'stock',
     title: { en: 'New item', hi: 'नया आइटम' },
-    goal: { en: 'Photo, name, price — and its barcode.', hi: 'फ़ोटो, नाम, दाम — और उसका बारकोड।' },
+    goal: { en: 'Collection, prices, sizes — and its barcodes.', hi: 'कलेक्शन, दाम, साइज़ — और उसके बारकोड।' },
     steps: [
       {
-        scene: { kind: 'photo' },
-        text: { en: '**Name**, category, photo on the right', hi: '**नाम**, कैटेगरी, दाईं ओर फ़ोटो' },
-        say: { en: 'Open Stock, New item. Type the product name, pick the category and who it is for, and tap the square on the right for a photo.', hi: 'स्टॉक में नया आइटम खोलें। प्रोडक्ट का नाम लिखें, कैटेगरी और किसके लिए है चुनें, और फ़ोटो के लिए दाईं ओर का चौकोर दबाएँ।' },
+        // Owner, 2026-11-22 (ADR-064): Home → Add new stock opens New item on the collection.
+        scene: { kind: 'buttons', items: [{ en: 'Men', hi: 'पुरुष' }, { en: 'Women', hi: 'महिला' }, { en: '+ Add', hi: '+ जोड़ें' }], tap: 0 },
+        text: { en: '**Add new stock** → pick the collection', hi: '**नया स्टॉक जोड़ें** → कलेक्शन चुनें' },
+        say: { en: 'On Home, tap Add new stock. Pick the collection, like Men or Women, then what it is. Men and Women always stay.', hi: 'होम पर नया स्टॉक जोड़ें दबाएँ। कलेक्शन चुनें, जैसे पुरुष या महिला, फिर बताएँ कि क्या है। पुरुष और महिला हमेशा रहते हैं।' },
       },
       {
-        scene: { kind: 'field', label: { en: 'MRP (₹)', hi: 'MRP (₹)' }, value: '1,499' },
-        text: { en: 'Company, **sale price**, purchase price', hi: 'कंपनी, **बिक्री दाम**, खरीद दाम' },
-        say: { en: 'Choose the company, then type the sale price, which is the MRP, and the purchase price. Pieces are in the Details tab.', hi: 'कंपनी चुनें, फिर बिक्री दाम यानी MRP और खरीद दाम लिखें। पीस जानकारी टैब में हैं।' },
+        scene: { kind: 'field', label: { en: 'Purchase price ₹', hi: 'खरीद दाम ₹' }, value: '700' },
+        text: { en: 'Company, **purchase price**, sale price', hi: 'कंपनी, **खरीद दाम**, बिक्री दाम' },
+        say: { en: 'Choose the company and type the purchase price. The sale price, the MRP, is worked out from it, or type your own.', hi: 'कंपनी चुनें और खरीद दाम लिखें। बिक्री दाम यानी MRP उससे अपने आप बनता है, या अपना लिखें।' },
       },
       {
         scene: { kind: 'chips', label: { en: 'Sizes', hi: 'साइज़' }, chips: ['M', 'L', 'XL', 'XXL'] },

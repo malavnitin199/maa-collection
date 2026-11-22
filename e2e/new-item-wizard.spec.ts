@@ -22,15 +22,20 @@ async function login(page: Page, who: string, lands: RegExp) {
 
 const heading = (page: Page, text: string) => expect(page.getByRole('heading', { level: 2, name: text })).toBeVisible();
 
-test('many items: who → what → details & sizes (one card) → check → save and print; back keeps everything', async ({ page }) => {
-  await login(page, 'Owner', /\/admin\/dashboard$/);
-  await page.goto('/admin/stock');
-  await page.getByRole('link', { name: /^New item/ }).click();
-  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
-  await heading(page, 'What are you adding?');
-  await page.getByRole('button', { name: /^Many items/ }).click();
+/** The "Saved …" card: wait for it, then any key closes it. */
+async function closeDone(page: Page) {
+  await expect(page.getByTestId('done-overlay')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('done-overlay')).toBeHidden();
+}
 
+test('Home → Add new stock → which collection → what → details & sizes (one card) → check → save and print; back keeps everything', async ({ page }) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  // Owner, 2026-11-22 (ADR-064): the Home tile opens New item itself, on "Which collection?" — no One / Many choice.
+  await page.getByTestId('quick-actions').getByRole('link', { name: 'Add new stock' }).click();
+  await expect(page).toHaveURL(/\/admin\/stock\/new$/);
   await heading(page, 'Which collection?');
+  await expect(page.getByRole('button', { name: /^(One item|Many items)/ })).toHaveCount(0);
   await expect(page.getByText('Step 1 of 4')).toBeVisible();
   const who = page.getByRole('group', { name: 'Which collection?' }).getByRole('button');
   await expect(who.nth(0)).toHaveText('Men'); // then Women, Boys, Girls, any the owner added, and Add last
@@ -94,16 +99,16 @@ test('many items: who → what → details & sizes (one card) → check → save
   await expect(page.getByTestId('wizard-path')).toContainText('M × 1 · L × 2');
 
   await page.getByRole('button', { name: 'Save & print tags' }).click();
-  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=2&mode=many$/);
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=2$/);
   await expect(page.getByText('Saved 2 new items with barcodes.')).toBeVisible();
   const lines = page.getByTestId('receipt-lines');
   await expect(lines).toContainText(`Chikan Kurta ${run} · M`); // no colour: nothing shown (D-V19-3)
   await expect(lines.getByRole('listitem').filter({ hasText: `Chikan Kurta ${run} · L` })).toContainText('2 pcs');
   await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(3);
 
-  // Add next item: the same bill — company, section and the many-items choice kept; straight to "What is it?".
+  // Add next item: the same bill — company and section kept; straight to "What is it?".
   await page.getByRole('link', { name: '+ Add next item' }).click();
-  await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=[0-9a-f-]{36}&section=[0-9a-f-]{36}&mode=many&n=[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/admin\/stock\/new\?supplier=[0-9a-f-]{36}&section=[0-9a-f-]{36}&n=[0-9a-f-]{36}$/);
   await heading(page, 'What is it?');
   await expect(page.getByTestId('wizard-path')).toHaveText('Men');
   await page.getByRole('button', { name: /^Shirt/ }).click();
@@ -111,10 +116,9 @@ test('many items: who → what → details & sizes (one card) → check → save
   await expect(page.getByLabel('Product name')).toHaveValue('');
 });
 
-test('one item: a new category and a new size on the spot; one size only', async ({ page }) => {
+test('a new category and a new size on the spot; every item may have many sizes (ADR-064)', async ({ page }) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^One item/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await heading(page, 'What is it?');
   await page.getByRole('group', { name: 'What is it?' }).getByRole('button', { name: 'Add' }).click();
@@ -147,28 +151,30 @@ test('one item: a new category and a new size on the spot; one size only', async
   await expect(page.getByLabel('Product name (optional)')).toHaveAttribute('placeholder', `Shorts ${run} + number`);
   await page.getByLabel('Sale price (MRP) ₹').fill('899');
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 1 pc');
-  await expect(page.getByRole('button', { name: 'All sizes' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'All sizes' })).toBeVisible();
+  // Sizes are tapped on and off; more than one may be chosen.
   await page.getByRole('button', { name: 'Size 30', exact: true }).click();
   await page.getByRole('button', { name: 'Size 32', exact: true }).click();
+  await page.getByRole('button', { name: 'Size 30', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Size 30', exact: true })).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('button', { name: 'Size 32', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  // A size the category lacks: kept on the category for next time, and chosen now.
+  // A size the category lacks: kept on the category for next time, and chosen now, with the others.
   await page.getByLabel('New size').fill('34');
   await page.getByRole('button', { name: '+ Add size' }).click();
   await expect(page.getByRole('button', { name: 'Size 34', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('button', { name: 'Size 32', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: 'Size 32', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'One more of size 34' }).click();
   await page.getByRole('button', { name: 'One more of size 34' }).click();
-  await expect(page.getByTestId('size-summary')).toHaveText('1 size · 3 pcs');
+  await expect(page.getByTestId('size-summary')).toHaveText('2 sizes · 4 pcs');
   await page.getByRole('button', { name: 'Next' }).click();
 
   await heading(page, 'Check and save');
   await expect(page.getByTestId('review-card')).toContainText(`Shorts ${run} + number`);
-  await expect(page.getByTestId('review-sizes').getByRole('listitem')).toHaveText(['34 × 3']);
+  await expect(page.getByTestId('review-sizes').getByRole('listitem')).toHaveText(['32 × 1', '34 × 3']);
   await page.getByRole('button', { name: 'Save & print tags' }).click();
-  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=1&mode=one$/);
+  await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=[0-9a-f-]{36}&created=2$/);
   await expect(page.getByTestId('receipt-lines')).toContainText(new RegExp(`Shorts ${run} 001 · 34`));
-  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(3);
+  await expect(page.getByTestId('label-sheet').getByRole('img', { name: /^Barcode 200/ })).toHaveCount(4);
 
   // The new size stayed on the category.
   await page.goto('/admin/categories');
@@ -178,7 +184,6 @@ test('one item: a new category and a new size on the spot; one size only', async
 test('save & add next keeps the bill (section, company, bill no.) and shows the SKUs; save clears everything; two saves = two receipts', async ({ page }) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Women', exact: true }).click();
   await page.getByRole('button', { name: /^Kurti/ }).click();
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Laxmi Fashion House');
@@ -219,8 +224,6 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await expect(page.getByTestId('done-overlay')).toContainText(new RegExp(`Saved Banarasi ${run}: MAA-SA-\\d{3} · 2 pcs`));
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('done-overlay')).toBeHidden();
-  await heading(page, 'What are you adding?');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await heading(page, 'Which collection?'); // no section kept
   await page.getByRole('button', { name: 'Women', exact: true }).click();
   await page.getByRole('button', { name: /^Saree/ }).click();
@@ -245,7 +248,6 @@ test('compact top, short company list, Next inside the card, and the phone back 
   await page.goto('/admin/stock');
   await page.getByRole('link', { name: /^New item/ }).click();
   await expect(page).toHaveURL(/\/admin\/stock\/new$/);
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Women', exact: true }).click();
   await page.getByRole('button', { name: /^Kurti/ }).click();
   await heading(page, 'Details & sizes');
@@ -271,18 +273,83 @@ test('compact top, short company list, Next inside the card, and the phone back 
   await page.goBack();
   await heading(page, 'What is it?');
   await page.goBack();
-  await heading(page, 'Which collection?');
-  await page.goBack();
-  await heading(page, 'What are you adding?');
+  await heading(page, 'Which collection?'); // the first step (ADR-064): the next back leaves the page
   await page.goBack();
   await expect(page).toHaveURL(/\/admin\/stock$/);
+});
+
+test('which collection: Men and Women always stay; the owner adds, edits and deletes the others right on their tiles (ADR-064)', async ({ page }, info) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  const tag = `${run}${info.project.name[0]}`;
+  await page.goto('/admin/stock/new');
+  const group = page.getByRole('group', { name: 'Which collection?' });
+  const sheet = page.getByRole('dialog');
+  // Men and Women carry a lock: no ✎, no 🗑. The others have both.
+  await expect(page.locator('[data-testid="collection-tile"][data-fixed]')).toHaveCount(2);
+  for (const fixed of ['Men', 'Women']) {
+    await expect(group.getByRole('button', { name: `Edit ${fixed}`, exact: true })).toHaveCount(0);
+    await expect(group.getByRole('button', { name: `Delete ${fixed}`, exact: true })).toHaveCount(0);
+  }
+  await expect(group.getByRole('button', { name: 'Edit Boys', exact: true })).toBeVisible();
+  await expect(group.getByRole('button', { name: 'Delete Boys', exact: true })).toBeVisible();
+
+  // + Add: it stays on this step, chosen and marked New, with its own ✎ / 🗑.
+  await group.getByRole('button', { name: 'Add', exact: true }).click();
+  await sheet.getByRole('textbox', { name: /^Name/ }).fill(`Kids ${tag}`);
+  await sheet.getByRole('button', { name: 'Add', exact: true }).click();
+  await closeDone(page);
+  await expect(group.getByRole('button', { name: new RegExp(`^New.*Kids ${tag}$`) })).toHaveAttribute('aria-pressed', 'true');
+
+  // ✎: a new name and picture, kept on the server.
+  await group.getByRole('button', { name: `Edit Kids ${tag}`, exact: true }).click();
+  await expect(sheet.getByRole('heading', { name: 'Edit collection' })).toBeVisible();
+  await expect(sheet.getByRole('textbox', { name: /^Name/ })).toHaveValue(`Kids ${tag}`);
+  await sheet.getByRole('textbox', { name: /^Name/ }).fill(`Juniors ${tag}`);
+  await sheet.getByRole('radio', { name: 'Baby' }).click();
+  await sheet.getByRole('button', { name: 'Save collection' }).click();
+  await closeDone(page);
+  await expect(group.getByRole('button', { name: `Edit Juniors ${tag}`, exact: true })).toBeVisible();
+  await page.reload();
+  await expect(group.getByRole('button', { name: `Juniors ${tag}`, exact: true })).toBeVisible();
+
+  // With an item in it, 🗑 says so and keeps it (every item needs its collection).
+  await group.getByRole('button', { name: `Juniors ${tag}`, exact: true }).click();
+  await page.getByRole('group', { name: 'What is it?' }).getByRole('button', { name: 'Add', exact: true }).click();
+  await sheet.getByLabel('Category name').fill(`Bibs ${tag}`);
+  await sheet.getByRole('button', { name: 'Add category' }).click();
+  await closeDone(page);
+  await page.getByRole('button', { name: new RegExp(`^New.*Bibs ${tag}`) }).click();
+  await page.getByLabel('Sale price (MRP) ₹').fill('199');
+  await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await closeDone(page);
+  await heading(page, 'Which collection?');
+  await group.getByRole('button', { name: `Delete Juniors ${tag}`, exact: true }).click();
+  const ask = page.getByTestId('action-sheet');
+  await expect(ask).toContainText(`Juniors ${tag} still has 1 items. Delete them first.`);
+  await expect(ask.getByTestId('confirm-delete-collection')).toHaveCount(0);
+  await ask.getByRole('button', { name: 'Cancel' }).click();
+
+  // An empty one: 🗑 asks first, then it is gone (after a reload too).
+  await group.getByRole('button', { name: 'Add', exact: true }).click();
+  await sheet.getByRole('textbox', { name: /^Name/ }).fill(`Spare ${tag}`);
+  await sheet.getByRole('button', { name: 'Add', exact: true }).click();
+  await closeDone(page);
+  await group.getByRole('button', { name: `Delete Spare ${tag}`, exact: true }).click();
+  await expect(ask).toHaveAccessibleName(`Delete Spare ${tag}?`);
+  await ask.getByTestId('confirm-delete-collection').click();
+  await expect(page.getByTestId('done-overlay')).toContainText(`Spare ${tag} deleted.`);
+  await closeDone(page);
+  await expect(group.getByRole('button', { name: `Spare ${tag}`, exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(group.getByRole('button', { name: `Juniors ${tag}`, exact: true })).toBeVisible();
+  await expect(group.getByRole('button', { name: `Spare ${tag}`, exact: true })).toHaveCount(0);
 });
 
 test('no size picked: just the pieces; saved as one item with no size (owner, 2026-11-22)', async ({ page }, info) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   const name = `Plain Dupatta ${run}${info.project.name[0]}`;
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByLabel('Product name').fill(name);
@@ -305,7 +372,6 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await expect(card.getByTestId('design-sizes')).toHaveText('N/A · 3'); // no size → N/A (ADR-058)
   // Tapping a size hides the pieces box again.
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^Many items/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByTestId('size-cards').getByRole('button').first().click();
@@ -316,7 +382,6 @@ test('purchase price first; an empty sale price is purchase + 50% (the % can be 
   await login(page, 'Owner', /\/admin\/dashboard$/);
   const name = `Markup Kurta ${run}${info.project.name[0]}`;
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^One item/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByLabel('Product name').fill(name);
@@ -341,7 +406,6 @@ test('purchase price first; an empty sale price is purchase + 50% (the % can be 
   await expect(page.getByTestId('item-prices')).toContainText('MRP ₹980.00');
   // The % is remembered on this phone for the next item.
   await page.goto('/admin/stock/new');
-  await page.getByRole('button', { name: /^One item/ }).click();
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await expect(page.getByTestId('mrp-from-cost').getByLabel('Markup % on the purchase price')).toHaveValue('40');

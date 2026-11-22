@@ -7,6 +7,9 @@
 export const sectionsEn = {
   // Home → Collections (owner, 2026-11-22, ADR-051).
   'sec.err.hasItems': '{name} still has {n} items. Delete them first.',
+  // Men and Women are fixed (owner, 2026-11-22, ADR-064).
+  'sec.err.fixed': '{name} always stays. It cannot be deleted, renamed or hidden.',
+  'sec.fixed': 'Always there',
   'col.title': 'Collections',
   'col.line': '{items} items · {pcs} pcs',
   'col.hidden': 'hidden',
@@ -68,6 +71,8 @@ export const sectionsEn = {
 
 export const sectionsHi: Record<keyof typeof sectionsEn, string> = {
   'sec.err.hasItems': '{name} में अभी {n} आइटम हैं। पहले उन्हें हटाएँ।',
+  'sec.err.fixed': '{name} हमेशा रहेगा। इसे हटाया, बदला या छिपाया नहीं जा सकता।',
+  'sec.fixed': 'हमेशा रहेगा',
   'col.title': 'कलेक्शन',
   'col.line': '{items} आइटम · {pcs} पीस',
   'col.hidden': 'छिपा',

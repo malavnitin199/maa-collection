@@ -30,7 +30,6 @@ test('a company with an item is deleted from its page; the item stays with no co
   // New item: with this company, then one with no company at all (optional).
   for (const [name, withCompany] of [[`Kept Kurta ${tag}`, true], [`Free Kurta ${tag}`, false]] as const) {
     await page.goto('/admin/stock/new');
-    await page.getByRole('button', { name: /^One item/ }).click();
     await page.getByRole('button', { name: 'Men', exact: true }).click();
     await page.getByRole('button', { name: /^Kurta/ }).click();
     if (withCompany) {
@@ -98,10 +97,15 @@ test('Home → Collections: items in each, rename in place, delete only an empty
   await page.goto('/admin/dashboard');
   const panel = page.getByTestId('home-collections');
   await expect(panel.getByRole('heading', { name: 'Collections' })).toBeVisible();
-  const men = panel.getByTestId('collection-row').filter({ has: page.getByRole('textbox', { name: 'Name of Men' }) });
+  const men = panel.locator('[data-testid="collection-row"][data-fixed="men"]');
   await expect(men.getByTestId('collection-count')).toContainText(/\d+ items · \d+ pcs/);
-  // A collection with items has no Delete.
-  await expect(panel.getByRole('button', { name: 'Delete Men' })).toHaveCount(0);
+  // Men and Women are fixed (ADR-064): always listed, no name box, no Delete — even when empty.
+  await expect(men).toContainText('Men');
+  await expect(panel.locator('[data-testid="collection-row"][data-fixed="women"]')).toContainText('Women');
+  for (const fixed of ['Men', 'Women']) {
+    await expect(panel.getByRole('textbox', { name: `Name of ${fixed}` })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: `Delete ${fixed}` })).toHaveCount(0);
+  }
 
   // Rename the spare one, then delete it (asks first).
   const spare = panel.getByRole('textbox', { name: `Name of Spare ${run}` });

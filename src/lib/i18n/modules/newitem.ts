@@ -1,6 +1,6 @@
 /**
- * New item, step by step (plan v19 task 03a, ADR-034): the start choice, the
- * steps, the size cards, "+ Add" sheets and the review. Keys start with "ni.".
+ * New item, step by step (plan v19 task 03a, ADR-034; ADR-064): the steps, the
+ * size cards, "+ Add" / ✎ sheets and the review. Keys start with "ni.".
  * English text is copied exactly from the screens; Hindi uses the shared word
  * list in docs/TECHNICAL_REFERENCE.md §15.
  */
@@ -8,20 +8,15 @@ export const newItemEn = {
   'ni.hub.hint': 'Who is it for → what is it → details → sizes and pieces → tags',
   'ni.hub.form.title': 'Old form',
   'ni.hub.form.hint': 'Sizes grid, prices by size, photos',
-  'ni.noSections': 'No collections yet (Men / Women / Boys / Girls).',
-  'ni.goCategories': 'Set them up in Categories',
-  'ni.start.title': 'What are you adding?',
-  'ni.start.one': 'One item',
-  'ni.start.oneHint': 'One size, a few pieces',
-  'ni.start.many': 'Many items',
-  'ni.start.manyHint': 'Sizes and pieces from a bill',
+  // Owner, 2026-11-22 (ADR-064): no One / Many choice; the owner edits collections on their tiles.
+  'ni.backHome': 'Back to Home',
+  'ni.section.edit': 'Edit {name}',
   'ni.steps': 'Steps',
   'ni.progress': 'Step {n} of 4',
   'ni.step.who': 'Which collection?',
   'ni.step.what': 'What is it?',
   'ni.step.details': 'Item details',
   'ni.step.sizes': 'Which sizes?',
-  'ni.step.size': 'Which size?',
   'ni.step.review': 'Check and save',
   'ni.short.who': 'Collection',
   'ni.short.what': 'Type',
@@ -110,20 +105,14 @@ export const newItemHi: Record<keyof typeof newItemEn, string> = {
   'ni.hub.hint': 'किसके लिए → क्या है → जानकारी → साइज़ और पीस → टैग',
   'ni.hub.form.title': 'पुराना फ़ॉर्म',
   'ni.hub.form.hint': 'साइज़ की तालिका, साइज़ के हिसाब से दाम, फ़ोटो',
-  'ni.noSections': 'अभी कोई कलेक्शन नहीं (पुरुष / महिला / लड़के / लड़कियाँ)।',
-  'ni.goCategories': 'कैटेगरी में सेट करें',
-  'ni.start.title': 'क्या जोड़ रहे हैं?',
-  'ni.start.one': 'एक आइटम',
-  'ni.start.oneHint': 'एक साइज़, कुछ पीस',
-  'ni.start.many': 'कई आइटम',
-  'ni.start.manyHint': 'बिल के साइज़ और पीस',
+  'ni.backHome': 'होम पर वापस',
+  'ni.section.edit': '{name} बदलें',
   'ni.steps': 'चरण',
   'ni.progress': 'चरण {n} / 4',
   'ni.step.who': 'कौन सा कलेक्शन?',
   'ni.step.what': 'क्या है?',
   'ni.step.details': 'आइटम की जानकारी',
   'ni.step.sizes': 'कौन से साइज़?',
-  'ni.step.size': 'कौन सा साइज़?',
   'ni.step.review': 'जाँचें और सेव करें',
   'ni.short.who': 'कलेक्शन',
   'ni.short.what': 'किस्म',

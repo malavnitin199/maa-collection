@@ -24,7 +24,7 @@ export const ownerEn = {
 
   // Dashboard
   'own.dash.tip': 'Set up companies, staff rights and your first stock in a few steps.',
-  'own.dash.newStock': '+ New stock',
+  'own.dash.newStock': 'Add new stock',
   'own.dash.netRevenue': 'Net revenue',
   'own.dash.unitsSold': 'Units sold',
   'own.dash.loading': 'Loading dashboard…',
@@ -164,7 +164,7 @@ export const ownerHi: Record<keyof typeof ownerEn, string> = {
   'own.noSalesPeriod': 'इस दौरान कोई बिक्री नहीं हुई।',
 
   'own.dash.tip': 'कुछ आसान कदमों में कंपनियाँ, स्टाफ़ के अधिकार और अपना पहला स्टॉक सेट करें।',
-  'own.dash.newStock': '+ नया स्टॉक',
+  'own.dash.newStock': 'नया स्टॉक जोड़ें',
   'own.dash.netRevenue': 'नेट बिक्री',
   'own.dash.unitsSold': 'बिके पीस',
   'own.dash.loading': 'डैशबोर्ड लोड हो रहा है…',
