@@ -29,8 +29,8 @@ Live app: https://maa-collection-pi.vercel.app
 
 ## 1b. Colours and day/night
 
-- Tap **⋯** at the top right (on the login page: the round ☀ / ☾ symbol). Pick a colour: **Bahi** (the default: a clean billing-app look in indigo and orange), **Peacock** (teal), **Marigold** (saffron), **Rani** (pink), **Neel** (indigo), **Mehendi** (henna green), **Sindoor** (vermilion red), **Jamun** (plum purple) or **Aasmani** (sky blue). Then **Day**, **Night** (dark, easier on the eyes in the evening) or **Same as phone**.
-- It changes at once and is saved **on that phone** (each phone can have its own look). Printed tags never change colour.
+- Tap **⋯** at the top right (on the login page: the round ☀ / ☾ symbol). Pick a colour: **Hara** (the default since 2026-11-22: the owner's look — a white page and header, one fresh green, light-green edged cards and boxes, rounded-square green buttons and a green square ← back button before each page's green title), **Bahi** (a clean billing-app look in indigo and orange), **Peacock** (teal), **Marigold** (saffron), **Rani** (pink), **Neel** (indigo), **Mehendi** (henna green), **Sindoor** (vermilion red), **Jamun** (plum purple) or **Aasmani** (sky blue). Then **Day**, **Night** (dark, easier on the eyes in the evening) or **Same as phone**.
+- It changes at once and is saved **on that phone** (each phone can have its own look). When Hara came, every phone switched to it once; pick another colour again if you like. Printed tags never change colour.
 - Login: tap your **name circle**, then your PIN on the big number keys (⌫ deletes the last digit), then **Log in**.
 - The round **Sell** button in the middle of the bottom bar opens the counter from anywhere.
 
