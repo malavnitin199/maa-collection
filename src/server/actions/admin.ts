@@ -18,7 +18,7 @@ import { localName } from '@/lib/sections';
 import { addTypeSize, backfillSections, createSection, createType, deleteSection, moveSection, moveType, renameSection, updateSection } from '@/server/services/sections';
 import { addPayment } from '@/server/services/company';
 import { DomainError } from '@/server/services/errors';
-import { addOrRestoreSupplier, createCategory, createSupplier, restoreSupplier,
+import { addOrRestoreSupplier, createCategory, createSupplier, listSuppliers, restoreSupplier,
   setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   clearAllStock,
@@ -33,6 +33,8 @@ import {
   type BulkProductChange,
   saveDesign,
   type DesignEdit,
+  getProduct,
+  stockIn,
   setDesignTags,
   type ProductInput,
 } from '@/server/services/products';
@@ -700,6 +702,36 @@ export async function saveItemAction(
     const result = await saveDesign(await getDb(), STORE_ID, productId, edit);
     revalidatePath('/admin', 'layout');
     return { ok: true, counted: result.counted, added: result.added };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/**
+ * Item page → + Add (owner's feedback 2026-11-22, ADR-061): new pieces of one size came in —
+ * a stock entry at the item's purchase price, under its company while that company is in use
+ * (so purchases and dues see it). A retried tap (same operation id) adds them once.
+ */
+export async function addPiecesAction(
+  productId: string,
+  input: { quantity: number; operationId: string },
+): Promise<{ ok: true; stock: number } | { ok: false; error: string }> {
+  const me = await requirePermission('stock');
+  try {
+    if (!/^[0-9a-f-]{36}$/i.test(String(productId))) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+    const db = await getDb();
+    const product = await getProduct(db, STORE_ID, productId);
+    if (!product) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+    const company = product.supplierId ? (await listSuppliers(db, STORE_ID)).find((c) => c.id === product.supplierId && c.active && !c.deletedAt) : undefined;
+    const result = await stockIn(db, STORE_ID, {
+      operationId: String(input?.operationId ?? ''),
+      productId,
+      quantity: Number(input?.quantity),
+      staffId: me.id,
+      supplierId: company?.id ?? null,
+    });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, stock: result.stock };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }

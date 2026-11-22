@@ -335,7 +335,7 @@ test('purchase price first; an empty sale price is purchase + 50% (the % can be 
   await page.goto('/admin/products');
   await expect(productCard(page, name).getByTestId('value-per-piece')).toHaveText('₹700.00'); // purchase per piece (ADR-057)
   await productCard(page, name).getByRole('link', { name, exact: true }).click();
-  await expect(page.getByTestId('item-editor').getByLabel('MRP ₹')).toHaveValue('980');
+  await expect(page.getByTestId('item-prices')).toContainText('MRP ₹980.00');
   // The % is remembered on this phone for the next item.
   await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: /^One item/ }).click();

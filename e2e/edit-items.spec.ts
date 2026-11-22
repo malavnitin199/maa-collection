@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { openProduct } from './products';
 
-// Owner, 2026-11-22 (ADR-054): edit an item at the top of its page (even one with no brand or size),
-// add more sizes to its design, add pieces; bills keep their own copy (unit tests: bill-copy.test.ts).
+// Owner, 2026-11-22 (ADR-054/061): edit an item on its page (even one with no brand or size) — tap a size,
+// ✎ Edit details, + Add size, + Add pieces; bills keep their own copy (unit tests: bill-copy.test.ts).
 const PIN = '1234';
 const run = Date.now().toString(36);
 
@@ -31,38 +31,46 @@ test('edit an item made with no brand and no size; add sizes; add pieces', async
 
   await openProduct(page, name);
 
-  // The item page's editor (ADR-059): the no-size item shows N/A; ✎ gives it size M and a colour; a new MRP.
-  const editor = page.getByTestId('item-editor');
-  await expect(editor.getByTestId('size-row')).toHaveCount(1);
-  await expect(editor.getByTestId('size-row')).toContainText('N/A');
-  await editor.getByRole('button', { name: 'Change size or colour: N/A' }).click();
-  await editor.getByLabel('Size', { exact: true }).fill('M');
-  await editor.getByLabel('Colour', { exact: true }).fill('Blue');
-  await editor.getByLabel('MRP ₹').fill('650');
-  await editor.getByLabel('Selling ₹').fill('650');
-  await editor.getByRole('button', { name: 'Save changes' }).click();
+  // The item page (ADR-061): the no-size item shows N/A; tap it to give it size M and a colour.
+  const sizes = page.getByTestId('size-row');
+  await expect(sizes).toHaveCount(1);
+  await expect(sizes).toContainText('N/A');
+  await page.getByRole('button', { name: 'Change N/A', exact: true }).click();
+  await page.getByLabel('Size', { exact: true }).fill('M');
+  await page.getByLabel('Colour', { exact: true }).fill('Blue');
+  await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByTestId('done-overlay')).toContainText('Saved');
   await page.keyboard.press('Escape');
-  await expect(editor.getByTestId('size-row').first()).toContainText('M · Blue');
-  await expect(editor.getByLabel('MRP ₹')).toHaveValue('650');
+  await expect(sizes.first()).toContainText('M · Blue');
 
-  // + Add size: L (2 pieces) and XL (1).
-  await editor.getByRole('button', { name: '+ Add size' }).click();
-  await editor.getByLabel('New size', { exact: true }).fill('L');
-  await editor.getByRole('button', { name: 'One more: L' }).click();
-  await editor.getByRole('button', { name: '+ Add size' }).click();
-  await editor.getByLabel('New size', { exact: true }).nth(1).fill('XL');
-  await editor.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByTestId('done-overlay')).toContainText('2 new sizes added');
+  // ✎ Edit details: a new MRP.
+  await page.getByTestId('edit-details').click();
+  const details = page.getByTestId('details-sheet');
+  await details.getByLabel('MRP ₹').fill('650');
+  await details.getByLabel('Selling ₹').fill('650');
+  await details.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('Saved');
   await page.keyboard.press('Escape');
-  await expect(editor.getByTestId('size-row')).toHaveCount(3);
-  await expect(editor.getByLabel('Pieces of L · Blue')).toHaveValue('2');
+  await expect(page.getByTestId('item-prices')).toContainText('MRP ₹650.00');
 
-  // Pieces of this size (M): 1 → 4, counted.
-  await editor.getByLabel('Pieces of M · Blue').fill('4');
-  await editor.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByTestId('done-overlay')).toContainText('Pieces corrected for 1 size');
+  // + Add size: L (2 pieces), then XL (1); they take the design's name, prices and colour.
+  for (const [size, pieces] of [['L', '2'], ['XL', '1']] as const) {
+    await page.getByRole('button', { name: '+ Add size' }).click();
+    await page.getByLabel('New size', { exact: true }).fill(size);
+    await page.getByLabel(`Pieces of ${size}`, { exact: true }).fill(pieces);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByTestId('done-overlay')).toContainText('1 new size added');
+    await page.keyboard.press('Escape');
+  }
+  await expect(sizes).toHaveCount(3);
+  await expect(sizes.filter({ hasText: 'L · Blue' }).first()).toContainText('2 pcs');
+
+  // + Add on M: 3 more came in (1 → 4).
+  await page.getByRole('button', { name: 'Add pieces: M · Blue' }).click();
+  await page.getByLabel('Pieces of M · Blue', { exact: true }).fill('3');
+  await page.getByRole('button', { name: 'Add 3 pieces' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('3 pieces added');
   await page.keyboard.press('Escape');
   // The design now holds M 4 + L 2 + XL 1 = 7 pieces.
-  await expect(page.getByTestId('item-pieces')).toHaveText('7 pcs');
+  await expect(page.getByTestId('item-pieces')).toHaveText('7');
 });

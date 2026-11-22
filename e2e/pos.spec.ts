@@ -199,11 +199,11 @@ test('admin adds a product with a generated barcode, receives stock; salesman se
   // The item page shows the tags it was added with; its pieces go from 2 to 5 (a count correction, ADR-059).
   await expect(page.getByTestId('item-chips')).toContainText('Boys');
   await expect(page.getByTestId('item-chips')).toContainText('Child');
-  const editor = page.getByTestId('item-editor');
-  await expect(editor.getByLabel('Pieces of M')).toHaveValue('2');
-  await editor.getByLabel('Pieces of M').fill('5');
-  await editor.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByTestId('item-pieces')).toHaveText('5 pcs');
+  await expect(page.getByTestId('item-pieces')).toHaveText('2');
+  await page.getByRole('button', { name: 'Add pieces: M' }).click();
+  await page.getByLabel('Pieces of M', { exact: true }).fill('3');
+  await page.getByRole('button', { name: 'Add 3 pieces' }).click();
+  await expect(page.getByTestId('item-pieces')).toHaveText('5');
 
   // Nitin sells 2, credited to Vishal.
   await login(page, 'Nitin');
