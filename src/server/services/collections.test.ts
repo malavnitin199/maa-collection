@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createPgliteDb, type Db } from '@/db/client';
 import { categories, sections } from '@/db/schema';
 import { STORE_ID } from '@/lib/app-config';
-import { listCategories } from './catalog';
+import { createCategory, deleteCategory, listCategories, updateCategory } from './catalog';
 import { deleteProducts } from './delete-products';
 import { createDesign } from './products';
-import { collectionsOverview, createSection, createType, deleteSection, ensureFixedSection, listSections, newItemSections, renameSection, updateSection } from './sections';
+import { categoryFigures, collectionsOverview, collectionsSummary, createSection, createType, deleteSection, ensureFixedSection, listSections, newItemSections, renameSection, sumFigures, updateSection } from './sections';
 import { listStaff } from './staff';
 
 /** Home → Collections (owner, 2026-11-22, ADR-051): rename, items in each, delete only when empty. Company optional on items. */
@@ -106,5 +106,57 @@ describe('Men and Women are fixed', () => {
     const shown = (await newItemSections(db, STORE_ID, 'en')).find((s) => s.fixed === 'women')!;
     expect(shown.standIn).toBeUndefined();
     expect(shown.types.length).toBe(women.types.filter((x) => x.active).length);
+  });
+});
+
+/** Owner, 2026-11-22 (ADR-066): Jeans, Jacket and Shirt are fixed; others are edited and deleted (only with no items) on Categories. */
+describe('categories on the Categories page', () => {
+  const design = (categoryId: string, name: string) =>
+    createDesign(db, STORE_ID, {
+      operationId: `t-${Math.random()}`,
+      supplierId: null,
+      categoryId,
+      name,
+      brand: '',
+      sizes: ['M', 'L'],
+      colors: [],
+      mrpPaise: 50000,
+      pricePaise: null,
+      costPaise: 30000,
+      quantityEach: 3,
+      staffId: owner,
+    });
+
+  it('Jeans, Jacket and Shirt cannot be deleted, renamed or hidden (sizes and code may change); others go only once empty', async () => {
+    const men = (await listSections(db, STORE_ID)).sections.find((x) => x.name === 'Men')!;
+    const jeans = men.types.find((x) => x.name === 'Jeans')!;
+    await expect(deleteCategory(db, STORE_ID, jeans.id)).rejects.toThrow('Jeans always stays. It cannot be deleted, renamed or hidden.');
+    await expect(updateCategory(db, STORE_ID, jeans.id, { name: 'Denim', code: jeans.code, active: true })).rejects.toThrow('Jeans always stays.');
+    await expect(updateCategory(db, STORE_ID, jeans.id, { name: 'Jeans', code: jeans.code, active: false })).rejects.toThrow('Jeans always stays.');
+    expect((await updateCategory(db, STORE_ID, jeans.id, { name: 'Jeans', code: jeans.code, active: true, sizes: '28, 30, 32' })).sizes).toEqual(['28', '30', '32']);
+    const jacket = await createCategory(db, STORE_ID, { name: 'Jackets', sectionId: men.id });
+    await expect(deleteCategory(db, STORE_ID, jacket.id)).rejects.toThrow('Jackets always stays.');
+
+    const pajama = await createCategory(db, STORE_ID, { name: 'Pajama', sectionId: men.id, sizes: 'M, L' });
+    expect((await updateCategory(db, STORE_ID, pajama.id, { name: 'Night Pajama', code: pajama.code, active: true })).name).toBe('Night Pajama');
+    const { products } = await design(pajama.id, 'Striped Pajama');
+    await expect(deleteCategory(db, STORE_ID, pajama.id)).rejects.toThrow('Night Pajama still has 2 items. Delete them first.');
+    await deleteProducts(db, STORE_ID, products.map((p) => p.id));
+    expect(await deleteCategory(db, STORE_ID, pajama.id)).toEqual({ name: 'Night Pajama' });
+    expect((await listCategories(db, STORE_ID)).some((c) => c.id === pajama.id)).toBe(false);
+  });
+
+  it('figures per category: products as on Products (one per design), items, pieces and their purchase value; Home adds them up', async () => {
+    const kids = await createSection(db, STORE_ID, { name: 'Kids' });
+    const frock = await createType(db, STORE_ID, { sectionId: kids.id, name: 'Frock', sizes: 'M, L' });
+    await design(frock.id, 'Rose Frock');
+    await design(frock.id, 'Lily Frock');
+    const figures = await categoryFigures(db, STORE_ID);
+    expect(figures[frock.id]).toEqual({ products: 2, items: 4, pieces: 12, valuePaise: 12 * 30000 });
+    expect(sumFigures([figures[frock.id], undefined, figures[frock.id]]).products).toBe(4);
+    const summary = await collectionsSummary(db, STORE_ID);
+    expect(summary.collections).toBe((await collectionsOverview(db, STORE_ID)).length);
+    expect(summary.categories).toBe((await listCategories(db, STORE_ID)).length);
+    expect(summary.products).toBe(sumFigures(Object.values(figures)).products);
   });
 });

@@ -3,7 +3,9 @@ import type { Db } from '@/db/client';
 import { categories, products, sections, type Category, type Section } from '@/db/schema';
 import type { Locale } from '@/lib/i18n';
 import { asSectionIcon, DEFAULT_SECTIONS, FIXED_SECTIONS, fixedSectionKey, fixedSectionPlace, localName, STARTER_TYPES, starterKeys, typeKey, withFixedSections, type FixedSectionKey, type SectionIcon } from '@/lib/sections';
+import { designKey } from '@/lib/design-groups';
 import { MAX_SIZES } from '@/lib/size-lists';
+import { stockValue } from '@/lib/stock-value';
 import { sameSize } from '@/lib/size-prices';
 import { assertFreeTypeName, checkedSizes, cleanHindi, createCategory, suggestSectionCode } from './catalog';
 import { DomainError, isUniqueViolation } from './errors';
@@ -445,4 +447,44 @@ export async function ensureFixedSection(db: Db, storeId: string, key: FixedSect
     if (!theirs) throw error;
     return theirs;
   }
+}
+
+/** One category's figures (ADR-066): products as on Products (one per design), items (sizes), pieces in stock, their value at purchase price. */
+export type TypeFigures = { products: number; items: number; pieces: number; valuePaise: number };
+
+/**
+ * Categories page and Home's Collections line (owner, 2026-11-22, ADR-066): the figures of
+ * every category, by category id. A product with no category counts nowhere. Never writes.
+ */
+export async function categoryFigures(db: Db, storeId: string): Promise<Record<string, TypeFigures>> {
+  const rows = await db
+    .select({ categoryId: products.categoryId, name: products.name, supplierId: products.supplierId, mrpPaise: products.mrpPaise, stock: products.stock, costPaise: products.costPaise })
+    .from(products)
+    .where(eq(products.storeId, storeId));
+  const byType = new Map<string, typeof rows>();
+  for (const row of rows) if (row.categoryId) byType.set(row.categoryId, [...(byType.get(row.categoryId) ?? []), row]);
+  return Object.fromEntries(
+    [...byType].map(([id, items]) => {
+      const value = stockValue(items);
+      return [id, { products: new Set(items.map(designKey)).size, items: items.length, pieces: value.pieces, valuePaise: value.totalPaise }];
+    }),
+  );
+}
+
+/** The figures of a group of categories (a collection), added up. */
+export function sumFigures(list: readonly (TypeFigures | undefined)[]): TypeFigures {
+  return list.reduce<TypeFigures>(
+    (sum, f) => (f ? { products: sum.products + f.products, items: sum.items + f.items, pieces: sum.pieces + f.pieces, valuePaise: sum.valuePaise + f.valuePaise } : sum),
+    { products: 0, items: 0, pieces: 0, valuePaise: 0 },
+  );
+}
+
+/** Home's Collections line (ADR-066): collections (Men and Women always counted), categories, products. */
+export async function collectionsSummary(db: Db, storeId: string): Promise<{ collections: number; categories: number; products: number }> {
+  const [rows, figures, [{ n }]] = await Promise.all([
+    collectionsOverview(db, storeId),
+    categoryFigures(db, storeId),
+    db.select({ n: int(sql`count(*)`) }).from(categories).where(eq(categories.storeId, storeId)),
+  ]);
+  return { collections: rows.length, categories: n, products: sumFigures(Object.values(figures)).products };
 }

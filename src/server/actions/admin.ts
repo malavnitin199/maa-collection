@@ -23,16 +23,14 @@ import {
   deleteSection,
   ensureFixedSection,
   listSections,
-  moveSection,
   moveType,
-  renameSection,
   toPickSection,
   updateSection,
   type PickSection,
 } from '@/server/services/sections';
 import { addPayment } from '@/server/services/company';
 import { DomainError } from '@/server/services/errors';
-import { addOrRestoreSupplier, createCategory, createSupplier, listSuppliers, restoreSupplier,
+import { addOrRestoreSupplier, createCategory, createSupplier, deleteCategory, listSuppliers, restoreSupplier,
   setSuppliersActive, updateCategory, updateSupplier, type SupplierInput } from '@/server/services/catalog';
 import {
   clearAllStock,
@@ -384,23 +382,6 @@ export async function createSectionAction(_prev: FormState, formData: FormData):
   }
 }
 
-/** Categories → a section's name (English / Hindi), picture, or hide / bring back. */
-export async function updateSectionAction(sectionId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requirePermission('catalog');
-  try {
-    await updateSection(await getDb(), STORE_ID, sectionId, {
-      name: text(formData, 'name'),
-      nameHi: text(formData, 'nameHi'),
-      icon: text(formData, 'icon'),
-      active: formData.get('active') === 'on',
-    });
-    revalidatePath('/admin', 'layout');
-    return { message: (await getT())('act.saved') };
-  } catch (error) {
-    return failure(error);
-  }
-}
-
 /**
  * Categories → "Set up Men / Women / Boys / Girls" (owner only, once): the explicit one-time
  * set-up of ADR-033 — the same `backfillSections` the script runs; never a side effect of a page read.
@@ -416,13 +397,6 @@ export async function setUpSectionsAction(): Promise<FormState> {
   } catch (error) {
     return failure(error);
   }
-}
-
-/** Categories → ▲ / ▼ on a section: one place up or down in the shop order. */
-export async function moveSectionAction(sectionId: string, direction: 'up' | 'down'): Promise<void> {
-  await requirePermission('catalog');
-  await moveSection(await getDb(), STORE_ID, sectionId, direction === 'up' ? 'up' : 'down');
-  revalidatePath('/admin', 'layout');
 }
 
 /** Categories → Needs sorting → Move under…: the category goes under the chosen section. */
@@ -1002,21 +976,9 @@ export async function checkTagBarcodeAction(code: string): Promise<TagLookup> {
   return isValidEan13(value) ? { status: 'new', barcode: value } : { status: 'invalid', code: value };
 }
 
-// ------------------------------------------------------------------ Home → Collections (ADR-051)
+// ------------------------------------------- collections and categories: delete (ADR-051, ADR-064, ADR-066)
 
-/** Home → Collections: rename one (owner only). */
-export async function renameCollectionAction(id: string, name: string): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
-  await requireAdmin();
-  try {
-    const updated = await renameSection(await getDb(), STORE_ID, String(id), String(name ?? ''));
-    revalidatePath('/admin', 'layout');
-    return { ok: true, name: updated.name };
-  } catch (error) {
-    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
-  }
-}
-
-/** Home → Collections: delete one with no items left (owner only). */
+/** New item → 🗑 on a collection: delete one with no items left (owner only; never Men or Women). */
 export async function deleteCollectionAction(id: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
   await requireAdmin();
   try {
@@ -1028,3 +990,14 @@ export async function deleteCollectionAction(id: string): Promise<{ ok: true; me
   }
 }
 
+/** Categories → 🗑 on a category (owner only, ADR-066): only with no items left; never Jeans, Jacket or Shirt. */
+export async function deleteCategoryAction(id: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  await requireAdmin();
+  try {
+    const result = await deleteCategory(await getDb(), STORE_ID, String(id));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, message: (await getT())('cat.deleted', { name: result.name }) };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}

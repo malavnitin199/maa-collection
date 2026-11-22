@@ -84,38 +84,56 @@ test('a company with an item is deleted from its page; the item stays with no co
   await expect(productCard(page, `Kept Kurta ${tag}`).getByTestId('card-company')).toHaveText('N/A');
 });
 
-test('Home → Collections: items in each, rename in place, delete only an empty one after a confirmation', async ({ page }, info) => {
-  test.skip(info.project.name === 'mobile', 'one shared list of collections; the desktop run covers it');
+test('Home → Collections opens Categories: figures, products per collection, Jeans and Shirt locked, the others edited and deleted (ADR-066)', async ({ page }, info) => {
   await loginOwner(page);
-  // An empty collection to work with.
-  await page.goto('/admin/categories');
-  await page.getByText('+ Add collection').click();
-  const add = page.locator('details', { hasText: '+ Add collection' });
-  await add.getByLabel('Collection name').fill(`Spare ${run}`);
-  await add.getByRole('button', { name: 'Add collection' }).click();
-  await expect(add.getByRole('status')).toContainText(`Spare ${run} added.`);
+  const tag = `${run}${info.project.name[0]}`;
+  // Home: one line like Companies and Bills.
+  const line = page.getByTestId('home-collections');
+  await expect(line).toContainText('Collections');
+  await expect(page.getByTestId('home-collections-line')).toHaveText(/^\d+ collections? · \d+ categor(y|ies) · \d+ products?$/);
+  await line.click();
+  await expect(page).toHaveURL(/\/admin\/categories$/);
+  await expect(page.getByTestId('section-tiles').getByRole('link').first()).toContainText(/^Men\d+ products?$/);
+  const figures = page.getByTestId('collection-figures');
+  await expect(figures).toHaveAccessibleName('Figures of Men');
+  for (const box of ['fig-categories', 'fig-products', 'fig-pieces']) await expect(figures.getByTestId(box)).toHaveText(/^\d+$/);
+  await expect(figures.getByTestId('fig-value')).toHaveText(/^₹[\d,]+$/);
 
-  await page.goto('/admin/dashboard');
-  const panel = page.getByTestId('home-collections');
-  await expect(panel.getByRole('heading', { name: 'Collections' })).toBeVisible();
-  const men = panel.locator('[data-testid="collection-row"][data-fixed="men"]');
-  await expect(men.getByTestId('collection-count')).toContainText(/\d+ items · \d+ pcs/);
-  // Men and Women are fixed (ADR-064): always listed, no name box, no Delete — even when empty.
-  await expect(men).toContainText('Men');
-  await expect(panel.locator('[data-testid="collection-row"][data-fixed="women"]')).toContainText('Women');
-  for (const fixed of ['Men', 'Women']) {
-    await expect(panel.getByRole('textbox', { name: `Name of ${fixed}` })).toHaveCount(0);
-    await expect(panel.getByRole('button', { name: `Delete ${fixed}` })).toHaveCount(0);
+  const list = page.getByTestId('category-list');
+  const row = (name: string) => list.getByTestId('category-row').filter({ hasText: new RegExp(`^${name}`) });
+  // Jeans and Shirt carry a lock: no ✎, no 🗑.
+  for (const fixed of ['Jeans', 'Shirt']) {
+    await expect(row(fixed)).toHaveAttribute('data-fixed', 'true');
+    await expect(list.getByRole('button', { name: `Edit ${fixed}`, exact: true })).toHaveCount(0);
+    await expect(list.getByRole('button', { name: `Delete ${fixed}`, exact: true })).toHaveCount(0);
   }
+  // T-Shirt has the demo tee: its figures, and 🗑 says it still has items.
+  await expect(row('T-Shirt').getByTestId('category-figures')).toHaveText(/^\d+ products? · [1-9]\d* items? · \d+ pcs?/);
+  await list.getByRole('button', { name: 'Delete T-Shirt', exact: true }).click();
+  const sheet = page.getByTestId('action-sheet');
+  await expect(sheet).toContainText(/T-Shirt still has \d+ items\. Delete them first\./);
+  await expect(page.getByTestId('confirm-delete-category')).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
 
-  // Rename the spare one, then delete it (asks first).
-  const spare = panel.getByRole('textbox', { name: `Name of Spare ${run}` });
-  await spare.fill(`Kids ${run}`);
-  await panel.getByRole('button', { name: 'Save' }).click();
-  await expect(panel.getByRole('status')).toHaveText('Name saved.');
-  await panel.getByRole('button', { name: `Delete Kids ${run}` }).click();
-  await expect(page.getByTestId('action-sheet')).toHaveAccessibleName(`Delete Kids ${run}?`);
-  await page.getByTestId('confirm-delete-collection').click();
-  await expect(panel.getByRole('status')).toHaveText(`Kids ${run} deleted.`);
-  await expect(panel.getByRole('textbox', { name: `Name of Kids ${run}` })).toHaveCount(0);
+  // A new, empty one: ✎ renames it; 🗑 asks first, then it is gone.
+  await page.getByText('+ Add category').click();
+  const add = page.locator('details', { hasText: '+ Add category' });
+  await add.getByLabel('Category name').fill(`Spare Type ${tag}`);
+  await add.getByRole('button', { name: 'Add category' }).click();
+  await expect(add.getByRole('status')).toContainText(`Spare Type ${tag} added`);
+  await page.keyboard.press('Escape');
+  await list.getByRole('button', { name: `Edit Spare Type ${tag}`, exact: true }).click();
+  const spare = row(`Spare Type ${tag}`);
+  await spare.getByLabel('Category name').fill(`Bibs ${tag}`);
+  await spare.getByRole('button', { name: 'Save category' }).click();
+  await expect(list.getByRole('button', { name: `Delete Bibs ${tag}`, exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await list.getByRole('button', { name: `Delete Bibs ${tag}`, exact: true }).click();
+  await expect(sheet).toHaveAccessibleName(`Delete Bibs ${tag}?`);
+  await page.getByTestId('confirm-delete-category').click();
+  await expect(page.getByTestId('done-overlay')).toContainText(`Bibs ${tag} deleted.`);
+  await page.keyboard.press('Escape');
+  await expect(row(`Bibs ${tag}`)).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId('category-list').getByText(`Bibs ${tag}`)).toHaveCount(0);
 });

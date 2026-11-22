@@ -345,26 +345,27 @@ test('each category has its sizes: owner sets them with a preset; new stock offe
   await expect(chips.getByRole('button', { name: /^Size /, pressed: true })).toHaveCount(5);
 });
 
-test('categories by section (plan v19): tiles; the owner\'s own section with a Hindi name and picture, renamed, reordered, hidden and brought back; a category with a Hindi name under it', async ({ page, isMobile }) => {
+test('categories by section (plan v19; ADR-066): tiles with their products and the figures of the one chosen; the owner\'s own section with its picture; a category with a Hindi name under it', async ({ page }) => {
   await loginOwner(page);
   await page.goto('/admin/categories');
   const tiles = page.getByTestId('section-tiles');
   const list = page.getByTestId('category-list');
-  const head = page.getByTestId('section-head');
-  // Tile texts are "Name<count>"; the run id ends in digits too, so match by prefix.
+  const figures = page.getByTestId('collection-figures');
+  // Tile texts are "Name<n> products" ("1 product").
   const order = async () => tiles.getByRole('link').allTextContents();
-  const indexOf = async (name: string) => (await order()).findIndex((text) => text.startsWith(name));
   await expect(tiles.getByRole('link').nth(3)).toContainText('Girls');
-  expect((await order()).slice(0, 4).map((text) => text.replace(/\d+$/, ''))).toEqual(['Men', 'Women', 'Boys', 'Girls']);
-  // Men opens first: its categories only; the first section cannot move up.
+  expect((await order()).slice(0, 4).map((text) => text.replace(/\d+ products?$/, ''))).toEqual(['Men', 'Women', 'Boys', 'Girls']);
+  // No collection card with ▲ / ▼ any more (owner, 2026-11-22): the figures instead.
+  await expect(page.getByTestId('section-head')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Move .* (up|down)$/ })).toHaveCount(0);
+  // Men opens first: its categories only.
+  await expect(figures).toHaveAccessibleName('Figures of Men');
   await expect(list).toContainText('Kurta');
   await expect(list).not.toContainText('Saree');
-  await expect(head.getByRole('button', { name: 'Move Men up' })).toBeDisabled();
   await tiles.getByRole('link', { name: /^Women/ }).click();
   await expect(page).toHaveURL(/\/admin\/categories\?s=[0-9a-f-]{36}$/);
   await expect(list).toContainText('Saree');
-  await expect(head).toContainText('Women');
-  await expect(head).toContainText('महिला');
+  await expect(figures).toHaveAccessibleName('Figures of Women');
 
   // The owner's own section (e.g. Kids) goes last, with its picture.
   await page.getByText('+ Add collection').click();
@@ -375,37 +376,10 @@ test('categories by section (plan v19): tiles; the owner\'s own section with a H
   await expect(addSection.getByRole('status')).toContainText(`Kids ${run} added.`);
   await expect(tiles.getByRole('link').filter({ hasNotText: 'Needs sorting' }).last()).toContainText(`Kids ${run}`); // Needs sorting stays last
   await tiles.getByRole('link', { name: `Kids ${run}` }).click();
-  await expect(head).toContainText(`Kids ${run}`);
-  await expect(head).toContainText('0 categories');
+  await expect(figures).toHaveAccessibleName(`Figures of Kids ${run}`);
+  await expect(figures.getByTestId('fig-categories')).toHaveText('0');
+  await expect(figures.getByTestId('fig-products')).toHaveText('0');
   await expect(page.getByText('No categories here yet.')).toBeVisible();
-
-  // Rename, Hindi name and picture.
-  await head.getByText('Edit collection').click();
-  await head.getByLabel('Collection name').fill(`Junior ${run}`);
-  await head.getByLabel('Hindi name').fill('जूनियर');
-  await head.locator('label').filter({ hasText: 'Family' }).click();
-  await head.getByRole('button', { name: 'Save collection' }).click();
-  await expect(head.getByRole('status')).toContainText('Saved');
-  await expect(tiles.getByRole('link', { name: `Junior ${run}` })).toBeVisible();
-  await expect(head).toContainText('जूनियर');
-
-  // Shop order: ▲ / ▼ swap with the neighbour (desktop run only: the phone run adds sections at the same time).
-  if (!isMobile) {
-    const was = await indexOf(`Junior ${run}`);
-    await head.getByRole('button', { name: `Move Junior ${run} up` }).click();
-    await expect.poll(() => indexOf(`Junior ${run}`)).toBe(was - 1);
-    await head.getByRole('button', { name: `Move Junior ${run} down` }).click();
-    await expect.poll(() => indexOf(`Junior ${run}`)).toBe(was);
-  }
-
-  // Hide it and bring it back (nothing deleted).
-  await head.getByLabel('Shown in New item').uncheck();
-  await head.getByRole('button', { name: 'Save collection' }).click();
-  await expect(tiles.getByRole('link', { name: `Junior ${run}` })).toContainText('(Hidden)');
-  await expect(head).toContainText('Hidden');
-  await head.getByLabel('Shown in New item').check();
-  await head.getByRole('button', { name: 'Save collection' }).click();
-  await expect(tiles.getByRole('link', { name: `Junior ${run}` })).not.toContainText('Hidden');
 
   // A category with a Hindi name lands under it.
   await page.getByText('+ Add category').click();
@@ -415,11 +389,11 @@ test('categories by section (plan v19): tiles; the owner\'s own section with a H
   await addCategory.getByRole('button', { name: 'Add category' }).click();
   await expect(addCategory.getByRole('status')).toContainText(`Frock ${run} added with code`);
   await expect(list.getByRole('listitem').filter({ hasText: `Frock ${run}` })).toContainText('फ़्रॉक');
-  await expect(head).toContainText('1 category');
+  await expect(figures.getByTestId('fig-categories')).toHaveText('1');
 
   // The same section name again is refused (the add form is still open from before).
   if (!(await addSection.getByLabel('Collection name').isVisible())) await page.getByText('+ Add collection').click();
-  await addSection.getByLabel('Collection name').fill(`Junior ${run}`);
+  await addSection.getByLabel('Collection name').fill(`Kids ${run}`);
   await addSection.getByRole('button', { name: 'Add collection' }).click();
   await expect(addSection.getByRole('alert')).toContainText('That name is already in the list.');
 });

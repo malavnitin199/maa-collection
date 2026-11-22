@@ -112,6 +112,16 @@ export function typeKey(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+/**
+ * Owner, 2026-11-22 (ADR-066): Jeans, Jacket and Shirt are the shop's fixed categories, in
+ * any collection — never deleted, renamed or hidden. Known by name ("Shirts" too, any case).
+ */
+export const FIXED_TYPES = ['Jeans', 'Jacket', 'Shirt'] as const;
+const FIXED_TYPE_KEYS = new Set(FIXED_TYPES.flatMap((name) => [typeKey(name), `${typeKey(name)}s`]));
+export function isFixedType(name: string): boolean {
+  return FIXED_TYPE_KEYS.has(typeKey(name));
+}
+
 /** Every spelling a starter type answers to, as keys. */
 export function starterKeys(type: StarterType): string[] {
   return [typeKey(type.name), ...(type.also ?? [])];

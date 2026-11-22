@@ -12,7 +12,6 @@ export const catalogEn = {
   'cat.backProducts': '← Products',
   'cat.backProductsAria': 'Back to Products',
   'cat.backSuppliersAria': 'Back to Companies',
-  'cat.productsPcs': '{products} products · {pcs} pcs',
   'cat.productsInStock': '{products} products · {pcs} pcs in stock',
   'cat.saveChanges': 'Save changes',
   'cat.adding': 'Adding…',
@@ -254,7 +253,6 @@ export const catalogEn = {
   'cat.cat.add': 'Add category',
   'cat.cat.sizes': 'Sizes: {sizes}',
   'cat.cat.sizesNotSet': 'not set',
-  'cat.cat.edit': 'Edit',
   'cat.cat.save': 'Save category',
   'cat.cat.subtitle': 'The kinds of items you sell. Each has a short code used in SKUs and the sizes it comes in.',
 
@@ -360,7 +358,6 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.backProducts': '← प्रोडक्ट',
   'cat.backProductsAria': 'प्रोडक्ट पर वापस',
   'cat.backSuppliersAria': 'कंपनियों पर वापस',
-  'cat.productsPcs': '{products} प्रोडक्ट · {pcs} पीस',
   'cat.productsInStock': '{products} प्रोडक्ट · स्टॉक में {pcs} पीस',
   'cat.saveChanges': 'बदलाव सेव करें',
   'cat.adding': 'जुड़ रहा है…',
@@ -600,7 +597,6 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.cat.add': 'कैटेगरी जोड़ें',
   'cat.cat.sizes': 'साइज़: {sizes}',
   'cat.cat.sizesNotSet': 'तय नहीं',
-  'cat.cat.edit': 'बदलें',
   'cat.cat.save': 'कैटेगरी सेव करें',
   'cat.cat.subtitle': 'आप जिस तरह का सामान बेचते हैं। हर कैटेगरी का एक छोटा कोड होता है जो SKU में लगता है, और उसके साइज़।',
 

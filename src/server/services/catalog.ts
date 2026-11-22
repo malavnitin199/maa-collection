@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, productImages, products, sections, staff, stockMovements, stockReceipts, suppliers, type Category, type Supplier } from '@/db/schema';
+import { isFixedType } from '@/lib/sections';
 import { cleanSizeList, MAX_SIZES } from '@/lib/size-lists';
 import { STORE_TIMEZONE } from '@/lib/app-config';
 import { DomainError, isUniqueViolation } from './errors';
@@ -146,6 +147,9 @@ export async function updateCategory(
 ): Promise<Category> {
   const name = input.name.trim();
   if (!name || name.length > 40) throw new DomainError('Enter a category name (up to 40 characters).', { key: 'cat.err.categoryName' });
+  // Jeans, Jacket and Shirt keep their name and stay shown (ADR-066); sizes, code and Hindi name may change.
+  const [current] = await db.select({ name: categories.name }).from(categories).where(and(eq(categories.storeId, storeId), eq(categories.id, id))).limit(1);
+  if (current && isFixedType(current.name) && (name.toLowerCase() !== current.name.toLowerCase() || !input.active)) throw fixedTypeRefusal(current.name);
   const code = cleanCode(input.code);
   // Leaving sizes out keeps the current list; leaving the section out keeps it too.
   const sizes = input.sizes === undefined ? undefined : checkedSizes(input.sizes);
@@ -167,6 +171,27 @@ export async function updateCategory(
     if (isUniqueViolation(error)) throw new DomainError('A category with that name or code already exists.', { key: 'cat.err.categoryExists' });
     throw error;
   }
+}
+
+function fixedTypeRefusal(name: string): DomainError {
+  return new DomainError(`${name} always stays. It cannot be deleted, renamed or hidden.`, { key: 'sec.err.fixed', vars: { name } });
+}
+
+/**
+ * Categories → 🗑 (owner, 2026-11-22, ADR-066): a category goes only once none of its items
+ * is left (every item needs its category), and never Jeans, Jacket or Shirt. Bills keep their copies.
+ */
+export async function deleteCategory(db: Db, storeId: string, id: string): Promise<{ name: string }> {
+  return db.transaction(async (raw) => {
+    const tx = raw as unknown as Db;
+    const [type] = await tx.select().from(categories).where(and(eq(categories.storeId, storeId), eq(categories.id, id))).limit(1);
+    if (!type) throw new DomainError('Category not found.', { key: 'cat.err.categoryNotFound' });
+    if (isFixedType(type.name)) throw fixedTypeRefusal(type.name);
+    const [{ items }] = await tx.select({ items: int(sql`count(*)`) }).from(products).where(eq(products.categoryId, id));
+    if (items > 0) throw new DomainError(`${type.name} still has ${items} items. Delete them first.`, { key: 'sec.err.hasItems', vars: { name: type.name, n: items } });
+    await tx.delete(categories).where(eq(categories.id, id));
+    return { name: type.name };
+  });
 }
 
 // ----------------------------------------------------------------- suppliers

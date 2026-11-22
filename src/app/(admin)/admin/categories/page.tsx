@@ -1,33 +1,38 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { card, link, muted, secondaryButton, sectionTitle } from '@/components/ui/styles';
+import { IconBack } from '@/components/ui/icons';
+import { backButton, card, sectionTitle } from '@/components/ui/styles';
+import { CategoryList, StandInTile, type CategoryRowData } from '@/features/catalog/category-list';
 import { SectionArt } from '@/features/catalog/section-art';
-import { CategoryForm, MoveTypeForm, SectionForm, SetUpSectionsForm, type SectionChoice } from '@/features/catalog/setup-forms';
+import { CategoryForm, SectionForm, SetUpSectionsForm, type SectionChoice } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import type { Locale, T } from '@/lib/i18n';
-import { localName } from '@/lib/sections';
-import { createCategoryAction, createSectionAction, moveSectionAction, moveTypeAction, setUpSectionsAction, updateCategoryAction, updateSectionAction } from '@/server/actions/admin';
+import { wholeRupees } from '@/lib/money';
+import { can } from '@/lib/permissions';
+import { FIXED_SECTIONS, isFixedType, localName, withFixedSections, type FixedSectionKey } from '@/lib/sections';
+import { createCategoryAction, createSectionAction, moveTypeAction, setUpSectionsAction, updateCategoryAction } from '@/server/actions/admin';
 import { requirePermission } from '@/server/auth';
 import { getLocale, getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listCategories, type CategoryRow } from '@/server/services/catalog';
-import { listSections, type SectionWithTypes } from '@/server/services/sections';
+import { categoryFigures, listSections, sumFigures, type SectionWithTypes, type TypeFigures } from '@/server/services/sections';
 
 /**
- * Plan v19 (task 02b): the owner's tree. Sections (Men / Women / Boys / Girls and
- * their own) as tiles on top; the chosen section's categories underneath; the
- * categories not sorted yet in a "Needs sorting" tile the owner empties once.
- * Everything here is server-rendered; the chosen tile lives in the address (`?s=`).
+ * Categories (plan v19 task 02b; owner, 2026-11-22, ADR-066): collection tiles on top, each
+ * with its products (Men and Women always there — a missing one is made by its tap); the
+ * chosen collection's figures (categories, products, pieces, stock value); its categories,
+ * each with products · items · pieces, sizes, ✎ and 🗑 (Jeans, Jacket, Shirt locked); the
+ * categories not sorted yet in a "Needs sorting" tile. The chosen tile lives in the address (`?s=`).
  */
 type Search = { s?: string };
 const UNSORTED = 'unsorted';
 
 async function load() {
-  const [, t, locale] = await Promise.all([requirePermission('catalog'), getT(), getLocale()]);
+  const [me, t, locale] = await Promise.all([requirePermission('catalog'), getT(), getLocale()]);
   const db = await requestDb();
-  const [{ sections }, rows] = await Promise.all([listSections(db, STORE_ID), listCategories(db, STORE_ID)]);
+  const [{ sections }, rows, figures] = await Promise.all([listSections(db, STORE_ID), listCategories(db, STORE_ID), categoryFigures(db, STORE_ID)]);
   const unsorted = rows.filter((c) => !c.sectionId || !sections.some((s) => s.id === c.sectionId));
-  return { t, locale, sections, rows, unsorted };
+  return { me, t, locale, sections, rows, unsorted, figures };
 }
 
 function pick(sections: SectionWithTypes[], s: string | undefined): string {
@@ -36,33 +41,43 @@ function pick(sections: SectionWithTypes[], s: string | undefined): string {
   return sections[0]?.id ?? UNSORTED;
 }
 
-function count(t: T, n: number) {
-  return t(n === 1 ? 'sec.count.one' : 'sec.count.other', { n });
-}
+const tileClass = (on: boolean, hidden = false) =>
+  `flex min-h-12 shrink-0 items-center gap-2 rounded-2xl border px-3 py-1.5 text-sm font-semibold transition ${
+    on ? 'border-brand-600 bg-brand-600 text-white shadow-md shadow-brand-700/25' : 'border-zinc-200 bg-surface text-zinc-800 hover:border-brand-400 dark:border-zinc-800 dark:text-zinc-100'
+  } ${hidden ? 'opacity-60' : ''}`;
 
-function SectionTiles({ sections, rows, unsorted, selected, t, locale }: { sections: SectionWithTypes[]; rows: CategoryRow[]; unsorted: CategoryRow[]; selected: string; t: T; locale: Locale }) {
-  const tile = (on: boolean, hidden = false) =>
-    `flex min-h-11 shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
-      on ? 'border-brand-600 bg-brand-600 text-white shadow-md shadow-brand-700/25' : 'border-zinc-200 bg-surface text-zinc-800 hover:border-brand-400 dark:border-zinc-800 dark:text-zinc-100'
-    } ${hidden ? 'opacity-60' : ''}`;
+type Tile = { fixed: FixedSectionKey | null; section?: SectionWithTypes };
+
+function SectionTiles({ sections, rows, unsorted, selected, figures, t, locale }: { sections: SectionWithTypes[]; rows: CategoryRow[]; unsorted: CategoryRow[]; selected: string; figures: Record<string, TypeFigures>; t: T; locale: Locale }) {
+  // Men and Women always show (ADR-064): one the shop lacks gets a tile that makes it.
+  const tiles = withFixedSections<Tile>(
+    sections.map((section) => ({ fixed: section.fixed, section })),
+    (fixed) => ({ fixed }),
+  );
   return (
     <nav aria-label={t('sec.tabs')} data-testid="section-tiles" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-      {sections.map((section) => {
+      {tiles.map(({ fixed, section }) => {
+        if (!section) {
+          const def = FIXED_SECTIONS.find((f) => f.key === fixed)!;
+          return <StandInTile key={`fixed:${fixed}`} fixedKey={def.key} name={localName(def, locale)} icon={def.icon} className={tileClass(false)} />;
+        }
         const on = selected === section.id;
-        const n = rows.filter((c) => c.sectionId === section.id).length;
+        const products = sumFigures(rows.filter((c) => c.sectionId === section.id).map((c) => figures[c.id])).products;
         return (
-          <Link key={section.id} href={`/admin/categories?s=${section.id}`} aria-current={on ? 'page' : undefined} className={tile(on, !section.active)}>
+          <Link key={section.id} href={`/admin/categories?s=${section.id}`} aria-current={on ? 'page' : undefined} className={tileClass(on, !section.active)}>
             <SectionArt icon={section.icon} className="h-7 w-7" />
-            <span>
-              {localName(section, locale)}
-              {!section.active && <span className="ml-1 text-xs font-normal">({t('sec.hidden')})</span>}
+            <span className="flex flex-col items-start leading-tight">
+              <span>
+                {localName(section, locale)}
+                {!section.active && <span className="ml-1 text-xs font-normal">({t('sec.hidden')})</span>}
+              </span>
+              <span className={`text-[11px] font-medium ${on ? 'text-white/80' : 'text-zinc-500 dark:text-zinc-400'}`}>{t(products === 1 ? 'sec.n.products.one' : 'sec.n.products.other', { n: products })}</span>
             </span>
-            <span className={`rounded-full px-1.5 text-xs ${on ? 'bg-white/20' : 'bg-zinc-100 dark:bg-zinc-800'}`}>{n}</span>
           </Link>
         );
       })}
       {(unsorted.length > 0 || sections.length === 0) && (
-        <Link href={`/admin/categories?s=${UNSORTED}`} aria-current={selected === UNSORTED ? 'page' : undefined} className={tile(selected === UNSORTED)}>
+        <Link href={`/admin/categories?s=${UNSORTED}`} aria-current={selected === UNSORTED ? 'page' : undefined} className={tileClass(selected === UNSORTED)}>
           <span>{t('sec.unsorted')}</span>
           <span className={`rounded-full px-1.5 text-xs ${selected === UNSORTED ? 'bg-white/20' : 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100'}`}>{unsorted.length}</span>
         </Link>
@@ -71,88 +86,54 @@ function SectionTiles({ sections, rows, unsorted, selected, t, locale }: { secti
   );
 }
 
-function SectionHead({ section, n, t, locale, first, last }: { section: SectionWithTypes; n: number; t: T; locale: Locale; first: boolean; last: boolean }) {
-  const name = localName(section, locale);
+/** The chosen collection's figures (owner, 2026-11-22: "number of products it has" and the rest that helps). */
+function Figures({ name, categories, figures, showCost, t }: { name: string; categories: number; figures: TypeFigures; showCost: boolean; t: T }) {
+  const boxes = [
+    { label: t('sec.fig.categories'), value: String(categories), testId: 'fig-categories' },
+    { label: t('sec.fig.products'), value: String(figures.products), testId: 'fig-products' },
+    { label: t('sec.fig.pieces'), value: String(figures.pieces), testId: 'fig-pieces' },
+    ...(showCost ? [{ label: t('sec.fig.value'), value: wholeRupees(figures.valuePaise), testId: 'fig-value' }] : []),
+  ];
   return (
-    <section data-testid="section-head" className={`${card} flex flex-col gap-3`}>
-      <div className="flex items-center gap-3">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-          <SectionArt icon={section.icon} className="h-10 w-10" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xl font-bold">
-            {name}
-            {locale === 'en' && section.nameHi && <span className={`ml-2 text-base font-normal ${muted}`}>{section.nameHi}</span>}
-          </h2>
-          <p className={`text-sm ${muted}`}>
-            {count(t, n)}
-            {!section.active && ` · ${t('sec.hidden')}`}
-          </p>
+    <dl data-testid="collection-figures" aria-label={t('sec.fig.aria', { name })} className={`grid gap-2 ${showCost ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+      {boxes.map((box) => (
+        <div key={box.testId} className="flex min-w-0 flex-col gap-0.5 rounded-2xl bg-surface px-3 py-2 shadow-sm ring-1 ring-brand-100 dark:ring-brand-900">
+          <dt className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">{box.label}</dt>
+          <dd data-testid={box.testId} className="truncate text-lg leading-tight font-bold tabular-nums">
+            {box.value}
+          </dd>
         </div>
-        <form action={moveSectionAction.bind(null, section.id, 'up')}>
-          <button type="submit" disabled={first} aria-label={t('sec.up', { name })} className={`${secondaryButton} h-11 w-11 px-0 text-lg`}>
-            ▲
-          </button>
-        </form>
-        <form action={moveSectionAction.bind(null, section.id, 'down')}>
-          <button type="submit" disabled={last} aria-label={t('sec.down', { name })} className={`${secondaryButton} h-11 w-11 px-0 text-lg`}>
-            ▼
-          </button>
-        </form>
-      </div>
-      <details>
-        <summary className={`cursor-pointer text-sm font-medium ${link}`}>{t('sec.edit')}</summary>
-        <div className="mt-3">
-          <SectionForm key={section.id} action={updateSectionAction.bind(null, section.id)} initial={section} submitLabel={t('sec.save')} />
-        </div>
-      </details>
-    </section>
-  );
-}
-
-function CategoryItem({ c, t, locale, choices, move }: { c: CategoryRow; t: T; locale: Locale; choices: SectionChoice[]; move: boolean }) {
-  return (
-    <li>
-      <div className={`${card} flex flex-col gap-3`}>
-        <details>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-            <span className="min-w-0">
-              <span className="font-medium">{localName(c, locale)}</span>
-              {locale === 'en' && c.nameHi && <span className={`ml-2 text-sm ${muted}`}>{c.nameHi}</span>}
-              <span className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-800">{c.code}</span>
-              {!c.active && <span className={`ml-1 text-xs ${muted}`}>{t('cat.inactiveParen')}</span>}
-              <span className={`block text-xs ${muted}`}>{t('cat.productsPcs', { products: c.productCount, pcs: c.stockUnits })}</span>
-              <span data-testid="category-sizes" className={`block text-xs ${muted}`}>
-                {t('cat.cat.sizes', { sizes: c.sizes.length > 0 ? c.sizes.join(' · ') : t('cat.cat.sizesNotSet') })}
-              </span>
-            </span>
-            <span className={`shrink-0 text-sm ${link}`}>{t('cat.cat.edit')}</span>
-          </summary>
-          <div className="mt-3 flex flex-col gap-3">
-            <CategoryForm action={updateCategoryAction.bind(null, c.id)} initial={c} submitLabel={t('cat.cat.save')} sections={move ? undefined : choices} />
-          </div>
-        </details>
-        {move && choices.length > 0 && <MoveTypeForm action={moveTypeAction.bind(null, c.id)} sections={choices} typeName={localName(c, locale)} />}
-      </div>
-    </li>
+      ))}
+    </dl>
   );
 }
 
 async function Tree({ searchParams }: { searchParams: Promise<Search> }) {
-  const [{ t, locale, sections, rows, unsorted }, params] = await Promise.all([load(), searchParams]);
+  const [{ me, t, locale, sections, rows, unsorted, figures }, params] = await Promise.all([load(), searchParams]);
   const selected = pick(sections, params.s);
   const choices: SectionChoice[] = sections.filter((s) => s.active).map((s) => ({ id: s.id, name: localName(s, locale) }));
   const section = sections.find((s) => s.id === selected);
-  const index = sections.findIndex((s) => s.id === selected);
   const shown = section ? rows.filter((c) => c.sectionId === section.id) : unsorted;
+  const showCost = can(me, 'costs');
+  const empty: TypeFigures = { products: 0, items: 0, pieces: 0, valuePaise: 0 };
+  const listRows: CategoryRowData[] = shown.map((c) => ({
+    id: c.id,
+    label: localName(c, locale),
+    hindi: locale === 'en' ? c.nameHi : null,
+    code: c.code,
+    sizes: c.sizes,
+    active: c.active,
+    fixed: isFixedType(c.name),
+    figures: figures[c.id] ?? empty,
+    initial: { name: c.name, nameHi: c.nameHi, code: c.code, active: c.active, sizes: c.sizes, sectionId: c.sectionId },
+    editAction: updateCategoryAction.bind(null, c.id),
+    moveAction: section ? undefined : moveTypeAction.bind(null, c.id),
+  }));
   return (
     <>
-      <SectionTiles sections={sections} rows={rows} unsorted={unsorted} selected={selected} t={t} locale={locale} />
-      {section ? (
-        <SectionHead section={section} n={shown.length} t={t} locale={locale} first={index === 0} last={index === sections.length - 1} />
-      ) : (
-        <h2 className={sectionTitle}>{t('sec.unsorted')}</h2>
-      )}
+      <SectionTiles sections={sections} rows={rows} unsorted={unsorted} selected={selected} figures={figures} t={t} locale={locale} />
+      <Figures name={section ? localName(section, locale) : t('sec.unsorted')} categories={shown.length} figures={sumFigures(shown.map((c) => figures[c.id]))} showCost={showCost} t={t} />
+      {!section && <h2 className={sectionTitle}>{t('sec.unsorted')}</h2>}
       {section && (
         <details className={card}>
           <summary className="cursor-pointer font-medium text-brand-700 dark:text-brand-400">{t('cat.cat.addOpen')}</summary>
@@ -177,12 +158,8 @@ async function Tree({ searchParams }: { searchParams: Promise<Search> }) {
           </div>
         </details>
       )}
-      <ul data-testid="category-list" className="flex flex-col gap-2">
-        {shown.map((c) => (
-          <CategoryItem key={c.id} c={c} t={t} locale={locale} choices={choices} move={!section} />
-        ))}
-      </ul>
-      {shown.length === 0 && <p className={`text-sm ${muted}`}>{t('sec.none')}</p>}
+      {/* Keyed by tile: a row's open form must not follow the owner to the next collection. */}
+      <CategoryList key={selected} rows={listRows} showCost={showCost} canDelete={me.role === 'admin'} choices={choices} move={!section} />
     </>
   );
 }
@@ -203,7 +180,13 @@ export default async function CategoriesPage(props: { searchParams: Promise<Sear
   const t = await getT();
   return (
     <main className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">{t('nav.categories')}</h1>
+      {/* Home → Collections lands here (ADR-066); ← goes back Home. */}
+      <div className="flex items-center gap-3">
+        <Link href="/admin/dashboard" aria-label={t('ni.backHome')} className={backButton}>
+          <IconBack className="h-5 w-5" />
+        </Link>
+        <h1 className="text-2xl font-semibold">{t('nav.categories')}</h1>
+      </div>
       <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <Tree searchParams={props.searchParams} />
       </Suspense>

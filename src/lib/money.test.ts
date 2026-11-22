@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatPaise, paperRupees, rupeesText } from './money';
+import { formatPaise, paperRupees, rupeesText, wholeRupees } from './money';
 
 describe('formatPaise', () => {
   it('formats paise as INR rupees', () => {
@@ -25,5 +25,13 @@ describe('paperRupees / rupeesText (bill tables, ADR-061/062)', () => {
     expect(rupeesText(68000)).toBe('680');
     expect(rupeesText(11650)).toBe('116.5');
     expect(rupeesText(null)).toBe('');
+  });
+});
+
+describe('wholeRupees (figure boxes, ADR-066)', () => {
+  it('rounds to whole rupees with Indian grouping', () => {
+    expect(wholeRupees(12345678)).toBe('₹1,23,457');
+    expect(wholeRupees(0)).toBe('₹0');
+    expect(wholeRupees(4950)).toBe('₹50');
   });
 });

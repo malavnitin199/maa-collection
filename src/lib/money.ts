@@ -16,6 +16,13 @@ export function rupeesText(paise: number | null): string {
   return paise === null ? '' : String(paise / 100);
 }
 
+const wholeFormatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+
+/** A total in whole rupees for small figure boxes: ₹1,23,457 (paise rounded). */
+export function wholeRupees(paise: number): string {
+  return `₹${wholeFormatter.format(Math.round(paise / 100))}`;
+}
+
 const paperFormatter = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Rupees the way a paper bill prints them, without ₹ (the column says it): 6,120.00. */
