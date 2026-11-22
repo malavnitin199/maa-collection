@@ -157,11 +157,14 @@ Good to know:
 - **Delete a company** (Catalog right): on its page tap **Delete this company** at the bottom (or Companies → Select → Delete). It asks first. Its items stay, just with no company. **Bills are never changed**: a bill keeps the company's name (shown *(deleted)*), its amounts and payments; edit the bill yourself if you want to change it. Deleting items does not change bills either.
 - **Collections** are the groups every item must belong to (on the shop now: Men, Women, Box, RAmDOm — New item's first step, *Which collection?*). **Home → Collections** lists each with *items · pcs*: change a name in its box and tap **Save**; the 🗑 appears only for a collection with **no items** and asks before deleting (its empty categories go too). In Bills, what used to be called *collections* (what came in on one New item save) is now called **stock entries**.
 
-### Editing an item (product page → Details)
+### Editing an item (Products → tap it; since 2026-11-22)
 
-- **✎ Edit this item** (top): name, size, category, company, colour, MRP, selling and purchase price → **Save changes**. Brand, size and colour may be empty.
-- **+ Add sizes**: tap the sizes this design doesn't have yet (or type one), set the pieces → **Add N sizes**. They get the same name, prices and company, and their tags are ready to print (All tags).
-- **Add pieces to this size**: more stock of the size you are looking at.
+One short screen shows everything about the product: its photo (or **N/A**), name and coloured labels — **company** (orange; tap it to open the company), **category**, **Items: n** and the **pieces** in stock (purple), For / Age — and below them one card to change it all, then **Save changes** once:
+- **Name** (Hindi or English, अ / A, ⇄ and the microphone), **Company** (N/A = none), **Category**.
+- **MRP ₹ · Selling ₹ · Purchase ₹** — one price for every size. If the sizes have different prices the box is empty and says **By size**: leave it empty and each size keeps its own; type a price and every size gets it.
+- **Sizes & pieces** — each size (and colour) with **− n +**: change the pieces when you count the shelf. It is saved as a **count correction** with your name, never overwritten. New stock from a company still comes in through **+ Stock**, so purchases and bills stay right. **✎** next to a size opens its **Size** and **Colour** boxes (e.g. give a no-size item size M). **+ Add size**: type the size and its pieces.
+- Below: **Print label** (prints the hang tag), **Hide** / **Bring back** (the counter stops showing it; it stays in Products marked *Hidden*), **More** (For / Age), **Delete this item** (owner).
+- You only get boxes for what you may change (name and sizes need Catalog, prices need Prices, purchase price needs the purchase-price right, pieces need Stock).
 
 **Bills keep their own copy:** what was on a bill (items, sizes, quantities, rates, amounts, company names) is saved with the bill. Editing, deleting or renaming items or companies later never changes a bill.
 
@@ -179,18 +182,6 @@ Good to know:
   - **All tags**: **Print n selected**.
   - **Companies** (anyone with the Catalog right): **Delete** only. It asks first (*Delete 2 companies?* → **Yes, delete** / **Cancel**) and cannot be undone. Any company can be deleted: its items **stay**, with no company; its **bills and payments stay exactly as they were**, still showing its name (marked *(deleted)*). (Earlier rule, replaced: a company that has items, bills or payments is **not** deleted — the message says *Can’t delete … it has n items, n bills, n payments* — because its purchase history depends on it. (To hide a company instead, untick **Active** in its **Edit company details**.)
 
-### The product page (Products → tap an item)
-
-**On top (2026-11-20):** the design's figures for the period you pick (All time · This month · Last 30 days · This year · Dates…): **In stock** (every size and colour; *this one* = the item you opened), **Sold** (approved sales; or how many are still waiting for the owner), **Came in** (pieces, and the purchase value for people with that right), **Profit** (owner), **Last sale**, **Last arrival**. Then one row with the company, MRP, selling (and purchase) price, **Print label** and **Restock**. Tabs: **Details** (tag, rates, receive), **Colours**, **Sales** (every sale of this design with its status), **Purchases** (every delivery, then the stock history), **Other details** (tags, edit — the name, brand and colour boxes type Hindi or English and take voice).
-
-
-- **Top**: name, colour · size · brand, small tags (the design's sizes, category, For, Age) and the main photo on the right.
-- **Must-haves**: company, MRP, selling and purchase price, **pieces in stock**, **Print label**, **Restock**.
-- **Details** tab: the hang tag, **Rates for the whole design** (change the default or one size → **Apply**; past sales keep their prices), receive more pieces, and the stock history.
-- **Colours** tab: every colour × size of the design with its pieces (tap one to open it) and the total; the photos.
-- **Other details** tab: change **For / Age** for the whole design (**Save tags**), and **Edit this item**.
-- Every way of adding an item (**New item**, **Tag old stock**, **More → Add a single product**) lets you tap **For** and **Age** while adding; change them later here.
-
 ### The Companies page
 
 Home has one small **Companies** line under Today (how many companies, bills, dues); tap it, or **Companies**, to open the Companies page. There: the **search** box with its **microphone** on one line (name, place, contact or phone; English or Hindi); on a second, small line the **place** filter (all the locations you have typed), **Summary ▸**, **Select** (and *n of N* while filtering) (tap to see companies, bills and open bills, collections and pieces, total spend, dues now), and the companies ten at a time (**Previous / Next**): name, location · contact · phone, *bills · dues* and collections. The latest activity comes first (a new bill, or a company you just added); hidden companies last. **+ Add supplier** (top right) opens the add form.
@@ -202,6 +193,7 @@ When you add or edit a company, give **Working since** — the day you started b
 A **collection** is what you add in New item (one save, e.g. Jeans in 6 sizes) or Receive stock — it is **not** a bill. A **bill** is the company's paper bill, entered here. Home has one **Bills** line (how many, how many open, what is due); tap it.
 
 - **Bills** lists every bill, newest bill date first, ten at a time: date, bill no., companies, how many collections, total and **Due ₹…** / **Paid**.
+- **A bill stands on its own (2026-11-22):** a company is optional. **With no company**, step 1 is **Items on this bill**: type a name, code or barcode (a scanner's Enter adds it), tap an item to add it, set how many with **− / +** (✕ takes it off); each line is *quantity × purchase price = amount* (N/A when the item has no purchase price). Such a bill shows its lines and total — nothing is owed on it, and it is not on any company's page. Adding items hides the company box; choosing a company hides the items. The bill keeps its own copy of every line: renaming, repricing or deleting the item later changes nothing on it. **With a company** the bill works as below, and the company's page lists it — tap its number to open that exact bill.
 - **+ New bill** — two steps. **Step 1**, the **companies**: choose one (or *+ New company…*); it appears as **1** in the list; **Add another company** puts the next one below it as **2**, and so on (✕ takes one off). Under **Collections on this bill** each chosen company's collections waiting for a bill sit under its name — date, sizes, pieces and value — with **Select all**. Tap a collection to tick it. A company with nothing waiting (for example one you just added with *+ New company…*) shows **+ New item from <company>**: add its stock there, then come back to the bill — your choices are still there. **No amount is typed**: each company's part and the **Bill total** are the value of the ticked collections (purchase price × pieces). **Next: check bill**.
 - **Step 2 — Check with the paper bill**: laid out like the company's paper — **Party**, **Bill no.** (optional), **Bill date** (can be earlier; the day you enter it is kept separately), then **S.N · Description · Qty · Rate · Amount (₹)** (sizes under each name; the same item at the same rate is one line), the **Total** and the units. Tick it off against the paper line by line. **Back** (or the phone's back button) returns to step 1 with your ticks kept. **Save bill**. Freight and GST printed on the paper are not added.
 - **A bill's page**: each company's amount and **due**, with **Mark paid**; **As on the paper bill** (the same table); the collections on it (**Take off** one, or **+ Add collections** — grouped by company); the amounts follow the collections. **Edit bill** (number, date, note, companies — taking a company off takes its collections off; one with payments on this bill stays); **Delete bill** (asks first; not when it has payments; its collections go back to waiting).
@@ -255,9 +247,9 @@ Every piece gets a **hang tag, 40 × 60 mm**: shop name, **QR code**, the **size
 
 **Sample tags to practise scanning:** 8 demo tags in `public/sample-scanner-images/` (in the code), also online at https://maa-collection-pi.vercel.app/sample-scanner-images/all-tags.png, …/all-tags-print-a4.pdf, and one per tag (e.g. …/02-anarkali-kurta-M-MAA-KU-001.png). Open one on a computer screen and scan it with **Sell → Scan with camera**.
 
-### Photos of an existing product
+### Photos of a product
 
-**Products** → tap the item → **Photos** → *Take photo* / *From gallery*. The first photo is the **main** one, shown at the counter. Use *Make main* to change it, or *Delete*. Up to 8 photos per product; they're made smaller automatically before uploading.
+Add the photos while making the item (**New item**, **Tag old stock**): the first one is the **main** photo, shown at the counter and on the item page. (Since 2026-11-22 the item page no longer adds, changes or deletes photos.)
 
 ## 5a. Sales team dashboard (owner)
 
