@@ -234,13 +234,16 @@ test('owner gives sizes their own MRP, selling and purchase price', async ({ pag
   await expect(labels.filter({ hasText: 'MRP ₹700.00' })).toHaveCount(2);
 
   // Products: XL has its own MRP, so it is a card of its own (same name, company and MRP = one card);
-  // each card: pieces × its sizes' own purchase prices = total (ADR-057).
+  // each card: its sizes' own purchase prices per piece (ADR-057/070).
   await page.goto('/admin/products');
   const cards = productCard(page, name);
   await expect(cards).toHaveCount(2);
-  const mAndL = cards.filter({ hasText: '× ₹300.00–₹330.00 =' });
+  const mAndL = cards.filter({ has: page.getByTestId('card-cost').getByText('₹300–₹330/pc', { exact: true }) });
   await expect(mAndL).toHaveCount(1);
-  await expect(cards.filter({ hasText: '× ₹360.00 =' })).toHaveCount(1);
+  await expect(mAndL.getByTestId('card-mrp')).toHaveText('MRP ₹700');
+  const xl = cards.filter({ has: page.getByTestId('card-cost').getByText('₹360/pc', { exact: true }) });
+  await expect(xl).toHaveCount(1);
+  await expect(xl.getByTestId('card-mrp')).toHaveText('MRP ₹750');
 
   // Item page (ADR-061): the prices line shows each price's range; ✎ Edit details has empty boxes
   // marked "By size" — left empty, each size keeps its own; a typed price goes to every size.
@@ -261,7 +264,7 @@ test('owner gives sizes their own MRP, selling and purchase price', async ({ pag
   await page.keyboard.press('Escape');
   await page.goto('/admin/products');
   await expect(mAndL).toHaveCount(1); // purchase prices untouched
-  await expect(cards.filter({ hasText: '× ₹360.00 =' })).toHaveCount(1);
+  await expect(xl).toHaveCount(1);
   // One selling price for every size; MRP stays by size.
   await mAndL.getByRole('link', { name, exact: true }).click();
   await page.getByTestId('edit-details').click();
@@ -612,7 +615,7 @@ test('Products → Select (owner, ADR-057): one bar at the bottom — Select all
 
   await page.goto('/admin/products');
   const card = productCard(page, name);
-  await expect(card.getByTestId('card-items')).toHaveText('Items: 3');
+  await expect(card).toHaveAttribute('data-items', '3');
   // A long-press on a card starts selecting with that card — all 3 of its items — ticked (and does not open it).
   await card.scrollIntoViewIfNeeded();
   const box = await card.boundingBox();
@@ -750,9 +753,9 @@ test('owner restocks existing items by scanning each piece and by name search', 
   await expect(page.getByTestId('restock-lines').getByRole('listitem')).toHaveCount(0);
   await expect(page.getByLabel('Company bill no. (optional)')).toHaveValue('');
 
-  // Stock went up by exactly 3.
-  await page.goto('/admin/products');
-  await expect(productCard(page, 'Oxford Shirt').getByTestId('design-sizes')).toContainText(`40 · ${Number(before) + 3}`); // MAA-SH-001
+  // Stock went up by exactly 3 (the sizes and their pieces are on the product page, ADR-070).
+  await openProduct(page, 'Oxford Shirt');
+  await expect(page.getByTestId('size-row').filter({ visible: true, hasText: /^40/ })).toContainText(`${Number(before) + 3} pcs`); // MAA-SH-001
 });
 
 test('a salesman cannot add companies, categories, products, stock or change rates', async ({ page }) => {
@@ -985,21 +988,15 @@ test('combined view: one card per design (name + company + MRP) on Products and 
   await page.getByRole('button', { name: 'Save 4 items' }).click();
   await expect(page).toHaveURL(/\/admin\/labels\/print\?receipt=/);
 
-  // Products (ADR-058): every product, one compact card for the 4 items — company, items and pieces
-  // as coloured chips, the purchase line (ADR-057), every size with its pieces; no MRP, QR code,
-  // folding list or print link, and no search, filters or view switch on the page.
+  // Stocks (ADR-070): every product, one short card for the 4 items — the pieces, the purchase price
+  // per piece and the MRP, each said once (no company, item count, "× = total" line or sizes row);
+  // no QR code on the card itself, no folding list or print link, and no search, filters or view switch.
   await page.goto('/admin/products');
   const card = productCard(page, name);
   await expect(card).toHaveCount(1);
-  await expect(card.getByTestId('card-company')).toHaveText(company);
-  await expect(card.getByTestId('card-items')).toHaveText('Items: 4');
-  await expect(card.getByTestId('card-pieces')).toHaveText('8 pcs');
-  const line = card.getByTestId('stock-value');
-  await expect(line.getByTestId('value-pieces')).toHaveText('8 pcs');
-  await expect(line.getByTestId('value-per-piece')).toHaveText('₹800.00');
-  await expect(line.getByTestId('value-total')).toHaveText('₹6,400.00');
-  await expect(card.getByTestId('design-sizes')).toHaveText('M · 2L · 2XL · 2XXL · 2');
-  await expect(card).not.toContainText('MRP');
+  await expect(card).toHaveAttribute('data-items', '4');
+  await expect(card.getByTestId('card-figures')).toHaveText('8 pcs₹800/pcMRP ₹1,499');
+  await expect(card).not.toContainText(company);
   await expect(card.getByRole('img')).toHaveCount(0);
   await expect(card).not.toContainText(/Show \d|Print tags/);
   await expect(page.getByRole('search')).toHaveCount(0);
@@ -1354,7 +1351,8 @@ test('after tagging an old item, Edit fixes it in place: same barcode, no new it
   // The tag Print tag prints (drawn only for printing) still carries the same barcode.
   await expect(page.getByTestId('item-print-tag').getByRole('img', { name: new RegExp(`^Barcode ${barcode}`), includeHidden: true })).toHaveCount(1);
   await page.goto('/admin/products'); // still exactly one item with that name
-  await expect(productCard(page, `Chikan Kurta Long ${run}`).getByTestId('card-items')).toHaveText(['Items: 1']);
+  await expect(productCard(page, `Chikan Kurta Long ${run}`)).toHaveCount(1);
+  await expect(productCard(page, `Chikan Kurta Long ${run}`)).toHaveAttribute('data-items', '1');
 });
 
 test('clear stock: owner only, two steps, and a wrong PIN changes nothing', async ({ page }) => {

@@ -52,12 +52,12 @@ test('Products: a tap anywhere on a card opens it; ticked cards are plain again 
   await toProducts();
   await expect(page).toHaveURL(/\/admin\/products$/);
 
-  // The card says it opens (a round ›), and a tap on its sizes — not the name — opens it.
+  // The card says it opens (a round ›), and a tap on its figures — not the name — opens it.
   const card = productCard(page, first).filter({ visible: true });
   await expect(card.getByTestId('card-open')).toBeVisible();
   await card.scrollIntoViewIfNeeded();
-  const sizes = await card.getByTestId('design-sizes').boundingBox();
-  await page.mouse.click(sizes!.x + 4, sizes!.y + sizes!.height / 2);
+  const figures = await card.getByTestId('card-figures').boundingBox();
+  await page.mouse.click(figures!.x + 4, figures!.y + figures!.height / 2);
   await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(first);
   await page.goBack();

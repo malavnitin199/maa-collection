@@ -30,10 +30,16 @@ export const catalogEn = {
   'cat.design.mrp': 'MRP {mrp}',
   'cat.design.selling': 'selling {price}',
   'cat.design.sellingRange': 'selling {min}–{max}',
-  // Products (ADR-057): pieces × purchase price per piece = total, in place of the MRP
-  'cat.design.items': 'Items: {items}',
   'cat.value.pcs': '{pcs} pcs',
-  'cat.value.missing': '{pcs} pcs have no purchase price',
+  // Stocks cards (ADR-070): pieces, the purchase price per piece (Costs right only), the MRP
+  'cat.card.perPiece': '{price}/pc',
+  'cat.card.noCost': 'Cost N/A',
+  // The card's QR button opens the product's label in a sheet (ADR-070)
+  'cat.card.label': 'Label of {name}',
+  'cat.label.loading': 'Loading the label…',
+  'cat.label.failed': 'Could not load the label. Try again.',
+  'cat.label.none': 'No label to show.',
+  'cat.label.close': 'Close',
   // Products cards (ADR-058): a hidden design (or some of its items) stays in the list, marked
   'cat.card.hidden': 'Hidden',
   'cat.card.hiddenN': '{n} hidden',
@@ -376,10 +382,16 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.design.mrp': 'MRP {mrp}',
   'cat.design.selling': 'बिक्री दाम {price}',
   'cat.design.sellingRange': 'बिक्री दाम {min}–{max}',
-  // प्रोडक्ट (ADR-057): पीस × प्रति पीस खरीद दाम = कुल, MRP की जगह
-  'cat.design.items': 'आइटम: {items}',
   'cat.value.pcs': '{pcs} पीस',
-  'cat.value.missing': '{pcs} पीस का खरीद दाम नहीं',
+  // स्टॉक कार्ड (ADR-070): पीस, प्रति पीस खरीद दाम (सिर्फ़ खरीद दाम के अधिकार के साथ), MRP
+  'cat.card.perPiece': '{price}/पीस',
+  'cat.card.noCost': 'खरीद N/A',
+  // कार्ड का QR बटन प्रोडक्ट का लेबल शीट में खोलता है (ADR-070)
+  'cat.card.label': '{name} का लेबल',
+  'cat.label.loading': 'लेबल लोड हो रहा है…',
+  'cat.label.failed': 'लेबल लोड नहीं हुआ। फिर से कोशिश करें।',
+  'cat.label.none': 'दिखाने को कोई लेबल नहीं।',
+  'cat.label.close': 'बंद करें',
   // प्रोडक्ट कार्ड (ADR-058): छिपा डिज़ाइन (या उसके कुछ आइटम) सूची में रहता है, निशान के साथ
   'cat.card.hidden': 'छिपा',
   'cat.card.hiddenN': '{n} छिपे',

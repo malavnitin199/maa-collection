@@ -42,7 +42,7 @@ test('owner deletes items: several from Products → Select, a whole design from
   // (Never Select all here: every product of the shared test shop is on the page.)
   await page.goto('/admin/products');
   const card = productCard(page, one);
-  await expect(card.getByTestId('card-items')).toHaveText('Items: 2');
+  await expect(card).toHaveAttribute('data-items', '2');
   await page.getByTestId('select-products').click();
   await page.getByRole('checkbox', { name: `Select ${one}`, exact: true }).click();
   await expect(page.getByTestId('selected-count')).toHaveText('2 selected');
