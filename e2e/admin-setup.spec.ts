@@ -70,18 +70,24 @@ test('phone layout: bottom tab bar navigates the admin area', async ({ page, isM
   await loginOwner(page);
   const tabs = page.getByRole('navigation', { name: 'Main' });
   await expect(tabs).toBeVisible();
-  await tabs.getByRole('link', { name: '+ Stock' }).click();
-  await expect(page).toHaveURL(/\/admin\/stock$/);
-  await expect(page.getByRole('link', { name: /New item/ })).toBeVisible();
+  // ADR-070: Products is called Stocks, and Bills took the place of "+ Stock" (Add stock is on Home and Stocks).
+  await expect(tabs.getByRole('link')).toHaveText(['Home', 'Stocks', 'Sell', 'Bills', 'More']);
+  await tabs.getByRole('link', { name: 'Bills' }).click();
+  await expect(page).toHaveURL(/\/admin\/bills$/);
+  await expect(tabs.getByRole('link', { name: 'Bills' })).toHaveAttribute('aria-current', 'page');
   await tabs.getByRole('link', { name: 'More' }).click();
   await page.getByRole('link', { name: /^Companies/ }).click();
   await expect(page).toHaveURL(/\/admin\/companies$/);
   await tabs.getByRole('link', { name: 'More' }).click();
   await page.getByRole('link', { name: /Categories/ }).click();
   await expect(page).toHaveURL(/\/admin\/categories$/);
-  await tabs.getByRole('link', { name: 'Products' }).click();
+  await tabs.getByRole('link', { name: 'Stocks' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Stocks' }).filter({ visible: true })).toBeVisible();
   await expect(page.getByTestId('design-list')).toContainText('Classic Crew Tee'); // every product, one card per design (ADR-058)
-  await expect(tabs.getByRole('link', { name: 'Products' })).toHaveAttribute('aria-current', 'page');
+  await expect(tabs.getByRole('link', { name: 'Stocks' })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('link', { name: '+ Add stock' }).filter({ visible: true }).first().click();
+  await expect(page).toHaveURL(/\/admin\/stock$/);
+  await expect(page.getByRole('link', { name: /New item/ })).toBeVisible();
 });
 
 test('owner enters a new design from a supplier in sizes, prints labels; salesman can scan it', async ({ page }) => {

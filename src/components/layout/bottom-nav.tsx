@@ -2,17 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { IconBook, IconHome, IconMenu, IconRupee, IconScan, IconStockAdd, IconSwap, IconTag } from '@/components/ui/icons';
+import { IconBill, IconBook, IconHome, IconMenu, IconRupee, IconScan, IconSwap, IconTag } from '@/components/ui/icons';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { MessageKey } from '@/lib/i18n';
 
 type Tab = { href: string; label: MessageKey; Icon: (p: { className?: string }) => React.ReactNode };
 
 const SELL: Tab = { href: '/pos', label: 'tab.sell', Icon: IconScan };
+/**
+ * The owner's dock (ADR-070): Home · Stocks (the products list, renamed) · Sell · Bills · More.
+ * "+ Stock" left the dock — Add stock is on Home and at the top of Stocks.
+ */
 const ADMIN_TABS: Tab[] = [
   { href: '/admin/dashboard', label: 'tab.home', Icon: IconHome },
   { href: '/admin/products', label: 'tab.products', Icon: IconTag },
-  { href: '/admin/stock', label: 'tab.stock', Icon: IconStockAdd },
+  { href: '/admin/bills', label: 'tab.bills', Icon: IconBill },
   { href: '/admin/more', label: 'tab.more', Icon: IconMenu },
 ];
 const SALES_TABS: Tab[] = [
