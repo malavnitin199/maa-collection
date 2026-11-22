@@ -68,6 +68,7 @@ export const itemEditEn = {
   'ied.photo.keep': 'Keep it',
   'ied.photo.removed': 'Photo removed',
   'ied.photo.close': 'Close',
+  'ied.photo.noNet': 'The photo did not reach the shop. Check the internet and try again.',
 } as const;
 
 export const itemEditHi: Record<keyof typeof itemEditEn, string> = {
@@ -134,4 +135,5 @@ export const itemEditHi: Record<keyof typeof itemEditEn, string> = {
   'ied.photo.keep': 'रहने दें',
   'ied.photo.removed': 'फ़ोटो हट गई',
   'ied.photo.close': 'बंद करें',
+  'ied.photo.noNet': 'फ़ोटो दुकान तक नहीं पहुँची। इंटरनेट देखें और फिर कोशिश करें।',
 };

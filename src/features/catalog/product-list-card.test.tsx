@@ -54,6 +54,7 @@ describe('Products card (ADR-058)', () => {
     expect(screen.getByTestId('product-card').className).toMatch(/\brelative\b/);
     // The › is a picture for the eyes only; the link keeps the product's name.
     expect(screen.getByTestId('card-open')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByTestId('card-open').className).toMatch(/\bpointer-events-none\b/); // a click on it reaches the link
     expect(screen.getAllByRole('link')).toHaveLength(1);
   });
 

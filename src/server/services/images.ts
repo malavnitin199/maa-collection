@@ -277,17 +277,21 @@ export async function removeDesignPhoto(db: Db, storeId: string, productIds: str
 
 /**
  * A new size of a product shows the product's photo too (ADR-068): a row pointing to the
- * stored photo, never a copy of the bytes. Items that already have a photo keep theirs, so a
- * repeated save adds nothing. Returns how many items got it.
+ * stored photo, never a copy of the bytes. `fromIds` in order of preference — the item the
+ * size was added from first, so the new size shows the photo the person saw. Items that
+ * already have a photo keep theirs, so a repeated save adds nothing. Returns how many got it.
  */
 export async function shareDesignPhoto(db: Db, storeId: string, input: { fromIds: string[]; toIds: string[]; staffId?: string | null }): Promise<number> {
   if (input.fromIds.length === 0 || input.toIds.length === 0) return 0;
-  const [main] = await db
-    .select({ id: productImages.id, url: productImages.url, contentType: productImages.contentType, width: productImages.width, height: productImages.height })
+  const rows = await db
+    .select({ id: productImages.id, productId: productImages.productId, url: productImages.url, contentType: productImages.contentType, width: productImages.width, height: productImages.height })
     .from(productImages)
     .where(and(eq(productImages.storeId, storeId), inArray(productImages.productId, input.fromIds)))
-    .orderBy(asc(productImages.sortOrder), asc(productImages.createdAt))
-    .limit(1);
+    .orderBy(asc(productImages.sortOrder), asc(productImages.createdAt));
+  // Each item's main photo, then the first item (in the order given) that has one.
+  const mainOf = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) if (!mainOf.has(row.productId)) mainOf.set(row.productId, row);
+  const main = input.fromIds.map((id) => mainOf.get(id)).find(Boolean);
   if (!main) return 0;
   const have = await db
     .select({ productId: productImages.productId })

@@ -22,7 +22,8 @@ const sizeChip = (out: boolean) =>
  *
  * The whole card opens the product (owner, 2026-11-23, ADR-068): the name's link covers the
  * card, a round › on the right says "this opens", and the card lifts on hover and presses in
- * on a tap. While selecting, the › steps aside (a tap ticks the card instead).
+ * on a tap. While selecting, the › steps aside (a tap ticks the card instead). The › never takes
+ * a click itself (its hover nudge would otherwise lift it above the link).
  * Server-rendered: nothing about the items is sent to the phone as data.
  */
 export function ProductListCard({ design, photo, href, showCost, t }: { design: DesignGroup<Item>; photo?: string; href: string; showCost: boolean; t: T }) {
@@ -84,7 +85,7 @@ export function ProductListCard({ design, photo, href, showCost, t }: { design: 
       <span
         aria-hidden
         data-testid="card-open"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-200 transition ring-inset group-hover:translate-x-0.5 group-hover:bg-brand-600 group-hover:text-white group-active:bg-brand-600 group-active:text-white dark:bg-brand-950 dark:text-brand-200 dark:ring-brand-800 [html[data-selecting]_&]:opacity-0"
+        className="pointer-events-none flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-200 transition ring-inset group-hover:translate-x-0.5 group-hover:bg-brand-600 group-hover:text-white group-active:bg-brand-600 group-active:text-white dark:bg-brand-950 dark:text-brand-200 dark:ring-brand-800 [html[data-selecting]_&]:opacity-0"
       >
         <IconChevron className="h-5 w-5" />
       </span>

@@ -66,7 +66,15 @@ export function usePhotoPicker({
     </>
   );
 
-  return { busy, error, inputs, remove, openCamera: () => camera.current?.click(), openGallery: () => gallery.current?.click() };
+  return {
+    busy,
+    error,
+    inputs,
+    remove,
+    clearError: () => setError(null),
+    openCamera: () => camera.current?.click(),
+    openGallery: () => gallery.current?.click(),
+  };
 }
 
 /**

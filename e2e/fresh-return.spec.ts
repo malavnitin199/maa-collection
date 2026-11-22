@@ -62,6 +62,13 @@ test('Products: a tap anywhere on a card opens it; ticked cards are plain again 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(first);
   await page.goBack();
   await expect(page).toHaveURL(/\/admin\/products$/);
+  // With a mouse the › is under the pointer too: hovering nudges it, a click on it still opens.
+  await card.hover();
+  const arrow = await card.getByTestId('card-open').boundingBox();
+  await page.mouse.click(arrow!.x + arrow!.width / 2, arrow!.y + arrow!.height / 2);
+  await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/products$/);
 
   // Tick two cards: the › steps aside while selecting.
   await page.getByTestId('select-products').filter({ visible: true }).click();
@@ -120,4 +127,23 @@ test('All tags: search and filters are gone after another screen; the plain list
   await page.goBack();
   await expect(page).toHaveURL(/\/admin\/labels$/);
   await expect(search).toHaveValue('');
+});
+
+test('a link that opens All tags with a filter keeps it, also the second time', async ({ page }) => {
+  await loginOwner(page);
+  await page.goto('/admin/companies');
+  await page.getByTestId('company-search').fill('Shree Ganesh');
+  await page.getByTestId('supplier-list').getByRole('link', { name: /Shree Ganesh Textiles/ }).click();
+  await expect(page).toHaveURL(/\/admin\/companies\/[0-9a-f-]{36}$/);
+  const companyTags = async () => {
+    await page.getByRole('tab', { name: 'Products', exact: true }).filter({ visible: true }).click();
+    await page.getByRole('link', { name: 'See this company’s tags' }).filter({ visible: true }).click();
+    await expect(page).toHaveURL(/\/admin\/labels\?supplier=[0-9a-f-]{36}&group=delivery$/);
+  };
+  await companyTags();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/companies\/[0-9a-f-]{36}$/);
+  await companyTags();
+  await page.waitForTimeout(800); // a wrong clean-up would have changed the address by now
+  await expect(page).toHaveURL(/supplier=[0-9a-f-]{36}/);
 });

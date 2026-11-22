@@ -1323,10 +1323,12 @@ export async function addDesignSizes(
     ageGroup: product.ageGroup,
     staffId: input.staffId,
   });
-  // The new sizes show the product's one photo too (ADR-068).
+  // The new sizes show the product's one photo too (ADR-068): the photo of the item they were
+  // added from, else one of the same colour, else any size's.
   const added = new Set(result.products.map((p) => p.id));
-  const siblings = await listDesignVariants(db, storeId, productId);
-  await shareDesignPhoto(db, storeId, { fromIds: siblings.map((v) => v.id).filter((id) => !added.has(id)), toIds: [...added], staffId: input.staffId });
+  const rest = (await listDesignVariants(db, storeId, productId)).filter((v) => !added.has(v.id) && v.id !== productId);
+  const fromIds = [productId, ...rest.filter((v) => v.color === product.color).map((v) => v.id), ...rest.filter((v) => v.color !== product.color).map((v) => v.id)];
+  await shareDesignPhoto(db, storeId, { fromIds, toIds: [...added], staffId: input.staffId });
   return result;
 }
 

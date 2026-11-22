@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { IconCamera, IconPencil } from '@/components/ui/icons';
 import { ActionSheet, sheetDanger, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
 import { errorBox } from '@/components/ui/styles';
@@ -28,12 +28,16 @@ export function ProductPhoto({ productId, src, name, sizes, canEdit }: { product
   const [picked, setPicked] = useState<PickedPhoto | null>(null);
   const [saving, startSaving] = useTransition();
 
+  /** The picked photo's local address, freed once it is no longer needed. */
+  const previewUrl = useRef<string | null>(null);
   const forget = () => {
-    if (picked) URL.revokeObjectURL(picked.url);
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+    previewUrl.current = null;
     setPicked(null);
   };
   const close = () => {
-    if (saving) return;
+    // Not while a photo is being made small or saved: the save would finish unseen.
+    if (saving || picker.busy) return;
     forget();
     setOpen(false);
     setAsking(false);
@@ -55,21 +59,31 @@ export function ProductPhoto({ productId, src, name, sizes, canEdit }: { product
 
   const save = (photo: PickedPhoto | null) => {
     if (!photo) return;
+    if (previewUrl.current && previewUrl.current !== photo.url) URL.revokeObjectURL(previewUrl.current);
+    previewUrl.current = photo.url;
     setPicked(photo);
     setError(null);
     setAsking(false);
     startSaving(async () => {
-      const result = await setProductPhotoAction(productId, photoForm(photo));
-      if (!result.ok) return failed(result.error);
-      finish(t(src ? 'ied.photo.changed' : 'ied.photo.added'), [{ label: t('ied.photo.sizes'), value: String(result.sizes) }]);
+      try {
+        const result = await setProductPhotoAction(productId, photoForm(photo));
+        if (!result.ok) return failed(result.error);
+        finish(t(src ? 'ied.photo.changed' : 'ied.photo.added'), [{ label: t('ied.photo.sizes'), value: String(result.sizes) }]);
+      } catch {
+        failed(t('ied.photo.noNet')); // the request never reached the server (weak signal)
+      }
     });
   };
   const remove = () =>
     startSaving(async () => {
       setError(null);
-      const result = await removeProductPhotoAction(productId);
-      if (!result.ok) return failed(result.error);
-      finish(t('ied.photo.removed'));
+      try {
+        const result = await removeProductPhotoAction(productId);
+        if (!result.ok) return failed(result.error);
+        finish(t('ied.photo.removed'));
+      } catch {
+        failed(t('ied.photo.noNet'));
+      }
     });
   const picker = usePhotoPicker({ label: t('ied.photo.this'), photo: picked, onChange: save });
 
@@ -109,7 +123,11 @@ export function ProductPhoto({ productId, src, name, sizes, canEdit }: { product
           type="button"
           data-testid="item-photo-button"
           aria-label={src ? (canEdit ? t('ied.photo.change') : t('ied.photo.open', { name })) : t('ied.photo.add')}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setError(null);
+            picker.clearError();
+            setOpen(true);
+          }}
           className="absolute inset-0 rounded-2xl transition outline-none focus-visible:ring-2 focus-visible:ring-brand-500 active:scale-95 active:bg-black/5"
         />
       </div>
@@ -165,7 +183,7 @@ export function ProductPhoto({ productId, src, name, sizes, canEdit }: { product
               </>
             )}
             {!asking && (
-              <button type="button" disabled={saving} onClick={close} className={sheetSecondary}>
+              <button type="button" disabled={saving || picker.busy} onClick={close} className={sheetSecondary}>
                 {t('ied.photo.close')}
               </button>
             )}

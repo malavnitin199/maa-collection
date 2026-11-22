@@ -180,7 +180,7 @@ A short page to read at a glance and act on:
 
 ### Selecting many (Products, Approvals, All tags, Companies)
 
-**Coming back starts plain** (owner, 2026-11-23): once you open another screen (or press the phone's back button), the cards you ticked are no longer ticked when you return. In the same way, searches and filters clear: the Companies search and place, All tags' search and filters (an open group stays), the period on Reports, Team and a company's page, and the search in a bill's item list (the bill's lines stay).
+**Coming back starts plain** (owner, 2026-11-23): once you open another screen, the cards you ticked are no longer ticked when you return. In the same way, searches clear (the Companies search and place, the search in a bill's item list — the bill's lines stay), and when you press **Back** to a screen, its filters in the address clear too: All tags' search and filters (an open group stays), the period on Reports, Team and a company's page. A link that opens a filtered list on purpose, like *See this company's tags*, always shows it filtered.
 
 On **Products** the **whole card** opens the product (the round **›** on the right); tap anywhere on it.
 

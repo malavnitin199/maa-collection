@@ -112,4 +112,20 @@ describe('one photo for the whole product', () => {
     await saveDesign(db, STORE_ID, plain[0], { newSizes: [{ size: 'L', pieces: 1 }], operationId: 'plain-l', staffId: owner });
     expect((await mainImages(db, STORE_ID, (await listDesignVariants(db, STORE_ID, plain[0])).map((v) => v.id))).size).toBe(0);
   });
+
+  it('+ Add a size on a colour: the new size shows the photo of the item it was added from', async () => {
+    const made = await createDesign(db, STORE_ID, {
+      operationId: 'photo-colours', supplierId: null, categoryId: kurta, name: 'Two Colour Kurta', brand: '',
+      sizes: ['M'], colors: ['Blue', 'Red'], mrpPaise: 100000, pricePaise: null, costPaise: 40000, quantityEach: 1, staffId: owner,
+    });
+    const blue = made.products.find((p) => p.color === 'Blue')!.id;
+    const red = made.products.find((p) => p.color === 'Red')!.id;
+    const bluePhoto = await setDesignPhoto(db, STORE_ID, { productIds: [blue], bytes: jpeg(100, 1), staffId: owner });
+    const redPhoto = await setDesignPhoto(db, STORE_ID, { productIds: [red], bytes: jpeg(100, 2), staffId: owner });
+    await saveDesign(db, STORE_ID, red, { newSizes: [{ size: 'L', pieces: 1 }], operationId: 'red-l', staffId: owner });
+    const { listDesignVariants } = await import('./products');
+    const redL = (await listDesignVariants(db, STORE_ID, red)).find((v) => v.color === 'Red' && v.size === 'L')!.id;
+    expect(await rowsOf([redL])).toEqual([expect.objectContaining({ url: `/api/product-images/${redPhoto.id}` })]);
+    expect(bluePhoto.id).not.toBe(redPhoto.id);
+  });
 });
