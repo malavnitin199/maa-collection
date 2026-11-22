@@ -131,10 +131,11 @@ Good to know:
 
 1. **Which collection?** — **Men** and **Women** always come first and always stay (a small 🔒: they cannot be deleted, renamed or hidden), then your other collections. **+ Add** makes a new one on the spot; you stay on this step and the new one shows chosen, glowing, marked **New** — tap it to go on. The **owner** sees **✎** and **🗑** on every other collection: ✎ changes its name and picture; 🗑 asks first and deletes it with its empty categories — a collection that still has items is not deleted (the sheet says how many; delete or move them first). If Women (or Men) was deleted before, its tile is still there: tapping it brings it back.
 2. **What is it?** — that section's categories (Jeans 28–36, Shirt M–XXL, Kurta …). **+ Add** makes a new category: type its name and **tap its sizes** — one (S), a few, or a quick range (**S–M**, **S–XL**, 28–36 …); letter, waist and kids' age sizes are listed, others can be typed. You stay on this step with the new category chosen and marked **New**; tap it to go on.
-3. **Details & sizes** — one card, top to bottom:
-   - **Company** (or *+ New company…*), **Product name (optional** — left empty, the item is named after its category and number, e.g. *Pajama 013*, the same number as its item code MAA-PJ-013), **Sale price (MRP) ₹**, **Purchase price ₹** per piece (only with the *Purchase price* right). Under **More**: counter price if lower, bill no., stock date, brand.
-   - **Which sizes?** — small size buttons from the category's sizes; tap the ones that came. Each chosen size gets a **− pieces +** row just below: 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** adds one the category lacks and keeps it for next time.
-   At the end of the card a line says what is missing, or counts sizes and pieces, next to **Next**.
+3. **Details & sizes** — the top row is small (← · New item · step 3 of 4 · Start again) so the boxes get the screen:
+   - **Four big boxes**: **Company** (*Optional*; or *+ New company…*), **Product name** (left empty, the item is named after its category and number, e.g. *Pajama 013*, the same number as its item code MAA-PJ-013), **Purchase price** (only with the *Purchase price* right) and **Sale price** — the ₹ sign is inside the price boxes.
+   - **%** next to *Sale price* opens a small calculator: tap **20 % / 30 % / 50 % / 100 %** or type your own %, it shows *₹700.00 + 50% = ₹1,050.00*; **Use it** puts that price in the box and closes. Leave the sale price empty and it is purchase + the last % anyway (shown in grey in the box).
+   - **Sizes & more** (closed until you tap it; its line shows the sizes and pieces, e.g. *No size · 1 pc*): **Which sizes?** — small size buttons from the category's sizes; tap the ones that came. Each chosen size gets a **− pieces +** row just below: 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** adds one the category lacks and keeps it for next time. Then *Comes as* (pieces or a box), counter price if lower, bill no., stock date, brand.
+   Under it a line says what is missing, or counts sizes and pieces, next to **Next**.
 
    **Company box**: tap it and the list opens just under it (about half the screen at most, scrolls inside; a search line when there are many companies). *Previous companies* are listed under their own heading; **+ New company…** is last. The same box is used on the old form, Tag old stock and Add product.
 4. **Check and save** — name, section › category, company, size × pieces, total pieces and items, MRP, purchase per piece and total. Three ways to finish, each saving one item per size (its own barcode each):
@@ -144,11 +145,11 @@ Good to know:
 
 **Colour appears only on the product page** (owner, 2026-11-22): no screen asks for it or shows it — not the counter, bills, tags, lists or messages. Add or change an item's colour on its product page (*Edit*, *Colours* tab).
 
-**Items that come in a box** (e.g. boys' sandos, 10 or 12 a box): in the details card set **Comes as → Box**, tap **6 / 10 / 12** (or type the number), type the **MRP of one piece** and, if the box sells for less, the **Whole box MRP** (empty = MRP × pieces). For the purchase price choose **Per piece** or **Whole box** — with *Whole box* the app shows the price of one piece (₹500 ÷ 12 = ₹41.67). Under the sizes, count **boxes** (3 boxes of 12 = 36 pieces in stock). **One tag is printed per box**; it says *BOX OF 12* and the box price.
+**Items that come in a box** (e.g. boys' sandos, 10 or 12 a box): under **Sizes & more** set **Comes as → Box**, tap **6 / 10 / 12** (or type the number), type the **MRP of one piece** and, if the box sells for less, the **Whole box MRP** (empty = MRP × pieces). For the purchase price choose **Per piece** or **Whole box** — with *Whole box* the app shows the price of one piece (₹500 ÷ 12 = ₹41.67). Under the sizes, count **boxes** (3 boxes of 12 = 36 pieces in stock). **One tag is printed per box**; it says *BOX OF 12* and the box price.
 
-**Prices in New item:** type the **Purchase price** first. The **Sale price (MRP)** next to it can stay empty: it becomes purchase **+ 50%** (₹700 → ₹1,050), shown under the box. Change the % in the small box there (e.g. 40) — the phone remembers it for the next items. Typing a sale price yourself always wins.
+**Prices in New item:** type the **Purchase price** first. The **Sale price** next to it can stay empty: it becomes purchase **+ 50%** (₹700 → ₹1,050), shown in grey in the box. Change the % with the **%** button beside it (e.g. 40) — the phone remembers it for the next items. Typing a sale price yourself always wins.
 
-**No size?** In New item's *Which sizes?* you can leave every size untapped: a **No size? Just the pieces:** box appears — set the pieces (− / +, or type) and tap Next. It is saved as one item with no size.
+**No size?** In New item's *Sizes & more* you can leave every size untapped: a **No size? Just the pieces:** box appears — set the pieces (− / +, or type) and tap Next. It is saved as one item with no size.
 
 ### Companies and Collections (owner, 2026-11-22)
 
