@@ -123,25 +123,24 @@ Good to know:
 
 **Needs attention** (Catalog menu) is the catalog to-do list: items without a photo, company or stock (and without a purchase price, for those allowed). Tap an item to fix it.
 
-### New stock from a company (Add stock → New item)
+### New stock from a company (Home → Add new stock)
 
-**Add stock** has one big button, **New item**, and under **Other ways**: *Old form* (the earlier New item screen: sizes grid, prices by size, photos), *More pieces of an existing item* and *Tag old stock*.
+**Home → Add new stock** (the green tile with a shirt) opens **New item** straight away (owner, 2026-11-22). **Add stock** (the Stock tab) still has the big **New item** button and, under **Other ways**: *Old form* (the earlier New item screen: sizes grid, prices by size, photos), *More pieces of an existing item* and *Tag old stock*.
 
-**New item** (plan v19) asks one thing at a time. The top is one short row (← · New item · step n of 4 · Start again), a thin bar of the steps, and the step's title with your choices beside it. The ← arrow, and the **phone's back button**, go back **one step at a time** without losing anything (back from the first screen leaves New item); the choice chips jump straight to a step:
+**New item** (plan v19) asks one thing at a time — there is no *One item / Many items* choice any more: every item can have many sizes. The top is one short row (← · New item · step n of 4 · Start again), a thin bar of the steps, and the step's title with your choices beside it. The ← arrow, and the **phone's back button**, go back **one step at a time** without losing anything (back from the first step leaves New item — to Home for the owner); the choice chips jump straight to a step:
 
-0. **What are you adding?** — **One item** (one size, a few pieces) or **Many items** (sizes and pieces from a bill).
-1. **Who is it for?** — **Men, Women, Boys, Girls** (or a section you added). **+ Add** makes a new one on the spot; you stay on this step and the new one shows chosen, glowing, marked **New** — tap it to go on. *If this screen shows only + Add, open Categories once and tap **Set up Men / Women / Boys / Girls**.*
+1. **Which collection?** — **Men** and **Women** always come first and always stay (a small 🔒: they cannot be deleted, renamed or hidden), then your other collections. **+ Add** makes a new one on the spot; you stay on this step and the new one shows chosen, glowing, marked **New** — tap it to go on. The **owner** sees **✎** and **🗑** on every other collection: ✎ changes its name and picture; 🗑 asks first and deletes it with its empty categories — a collection that still has items is not deleted (the sheet says how many; delete or move them first). If Women (or Men) was deleted before, its tile is still there: tapping it brings it back.
 2. **What is it?** — that section's categories (Jeans 28–36, Shirt M–XXL, Kurta …). **+ Add** makes a new category: type its name and **tap its sizes** — one (S), a few, or a quick range (**S–M**, **S–XL**, 28–36 …); letter, waist and kids' age sizes are listed, others can be typed. You stay on this step with the new category chosen and marked **New**; tap it to go on.
 3. **Details & sizes** — one card, top to bottom:
    - **Company** (or *+ New company…*), **Product name (optional** — left empty, the item is named after its category and number, e.g. *Pajama 013*, the same number as its item code MAA-PJ-013), **Sale price (MRP) ₹**, **Purchase price ₹** per piece (only with the *Purchase price* right). Under **More**: counter price if lower, bill no., stock date, brand.
-   - **Which sizes?** — small size buttons from the category's sizes; tap the ones that came. Each chosen size gets a **− pieces +** row just below: 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** adds one the category lacks and keeps it for next time. *One item* lets you pick one size.
+   - **Which sizes?** — small size buttons from the category's sizes; tap the ones that came. Each chosen size gets a **− pieces +** row just below: 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** adds one the category lacks and keeps it for next time.
    At the end of the card a line says what is missing, or counts sizes and pieces, next to **Next**.
 
    **Company box**: tap it and the list opens just under it (about half the screen at most, scrolls inside; a search line when there are many companies). *Previous companies* are listed under their own heading; **+ New company…** is last. The same box is used on the old form, Tag old stock and Add product.
 4. **Check and save** — name, section › category, company, size × pieces, total pieces and items, MRP, purchase per piece and total. Three ways to finish, each saving one item per size (its own barcode each):
    - **Save & print tags** opens the tags page. There, **+ Add next item** starts the next product of the same bill (company, section, bill no., stock date kept) at *What is it?*.
    - **Save & add next** shows *Saved <name>: first – last item code · pieces* and goes straight to *What is it?* of the same bill — the fastest way through a bill.
-   - **Save** shows the same message and returns to the start with everything cleared — done with this bill.
+   - **Save** shows the same message and returns to *Which collection?* with everything cleared — done with this bill.
 
 **Colour appears only on the product page** (owner, 2026-11-22): no screen asks for it or shows it — not the counter, bills, tags, lists or messages. Add or change an item's colour on its product page (*Edit*, *Colours* tab).
 
@@ -155,7 +154,7 @@ Good to know:
 
 - The app says **Company** everywhere (never *supplier*). A company is **optional** on an item: leave the company box empty, or pick **No company** to clear it.
 - **Delete a company** (Catalog right): on its page tap **Delete this company** at the bottom (or Companies → Select → Delete). It asks first. Its items stay, just with no company. **Bills are never changed**: a bill keeps the company's name (shown *(deleted)*), its amounts and payments; edit the bill yourself if you want to change it. Deleting items does not change bills either.
-- **Collections** are the groups every item must belong to (on the shop now: Men, Women, Box, RAmDOm — New item's first step, *Which collection?*). **Home → Collections** lists each with *items · pcs*: change a name in its box and tap **Save**; the 🗑 appears only for a collection with **no items** and asks before deleting (its empty categories go too). In Bills, what used to be called *collections* (what came in on one New item save) is now called **stock entries**.
+- **Collections** are the groups every item must belong to (New item's first step, *Which collection?*). **Men and Women are fixed** (🔒, owner, 2026-11-22): always listed, never deleted, renamed or hidden — only their Hindi name and picture can change (Categories). **Home → Collections** lists each with *items · pcs*: for the others change a name in its box and tap **Save**; the 🗑 appears only for a collection with **no items** and asks before deleting (its empty categories go too). The same ✎ / 🗑 are on the collection tiles in New item. In Bills, what used to be called *collections* (what came in on one New item save) is now called **stock entries**.
 
 ### The item page (Products → tap a product; since 2026-11-22)
 
