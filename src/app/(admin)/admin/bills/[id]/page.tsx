@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { IconBack } from '@/components/ui/icons';
-import { card, link, muted, sectionTitle } from '@/components/ui/styles';
+import { card, link, muted, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { BillForm } from '@/features/bills/bill-form';
 import { BillSheet } from '@/features/bills/bill-sheet';
 import { itemsPart, sheetParts } from '@/features/bills/sheet-parts';
@@ -37,8 +37,10 @@ async function BillDetail({ id }: { id: string }) {
   const today = shopToday();
   const day = (value: string) => formatDate(locale, `${value}T00:00:00+05:30`, 'date');
   const label = [bill.billNumber ? t('cat.bill', { number: bill.billNumber }) : null, day(bill.billDate)].filter(Boolean).join(' · ');
-  // A bill made from items, with no company (ADR-060): its lines and total; no dues, no stock entries.
-  const byItems = bill.status === 'record';
+  // A bill made from items (ADR-060/061): its lines; with its company, that company's dues. A bill of
+  // stock entries (the earlier way) keeps its own sections.
+  const byItems = bill.collections === 0;
+  const noCompany = bill.companies.length === 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -52,14 +54,14 @@ async function BillDetail({ id }: { id: string }) {
             <p data-testid="bill-detail-total" className="text-xl font-bold tabular-nums">
               {formatPaise(bill.totalPaise)}
             </p>
-            {!byItems && (
+            {!noCompany && (
               <p className={`text-xs font-semibold ${bill.status === 'open' ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
                 {bill.status === 'open' ? t('bills.status.open', { amount: formatPaise(bill.duePaise) }) : t('bills.status.paid')}
               </p>
             )}
           </div>
         </div>
-        {byItems ? (
+        {noCompany ? (
           <p data-testid="bill-no-company" className={`text-sm ${muted}`}>
             {t('bills.noCompany')}
           </p>
@@ -108,7 +110,12 @@ async function BillDetail({ id }: { id: string }) {
 
       {byItems && (
         <section className="flex flex-col gap-2">
-          <h2 className={sectionTitle}>{t('bills.sheet.title')}</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className={sectionTitle}>{t('bills.sheet.title')}</h2>
+            <Link href={`/admin/bills/${bill.id}/edit`} data-testid="edit-bill" className={`${secondaryButton} py-1.5`}>
+              {t('bills.editBill')}
+            </Link>
+          </div>
           <BillSheet parts={itemsPart(bill.itemLines)} />
           <p data-testid="bill-value" className="text-sm">
             {t('bills.itemsFooter', { n: bill.items, pcs: bill.pieces })}
@@ -150,12 +157,12 @@ async function BillDetail({ id }: { id: string }) {
       </section>
       )}
 
+      {!byItems && (
       <details className={card}>
         <summary className="cursor-pointer font-medium">{t('bills.editTitle')}</summary>
         <div className="mt-3">
           <BillForm
             billId={bill.id}
-            itemsBill={byItems}
             suppliers={companies.filter((c) => c.active).map(({ id: sid, name }) => ({ id: sid, name }))}
             previous={companies.filter((c) => !c.active).map(({ id: sid, name }) => ({ id: sid, name }))}
             today={today}
@@ -168,6 +175,7 @@ async function BillDetail({ id }: { id: string }) {
           />
         </div>
       </details>
+      )}
       {!bill.hasPayments && <DeleteBill billId={bill.id} />}
     </div>
   );

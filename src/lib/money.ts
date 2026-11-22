@@ -10,3 +10,8 @@ export function formatPaise(amountPaise: number): string {
   }
   return inrFormatter.format(amountPaise / 100);
 }
+
+/** Paise as a rupee box shows them: 299, 299.5; none = empty (bill lines, ADR-061). */
+export function rupeesText(paise: number | null): string {
+  return paise === null ? '' : String(paise / 100);
+}

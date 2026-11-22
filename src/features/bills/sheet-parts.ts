@@ -42,18 +42,33 @@ export function sheetParts(companies: { id: string; name: string }[], collection
  * A bill made from items (ADR-060) as the paper shows it: one part with no company, one line
  * per item as added (size and colour under the name); no purchase price → rate N/A, amount 0.
  */
-export function itemsPart(lines: Pick<BillItemLine, 'name' | 'size' | 'color' | 'qty' | 'ratePaise' | 'amountPaise'>[]): SheetPart[] {
+export function itemsPart(lines: (Pick<BillItemLine, 'name' | 'size' | 'color' | 'qty' | 'ratePaise' | 'amountPaise'> & { pack?: number | null })[]): SheetPart[] {
   if (lines.length === 0) return [];
   const sheet: BillLine[] = lines.map((l) => ({
     name: l.name,
     sizes: [[l.size, l.color].filter(Boolean).join(' ')].filter(Boolean),
-    pieces: l.qty,
+    pieces: l.qty * (l.pack ?? 1),
     qty: l.qty,
-    pack: null,
+    pack: l.pack ?? null,
     ratePaise: l.ratePaise ?? 0,
     amountPaise: l.amountPaise,
     noRate: l.ratePaise === null,
   }));
-  const pieces = sheet.reduce((n, l) => n + l.qty, 0);
-  return [{ supplierId: 'items', name: '', lines: sheet, pieces, units: pieces, totalPaise: sheet.reduce((n, l) => n + l.amountPaise, 0) }];
+  return [
+    {
+      supplierId: 'items',
+      name: '',
+      lines: sheet,
+      pieces: sheet.reduce((n, l) => n + l.pieces, 0),
+      units: sheet.reduce((n, l) => n + l.qty, 0),
+      totalPaise: sheet.reduce((n, l) => n + l.amountPaise, 0),
+    },
+  ];
+}
+
+/** A new bill line's start (ADR-061): the item's stock (in boxes for a box item) and purchase price (per box). */
+export function startLine(item: { stock: number; costPaise: number | null; pack: number | null; boxCostPaise: number | null }) {
+  return item.pack
+    ? { qty: Math.max(1, Math.floor(item.stock / item.pack)), ratePaise: item.boxCostPaise }
+    : { qty: Math.max(1, item.stock), ratePaise: item.costPaise };
 }

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { productCard } from './products';
+import { addToBill, billEditor, chooseBillCompany, productCard } from './products';
 
 // Owner's feedback 2026-11-22 (ADR-051): "Companies" everywhere; any company can be deleted after a
 // confirmation (its items stay, with no company); the company is optional on items; Home → Collections.
@@ -46,12 +46,11 @@ test('a company with an item is deleted from its page; the item stays with no co
     await page.keyboard.press('Escape');
   }
 
-  // A bill from this company (its stock entry ticked), like "Fungi" on the live shop.
+  // A bill from this company (its item on it), like "Fungi" on the live shop.
   await page.goto('/admin/bills/new');
-  const form = page.getByTestId('bill-form');
-  await form.getByRole('combobox', { name: /^Company/ }).click();
-  await page.getByRole('listbox').getByRole('option', { name: company, exact: true }).click();
-  await form.getByRole('checkbox', { name: `Kept Kurta ${tag}` }).click();
+  const form = billEditor(page);
+  await chooseBillCompany(page, company);
+  await addToBill(page, `Kept Kurta ${tag}`);
   await form.getByRole('button', { name: 'Next: check bill' }).click();
   await form.getByRole('button', { name: 'Save bill' }).click();
   await expect(page).toHaveURL(/\/admin\/bills\/[0-9a-f-]{36}$/);

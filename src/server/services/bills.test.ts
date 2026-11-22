@@ -111,9 +111,9 @@ describe('createBill', () => {
   it('refuses: no company, no collection, another company’s collection, a future date, a collection already on another bill; the same tap twice makes one bill', async () => {
     const c = await collection(surat, 'Taken');
     const m = await collection(mumbai, 'Theirs', ['M']);
-    // A company is optional since ADR-060, but a bill needs a company (with collections) or items.
-    await expect(createBill(db, STORE_ID, base([c.receipt.id], { companies: [] }))).rejects.toMatchObject({ key: 'bill.err.nothing' });
-    await expect(createBill(db, STORE_ID, base([]))).rejects.toMatchObject({ key: 'bill.err.noCollection' });
+    // Stock entries come with their company; a company with nothing on it is refused (ADR-061: "add at least one item").
+    await expect(createBill(db, STORE_ID, base([c.receipt.id], { companies: [] }))).rejects.toMatchObject({ key: 'bill.err.company' });
+    await expect(createBill(db, STORE_ID, base([]))).rejects.toMatchObject({ key: 'bill.err.noItems' });
     await expect(createBill(db, STORE_ID, base([m.receipt.id]))).rejects.toMatchObject({ key: 'bill.err.otherCompany' });
     await expect(createBill(db, STORE_ID, base([c.receipt.id], { billDate: '2999-01-01' }))).rejects.toMatchObject({ key: 'bill.err.date' });
     await createBill(db, STORE_ID, base([c.receipt.id]));

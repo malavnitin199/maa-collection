@@ -14,3 +14,27 @@ export async function openProduct(page: Page, name: string) {
   await productCard(page, name).getByRole('link', { name, exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
 }
+
+/** New bill / Edit bill (ADR-061): the bill editor on screen (Next keeps a visited page's hidden copy). */
+export const billEditor = (page: Page) => page.getByTestId('bill-editor').filter({ visible: true });
+
+/** Chooses the bill's one company in the bill editor. */
+export async function chooseBillCompany(page: Page, company: string) {
+  await billEditor(page).getByRole('combobox', { name: /^Company/ }).click();
+  await page.getByRole('listbox').getByRole('option', { name: company, exact: true }).click();
+}
+
+/**
+ * Finds a product in the bill editor's list (searching for its name, as the list shows the
+ * newest first) and taps one size chip — `size` as the chip shows it (size, then colour) —
+ * or, without `size`, + All sizes (a one-size product: its only chip).
+ */
+export async function addToBill(page: Page, name: string, size?: string) {
+  await billEditor(page).getByLabel('Search an item: name, code or barcode').fill(name);
+  const card = billEditor(page).getByTestId('bill-product').filter({ has: page.getByText(name, { exact: true }) });
+  await expect(card).toHaveCount(1);
+  if (size) return card.getByRole('button', { name: `Add ${name} · ${size}`, exact: true }).click();
+  const all = card.getByRole('button', { name: `+ All sizes: ${name}` });
+  if ((await all.count()) > 0) return all.click();
+  await card.getByRole('button', { name: new RegExp(`^Add ${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} · `) }).click();
+}

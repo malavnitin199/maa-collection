@@ -56,7 +56,8 @@ export type Collection = {
 export type BillLine = { name: string; sizes: string[]; pieces: number; qty: number; pack: number | null; ratePaise: number; amountPaise: number; noRate?: boolean };
 
 /** A line of a bill made from items (ADR-060), as the bill keeps it. `ratePaise` null = no purchase price (N/A). */
-export type BillItemLine = { productId: string | null; name: string; size: string; color: string; sku: string; qty: number; ratePaise: number | null; amountPaise: number };
+/** `pack`: a box item (ADR-047) — `qty` is boxes and `ratePaise` is per box. */
+export type BillItemLine = { id: string; productId: string | null; name: string; size: string; color: string; sku: string; pack: number | null; qty: number; ratePaise: number | null; amountPaise: number };
 
 /** `deleted`: the company was deleted (ADR-051); the bill keeps its name and amounts. */
 export type BillCompany = { supplierId: string; name: string; deleted: boolean; amountPaise: number; paidPaise: number; duePaise: number };
@@ -179,53 +180,86 @@ export type BillInput = {
   companies: string[];
   /** The collections on it; each must be one of the chosen companies' and on no other bill. */
   receiptIds: string[];
-  /** A bill with no company (ADR-060): the shop's items and how many of each, in order. */
-  items?: { productId: string; quantity: number }[];
+  /**
+   * The shop's items on the bill, in order (ADR-060/061): how many and the rate — left out
+   * (undefined) = the item's purchase price now; null = none (N/A, amount 0).
+   */
+  items?: BillLineInput[];
   staffId: string;
 };
 
+/** A line as the bill editor sends it: a new item (`productId`) or a line already on the bill (`lineId`). */
+export type BillLineInput = { lineId?: string; productId?: string; quantity: number; ratePaise?: number | null };
+
 export const BILL_ITEMS_MAX = 200;
 
-/** The items as asked: known ids, whole quantities from 1, the same item once (quantities added). */
-function cleanItems(items: { productId: string; quantity: number }[] | undefined): { productId: string; quantity: number }[] {
-  const out: { productId: string; quantity: number }[] = [];
-  for (const item of items ?? []) {
-    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100_000) {
+/** The lines as asked: whole quantities from 1, rates in whole paise; a new item twice at one rate = one line. */
+function cleanLines(lines: BillLineInput[] | undefined): BillLineInput[] {
+  const out: BillLineInput[] = [];
+  for (const line of lines ?? []) {
+    if (!Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 100_000) {
       throw new DomainError('Quantity must be a whole number, at least 1.', { key: 'stk.err.quantity' });
     }
-    const same = out.find((o) => o.productId === item.productId);
-    if (same) same.quantity += item.quantity;
-    else out.push({ productId: item.productId, quantity: item.quantity });
+    if (line.ratePaise != null && (!Number.isSafeInteger(line.ratePaise) || line.ratePaise < 0 || line.ratePaise > MAX_PART)) {
+      throw new DomainError('Enter a valid rate in rupees.', { key: 'bill.err.rate' });
+    }
+    if (!line.lineId && !line.productId) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+    const same = !line.lineId && out.find((o) => !o.lineId && o.productId === line.productId && o.ratePaise === line.ratePaise);
+    if (same) same.quantity += line.quantity;
+    else out.push({ ...line });
   }
   if (out.length > BILL_ITEMS_MAX) throw new DomainError(`Up to ${BILL_ITEMS_MAX} items on one bill.`, { key: 'bill.err.tooManyItems', vars: { n: BILL_ITEMS_MAX } });
   return out;
 }
 
-/** Puts the items on the bill as its own copy: what they are and cost today (ADR-060). */
-async function addItems(db: Db, storeId: string, billId: string, items: { productId: string; quantity: number }[]) {
-  const ids = items.map((i) => i.productId);
-  const rows = await db
-    .select({ id: products.id, name: products.name, size: products.size, color: products.color, sku: products.sku, costPaise: products.costPaise, company: suppliers.name })
-    .from(products)
-    .leftJoin(suppliers, eq(suppliers.id, products.supplierId))
-    .where(and(eq(products.storeId, storeId), inArray(products.id, ids)));
-  if (rows.length !== new Set(ids).size) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
-  await db.insert(billItems).values(
-    items.map((item, i) => {
-      const p = rows.find((r) => r.id === item.productId)!;
-      const amountPaise = p.costPaise === null ? 0 : p.costPaise * item.quantity;
-      if (amountPaise > MAX_PART) throw new DomainError('The bill amount is too large.', { key: 'bill.err.amount' });
-      return {
-        billId,
-        productId: p.id,
-        position: i + 1,
-        quantity: item.quantity,
-        ratePaise: p.costPaise,
-        amountPaise,
-        snapshot: { name: p.name, size: p.size, color: p.color, sku: p.sku, companyName: p.company ?? null },
-      };
-    }),
-  );
+type KeptLine = { productId: string | null; ratePaise: number | null; snapshot: Record<string, unknown> };
+
+/**
+ * Writes the bill's lines in order as its own copy (ADR-054/060): a new item is copied as
+ * it is today (name, size, colour, code, company); a line already on the bill keeps its copy.
+ */
+async function writeLines(db: Db, storeId: string, billId: string, lines: BillLineInput[], kept: Map<string, KeptLine> = new Map()) {
+  const ids = [...new Set(lines.filter((l) => !l.lineId).map((l) => l.productId as string))];
+  const rows = ids.length
+    ? await db
+        .select({
+          id: products.id,
+          name: products.name,
+          size: products.size,
+          color: products.color,
+          sku: products.sku,
+          costPaise: products.costPaise,
+          packSize: products.packSize,
+          packCostPaise: products.packCostPaise,
+          company: suppliers.name,
+        })
+        .from(products)
+        .leftJoin(suppliers, eq(suppliers.id, products.supplierId))
+        .where(and(eq(products.storeId, storeId), inArray(products.id, ids)))
+    : [];
+  if (rows.length !== ids.length) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  const values = lines.map((line, i) => {
+    let productId: string | null;
+    let snapshot: Record<string, unknown>;
+    let ratePaise: number | null;
+    if (line.lineId) {
+      const old = kept.get(line.lineId);
+      if (!old) throw new DomainError('Bill not found.', { key: 'bill.err.notFound' });
+      ({ productId, snapshot } = old);
+      ratePaise = line.ratePaise === undefined ? old.ratePaise : line.ratePaise;
+    } else {
+      const p = rows.find((r) => r.id === line.productId)!;
+      productId = p.id;
+      // A box item (ADR-047) is billed by the box: quantity in boxes, the box's purchase price.
+      snapshot = { name: p.name, size: p.size, color: p.color, sku: p.sku, companyName: p.company ?? null, pack: p.packSize ?? null };
+      const boxRate = p.packSize ? (p.packCostPaise ?? (p.costPaise === null ? null : p.costPaise * p.packSize)) : p.costPaise;
+      ratePaise = line.ratePaise === undefined ? boxRate : line.ratePaise;
+    }
+    const amountPaise = ratePaise === null ? 0 : ratePaise * line.quantity;
+    if (amountPaise > MAX_PART) throw new DomainError('The bill amount is too large.', { key: 'bill.err.amount' });
+    return { billId, productId, position: i + 1, quantity: line.quantity, ratePaise, amountPaise, snapshot };
+  });
+  if (values.length) await db.insert(billItems).values(values);
 }
 
 /** A bill's item lines as it keeps them, in order. */
@@ -233,14 +267,16 @@ async function itemLinesOf(db: Db, billIds: string[]): Promise<(BillItemLine & {
   if (billIds.length === 0) return [];
   const rows = await db.select().from(billItems).where(inArray(billItems.billId, billIds)).orderBy(billItems.billId, billItems.position);
   return rows.map((r) => {
-    const copy = r.snapshot as { name?: string; size?: string; color?: string; sku?: string };
+    const copy = r.snapshot as { name?: string; size?: string; color?: string; sku?: string; pack?: number | null };
     return {
+      id: r.id,
       billId: r.billId,
       productId: r.productId,
       name: copy.name ?? '',
       size: copy.size ?? '',
       color: copy.color ?? '',
       sku: copy.sku ?? '',
+      pack: copy.pack ?? null,
       qty: r.quantity,
       ratePaise: r.ratePaise,
       amountPaise: r.amountPaise,
@@ -329,8 +365,11 @@ async function billCopies(db: Db, storeId: string, billIds: string[]): Promise<{
 export async function recompute(db: Db, storeId: string, billId: string) {
   const list = (await billCopies(db, storeId, [billId])).map((r) => r.entry);
   const parts = await db.select({ id: billCompanies.id, supplierId: billCompanies.supplierId }).from(billCompanies).where(eq(billCompanies.billId, billId));
+  // Item lines (ADR-061) belong to the bill's one company.
+  const items = await db.select({ amount: billItems.amountPaise }).from(billItems).where(eq(billItems.billId, billId));
+  const itemsPaise = parts.length === 1 ? items.reduce((n, i) => n + i.amount, 0) : 0;
   for (const part of parts) {
-    const amount = list.filter((c) => c.supplierId === part.supplierId).reduce((n, c) => n + c.valuePaise, 0);
+    const amount = list.filter((c) => c.supplierId === part.supplierId).reduce((n, c) => n + c.valuePaise, 0) + itemsPaise;
     await db.update(billCompanies).set({ amountPaise: Math.min(amount, MAX_PART) }).where(eq(billCompanies.id, part.id));
   }
 }
@@ -340,11 +379,18 @@ export async function createBill(db: Db, storeId: string, input: BillInput): Pro
   if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
   const [existing] = await db.select({ id: bills.id }).from(bills).where(and(eq(bills.storeId, storeId), eq(bills.operationId, input.operationId))).limit(1);
   if (existing) return { id: existing.id, duplicate: true };
-  const items = cleanItems(input.items);
+  // New lines only: a new bill has no lines to keep.
+  const items = cleanLines((input.items ?? []).map((line) => ({ productId: line.productId, quantity: line.quantity, ratePaise: line.ratePaise })));
   const companies = [...new Set((input.companies ?? []).filter(Boolean))];
-  if (companies.length === 0 && items.length === 0) throw new DomainError('Choose a company, or add items.', { key: 'bill.err.nothing' });
-  if (companies.length > 0 && items.length > 0) throw new DomainError('Items go on a bill with no company.', { key: 'bill.err.itemsNoCompany' });
-  if (companies.length > 0 && !input.receiptIds?.length) throw new DomainError('Tick at least one collection.', { key: 'bill.err.noCollection' });
+  const receiptIds = input.receiptIds ?? [];
+  if (items.length > 0 && receiptIds.length > 0) throw new DomainError('A bill has items or stock entries, not both.', { key: 'bill.err.mixed' });
+  if (items.length > 0 && companies.length > 1) throw new DomainError('A bill made from items has one company, or none.', { key: 'bill.err.oneCompany' });
+  if (items.length === 0 && receiptIds.length === 0) {
+    if (companies.length === 0) throw new DomainError('Choose a company, or add items.', { key: 'bill.err.nothing' });
+    throw new DomainError('Add at least one item.', { key: 'bill.err.noItems' });
+  }
+  // Stock entries (the earlier way, ADR-044) always come with their company.
+  if (receiptIds.length > 0 && companies.length === 0) throw new DomainError('Choose at least one company.', { key: 'bill.err.company' });
   const billDate = cleanBillDate(input.billDate);
   if (companies.length > 0) await checkCompanies(db, storeId, companies);
   return db.transaction(async (tx) => {
@@ -360,12 +406,9 @@ export async function createBill(db: Db, storeId: string, input: BillInput): Pro
         staffId: input.staffId,
       })
       .returning({ id: bills.id });
-    if (items.length > 0) {
-      await addItems(t, storeId, bill.id, items);
-      return { id: bill.id, duplicate: false };
-    }
-    await tx.insert(billCompanies).values(await companyParts(t, bill.id, companies));
-    await attach(t, storeId, bill.id, input.receiptIds, companies);
+    if (companies.length > 0) await tx.insert(billCompanies).values(await companyParts(t, bill.id, companies));
+    if (items.length > 0) await writeLines(t, storeId, bill.id, items);
+    else await attach(t, storeId, bill.id, receiptIds, companies);
     await recompute(t, storeId, bill.id);
     return { id: bill.id, duplicate: false };
   });
@@ -427,6 +470,46 @@ export async function updateBill(
       await tx.delete(billCompanies).where(and(eq(billCompanies.billId, id), inArray(billCompanies.supplierId, gone)));
     }
     if (added.length) await tx.insert(billCompanies).values(await companyParts(t, id, added));
+    await recompute(t, storeId, id);
+  });
+}
+
+/**
+ * Edit bill for a bill made from items (owner's feedback 2026-11-22, ADR-061): number, date,
+ * note, its one company (or none) and its lines — quantities and rates changed, lines taken
+ * off or added. A line already on the bill keeps its own copy of the item; a company with
+ * payments on this bill stays. A bill of stock entries is changed through those instead.
+ */
+export async function updateItemBill(
+  db: Db,
+  storeId: string,
+  id: string,
+  input: { billNumber?: string | null; billDate?: string | null; note?: string | null; supplierId: string | null; lines: BillLineInput[] },
+): Promise<void> {
+  await ownBill(db, storeId, id);
+  const [entry] = await db.select({ id: billCollections.receiptId }).from(billCollections).where(eq(billCollections.billId, id)).limit(1);
+  if (entry) throw new DomainError('This bill is made of stock entries; change those instead.', { key: 'bill.err.stockEntryBill' });
+  const lines = cleanLines(input.lines);
+  if (lines.length === 0) throw new DomainError('Add at least one item.', { key: 'bill.err.noItems' });
+  const billDate = cleanBillDate(input.billDate);
+  const supplierId = input.supplierId || null;
+  if (supplierId) await checkCompanies(db, storeId, [supplierId]);
+  const paid = await db.selectDistinct({ id: supplierPayments.supplierId }).from(supplierPayments).where(eq(supplierPayments.billId, id));
+  if (paid.some((p) => p.id !== supplierId)) throw new DomainError('A company with payments on this bill cannot be taken off it.', { key: 'bill.err.paidCompany' });
+  const before = await db.select().from(billItems).where(eq(billItems.billId, id));
+  const kept = new Map(before.map((r) => [r.id, { productId: r.productId, ratePaise: r.ratePaise, snapshot: r.snapshot as Record<string, unknown> }]));
+  const companies = await billCompanyIds(db, id);
+  await db.transaction(async (tx) => {
+    const t = tx as unknown as Db;
+    await tx
+      .update(bills)
+      .set({ billNumber: input.billNumber?.trim().slice(0, 40) || null, billDate, note: input.note?.trim().slice(0, 200) || null })
+      .where(eq(bills.id, id));
+    const gone = companies.filter((c) => c !== supplierId);
+    if (gone.length) await tx.delete(billCompanies).where(and(eq(billCompanies.billId, id), inArray(billCompanies.supplierId, gone)));
+    if (supplierId && !companies.includes(supplierId)) await tx.insert(billCompanies).values(await companyParts(t, id, [supplierId]));
+    await tx.delete(billItems).where(eq(billItems.billId, id));
+    await writeLines(t, storeId, id, lines, kept);
     await recompute(t, storeId, id);
   });
 }
@@ -506,7 +589,8 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
     const mine = links.filter((l) => l.billId === b.id).map((l) => l.entry);
     const itemsOf = lines.filter((l) => l.billId === b.id);
     const itemsPaise = itemsOf.reduce((n, l) => n + l.amountPaise, 0);
-    const totalPaise = companies.reduce((n, c) => n + c.amountPaise, 0) + itemsPaise;
+    // A company's part already holds its items (recompute); with no company the items are the total.
+    const totalPaise = companies.length > 0 ? companies.reduce((n, c) => n + c.amountPaise, 0) : itemsPaise;
     const paidPaise = companies.reduce((n, c) => n + c.paidPaise, 0);
     const duePaise = companies.reduce((n, c) => n + c.duePaise, 0);
     return {
@@ -522,7 +606,7 @@ export async function listBills(db: Db, storeId: string, { supplierId, ids }: { 
       status: companies.length === 0 ? 'record' : duePaise > 0 ? 'open' : 'paid',
       collections: mine.length,
       items: itemsOf.length,
-      pieces: mine.reduce((n, c) => n + c.pieces, 0) + itemsOf.reduce((n, l) => n + l.qty, 0),
+      pieces: mine.reduce((n, c) => n + c.pieces, 0) + itemsOf.reduce((n, l) => n + l.qty * (l.pack ?? 1), 0),
       valuePaise: mine.reduce((n, c) => n + c.valuePaise, 0) + itemsPaise,
     };
   });

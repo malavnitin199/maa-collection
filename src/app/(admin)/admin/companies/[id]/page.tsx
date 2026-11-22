@@ -140,12 +140,11 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
                     {d.estimated && d.amountPaise !== null && ` ${t('cat.acc.estimatedMark')}`}
                   </span>
                 </span>
-                {d.billId ? (
+                {/* Bills are made from products since ADR-061; an older bill that took this delivery is still linked. */}
+                {d.billId && (
                   <Link href={`/admin/bills/${d.billId}`} className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
                     {t('bills.onBill')}
                   </Link>
-                ) : (
-                  <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{t('cat.acc.noBillYet')}</span>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

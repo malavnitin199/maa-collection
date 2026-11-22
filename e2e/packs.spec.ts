@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { addToBill, billEditor, chooseBillCompany } from './products';
 
 // Box packs (owner, 2026-11-21, ADR-047): sandos in boxes of 12 — New item, one tag per box,
 // sold by the piece or by the box at the counter, and boxes at the box rate on the bill check.
@@ -115,12 +116,13 @@ test('a box of 12: New item by the box, one tag per box, sell 2 pieces and a who
   await page.getByRole('button', { name: 'Sell this item' }).click();
   await expect(page.getByTestId('sell-stock')).toContainText('10 pcs in stock');
 
-  // Bill check: boxes at the box rate, as the paper writes them.
+  // A bill: the box item is billed by the box at the box rate, as the paper writes them (ADR-061).
   await page.goto('/admin/bills/new');
-  const form = page.getByTestId('bill-form');
-  await form.getByRole('combobox', { name: /^Company/ }).click();
-  await page.getByRole('listbox').getByRole('option', { name: company, exact: true }).click();
-  await form.getByRole('checkbox', { name }).click();
+  const form = billEditor(page);
+  await chooseBillCompany(page, company);
+  await addToBill(page, name, size);
+  await form.getByLabel(`Quantity of ${name} · ${size}`).fill('3');
+  await expect(form.getByLabel(`Rate of ${name} · ${size} ₹`)).toHaveValue('500');
   await expect(form.getByTestId('bill-total')).toHaveText('₹1,500.00');
   await form.getByRole('button', { name: 'Next: check bill' }).click();
   const line = form.getByTestId('bill-sheet-line');

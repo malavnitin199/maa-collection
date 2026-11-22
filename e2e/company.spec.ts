@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { addToBill, billEditor, chooseBillCompany } from './products';
 
 /**
  * Company accounts (owner's feedback 2026-11-20; real bills 2026-11-21): the
@@ -79,21 +80,18 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   const delivery = page.getByTestId('company-collections-list').locator('li').first();
   await expect(delivery).toContainText(`ref INV-${run}`);
   await expect(delivery).toContainText('2 items · 6 pcs · purchase ₹2,400.00');
-  await expect(delivery).toContainText('No bill yet');
+  await expect(delivery).not.toContainText('on a bill'); // bills are made from products (ADR-061)
 
-  // The bill, from Home → Bills → + New bill: this company, this collection ticked — the amount is worked out (₹2,400).
+  // The bill, from Home → Bills → + New bill: this company, its item's sizes from the list (ADR-061) — ₹2,400.
   await page.goto('/admin/dashboard');
   await page.getByTestId('home-bills').click();
   await expect(page).toHaveURL(/\/admin\/bills$/);
   await page.getByRole('link', { name: '+ New bill' }).click();
-  const billForm = page.getByTestId('bill-form');
-  await billForm.getByRole('combobox', { name: /^Company/ }).click();
-  await page.getByRole('listbox').getByRole('option', { name, exact: true }).click();
-  await expect(billForm.getByTestId('bill-company')).toContainText(name);
-  await billForm.getByRole('checkbox', { name: `Chikan Kurta ${run}` }).click();
-  await expect(billForm.getByRole('checkbox', { name: `Chikan Kurta ${run}` })).toHaveAttribute('aria-checked', 'true');
+  const billForm = billEditor(page);
+  await chooseBillCompany(page, name);
+  await addToBill(page, `Chikan Kurta ${run}`); // both sizes, 3 pieces each at ₹400
+  await expect(billForm.getByTestId('bill-line')).toHaveCount(2);
   await expect(billForm.getByTestId('bill-total')).toHaveText('₹2,400.00');
-  await expect(billForm.getByTestId('bill-company')).toContainText('1 stock entries ticked · ₹2,400.00');
   await billForm.getByRole('button', { name: 'Next: check bill' }).click();
   await billForm.getByLabel('Bill no. (optional)').fill(`INV-${run}`);
   await billForm.getByRole('button', { name: 'Save bill' }).click();
@@ -101,7 +99,8 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   const billUrl = page.url();
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('bill-detail-total')).toHaveText('₹2,400.00');
-  await expect(page.getByTestId('bill-collection-list')).toContainText(`Chikan Kurta ${run}`);
+  await expect(page.getByTestId('bill-sheet').getByTestId('bill-sheet-line')).toHaveCount(2);
+  await expect(page.getByTestId('bill-sheet')).toContainText(`Chikan Kurta ${run}`);
 
   // Back on the company: 1 bill, billed and due ₹2,400; the collection is on a bill.
   await page.goto(companyUrl);
@@ -116,8 +115,6 @@ test('company page: a collection is not a bill; a bill from the Bills section ca
   await expect(page).toHaveURL(billUrl);
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`bill INV-${run}`);
   await page.goto(companyUrl);
-  await page.getByRole('tab', { name: 'Stock entries', exact: true }).click();
-  await expect(delivery).toContainText('on a bill');
 
   // Part payment against the bill from the Payments tab; then Mark paid closes it.
   await page.getByRole('tab', { name: 'Payments', exact: true }).click();

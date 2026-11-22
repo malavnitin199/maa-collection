@@ -2,17 +2,14 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { card, errorBox, input, muted, primaryButton } from '@/components/ui/styles';
-import { BillSheet } from '@/features/bills/bill-sheet';
-import { BillItemsPicker, type PickedItem } from '@/features/bills/bill-items';
-import { itemsPart, sheetParts } from '@/features/bills/sheet-parts';
 import { CompanyPicker } from '@/features/catalog/company-picker';
 import { useDone } from '@/features/feedback/effects';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
 import { formatDate } from '@/lib/i18n';
 import { formatPaise } from '@/lib/money';
-import { createBillAction, updateBillAction } from '@/server/actions/bills';
+import { updateBillAction } from '@/server/actions/bills';
 import type { Collection } from '@/server/services/bills';
 
 type Option = { id: string; name: string };
@@ -105,162 +102,109 @@ export function CompanyCollections({ id, name, list, picked, onChange }: { id?: 
 }
 
 /**
- * New bill / Edit bill (owner's feedback 2026-11-21). A new bill has two steps:
- * 1. companies added one after another, each company's collections waiting for
- *    a bill to tick; 2. the bill as the company's paper shows it — party, bill
- *    no., date, then S.N · goods · qty · rate · amount and the total — to check
- *    against the paper and save. Nothing is typed as an amount: the total is the
- *    value of the ticked collections. Edit bill: number, date, companies, note.
- * A bill without a company (ADR-060): step 1 adds the shop's items one by one instead
- * (quantity × purchase price); choosing a company hides them, adding items hides the
- * company box. Editing such a bill changes its number, date and note.
+ * Edit bill for a bill of stock entries (the earlier way, ADR-044/045): its number, date,
+ * companies and note. New bills — and bills made from items — use the bill editor (ADR-061).
  */
 export function BillForm({
   suppliers,
   previous,
-  collections = [],
-  today,
   initial,
   billId,
-  itemsBill = false,
 }: {
   suppliers: Option[];
   previous: Option[];
-  collections?: Collection[];
+  initial: { billNumber: string; billDate: string; note: string; companies: Option[] };
+  billId: string;
   today: string;
-  initial?: { billNumber: string; billDate: string; note: string; companies: Option[] };
-  billId?: string;
-  /** Editing a bill made from items: no company box. */
-  itemsBill?: boolean;
 }) {
   const t = useT();
   const router = useRouter();
   const done = useDone();
-  const [billNumber, setBillNumber] = useState(initial?.billNumber ?? '');
-  const [billDate, setBillDate] = useState(initial?.billDate ?? today);
-  const [note, setNote] = useState(initial?.note ?? '');
-  const [companies, setCompanies] = useState<Option[]>(initial?.companies ?? []);
-  const [picked, setPicked] = useState<string[]>([]);
-  const [items, setItems] = useState<PickedItem[]>([]);
+  const [billNumber, setBillNumber] = useState(initial.billNumber);
+  const [billDate, setBillDate] = useState(initial.billDate);
+  const [note, setNote] = useState(initial.note);
+  const [companies, setCompanies] = useState<Option[]>(initial.companies);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<'pick' | 'check'>('pick');
   const [saving, startSaving] = useTransition();
-  const operationId = useRef<string | null>(null);
-
-  const of = (id: string) => collections.filter((c) => c.supplierId === id);
-  const pickedRows = collections.filter((c) => picked.includes(c.receiptId));
-  const value = (rows: Collection[]) => rows.reduce((n, c) => n + c.valuePaise, 0);
-  const byItems = companies.length === 0;
-  const itemLines = items.map((i) => ({ name: i.name, size: i.size, color: i.color, qty: i.qty, ratePaise: i.costPaise, amountPaise: (i.costPaise ?? 0) * i.qty }));
-  const total = byItems ? itemLines.reduce((n, l) => n + l.amountPaise, 0) : value(pickedRows);
-  const pieces = byItems ? items.reduce((n, i) => n + i.qty, 0) : pickedRows.reduce((n, c) => n + c.pieces, 0);
-  const footer = byItems ? t('bills.itemsFooter', { n: items.length, pcs: pieces }) : t('bills.footer', { n: picked.length, pcs: pieces });
-  const touched = () => (operationId.current = null);
 
   const addCompany = (id: string, name: string) => {
     if (!id || companies.some((c) => c.id === id)) return;
-    touched();
     setCompanies([...companies, { id, name }]);
   };
-  const removeCompany = (id: string) => {
-    touched();
-    setCompanies(companies.filter((c) => c.id !== id));
-    setPicked(picked.filter((p) => !of(id).some((c) => c.receiptId === p)));
-  };
-
-  // The phone's back button on the check step goes back to ticking, not off the page (same guard as New item).
-  const guarded = useRef(false);
-  const skipPop = useRef(false);
-  useEffect(() => {
-    if (step === 'check' && !guarded.current) {
-      window.history.pushState(window.history.state, '');
-      guarded.current = true;
-    } else if (step === 'pick' && guarded.current) {
-      guarded.current = false;
-      skipPop.current = true;
-      window.history.back();
-    }
-  }, [step]);
-  useEffect(() => {
-    const onPop = () => {
-      if (skipPop.current) {
-        skipPop.current = false;
-        return;
-      }
-      if (!guarded.current) return;
-      guarded.current = false;
-      setStep('pick');
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
-  const goTo = (next: 'pick' | 'check') => {
-    setError(null);
-    setStep(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const save = () => {
     setError(null);
-    operationId.current ??= crypto.randomUUID();
-    const input = {
-      operationId: operationId.current,
-      billNumber,
-      billDate,
-      note,
-      companies: companies.map((c) => c.id),
-      receiptIds: byItems ? [] : picked,
-      items: byItems ? items.map((i) => ({ productId: i.id, quantity: i.qty })) : [],
-    };
     startSaving(async () => {
-      const result = billId ? await updateBillAction(billId, input) : await createBillAction(input);
+      const result = await updateBillAction(billId, { billNumber, billDate, note, companies: companies.map((c) => c.id) });
       if (!result.ok) {
         done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
         return setError(result.error);
       }
       done.show({
         title: t('bills.saved'),
-        amount: billId ? undefined : formatPaise(total),
         lines: [
           { label: t('bills.number'), value: billNumber.trim() },
           { label: t('bills.date'), value: billDate },
-          { label: t('bills.companies'), value: byItems ? t('bills.noCompany') : companies.map((c) => c.name).join(', ') },
-          byItems
-            ? { label: t('bills.items'), value: billId ? '' : footer }
-            : { label: t('bills.collections'), value: billId ? '' : t('bills.picked', { n: picked.length, pcs: pieces, value: formatPaise(total) }) },
+          { label: t('bills.companies'), value: companies.map((c) => c.name).join(', ') },
         ].filter((line) => line.value),
       });
-      if (billId) return router.refresh();
-      // Next keeps this page alive: start clean for the next bill. The back guard stays in the
-      // history as a plain entry (no back() here — that would leave the bill just opened).
-      guarded.current = false;
-      operationId.current = null;
-      setStep('pick');
-      setPicked([]);
-      setItems([]);
-      setCompanies(initial?.companies ?? []);
-      setBillNumber('');
-      setBillDate(today);
-      setNote('');
-      router.push(`/admin/bills/${'id' in result ? result.id : ''}`);
+      router.refresh();
     });
   };
 
-  const canSave = !saving && (billId ? itemsBill || companies.length > 0 : byItems ? items.length > 0 : picked.length > 0);
-  const numberAndDate = (
-    <div className="grid grid-cols-2 gap-3">
-      <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
-        {t('bills.number')}
-        <input value={billNumber} onChange={(e) => setBillNumber(e.target.value)} maxLength={40} className={input} />
-      </label>
-      <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
-        {t('bills.date')}
-        <input type="date" value={billDate} max={today} onChange={(e) => setBillDate(e.target.value)} className={`${input} min-w-0`} />
-      </label>
-    </div>
-  );
-  const noteAndError = (
-    <>
+  return (
+    <form
+      data-testid="bill-form"
+      data-step="edit"
+      className={`${card} flex flex-col gap-4`}
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      {done.node}
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
+          {t('bills.number')}
+          <input value={billNumber} onChange={(e) => setBillNumber(e.target.value)} maxLength={40} className={input} />
+        </label>
+        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
+          {t('bills.date')}
+          <input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className={`${input} min-w-0`} />
+        </label>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-semibold">{t('bills.companies')}</p>
+        {companies.length > 0 && (
+          <ul data-testid="bill-company-list" className="flex flex-col gap-1.5">
+            {companies.map((c, i) => (
+              <li key={c.id} data-testid="bill-company" className="flex items-center gap-2 rounded-xl bg-brand-50/70 py-1.5 pr-1 pl-3 dark:bg-brand-950/60">
+                <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{c.name}</span>
+                <button
+                  type="button"
+                  aria-label={t('bills.removeCompany', { name: c.name })}
+                  onClick={() => setCompanies(companies.filter((x) => x.id !== c.id))}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 hover:bg-white dark:hover:bg-zinc-800"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <CompanyPicker
+          label={companies.length ? t('bills.anotherCompany') : t('bills.colCompany')}
+          companies={suppliers}
+          exclude={companies.map((c) => c.id)}
+          previous={previous}
+          value=""
+          emptyLabel={t('bills.addCompany')}
+          onChange={addCompany}
+        />
+        <p className={`text-xs ${muted}`}>{t('bills.editCompaniesNote')}</p>
+      </div>
       <label className="flex flex-col gap-1 text-sm font-medium">
         {t('bills.note')}
         <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} className={input} />
@@ -270,126 +214,9 @@ export function BillForm({
           {error}
         </p>
       )}
-    </>
-  );
-  const totals = (
-    <p className="min-w-0 text-sm">
-      <span data-testid="bill-picked" className={`block text-xs ${muted}`}>{footer}</span>
-      <span className="font-semibold">
-        {t('bills.total')}: <span data-testid="bill-total" className="text-lg font-bold tabular-nums">{formatPaise(total)}</span>
-      </span>
-    </p>
-  );
-
-  return (
-    <form
-      data-testid="bill-form"
-      data-step={billId ? 'edit' : step}
-      className={`${card} flex flex-col gap-4`}
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!billId && step === 'pick') return canSave && goTo('check');
-        save();
-      }}
-      onChange={touched}
-    >
-      {done.node}
-      {!billId && (
-        <p className={`text-xs font-semibold ${muted}`}>
-          {t('bills.step', { n: step === 'pick' ? 1 : 2 })} ·{' '}
-          {step === 'check' ? t('bills.step.check') : !byItems ? t('bills.step.pick') : items.length ? t('bills.step.pickItems') : t('bills.step.pickAny')}
-        </p>
-      )}
-
-      {billId && numberAndDate}
-
-      {(billId ? !itemsBill : step === 'pick' && items.length === 0) && (
-        // Companies: chosen ones one under the other, then the box to add the next.
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold">{t('bills.companies')}</p>
-          {companies.length > 0 && (
-            <ul data-testid="bill-company-list" className="flex flex-col gap-1.5">
-              {companies.map((c, i) => {
-                const mine = pickedRows.filter((r) => r.supplierId === c.id);
-                return (
-                  <li key={c.id} data-testid="bill-company" className="flex items-center gap-2 rounded-xl bg-brand-50/70 py-1.5 pr-1 pl-3 dark:bg-brand-950/60">
-                    <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
-                      {i + 1}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{c.name}</span>
-                      {!billId && <span className={`block text-xs ${muted}`}>{t('bills.companyLine', { n: mine.length, value: formatPaise(value(mine)) })}</span>}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={t('bills.removeCompany', { name: c.name })}
-                      onClick={() => removeCompany(c.id)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 hover:bg-white dark:hover:bg-zinc-800"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {/* One picker for the whole form (not re-made per pick), so the "Company added" card stays. */}
-          <CompanyPicker
-            label={companies.length ? t('bills.anotherCompany') : t('bills.colCompany')}
-            companies={suppliers}
-            exclude={companies.map((c) => c.id)}
-            previous={previous}
-            value=""
-            emptyLabel={t('bills.addCompany')}
-            onChange={addCompany}
-          />
-          {billId && <p className={`text-xs ${muted}`}>{t('bills.editCompaniesNote')}</p>}
-        </div>
-      )}
-
-      {!billId && step === 'pick' && (
-        <div className="flex flex-col gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-          {companies.length > 0 && <p className="text-sm font-semibold">{t('bills.collections')}</p>}
-          {companies.length === 0 ? (
-            // No company: the shop's items, one by one (ADR-060).
-            <BillItemsPicker items={items} onChange={(next) => (touched(), setItems(next))} />
-          ) : (
-            companies.map((c) => <CompanyCollections key={c.id} id={c.id} name={c.name} list={of(c.id)} picked={picked} onChange={(next) => (touched(), setPicked(next))} />)
-          )}
-        </div>
-      )}
-
-      {!billId && step === 'check' && (
-        // Laid out like the company's paper bill, to check line by line.
-        <div className="rise-in flex flex-col gap-3">
-          <div data-testid="bill-party" className="flex flex-col gap-0.5">
-            <span className={`text-xs font-medium ${muted}`}>{t('bills.sheet.party')}</span>
-            <span className="text-sm font-semibold">{byItems ? t('bills.noCompany') : companies.map((c) => c.name).join(', ')}</span>
-          </div>
-          {numberAndDate}
-          <BillSheet parts={byItems ? itemsPart(itemLines) : sheetParts(companies, pickedRows)} />
-        </div>
-      )}
-
-      {billId ? noteAndError : step === 'check' && noteAndError}
-
-      <div className="flex items-center justify-between gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-        {billId ? <span /> : totals}
-        <span className="flex shrink-0 items-center gap-2">
-          {!billId && step === 'check' && (
-            <button
-              type="button"
-              onClick={() => goTo('pick')}
-              className="min-h-12 rounded-xl border border-zinc-300 px-4 text-sm font-semibold dark:border-zinc-700"
-            >
-              {t('bills.back.step')}
-            </button>
-          )}
-          <button type="submit" disabled={!canSave} className={`${primaryButton} min-h-12 shrink-0 px-6`}>
-            {saving ? t('common.saving') : billId ? t('bills.saveChanges') : step === 'pick' ? t('bills.next') : t('bills.save')}
-          </button>
-        </span>
-      </div>
+      <button type="submit" disabled={saving || companies.length === 0} className={`${primaryButton} min-h-12`}>
+        {saving ? t('common.saving') : t('bills.saveChanges')}
+      </button>
     </form>
   );
 }

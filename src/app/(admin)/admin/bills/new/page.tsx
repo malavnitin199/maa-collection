@@ -1,36 +1,58 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { IconBack } from '@/components/ui/icons';
-import { BillForm } from '@/features/bills/bill-form';
+import { BillEditor, type EditorLine } from '@/features/bills/bill-editor';
+import { startLine } from '@/features/bills/sheet-parts';
+import { rupeesText } from '@/lib/money';
 import { STORE_ID } from '@/lib/app-config';
+import { browseBillProductsAction } from '@/server/actions/bills';
 import { requirePermission } from '@/server/auth';
 import { getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
-import { listCollections } from '@/server/services/bills';
 import { listSuppliers } from '@/server/services/catalog';
-import { shopToday } from '@/server/services/products';
+import { getProduct, listDesignVariants, shopToday } from '@/server/services/products';
 
-/** New bill (owner's feedback 2026-11-21): one card, with the recent collections waiting for a bill to tick. */
-async function NewBill({ supplier }: { supplier?: string }) {
+const uuid = (v?: string) => (v && /^[0-9a-f-]{36}$/i.test(v) ? v : undefined);
+
+/**
+ * New bill (owner's feedback 2026-11-22, ADR-061): an optional company and the shop's products
+ * as lines. `?product=<id>` (Make bill on a product's page): that product's sizes start on the
+ * bill — each with its pieces in stock and purchase price — and its company is chosen;
+ * `?supplier=<id>` chooses a company.
+ */
+async function NewBill({ supplier, product }: { supplier?: string; product?: string }) {
   await requirePermission('costs');
   const db = await requestDb();
-  const [companies, collections] = await Promise.all([listSuppliers(db, STORE_ID), listCollections(db, STORE_ID, { unbilled: true })]);
-  const start = companies.find((c) => c.id === supplier && c.active);
+  const [companies, first] = await Promise.all([listSuppliers(db, STORE_ID), browseBillProductsAction({ offset: 0 })]);
+  const usable = companies.filter((c) => !c.deletedAt);
+  let supplierId = usable.find((c) => c.id === supplier && c.active)?.id ?? '';
+  let lines: EditorLine[] = [];
+  const start = product ? await getProduct(db, STORE_ID, product) : null;
+  if (start) {
+    const variants = (await listDesignVariants(db, STORE_ID, start.id)).filter((v) => v.active);
+    const withStock = variants.filter((v) => v.stock > 0);
+    lines = (withStock.length ? withStock : variants).map((v) => {
+      const box = v.packSize ? (v.packCostPaise ?? (v.costPaise === null ? null : v.costPaise * v.packSize)) : null;
+      const start = startLine({ stock: v.stock, costPaise: v.costPaise, pack: v.packSize, boxCostPaise: box });
+      return { key: `p-${v.id}`, productId: v.id, name: v.name, size: v.size, color: v.color, stock: v.stock, pack: v.packSize, qty: start.qty, rate: rupeesText(start.ratePaise) };
+    });
+    supplierId = usable.find((c) => c.id === start.supplierId && c.active)?.id ?? supplierId;
+  }
   return (
-    <BillForm
-      key={supplier ?? ''}
-      suppliers={companies.filter((c) => c.active).map(({ id, name }) => ({ id, name }))}
-      previous={companies.filter((c) => !c.active).map(({ id, name }) => ({ id, name }))}
-      collections={collections}
+    <BillEditor
+      key={`${supplier ?? ''}|${product ?? ''}`}
       today={shopToday()}
-      initial={start ? { billNumber: '', billDate: shopToday(), note: '', companies: [{ id: start.id, name: start.name }] } : undefined}
+      companies={usable.filter((c) => c.active).map(({ id, name }) => ({ id, name }))}
+      previous={usable.filter((c) => !c.active).map(({ id, name }) => ({ id, name }))}
+      first={first}
+      initial={{ supplierId, billNumber: '', billDate: shopToday(), note: '', lines }}
     />
   );
 }
 
 export default async function NewBillPage(props: PageProps<'/admin/bills/new'>) {
   const t = await getT();
-  const params = (await props.searchParams) as { supplier?: string };
+  const params = (await props.searchParams) as { supplier?: string; product?: string };
   return (
     <main className="flex flex-col gap-3">
       <div className="flex items-center gap-1">
@@ -40,7 +62,7 @@ export default async function NewBillPage(props: PageProps<'/admin/bills/new'>) 
         <h1 className="text-xl font-semibold">{t('bills.newTitle')}</h1>
       </div>
       <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
-        <NewBill supplier={typeof params.supplier === 'string' ? params.supplier : undefined} />
+        <NewBill supplier={uuid(typeof params.supplier === 'string' ? params.supplier : undefined)} product={uuid(typeof params.product === 'string' ? params.product : undefined)} />
       </Suspense>
     </main>
   );

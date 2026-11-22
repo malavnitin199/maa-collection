@@ -40,7 +40,7 @@ async function BillList() {
                 </span>
                 {/* A bill with no company (ADR-060): made from items. */}
                 <span className={`block truncate text-xs ${muted}`}>{b.status === 'record' ? t('bills.noCompany') : b.companies.map((c) => c.name).join(', ')}</span>
-                <span className={`block text-xs ${muted}`}>{b.status === 'record' ? t('bills.itemsFooter', { n: b.items, pcs: b.pieces }) : t('bills.count', { n: b.collections })}</span>
+                <span className={`block text-xs ${muted}`}>{b.collections === 0 ? t('bills.itemsFooter', { n: b.items, pcs: b.pieces }) : t('bills.count', { n: b.collections })}</span>
               </span>
               <span className="shrink-0 text-right text-sm tabular-nums">
                 <span className="block font-semibold">{formatPaise(b.totalPaise)}</span>
