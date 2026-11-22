@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { card, muted, sectionTitle } from '@/components/ui/styles';
 import { DailyColumns, formatShare, ShareBars } from '@/features/reports/team-charts';
+import { FreshAddress } from '@/features/forms/fresh-address';
 import { StatTile } from '@/features/reports/widgets';
 import { STORE_ID } from '@/lib/app-config';
 import type { MessageKey } from '@/lib/i18n';
@@ -136,6 +137,8 @@ export default async function TeamPage(props: PageProps<'/admin/team'>) {
   const t = await getT();
   return (
     <main className="flex flex-col gap-5">
+      {/* Back from another screen: the first period again (ADR-068). */}
+      <FreshAddress drop={['period']} />
       <div>
         <h1 className="text-2xl font-semibold">{t('own.team.title')}</h1>
         <p className={`text-sm ${muted}`}>{t('own.team.subtitle')}</p>

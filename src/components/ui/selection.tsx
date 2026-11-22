@@ -4,6 +4,7 @@ import { createContext, use, useEffect, useMemo, useRef, useState, type ReactNod
 import { createPortal } from 'react-dom';
 import { IconClose, IconSelect } from '@/components/ui/icons';
 import { haptic } from '@/features/feedback/sounds';
+import { useClearOnLeave } from '@/features/forms/fresh-on-return';
 import { useT } from '@/features/i18n/i18n-provider';
 
 /**
@@ -17,6 +18,8 @@ import { useT } from '@/features/i18n/i18n-provider';
  * Lists stay server-rendered: each card is wrapped in a `SelectableItem` with the
  * ids it stands for (a design card stands for all its items). Screens put their own
  * actions inside `SelectionBar` and read the choice with `useSelection()`.
+ * Another screen opened = selection over (owner, 2026-11-23, ADR-068): coming back shows
+ * the plain list, nothing ticked.
  */
 type Toast = { id: number; kind: 'ok' | 'error'; text: string };
 
@@ -50,6 +53,11 @@ export function SelectionProvider({ allIds, children }: { allIds: readonly strin
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const [toast, setToast] = useState<Toast | null>(null);
   const toastId = useRef(0);
+  useClearOnLeave(() => {
+    setSelecting(false);
+    setChosen(new Set());
+    setToast(null);
+  });
 
   // Selection mode: the dock steps aside (CSS on html[data-selecting]); Escape leaves it
   // unless a sheet is open (the sheet closes first).

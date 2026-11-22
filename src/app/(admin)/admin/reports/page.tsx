@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { card, link, muted, secondaryButton, sectionTitle } from '@/components/ui/styles';
+import { FreshAddress } from '@/features/forms/fresh-address';
 import { StatTile } from '@/features/reports/widgets';
 import { STORE_ID } from '@/lib/app-config';
 import type { MessageKey, T } from '@/lib/i18n';
@@ -162,6 +163,8 @@ export default async function ReportsPage(props: PageProps<'/admin/reports'>) {
   const t = await getT();
   return (
     <main className="flex flex-col gap-5">
+      {/* Back from another screen: this month again (ADR-068). */}
+      <FreshAddress drop={['period']} />
       <div>
         <h1 className="text-2xl font-semibold">{t('nav.reports')}</h1>
         <p className={`text-sm ${muted}`}>{t('own.rep.subtitle')}</p>

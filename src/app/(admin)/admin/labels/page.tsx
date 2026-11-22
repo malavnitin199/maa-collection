@@ -6,6 +6,7 @@ import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@
 import { PrintSelected } from '@/features/catalog/bulk-actions';
 import { DesignCard } from '@/features/catalog/design-card';
 import { HangTag } from '@/features/catalog/hang-tag';
+import { FreshAddress } from '@/features/forms/fresh-address';
 import { TagFilterForm } from '@/features/tag-library/filter-form';
 import { groupNote, groupTitle } from '@/features/tag-library/group-title';
 import { TagViews } from '@/features/tag-library/tag-views';
@@ -303,6 +304,8 @@ export default async function LabelsPage(props: PageProps<'/admin/labels'>) {
   const t = await getT();
   return (
     <main className="flex min-w-0 flex-col gap-5">
+      {/* Back from another screen: no search or filters (ADR-068); an open group or design stays. */}
+      <FreshAddress drop={['q', 'supplier', 'category', 'made', 'when', 'stock', 'limit']} />
       <div>
         <h1 className="text-2xl font-semibold">{t('stk.labels.title')}</h1>
         <p className={`mt-1 text-sm ${muted}`}>{t('stk.labels.subtitle')}</p>

@@ -6,6 +6,7 @@ import { Paged } from '@/components/ui/paged';
 import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
 import { card, input, muted } from '@/components/ui/styles';
 import { CompanyBulkActions } from '@/features/catalog/bulk-actions';
+import { useClearOnLeave } from '@/features/forms/fresh-on-return';
 import { useT } from '@/features/i18n/i18n-provider';
 import { useTypingScript } from '@/features/i18n/lang-text';
 import { SpeakButton } from '@/features/i18n/speak-button';
@@ -28,7 +29,8 @@ function needles(query: string): string[] {
  * The Companies page list (owner's feedback 2026-11-21): a search box with the
  * microphone (name, location, contact or phone; English or Hindi), a Location
  * dropdown, the figures folded away under *Summary*, and short rows ten at a
- * time. Select → Delete for the owner (ADR-051).
+ * time. Select → Delete for the owner (ADR-051). Coming back from another screen: no
+ * search, every place, Summary folded (ADR-068).
  */
 export function CompanyBrowser({ rows, totals, showMoney, canDelete = false }: { rows: BrowserRow[]; totals: CompaniesOverview['totals']; showMoney: boolean; canDelete?: boolean }) {
   const t = useT();
@@ -36,6 +38,11 @@ export function CompanyBrowser({ rows, totals, showMoney, canDelete = false }: {
   const [query, setQuery] = useState('');
   const [place, setPlace] = useState('');
   const [summary, setSummary] = useState(false);
+  useClearOnLeave(() => {
+    setQuery('');
+    setPlace('');
+    setSummary(false);
+  });
   const places = useMemo(
     () => [...new Set(rows.map((r) => r.location?.trim()).filter((l): l is string => Boolean(l)))].sort((a, b) => a.localeCompare(b)),
     [rows],

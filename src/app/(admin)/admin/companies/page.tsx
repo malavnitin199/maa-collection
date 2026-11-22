@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { card, muted, okBox } from '@/components/ui/styles';
 import { CompanyBrowser } from '@/features/catalog/company-browser';
+import { FreshAddress } from '@/features/forms/fresh-address';
 import { SupplierForm } from '@/features/catalog/setup-forms';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
@@ -38,6 +39,7 @@ export default async function CompaniesPage(props: PageProps<'/admin/companies'>
   const { deleted } = (await props.searchParams) as { deleted?: string };
   return (
     <main className="flex flex-col gap-3">
+      <FreshAddress drop={['deleted']} />
       {/* After Delete on a company's page (ADR-051): what happened. */}
       {typeof deleted === 'string' && deleted && (
         <p role="status" data-testid="deleted-note" className={okBox}>

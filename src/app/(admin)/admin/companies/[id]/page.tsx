@@ -7,6 +7,7 @@ import { MarkPaidForm, PaymentForm } from '@/features/catalog/company-parts';
 import { DeleteCompanyButton } from '@/features/catalog/bulk-actions';
 import { ItemTabs } from '@/features/catalog/item-parts';
 import { SupplierForm } from '@/features/catalog/setup-forms';
+import { FreshAddress } from '@/features/forms/fresh-address';
 import { StatTile } from '@/features/reports/widgets';
 import { Paged } from '@/components/ui/paged';
 import { STORE_ID } from '@/lib/app-config';
@@ -416,8 +417,12 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
 export default async function CompanyPage(props: PageProps<'/admin/companies/[id]'>) {
   const t = await getT();
   return (
-    <Suspense fallback={<p className="text-sm text-zinc-500">{t('cat.sup.loading')}</p>}>
-      <CompanyDetail params={props.params} searchParams={props.searchParams as Promise<Search>} />
-    </Suspense>
+    <>
+      {/* Back from another screen (a bill, an item): the first period again (ADR-068). */}
+      <FreshAddress drop={['period', 'from', 'to']} />
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('cat.sup.loading')}</p>}>
+        <CompanyDetail params={props.params} searchParams={props.searchParams as Promise<Search>} />
+      </Suspense>
+    </>
   );
 }

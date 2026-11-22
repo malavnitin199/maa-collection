@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { input, muted, secondaryButton } from '@/components/ui/styles';
 import { chip, chipTone } from '@/features/catalog/chips';
+import { useClearOnLeave } from '@/features/forms/fresh-on-return';
 import { useT } from '@/features/i18n/i18n-provider';
 import { CameraScanner } from '@/features/scanning/camera-scanner';
 import { browseBillProductsAction, findBillProductAction, type BillDesign, type BillScanned } from '@/server/actions/bills';
@@ -48,6 +49,14 @@ export function ProductBrowser({
   const timer = useRef<number | undefined>(undefined);
   const sentinel = useRef<HTMLDivElement>(null);
   const asked = useRef(query);
+  // Another screen opened: the search box is empty again on return; the bill's lines stay (ADR-068).
+  useClearOnLeave(() => {
+    window.clearTimeout(timer.current);
+    asked.current = '';
+    setQuery('');
+    setList(first);
+    setScanning(false);
+  });
 
   const search = (value: string) => {
     window.clearTimeout(timer.current);

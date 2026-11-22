@@ -2,17 +2,20 @@
 
 import { useState, type ReactNode } from 'react';
 import { muted, secondaryButton } from '@/components/ui/styles';
+import { useClearOnLeave } from '@/features/forms/fresh-on-return';
 import { useT } from '@/features/i18n/i18n-provider';
 
 /**
  * A long list shown a page at a time (companies overview, 2026-11-20): the
  * owner asked for ten rows at a time with Previous / Next for the rest. The
  * rows are rendered by the caller (server components are fine); this only
- * picks which ones show. Lists that fit on one page show no pager.
+ * picks which ones show. Lists that fit on one page show no pager. Coming back from
+ * another screen starts on the first page again (ADR-068).
  */
 export function Paged({ items, size = 10, testId, as: Tag = 'ul', className }: { items: ReactNode[]; size?: number; testId?: string; as?: 'ul' | 'div'; className?: string }) {
   const t = useT();
   const [page, setPage] = useState(0);
+  useClearOnLeave(() => setPage(0));
   const pages = Math.max(1, Math.ceil(items.length / size));
   const current = Math.min(page, pages - 1);
   const from = current * size;
