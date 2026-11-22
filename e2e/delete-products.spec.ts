@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { openProduct, productCard } from './products';
+import { openMore, openProduct, productCard } from './products';
 
 // Delete items (owner, 2026-11-22, ADR-050): Products → Select → Delete, and Delete on the product page,
 // both after a confirmation; the owner only.
@@ -23,7 +23,8 @@ async function addItem(page: Page, name: string) {
   await page.getByRole('combobox', { name: /^Company/ }).click();
   await page.getByRole('listbox').getByRole('option', { name: 'Royal Garments', exact: true }).click();
   await page.getByLabel('Product name').fill(name);
-  await page.getByLabel('Sale price (MRP) ₹').fill('999');
+  await page.getByLabel('Sale price', { exact: true }).fill('999');
+  await openMore(page);
   for (const size of ['M', 'L']) await page.getByTestId('size-cards').getByRole('button', { name: `Size ${size}`, exact: true }).click();
   await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Save', exact: true }).click();

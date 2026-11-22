@@ -109,7 +109,7 @@ export function CompanyPicker({
       />
       {name && <input type="hidden" name={name} value={value} />}
       {adding && (
-        <div className="flex gap-2">
+        <div data-adding className="flex gap-2">
           <LangText
             autoFocus
             aria-label={t('cat.company.newName')}

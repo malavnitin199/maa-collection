@@ -113,7 +113,7 @@ export function Dropdown({
       {/* Lets a form that posts refuse an empty choice, like a required <select>. */}
       {required && <input tabIndex={-1} aria-hidden required value={value} onChange={() => {}} className="pointer-events-none absolute bottom-0 left-4 h-px w-px opacity-0" />}
       {open && (
-        <div className="absolute top-full right-0 left-0 z-40 mt-1 flex flex-col overflow-hidden rounded-2xl bg-surface shadow-xl ring-1 ring-zinc-200 dark:ring-zinc-700">
+        <div className="absolute top-full right-0 left-0 z-40 mt-1 flex min-w-[min(18rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl bg-surface shadow-xl ring-1 ring-zinc-200 dark:ring-zinc-700">
           {searchable && (
             <input
               autoFocus

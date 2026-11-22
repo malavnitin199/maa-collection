@@ -57,6 +57,13 @@ const artCircle = 'flex h-20 w-20 items-center justify-center rounded-full bg-br
 const cornerButton =
   'absolute top-2 flex h-9 w-9 items-center justify-center rounded-full bg-surface shadow-sm ring-1 ring-zinc-200 transition active:scale-90 dark:ring-zinc-700';
 const field = 'flex flex-col gap-1 text-sm font-medium';
+/** Details: the four must-have boxes (owner, 2026-11-22) — big, like the tiles on the steps before. */
+const fieldTile = 'flex min-h-28 min-w-0 flex-col justify-between gap-2 rounded-3xl bg-surface p-3 shadow-sm ring-1 ring-brand-100 dark:ring-brand-900';
+const tileLabel = 'text-sm leading-tight font-semibold';
+/** Quick % on the purchase price in the sale price calculator. */
+const MARKUP_CHOICES = [20, 30, 50, 100] as const;
+/** The first row's ← (owner, 2026-11-22: a smaller, higher top). */
+const smallBack = backButton.replace('h-10 w-10', 'h-8 w-8').replace('rounded-xl', 'rounded-lg');
 
 /** The markup % this phone used last (ADR-053), or null. Storage may be blocked: then nothing. */
 function readMarkup(): string | null {
@@ -143,6 +150,9 @@ export function NewItemWizard({
   const [packText, setPackText] = useState('12');
   const [packMrp, setPackMrp] = useState('');
   const [costAs, setCostAs] = useState<'piece' | 'box'>('piece');
+  // Owner, 2026-11-22: the % calculator beside the sale price, and "Sizes & more" — both folded at first.
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [reached, setReached] = useState(startSection ? 1 : 0);
   const [sheet, setSheet] = useState<'section' | 'type' | null>(null);
   // The owner's ✎ / 🗑 on a collection tile (ADR-064).
@@ -193,6 +203,14 @@ export function NewItemWizard({
   const boxesText = (n: number) => t(n === 1 ? 'pack.boxes.one' : 'pack.boxes.other', { n });
   const pcs = (n: number) => t(n === 1 ? 'stk.item.pcs.one' : 'stk.item.pcs.other', { n });
   const sizesOk = totalPieces > 0;
+  // The four boxes (company and name are optional): a sale price, worked out or typed, and a readable purchase price.
+  const basicsOk = mrpPaise !== null && (!cost.trim() || typedCost !== null);
+  const sizesText = noSize
+    ? t('ni.noSize.summary', { pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces) })
+    : t('ni.sizes.summary', {
+        sizes: t(ordered.length === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: ordered.length }),
+        pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces),
+      });
   const shownName = name.trim() || (type ? t('ni.name.auto', { type: type.name }) : '');
   const sizeLine = [
     pack ? t('pack.label', { n: pack }) : '',
@@ -318,6 +336,7 @@ export function NewItemWizard({
     setPackText('12');
     setPackMrp('');
     setCostAs('piece');
+    setCalcOpen(false);
   };
   /** Everything back to the first screen (what the address asked for stays: company, section, bill, date). */
   const startOver = () => {
@@ -326,6 +345,8 @@ export function NewItemWizard({
     setSheet(null);
     setEditing(null);
     setRemoving(null);
+    setCalcOpen(false);
+    setMoreOpen(false);
     setSectionId(startSection);
     setSupplierId(initial.supplierId ?? '');
     setSupplierName(suppliers.find((s) => s.id === initial.supplierId)?.name ?? '');
@@ -411,6 +432,7 @@ export function NewItemWizard({
         setSupplierName('');
         setBillNumber('');
         setStockDate('');
+        setMoreOpen(false);
         setReached(0);
         setStep('who');
       }
@@ -428,10 +450,15 @@ export function NewItemWizard({
     details: t('ni.step.detailsSizes'),
     review: t('ni.step.review'),
   };
-  /** Next on the Details & sizes step: everything must be in; else the card scrolls to what is missing. */
+  /** Next on the Details & sizes step: everything must be in; else it shows what is missing (opening Sizes & more when it is there). */
   const finishDetails = () => {
+    if (!basicsOk) {
+      document.getElementById('ni-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     if (!detailsOk || !sizesOk) {
-      document.getElementById(detailsOk ? 'ni-sizes' : 'ni-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setMoreOpen(true);
+      requestAnimationFrame(() => document.getElementById('ni-more')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       return;
     }
     toReview();
@@ -443,28 +470,28 @@ export function NewItemWizard({
       <ResumeSheet asking={resume.asking} what="collection" onKeep={resume.keep} onFresh={resume.fresh} />
       {/* A compact top (owner's feedback 2026-11-21): one row with back · New item · Start again,
           a thin progress bar, then the step's title — so the fields get the screen. */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
+      <div className="-mt-3 flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
           {step === 'who' ? (
             // The first step leaves the page: Home for the owner (Add new stock lives there), else Add stock.
-            <Link href={isOwner ? '/admin/dashboard' : '/admin/stock'} aria-label={isOwner ? t('ni.backHome') : t('stk.item.back')} className={backButton}>
-              <IconBack className="h-5 w-5" />
+            <Link href={isOwner ? '/admin/dashboard' : '/admin/stock'} aria-label={isOwner ? t('ni.backHome') : t('stk.item.back')} className={smallBack}>
+              <IconBack className="h-4 w-4" />
             </Link>
           ) : (
             <button
               type="button"
               onClick={stepBack}
               aria-label={t('ni.back')}
-              className={backButton}
+              className={smallBack}
             >
-              <IconBack className="h-5 w-5" />
+              <IconBack className="h-4 w-4" />
             </button>
           )}
-          <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">
+          <h1 className="min-w-0 flex-1 truncate text-base leading-tight font-semibold">
             {t('stk.item.title')}
-            <span className={`ml-2 text-[11px] font-semibold tracking-wide uppercase ${muted}`}>{t('ni.progress', { n: stepIndex + 1 })}</span>
+            <span className={`ml-1.5 text-[10px] font-semibold tracking-wide uppercase ${muted}`}>{t('ni.progress', { n: stepIndex + 1 })}</span>
           </h1>
-          {(stepIndex > 0 || dirty) && <StartOver onStartOver={startOver} dirty={dirty} />}
+          {(stepIndex > 0 || dirty) && <StartOver onStartOver={startOver} dirty={dirty} small />}
         </div>
         <ol aria-label={t('ni.steps')} className="grid grid-cols-4 gap-1">
           {FLOW.map((s, i) => (
@@ -627,7 +654,9 @@ export function NewItemWizard({
         )}
       </div>
 
-      {/* Details & sizes (owner's feedback 2026-11-21): one card — company, name, prices, then the sizes, then More.
+      {/* Details & sizes (owner's feedback 2026-11-21; 2026-11-22, ADR-065): the four must-haves as big boxes —
+          company, product name, purchase price, sale price (₹ inside, % calculator beside it) — then everything
+          else (sizes first, box, counter price, bill no., date, brand) folded under "Sizes & more", then Next.
           Stays mounted once reached (the company list it may grow lives inside it). */}
       {reached >= 2 && (
         <div hidden={step !== 'details'} data-testid="details-step" className={step === 'details' ? (direction === 'next' ? 'step-next' : 'step-back') : ''}>
@@ -635,191 +664,252 @@ export function NewItemWizard({
             id="ni-details"
             data-testid="details-form"
             noValidate
-            className={`${card} flex scroll-mt-28 flex-col gap-4`}
+            className="flex scroll-mt-28 flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault();
               finishDetails();
             }}
           >
-            <CompanyPicker
-              label={t('stk.item.company')}
-              companies={suppliers}
-              previous={previousSuppliers}
-              value={supplierId}
-              emptyLabel={t('ni.chooseCompany')}
-              onChange={(id, companyName) => {
-                setSupplierId(id);
-                setSupplierName(companyName);
-              }}
-            />
-            <label className={field}>
-              {t('ni.name.optional')}
-              <LangText
-                value={name}
-                onValueChange={setName}
-                maxLength={120}
-                autoComplete="off"
-                placeholder={type ? t('ni.name.auto', { type: type.name }) : undefined}
-                inputClassName={`${input} min-w-0 flex-1 text-lg`}
-              />
-            </label>
-            {/* Box packs (owner, 2026-11-21): loose pieces, or boxes of N (sandos: 10 or 12 a box). */}
-            <div data-testid="pack-choice" className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium">{t('pack.soldAs')}</span>
-                <Segmented
-                  label={t('pack.soldAs')}
-                  value={boxed ? 'box' : 'pieces'}
-                  options={[
-                    { value: 'pieces', label: t('pack.pieces') },
-                    { value: 'box', label: t('pack.box') },
-                  ]}
-                  onChange={(v) => setBoxed(v === 'box')}
+            <div data-testid="details-tiles" className="grid grid-cols-2 gap-2.5">
+              {/* A new company being typed takes the whole row. */}
+              <div className={`${fieldTile} has-[[data-adding]]:col-span-2`}>
+                <CompanyPicker
+                  label={t('stk.item.company')}
+                  companies={suppliers}
+                  previous={previousSuppliers}
+                  value={supplierId}
+                  emptyLabel={t('ni.chooseCompany')}
+                  onChange={(id, companyName) => {
+                    setSupplierId(id);
+                    setSupplierName(companyName);
+                  }}
                 />
               </div>
-              {boxed && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className={`mr-1 text-xs ${muted}`}>{t('pack.size')}</span>
-                  {PACK_CHOICES.map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      aria-pressed={pack === n}
-                      aria-label={t('pack.sizeOf', { n })}
-                      onClick={() => setPackText(String(n))}
-                      className={`min-h-9 min-w-10 rounded-xl px-2.5 text-sm font-bold tabular-nums transition active:scale-95 ${
-                        pack === n ? 'bg-brand-600 text-white shadow-sm' : 'bg-surface ring-1 ring-zinc-300 dark:ring-zinc-700'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                  <input
-                    inputMode="numeric"
-                    aria-label={t('pack.sizeOther')}
-                    aria-invalid={pack === null}
-                    value={packText}
-                    onChange={(e) => setPackText(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    className={`${input} h-9 w-16 py-1 text-center text-sm font-bold tabular-nums aria-invalid:border-red-500`}
-                  />
-                </div>
-              )}
-            </div>
-            {/* Purchase price first, then the sale price (owner, 2026-11-22, ADR-053). */}
-            <div className="grid grid-cols-2 gap-3">
-              {showCost && !boxed && (
-                <label className={field}>
-                  {t('ni.cost')}
-                  <input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} className={`${input} text-lg tabular-nums`} />
-                  <span className={`text-xs ${muted}`}>{t('ni.perPiece')}</span>
+              <div className={fieldTile}>
+                <label htmlFor="ni-name" className={tileLabel}>
+                  {t('ni.name.optional')}
                 </label>
-              )}
-              {showCost && boxed && (
-                // A full row: the label with the Per piece | Whole box switch beside it, then the box.
-                <div className="col-span-2 flex flex-col gap-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <label htmlFor="ni-cost" className="text-sm font-medium">
-                      {costAs === 'box' ? t('pack.costBox') : t('ni.cost')}
-                    </label>
-                    <Segmented
-                      label={t('pack.costAs')}
-                      small
-                      value={costAs}
-                      options={[
-                        { value: 'piece', label: t('pack.costPerPiece') },
-                        { value: 'box', label: t('pack.costPerBox') },
-                      ]}
-                      onChange={(v) => setCostAs(v as 'piece' | 'box')}
-                    />
-                  </div>
-                  <input id="ni-cost" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} className={`${input} text-lg tabular-nums`} />
-                  {costAs === 'box' && costPaise !== null && (
+                <LangText
+                  id="ni-name"
+                  value={name}
+                  onValueChange={setName}
+                  maxLength={120}
+                  autoComplete="off"
+                  placeholder={type ? t('ni.name.auto', { type: type.name }) : undefined}
+                  inputClassName={`${input} w-full min-w-0 basis-full text-base font-semibold`}
+                />
+              </div>
+              {showCost && (
+                <div className={fieldTile}>
+                  <label htmlFor="ni-cost" className={tileLabel}>
+                    {boxed && costAs === 'box' ? t('pack.costBox') : t('ni.cost')}
+                  </label>
+                  <RupeeBox id="ni-cost" value={cost} onChange={setCost} />
+                  {boxed && costAs === 'box' && costPaise !== null && (
                     <span data-testid="pack-cost-each" className={`text-xs ${muted}`}>
                       {t('pack.costEach', { amount: formatPaise(costPaise) })}
                     </span>
                   )}
                 </div>
               )}
-              <div className={field}>
-                <label htmlFor="ni-mrp">{boxed ? t('pack.mrpPiece') : t('ni.mrp')}</label>
-                <input
-                  id="ni-mrp"
-                  inputMode="decimal"
-                  value={mrp}
-                  placeholder={derivedMrp !== null ? String(derivedMrp / 100) : undefined}
-                  onChange={(e) => setMrp(e.target.value)}
-                  className={`${input} text-lg tabular-nums`}
-                />
-                {/* Optional (ADR-053): empty = purchase + markup %. */}
-                {showCost && (
-                  <span data-testid="mrp-from-cost" className={`flex flex-wrap items-center gap-1 text-xs ${muted}`}>
-                    {t('ni.markup.before')}
-                    <input
-                      inputMode="numeric"
-                      aria-label={t('ni.markup.aria')}
-                      value={markupText}
-                      onChange={(e) => changeMarkup(e.target.value)}
-                      className="h-7 w-11 rounded-lg border border-zinc-300 bg-surface text-center text-xs font-bold tabular-nums dark:border-zinc-700"
-                    />
-                    %{!mrp.trim() && derivedMrp !== null && <b className="text-zinc-800 dark:text-zinc-100"> = {formatPaise(derivedMrp)}</b>}
-                  </span>
+              <div className={fieldTile}>
+                <div className="flex items-start justify-between gap-1">
+                  <label htmlFor="ni-mrp" className={tileLabel}>
+                    {boxed ? t('pack.mrpPiece') : t('ni.mrp')}
+                  </label>
+                  {/* The % calculator (owner, 2026-11-22): opens under the boxes. */}
+                  {showCost && (
+                    <button
+                      type="button"
+                      aria-expanded={calcOpen}
+                      aria-controls="ni-calc"
+                      aria-label={t('ni.calc.open')}
+                      title={t('ni.calc.open')}
+                      onClick={() => setCalcOpen((open) => !open)}
+                      className={`-mt-1 -mr-1 inline-flex h-8 shrink-0 items-center gap-0.5 rounded-lg px-2 text-xs font-bold transition active:scale-95 ${
+                        calcOpen ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950 dark:text-brand-300 dark:ring-brand-800'
+                      }`}
+                    >
+                      %
+                      <IconChevron className={`h-3.5 w-3.5 transition ${calcOpen ? '-rotate-90' : 'rotate-90'}`} />
+                    </button>
+                  )}
+                </div>
+                {/* Left empty, it is purchase + the % (shown in grey) — ADR-053. */}
+                <RupeeBox id="ni-mrp" value={mrp} onChange={setMrp} placeholder={derivedMrp !== null ? String(derivedMrp / 100) : undefined} />
+              </div>
+            </div>
+
+            {showCost && calcOpen && (
+              <div id="ni-calc" data-testid="markup-calc" className="rise-in flex flex-col gap-2.5 rounded-2xl bg-brand-50 p-3 ring-1 ring-brand-100 dark:bg-brand-950 dark:ring-brand-900">
+                <p className="text-sm font-semibold">{t('ni.calc.title')}</p>
+                {costPaise === null || derivedMrp === null ? (
+                  <p className={`text-sm ${muted}`}>{t('ni.calc.needCost')}</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {MARKUP_CHOICES.map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          aria-pressed={markup === n}
+                          onClick={() => changeMarkup(String(n))}
+                          className={`min-h-9 rounded-xl px-2.5 text-sm font-bold tabular-nums transition active:scale-95 ${
+                            markup === n ? 'bg-brand-600 text-white shadow-sm' : 'bg-surface ring-1 ring-zinc-300 dark:ring-zinc-700'
+                          }`}
+                        >
+                          {n}%
+                        </button>
+                      ))}
+                      <span className="flex items-center gap-1 text-sm font-semibold">
+                        <input
+                          inputMode="numeric"
+                          aria-label={t('ni.calc.percent')}
+                          value={markupText}
+                          onChange={(e) => changeMarkup(e.target.value)}
+                          className={`${input} h-9 w-14 px-1 py-1 text-center text-sm font-bold tabular-nums`}
+                        />
+                        %
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p data-testid="calc-result" className="text-sm tabular-nums">
+                        {formatPaise(costPaise)} + {markup}% = <b className="text-base">{formatPaise(derivedMrp)}</b>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMrp(String(derivedMrp / 100));
+                          setCalcOpen(false);
+                        }}
+                        className={`${primaryButton} min-h-10 shrink-0 px-4 text-sm`}
+                      >
+                        {t('ni.calc.use')}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
-              {boxed && (
-                <label className={field}>
-                  {t('pack.mrpBox')}
-                  <input inputMode="decimal" value={packMrp} onChange={(e) => setPackMrp(e.target.value)} className={`${input} text-lg tabular-nums`} />
-                  {mrpPaise !== null && pack && <span className={`text-xs ${muted}`}>{t('pack.mrpBoxHint', { amount: formatPaise(mrpPaise * pack) })}</span>}
-                </label>
-              )}
-            </div>
-            {type && (
-              <div id="ni-sizes" className="flex scroll-mt-28 flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-                <SizeStep
-                  type={type}
-                  boxes={pack}
-                  offered={offered}
-                  sizes={sizes}
-                  pieces={pieces}
-                  onToggle={toggleSize}
-                  onAll={(all) => setSizes(all ? offered : [])}
-                  onPieces={(size, value) => setPieces({ ...pieces, [size]: Math.max(0, Math.min(999, value)) })}
-                  onTypeSizes={(next) => addToList(sectionId, (s) => ({ ...s, types: s.types.map((x) => (x.id === type.id ? { ...x, sizes: next } : x)) }))}
-                />
-              </div>
             )}
-            <details className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
-              <summary className="cursor-pointer text-sm font-medium text-brand-700 dark:text-brand-300">{t('ni.more')}</summary>
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className={field}>
-                  {t('ni.price')}
-                  <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className={`${input} tabular-nums`} />
-                </label>
-                <label className={field}>
-                  {t('ni.bill')}
-                  <input value={billNumber} onChange={(e) => setBillNumber(e.target.value)} maxLength={60} className={input} />
-                </label>
-                <label className={field}>
-                  {t('ni.stockDate')}
-                  <input type="date" value={stockDate} onChange={(e) => setStockDate(e.target.value)} className={input} />
-                </label>
-                <label className={field}>
-                  {t('ni.brand')}
-                  <LangText value={brand} onValueChange={setBrand} maxLength={60} />
-                </label>
+
+            {/* Everything else, folded (owner, 2026-11-22): the sizes first. */}
+            <details
+              id="ni-more"
+              data-testid="more-details"
+              open={moreOpen}
+              onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+              className="group/more scroll-mt-28 rounded-2xl bg-surface ring-1 ring-brand-100 dark:ring-brand-900"
+            >
+              <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 py-2 [&::-webkit-details-marker]:hidden">
+                <span className="flex-1 text-sm font-semibold text-brand-700 dark:text-brand-300">{t('ni.more')}</span>
+                <span className={`truncate text-xs font-semibold ${muted}`}>{sizesText}</span>
+                <IconChevron className="h-4 w-4 shrink-0 rotate-90 text-brand-700 transition group-open/more:-rotate-90 dark:text-brand-300" />
+              </summary>
+              <div className="flex flex-col gap-4 border-t border-zinc-100 px-4 pt-3 pb-4 dark:border-zinc-800">
+                {type && (
+                  <div id="ni-sizes" className="flex scroll-mt-28 flex-col gap-2">
+                    <SizeStep
+                      type={type}
+                      boxes={pack}
+                      offered={offered}
+                      sizes={sizes}
+                      pieces={pieces}
+                      onToggle={toggleSize}
+                      onAll={(all) => setSizes(all ? offered : [])}
+                      onPieces={(size, value) => setPieces({ ...pieces, [size]: Math.max(0, Math.min(999, value)) })}
+                      onTypeSizes={(next) => addToList(sectionId, (s) => ({ ...s, types: s.types.map((x) => (x.id === type.id ? { ...x, sizes: next } : x)) }))}
+                    />
+                  </div>
+                )}
+                {/* Box packs (owner, 2026-11-21): loose pieces, or boxes of N (sandos: 10 or 12 a box). */}
+                <div data-testid="pack-choice" className="flex flex-col gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">{t('pack.soldAs')}</span>
+                    <Segmented
+                      label={t('pack.soldAs')}
+                      value={boxed ? 'box' : 'pieces'}
+                      options={[
+                        { value: 'pieces', label: t('pack.pieces') },
+                        { value: 'box', label: t('pack.box') },
+                      ]}
+                      onChange={(v) => setBoxed(v === 'box')}
+                    />
+                  </div>
+                  {boxed && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`mr-1 text-xs ${muted}`}>{t('pack.size')}</span>
+                      {PACK_CHOICES.map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          aria-pressed={pack === n}
+                          aria-label={t('pack.sizeOf', { n })}
+                          onClick={() => setPackText(String(n))}
+                          className={`min-h-9 min-w-10 rounded-xl px-2.5 text-sm font-bold tabular-nums transition active:scale-95 ${
+                            pack === n ? 'bg-brand-600 text-white shadow-sm' : 'bg-surface ring-1 ring-zinc-300 dark:ring-zinc-700'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                      <input
+                        inputMode="numeric"
+                        aria-label={t('pack.sizeOther')}
+                        aria-invalid={pack === null}
+                        value={packText}
+                        onChange={(e) => setPackText(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        className={`${input} h-9 w-16 py-1 text-center text-sm font-bold tabular-nums aria-invalid:border-red-500`}
+                      />
+                    </div>
+                  )}
+                  {boxed && showCost && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{t('pack.costAs')}</span>
+                      <Segmented
+                        label={t('pack.costAs')}
+                        small
+                        value={costAs}
+                        options={[
+                          { value: 'piece', label: t('pack.costPerPiece') },
+                          { value: 'box', label: t('pack.costPerBox') },
+                        ]}
+                        onChange={(v) => setCostAs(v as 'piece' | 'box')}
+                      />
+                    </div>
+                  )}
+                  {boxed && (
+                    <div className={field}>
+                      <label htmlFor="ni-pack-mrp">{t('pack.mrpBox')}</label>
+                      <RupeeBox id="ni-pack-mrp" value={packMrp} onChange={setPackMrp} small />
+                      {mrpPaise !== null && pack && <span className={`text-xs ${muted}`}>{t('pack.mrpBoxHint', { amount: formatPaise(mrpPaise * pack) })}</span>}
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 gap-3 border-t border-zinc-100 pt-3 sm:grid-cols-2 dark:border-zinc-800">
+                  <div className={field}>
+                    <label htmlFor="ni-price">{t('ni.price')}</label>
+                    <RupeeBox id="ni-price" value={price} onChange={setPrice} small />
+                  </div>
+                  <label className={field}>
+                    {t('ni.bill')}
+                    <input value={billNumber} onChange={(e) => setBillNumber(e.target.value)} maxLength={60} className={input} />
+                  </label>
+                  <label className={field}>
+                    {t('ni.stockDate')}
+                    <input type="date" value={stockDate} onChange={(e) => setStockDate(e.target.value)} className={input} />
+                  </label>
+                  <label className={field}>
+                    {t('ni.brand')}
+                    <LangText value={brand} onValueChange={setBrand} maxLength={60} />
+                  </label>
+                </div>
               </div>
             </details>
-            {/* Next sits at the end of the card (owner, 2026-11-21: the floating bar covered the fields). */}
-            <div className="flex items-center justify-between gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+
+            {/* Next stays in sight (owner, 2026-11-21: no bar floating over the fields). */}
+            <div className="flex items-center justify-between gap-3 px-1">
               <p data-testid="size-summary" className="text-sm font-semibold">
-                {!detailsOk
-                  ? t('ni.panel.needDetails')
-                  : noSize
-                    ? t('ni.noSize.summary', { pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces) })
-                    : t('ni.sizes.summary', {
-                        sizes: t(ordered.length === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: ordered.length }),
-                        pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces),
-                      })}
+                {!basicsOk ? t('ni.panel.needDetails') : !detailsOk ? t('ni.panel.checkMore') : sizesText}
               </p>
               <button type="submit" disabled={!detailsOk || !sizesOk} className={nextButton}>
                 {t('ni.next')}
@@ -899,6 +989,26 @@ export function NewItemWizard({
         />
       )}
     </div>
+  );
+}
+
+/** A price box with ₹ inside it (owner, 2026-11-22: no "₹" or "MRP" beside the words). */
+function RupeeBox({ id, value, onChange, placeholder, small = false }: { id: string; value: string; onChange: (value: string) => void; placeholder?: string; small?: boolean }) {
+  return (
+    <span className="relative block">
+      <span aria-hidden className={`pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 font-semibold text-zinc-500 dark:text-zinc-400 ${small ? 'text-base' : 'text-lg'}`}>
+        ₹
+      </span>
+      <input
+        id={id}
+        inputMode="decimal"
+        autoComplete="off"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${input} w-full pl-7 tabular-nums ${small ? '' : 'text-lg font-semibold'}`}
+      />
+    </span>
   );
 }
 

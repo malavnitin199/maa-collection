@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { addToBill, billEditor, chooseBillCompany, openProduct } from './products';
+import { addToBill, billEditor, chooseBillCompany, openMore, openProduct } from './products';
 
 /**
  * Bills (owner's feedback 2026-11-22, ADR-060/061): a bill stands on its own — a company if you
@@ -27,8 +27,9 @@ async function addCollection(page: Page, company: string, name: string) {
   await box.click();
   await page.getByRole('listbox').getByRole('option', { name: company, exact: true }).click();
   await page.getByLabel('Product name').fill(name);
-  await page.getByLabel('Sale price (MRP) ₹').fill('999');
-  await page.getByLabel('Purchase price ₹').fill('300');
+  await page.getByLabel('Sale price', { exact: true }).fill('999');
+  await page.getByLabel('Purchase price', { exact: true }).fill('300');
+  await openMore(page);
   await page.getByRole('button', { name: 'All sizes' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Save', exact: true }).click();

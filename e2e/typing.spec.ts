@@ -29,7 +29,7 @@ test('New item: type a name in Hindi from English letters, change it back, the c
   await expect(name).toHaveAttribute('lang', 'hi');
   // A word still being typed changes when the box loses focus.
   await name.pressSequentially('blue');
-  await page.getByLabel('Sale price (MRP) ₹').click();
+  await page.getByLabel('Sale price', { exact: true }).click();
   await expect(name).toHaveValue('चिकन कुर्ता ब्लू');
 
   // ⇄ changes what is typed to English letters and switches the script back.

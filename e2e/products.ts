@@ -8,6 +8,13 @@ export function productCard(page: Page, name: string) {
   return page.getByTestId('design-list').getByTestId('product-card').filter({ has: page.getByRole('link', { name, exact: true }) });
 }
 
+/** New item's "Sizes & more" fold (owner, 2026-11-22, ADR-065): opened before sizes, boxes, bill no. … */
+export async function openMore(page: Page) {
+  const more = page.getByTestId('more-details').filter({ visible: true });
+  if (!(await more.evaluate((d) => (d as HTMLDetailsElement).open))) await more.locator('summary').click();
+  await expect(more).toHaveAttribute('open', '');
+}
+
 /** Products → the card of this design → its item page (the design's first size in shop order). */
 export async function openProduct(page: Page, name: string) {
   await page.goto('/admin/products');

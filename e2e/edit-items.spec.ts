@@ -23,7 +23,7 @@ test('edit an item made with no brand and no size; add sizes; add pieces', async
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByLabel('Product name').fill(name);
-  await page.getByLabel('Sale price (MRP) ₹').fill('600');
+  await page.getByLabel('Sale price', { exact: true }).fill('600');
   await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.keyboard.press('Escape');

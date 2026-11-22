@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { addToBill, billEditor, chooseBillCompany } from './products';
+import { addToBill, billEditor, chooseBillCompany, openMore } from './products';
 
 // Box packs (owner, 2026-11-21, ADR-047): sandos in boxes of 12 — New item, one tag per box,
 // sold by the piece or by the box at the counter, and boxes at the box rate on the bill check.
@@ -40,12 +40,14 @@ test('a box of 12: New item by the box, one tag per box, sell 2 pieces and a who
   await expect(page.getByText('Company added')).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByLabel('Product name').fill(name);
+  // Box packs and sizes sit under "Sizes & more" (owner, 2026-11-22).
+  await openMore(page);
   await page.getByRole('radiogroup', { name: 'Comes as' }).getByRole('radio', { name: 'Box' }).click();
   await page.getByRole('button', { name: '12 in a box' }).click();
-  await page.getByLabel('MRP of one piece ₹').fill('50');
-  await page.getByLabel('Whole box MRP ₹').fill('540');
+  await page.getByLabel('Sale price of one piece', { exact: true }).fill('50');
+  await page.getByLabel('Sale price of the whole box', { exact: true }).fill('540');
   await page.getByRole('radiogroup', { name: 'Purchase price given' }).getByRole('radio', { name: 'Whole box' }).click();
-  await page.getByLabel('Purchase price of a box ₹').fill('500');
+  await page.getByLabel('Purchase price of a box', { exact: true }).fill('500');
   await expect(page.getByTestId('pack-cost-each')).toHaveText('= ₹41.67 a piece');
   const firstSize = page.getByTestId('size-cards').getByRole('button').first();
   const size = (await firstSize.innerText()).trim();

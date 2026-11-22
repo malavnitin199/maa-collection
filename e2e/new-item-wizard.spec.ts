@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { productCard } from './products';
+import { openMore, productCard } from './products';
 
 /** The company box is a compact dropdown (2026-11-21), not a <select>: open it and tap the name. */
 async function choose(box: Locator, label: string) {
@@ -50,22 +50,27 @@ test('Home → Add new stock → which collection → what → details & sizes (
   await expect(page.getByRole('button', { name: /^Kurta/ })).toContainText('M–XXL');
   await page.getByRole('button', { name: /^Kurta/ }).click();
 
-  // Owner's feedback 2026-11-21: details and sizes on one step, in the same card (company, name, prices, sizes).
+  // Owner's feedback 2026-11-21: details and sizes on one step. 2026-11-22 (ADR-065): the four must-haves are big
+  // boxes — company, product name, purchase price, sale price (₹ inside) — and the sizes wait under "Sizes & more".
   await heading(page, 'Details & sizes');
   await expect(page.getByTestId('wizard-path')).toHaveText(/Men.*Kurta/);
   const card = page.getByTestId('details-form');
-  await expect(card.getByTestId('size-cards')).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Size M', exact: true })).toBeVisible();
+  const tiles = page.getByTestId('details-tiles');
+  await expect(tiles.getByRole('combobox', { name: /^Company/ })).toBeVisible();
+  for (const label of ['Product name', 'Purchase price', 'Sale price']) await expect(tiles.getByLabel(label, { exact: true })).toBeVisible();
+  await expect(card.getByTestId('size-cards')).toBeHidden();
   const next = page.getByRole('button', { name: 'Next' });
   await expect(next).toBeDisabled();
-  await expect(page.getByTestId('size-summary')).toHaveText('Type the purchase price or the MRP');
+  await expect(page.getByTestId('size-summary')).toHaveText('Type the purchase or sale price');
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
-  await page.getByLabel('Sale price (MRP) ₹').fill('1299');
-  await page.getByLabel('Purchase price ₹').fill('700');
+  await page.getByLabel('Sale price', { exact: true }).fill('1299');
+  await page.getByLabel('Purchase price', { exact: true }).fill('700');
   // No size yet: the pieces box stands in (owner, 2026-11-22) — Next works with 1 piece, no size.
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 1 pc');
+  await expect(page.getByTestId('more-details').locator('summary')).toContainText('No size · 1 pc');
   await expect(next).toBeEnabled();
+  await openMore(page);
   await expect(page.getByTestId('size-cards').getByRole('button', { name: /^Size / })).toHaveText(['M', 'L', 'XL', 'XXL']);
   await page.getByRole('button', { name: 'Size M', exact: true }).click();
   await page.getByRole('button', { name: 'Size L', exact: true }).click();
@@ -83,7 +88,7 @@ test('Home → Add new stock → which collection → what → details & sizes (
   // Back: everything typed and picked is still there.
   await page.getByRole('button', { name: 'Back' }).click();
   await heading(page, 'Details & sizes');
-  await expect(page.getByLabel('Purchase price ₹')).toHaveValue('700');
+  await expect(page.getByLabel('Purchase price', { exact: true })).toHaveValue('700');
   await expect(page.getByLabel('Pieces of size L')).toHaveValue('2');
   await page.getByRole('button', { name: 'Next' }).click();
 
@@ -148,8 +153,9 @@ test('a new category and a new size on the spot; every item may have many sizes 
   await expect(page.getByTestId('wizard-path')).toHaveText(new RegExp(`Men.*Shorts ${run}`));
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   // No product name: it gets "Shorts … + number" on save.
-  await expect(page.getByLabel('Product name (optional)')).toHaveAttribute('placeholder', `Shorts ${run} + number`);
-  await page.getByLabel('Sale price (MRP) ₹').fill('899');
+  await expect(page.getByLabel('Product name', { exact: true })).toHaveAttribute('placeholder', `Shorts ${run} + number`);
+  await page.getByLabel('Sale price', { exact: true }).fill('899');
+  await openMore(page);
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 1 pc');
   await expect(page.getByRole('button', { name: 'All sizes' })).toBeVisible();
   // Sizes are tapped on and off; more than one may be chosen.
@@ -188,8 +194,8 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await page.getByRole('button', { name: /^Kurti/ }).click();
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Laxmi Fashion House');
   await page.getByLabel('Product name').fill(`Anarkali ${run}`);
-  await page.getByLabel('Sale price (MRP) ₹').fill('1899');
-  await page.getByText('More: counter price, bill no., stock date, brand').click();
+  await page.getByLabel('Sale price', { exact: true }).fill('1899');
+  await openMore(page);
   await page.getByLabel('Bill no.').fill(`LF-${run}`);
   await page.getByRole('button', { name: 'All sizes' }).click();
   await expect(page.getByTestId('size-summary')).toHaveText('4 sizes · 4 pcs');
@@ -212,9 +218,9 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await expect(details.getByRole('combobox', { name: /^Company/ })).toHaveText('Laxmi Fashion House');
   await expect(details.getByLabel('Bill no.')).toHaveValue(`LF-${run}`);
   await expect(details.getByLabel('Product name')).toHaveValue('');
-  await expect(details.getByLabel('Sale price (MRP) ₹')).toHaveValue('');
+  await expect(details.getByLabel('Sale price', { exact: true })).toHaveValue('');
   await details.getByLabel('Product name').fill(`Banarasi ${run}`);
-  await details.getByLabel('Sale price (MRP) ₹').fill('4500');
+  await details.getByLabel('Sale price', { exact: true }).fill('4500');
   await expect(page.getByTestId('size-summary')).toHaveText('1 size · 1 pc'); // Saree: Free
   await page.getByRole('button', { name: 'One more of size Free' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
@@ -227,7 +233,7 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await heading(page, 'Which collection?'); // no section kept
   await page.getByRole('button', { name: 'Women', exact: true }).click();
   await page.getByRole('button', { name: /^Saree/ }).click();
-  await expect(page.getByTestId('details-form').getByRole('combobox', { name: /^Company/ })).toHaveText('No company (optional)');
+  await expect(page.getByTestId('details-form').getByRole('combobox', { name: /^Company/ })).toHaveText('Optional');
   await expect(page.getByTestId('details-form').getByLabel('Bill no.')).toHaveValue('');
 
   // Both items exist, under their own receipts (each save has its own operation id).
@@ -319,7 +325,7 @@ test('which collection: Men and Women always stay; the owner adds, edits and del
   await sheet.getByRole('button', { name: 'Add category' }).click();
   await closeDone(page);
   await page.getByRole('button', { name: new RegExp(`^New.*Bibs ${tag}`) }).click();
-  await page.getByLabel('Sale price (MRP) ₹').fill('199');
+  await page.getByLabel('Sale price', { exact: true }).fill('199');
   await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await closeDone(page);
@@ -353,7 +359,8 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByLabel('Product name').fill(name);
-  await page.getByLabel('Sale price (MRP) ₹').fill('499');
+  await page.getByLabel('Sale price', { exact: true }).fill('499');
+  await openMore(page);
   // No size tapped: a pieces box shows instead; Next works.
   const plain = page.getByTestId('no-size-pieces');
   await expect(plain).toContainText('No size? Just the pieces:');
@@ -374,11 +381,12 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
+  await openMore(page);
   await page.getByTestId('size-cards').getByRole('button').first().click();
   await expect(page.getByTestId('no-size-pieces')).toHaveCount(0);
 });
 
-test('purchase price first; an empty sale price is purchase + 50% (the % can be changed) (owner, 2026-11-22)', async ({ page }, info) => {
+test('purchase price first; an empty sale price is purchase + 50%; the % calculator beside the sale price fills it (owner, 2026-11-22)', async ({ page }, info) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   const name = `Markup Kurta ${run}${info.project.name[0]}`;
   await page.goto('/admin/stock/new');
@@ -386,15 +394,24 @@ test('purchase price first; an empty sale price is purchase + 50% (the % can be 
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByLabel('Product name').fill(name);
   // Purchase price comes before the sale price.
-  const purchase = page.getByRole('textbox', { name: /^Purchase price ₹/ });
-  const sale = page.getByLabel('Sale price (MRP) ₹');
+  const purchase = page.getByLabel('Purchase price', { exact: true });
+  const sale = page.getByLabel('Sale price', { exact: true });
   expect((await purchase.boundingBox())!.x).toBeLessThan((await sale.boundingBox())!.x);
   await purchase.fill('700');
-  const hint = page.getByTestId('mrp-from-cost');
-  await expect(hint).toContainText('= ₹1,050.00');
+  // Left empty, the sale price is purchase + 50% (in grey in the box).
   await expect(sale).toHaveAttribute('placeholder', '1050');
-  await hint.getByLabel('Markup % on the purchase price').fill('40');
-  await expect(hint).toContainText('= ₹980.00');
+  // The % calculator beside the sale price: pick or type a %, then "Use it" fills the box and closes.
+  await page.getByRole('button', { name: 'Work out the sale price' }).click();
+  const calc = page.getByTestId('markup-calc');
+  await expect(calc.getByTestId('calc-result')).toHaveText('₹700.00 + 50% = ₹1,050.00');
+  await calc.getByRole('button', { name: '30%', exact: true }).click();
+  await expect(calc.getByTestId('calc-result')).toHaveText('₹700.00 + 30% = ₹910.00');
+  await calc.getByLabel('% more than the purchase price').fill('40');
+  await expect(calc.getByTestId('calc-result')).toHaveText('₹700.00 + 40% = ₹980.00');
+  await calc.getByRole('button', { name: 'Use it' }).click();
+  await expect(sale).toHaveValue('980');
+  await expect(calc).toHaveCount(0);
+  await openMore(page);
   await page.getByTestId('size-cards').getByRole('button').first().click();
   await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
   await expect(page.getByTestId('review-card')).toContainText('MRP ₹980.00');
@@ -408,5 +425,7 @@ test('purchase price first; an empty sale price is purchase + 50% (the % can be 
   await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: 'Men', exact: true }).click();
   await page.getByRole('button', { name: /^Kurta/ }).click();
-  await expect(page.getByTestId('mrp-from-cost').getByLabel('Markup % on the purchase price')).toHaveValue('40');
+  await page.getByLabel('Purchase price', { exact: true }).fill('100');
+  await page.getByRole('button', { name: 'Work out the sale price' }).click();
+  await expect(page.getByTestId('markup-calc').getByLabel('% more than the purchase price')).toHaveValue('40');
 });

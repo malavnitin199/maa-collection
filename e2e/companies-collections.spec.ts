@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { addToBill, billEditor, chooseBillCompany, productCard } from './products';
+import { addToBill, billEditor, chooseBillCompany, openMore, productCard } from './products';
 
 // Owner's feedback 2026-11-22 (ADR-051): "Companies" everywhere; any company can be deleted after a
 // confirmation (its items stay, with no company); the company is optional on items; Home → Collections.
@@ -37,7 +37,8 @@ test('a company with an item is deleted from its page; the item stays with no co
       await page.getByRole('listbox').getByRole('option', { name: company, exact: true }).click();
     }
     await page.getByLabel('Product name').fill(name);
-    await page.getByLabel('Sale price (MRP) ₹').fill('999');
+    await page.getByLabel('Sale price', { exact: true }).fill('999');
+    await openMore(page);
     await page.getByTestId('size-cards').getByRole('button').first().click();
     await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
