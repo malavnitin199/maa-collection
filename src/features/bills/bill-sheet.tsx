@@ -3,14 +3,12 @@
 import { muted } from '@/components/ui/styles';
 import { useT } from '@/features/i18n/i18n-provider';
 import type { SheetPart } from '@/features/bills/sheet-parts';
+import { paperRupees as amount } from '@/lib/money';
 
-const numbers = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-/** Rupees the way the paper bill prints them: 6,120.00 (no ₹ in the cells). */
-const amount = (paise: number) => numbers.format(paise / 100);
 /** A quantity: whole, or to 2 places for a part box. */
 const qty = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
 
-/** S.N · Description of goods · Qty · Rate · Amount, then Total and units — like the paper. */
+/** S.N · Product · Qty · Purchase ₹ · Total ₹, then the total and units — like the paper (headers in the owner's words, ADR-062). */
 export function BillSheet({ parts }: { parts: SheetPart[] }) {
   const t = useT();
   const units = parts.reduce((n, p) => n + p.units, 0);
@@ -27,12 +25,12 @@ export function BillSheet({ parts }: { parts: SheetPart[] }) {
           <col className="w-[4.5rem]" />
           <col className="w-[5.5rem]" />
         </colgroup>
-        <thead className="bg-zinc-100 text-xs dark:bg-zinc-900">
+        <thead className="bg-zinc-100 text-[11px] leading-tight dark:bg-zinc-900">
           <tr className="text-left">
             <th className={`${cell} font-semibold`}>{t('bills.sheet.sn')}</th>
             <th className={`${cell} font-semibold`}>{t('bills.sheet.goods')}</th>
             <th className={`${cell} text-right font-semibold`}>{t('bills.sheet.qty')}</th>
-            <th className={`${cell} text-right font-semibold`}>{t('bills.sheet.rate')}</th>
+            <th className="px-1 py-1.5 text-right font-semibold">{t('bills.sheet.rate')}</th>
             <th className={`${cell} text-right font-semibold`}>{t('bills.sheet.amount')}</th>
           </tr>
         </thead>

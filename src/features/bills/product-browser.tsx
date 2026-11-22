@@ -7,8 +7,8 @@ import { useT } from '@/features/i18n/i18n-provider';
 import { CameraScanner } from '@/features/scanning/camera-scanner';
 import { browseBillProductsAction, findBillProductAction, type BillDesign, type BillScanned } from '@/server/actions/bills';
 
-/** Size (and colour) as a line shows it; no size = N/A. */
-export const sizeLabel = (p: { size: string; color: string }, na: string) => [p.size.trim() || na, p.color.trim()].filter(Boolean).join(' ');
+/** A size as a bill shows it; no size = N/A. Never the colour (owner's rule, ADR-049). */
+export const sizeLabel = (p: { size: string }, na: string) => p.size.trim() || na;
 
 /**
  * New bill's products (owner's feedback 2026-11-22, ADR-061): the shop's products, newest

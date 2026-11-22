@@ -122,7 +122,7 @@ test('a box of 12: New item by the box, one tag per box, sell 2 pieces and a who
   await chooseBillCompany(page, company);
   await addToBill(page, name, size);
   await form.getByLabel(`Quantity of ${name} · ${size}`).fill('3');
-  await expect(form.getByLabel(`Rate of ${name} · ${size} ₹`)).toHaveValue('500');
+  await expect(form.getByLabel(`Purchase price of ${name} · ${size} ₹`)).toHaveValue('500');
   await expect(form.getByTestId('bill-total')).toHaveText('₹1,500.00');
   await form.getByRole('button', { name: 'Next: check bill' }).click();
   const line = form.getByTestId('bill-sheet-line');

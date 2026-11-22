@@ -46,7 +46,6 @@ async function EditBill({ id }: { id: string }) {
           name: l.name,
           size: l.size,
           color: l.color,
-          stock: null,
           pack: l.pack,
           qty: l.qty,
           rate: rupeesText(l.ratePaise),

@@ -63,12 +63,25 @@ test('a bill from products with a company: + All sizes, quantities and rates, th
   await expect(lines).toHaveCount(4);
   await expect(editor.getByTestId('bill-total')).toHaveText('₹1,200.00');
   await expect(editor.getByRole('button', { name: `Add ${name} · M`, exact: true })).toHaveAttribute('aria-pressed', 'true');
-  // Change a line (3 pieces at ₹280), take another off.
-  await editor.getByLabel(`Quantity of ${name} · M`).fill('3');
-  await editor.getByLabel(`Rate of ${name} · M ₹`).fill('280');
-  await expect(lines.first().getByTestId('bill-line-amount')).toHaveText('₹840.00');
+  // The lines are a table like the paper: S.N · Product · Qty · Purchase ₹ · Total ₹.
+  await expect(editor.getByTestId('bill-lines').locator('thead').getByRole('columnheader')).toHaveText(['S.N', 'Product', 'Qty', 'Purchase ₹', 'Total ₹']);
+  // Type over a line (3 pieces at ₹280; Enter moves to the next box, never to step 2), take another off.
+  const qtyM = editor.getByLabel(`Quantity of ${name} · M`);
+  await qtyM.fill('3');
+  await qtyM.press('Enter');
+  await expect(editor.getByLabel(`Purchase price of ${name} · M ₹`)).toBeFocused();
+  await editor.getByLabel(`Purchase price of ${name} · M ₹`).fill('280');
+  await expect(lines.first().getByTestId('bill-line-amount')).toHaveText('840.00');
+  await expect(editor).toHaveAttribute('data-step', 'pick');
   await editor.getByRole('button', { name: `Take off ${name} · XXL` }).click();
   await expect(lines).toHaveCount(3);
+  // Undo brings it back in its place; taken off again, it stays off.
+  await editor.getByTestId('bill-line-removed').getByRole('button', { name: 'Undo' }).click();
+  await expect(lines).toHaveCount(4);
+  await expect(lines.nth(3)).toContainText('XXL');
+  await editor.getByRole('button', { name: `Take off ${name} · XXL` }).click();
+  await expect(lines).toHaveCount(3);
+  await expect(editor.getByTestId('bill-units')).toHaveText('5');
   await expect(editor.getByTestId('bill-total')).toHaveText('₹1,440.00');
   await expect(editor.getByTestId('bill-picked')).toHaveText('3 items · 5 pcs');
 
@@ -77,7 +90,7 @@ test('a bill from products with a company: + All sizes, quantities and rates, th
   await expect(editor).toHaveAttribute('data-step', 'check');
   await expect(editor.getByTestId('bill-party')).toContainText(company);
   const sheet = editor.getByTestId('bill-sheet');
-  await expect(sheet.locator('thead').getByRole('columnheader')).toHaveText(['S.N', 'Description', 'Qty', 'Rate', 'Amount (₹)']);
+  await expect(sheet.locator('thead').getByRole('columnheader')).toHaveText(['S.N', 'Product', 'Qty', 'Purchase ₹', 'Total ₹']);
   await expect(sheet.getByTestId('bill-sheet-line')).toHaveCount(3);
   await expect(sheet.getByTestId('bill-sheet-line').first()).toHaveText(new RegExp(`^1\\.${name}M3280\\.00840\\.00$`));
   await expect(sheet.getByTestId('bill-sheet-total')).toHaveText('1,440.00');
@@ -98,11 +111,12 @@ test('a bill from products with a company: + All sizes, quantities and rates, th
   await expect(page.getByTestId('bill-companies')).toContainText('₹1,440.00');
   await expect(page.getByTestId('bill-sheet').getByTestId('bill-sheet-line')).toHaveCount(3);
 
-  // Edit bill: one more piece of M; the number stays; the amount follows.
+  // Edit bill: one more piece of M (typed over); the number stays; the amount follows.
   await page.getByTestId('edit-bill').click();
   await expect(page).toHaveURL(/\/edit$/);
   await expect(editor.getByTestId('bill-line')).toHaveCount(3);
-  await editor.getByRole('button', { name: `One more: ${name} · M` }).click();
+  await expect(editor.getByLabel(`Quantity of ${name} · M`)).toHaveValue('3');
+  await editor.getByLabel(`Quantity of ${name} · M`).fill('4');
   await expect(editor.getByTestId('bill-total')).toHaveText('₹1,720.00');
   await editor.getByRole('button', { name: 'Next: check bill' }).click();
   await expect(editor.getByLabel('Bill no. (optional)')).toHaveValue(`JB-${run}`);
@@ -147,7 +161,7 @@ test('a company added from New bill is chosen there; a barcode gun adds tags (th
 
   // A barcode gun types the tag and presses Enter: that item goes on the bill (one piece), never the form.
   const search = editor.getByLabel('Search an item: name, code or barcode');
-  const qty = editor.getByLabel('Quantity of Anarkali Kurta · M Blue');
+  const qty = editor.getByLabel('Quantity of Anarkali Kurta · M'); // never its colour (ADR-049)
   await search.fill('8902222000016'); // Anarkali Kurta M Blue (demo)
   await search.press('Enter');
   await expect(qty).toHaveValue('1');
@@ -199,8 +213,8 @@ test('a bill with no company; it keeps its copy when the item changes later (ADR
   const editor = billEditor(page);
   await addToBill(page, name, 'M');
   await expect(editor.getByLabel(`Quantity of ${name} · M`)).toHaveValue('3');
-  await expect(editor.getByLabel(`Rate of ${name} · M ₹`)).toHaveValue('400');
-  await editor.getByRole('button', { name: `One less: ${name} · M` }).click();
+  await expect(editor.getByLabel(`Purchase price of ${name} · M ₹`)).toHaveValue('400');
+  await editor.getByLabel(`Quantity of ${name} · M`).fill('2');
   await addToBill(page, name, 'L');
   await editor.getByLabel(`Quantity of ${name} · L`).fill('1');
   await expect(editor.getByTestId('bill-total')).toHaveText('₹1,200.00');
@@ -252,5 +266,5 @@ test('Make bill on a product page: New bill starts with its sizes (pieces in sto
   await expect(editor.getByTestId('bill-line')).toHaveCount(4);
   await expect(editor.getByTestId('bill-total')).toHaveText('₹1,200.00');
   await expect(editor.getByRole('combobox', { name: /^Company/ })).toContainText('Royal Garments');
-  await expect(editor.getByLabel(`Rate of ${name} · M ₹`)).toHaveValue('300');
+  await expect(editor.getByLabel(`Purchase price of ${name} · M ₹`)).toHaveValue('300');
 });

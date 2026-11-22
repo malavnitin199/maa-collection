@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { card, errorBox, input, muted, primaryButton } from '@/components/ui/styles';
+import { BillLinesTable, QtyInput, clampQty, lineAmount } from '@/features/bills/bill-lines-table';
 import { BillSheet } from '@/features/bills/bill-sheet';
 import { ProductBrowser, sizeLabel } from '@/features/bills/product-browser';
 import { itemsPart, startLine } from '@/features/bills/sheet-parts';
@@ -21,28 +22,26 @@ export type EditorLine = {
   productId: string | null;
   name: string;
   size: string;
+  /** Kept with the line, never shown (colour only on the product page, ADR-049). */
   color: string;
-  /** Pieces in stock (null on a saved line). */
-  stock: number | null;
   /** A box item (ADR-047): quantity in boxes, the rate per box. */
   pack: number | null;
   qty: number;
   rate: string;
 };
 
-const MAX = 100_000;
 const stepper =
   'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-lg font-bold transition active:scale-90 disabled:opacity-30 dark:border-zinc-700';
-const clamp = (n: number) => Math.min(MAX, Math.max(1, Math.trunc(Number.isFinite(n) ? n : 1)));
 
 /**
- * New bill and Edit bill (owner's feedback 2026-11-22, ADR-061). A bill stands on its own:
- * a company if you like (one), and the shop's products as lines. Lines start with what the
- * product has now — its pieces and purchase price — and both can be changed; − / + and ✕ per
- * line. Products come from the list below (newest first, more as you scroll), a search, a
- * barcode gun or the camera (each tag scanned = one piece more, its quantity right under the
- * picture). Step 2 shows the bill like the paper to check, with its number, date and note.
- * The saved bill keeps its own copy of every line: changing the products later never changes it.
+ * New bill and Edit bill (owner's feedback 2026-11-22, ADR-061/062). A bill stands on its own:
+ * a company if you like (one), and the shop's products as lines — laid out like the company's
+ * paper bill, S.N · Product · Qty · Purchase ₹ · Total ₹ (`BillLinesTable`). Lines start with what
+ * the product has now — its pieces and purchase price — and both are typed over in their boxes.
+ * Products come from the list below (newest first, more as you scroll), a search, a barcode gun
+ * or the camera (each tag scanned = one piece more, its quantity right under the picture). Step 2
+ * shows the bill to check, with its number, date and note. The saved bill keeps its own copy of
+ * every line: changing the products later never changes it.
  */
 export function BillEditor({
   billId,
@@ -71,19 +70,16 @@ export function BillEditor({
   const [step, setStep] = useState<'pick' | 'check'>('pick');
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [removed, setRemoved] = useState<{ line: EditorLine; at: number } | null>(null);
   const [saving, startSaving] = useTransition();
   const operationId = useRef<string | null>(null);
   const keys = useRef(0);
   const touched = () => (operationId.current = null);
 
-  const amountOf = (l: EditorLine) => {
-    const paise = l.rate.trim() ? rupeesToPaise(l.rate) : null;
-    return paise === null ? null : paise * l.qty;
-  };
-  const total = lines.reduce((n, l) => n + (amountOf(l) ?? 0), 0);
-  const pieces = lines.reduce((n, l) => n + l.qty, 0);
+  const total = lines.reduce((n, l) => n + (lineAmount(l) ?? 0), 0);
+  const pieces = lines.reduce((n, l) => n + l.qty * (l.pack ?? 1), 0);
   const onBill = useMemo(() => new Map(lines.filter((l) => l.productId).map((l) => [l.productId as string, l.qty])), [lines]);
-  const nameOf = (l: { name: string; size: string; color: string }) => `${l.name} · ${sizeLabel(l, na)}`;
+  const nameOf = (l: { name: string; size: string }) => `${l.name} · ${sizeLabel(l, na)}`;
 
   /** Puts an item on the bill — `qty` pieces, or (from the list) its pieces in stock — or adds to its line. */
   const put = (item: BillScanned, qty?: number) => {
@@ -91,7 +87,7 @@ export function BillEditor({
     setFlash(item.id);
     setLines((list) => {
       const there = list.find((l) => l.productId === item.id);
-      if (there) return list.map((l) => (l === there ? { ...l, qty: clamp(l.qty + (qty ?? 1)) } : l));
+      if (there) return list.map((l) => (l === there ? { ...l, qty: clampQty(l.qty + (qty ?? 1)) } : l));
       keys.current += 1;
       const start = startLine(item);
       return [
@@ -102,9 +98,8 @@ export function BillEditor({
           name: item.name,
           size: item.size,
           color: item.color,
-          stock: item.stock,
           pack: item.pack,
-          qty: clamp(qty ?? start.qty),
+          qty: clampQty(qty ?? start.qty),
           rate: rupeesText(start.ratePaise),
         },
       ];
@@ -117,14 +112,34 @@ export function BillEditor({
     touched();
     setLines((list) => list.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   };
+  /** ✕ on a line: it goes, and an Undo row stands in its place for a few seconds. */
+  const remove = (key: string) => {
+    const at = lines.findIndex((l) => l.key === key);
+    if (at < 0) return;
+    touched();
+    setRemoved({ line: lines[at], at });
+    setLines(lines.filter((l) => l.key !== key));
+  };
+  // Once the same item is back on the bill (tapped again, scanned), there is nothing to undo.
+  const undoable = removed && !lines.some((l) => l.key === removed.line.key || (l.productId !== null && l.productId === removed.line.productId)) ? removed : null;
+  const undo = () => {
+    if (!undoable) return;
+    touched();
+    setLines((list) => [...list.slice(0, undoable.at), undoable.line, ...list.slice(undoable.at)]);
+    setRemoved(null);
+  };
 
-  // The line just added glows for a moment and comes into view.
+  // The line just added glows for a moment (the chip it came from is ticked, so the page stays put).
   useEffect(() => {
     if (!flash) return;
-    document.querySelector(`[data-line-of="${flash}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     const timer = window.setTimeout(() => setFlash(null), 1400);
     return () => window.clearTimeout(timer);
-  }, [flash, lines]);
+  }, [flash]);
+  useEffect(() => {
+    if (!removed) return;
+    const timer = window.setTimeout(() => setRemoved(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [removed]);
 
   // The phone's back button on the check step goes back to the lines, not off the page.
   const guarded = useRef(false);
@@ -154,6 +169,7 @@ export function BillEditor({
   }, []);
   const goTo = (next: 'pick' | 'check') => {
     setError(null);
+    setRemoved(null);
     setStep(next);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -191,6 +207,7 @@ export function BillEditor({
         // Next keeps this page alive: start clean for the next bill.
         setStep('pick');
         setLines([]);
+        setRemoved(null);
         setBillNumber('');
         setBillDate(today);
         setNote('');
@@ -198,17 +215,6 @@ export function BillEditor({
       router.push(`/admin/bills/${result.id}`);
     });
   };
-
-  const totals = (
-    <p className="min-w-0 text-sm">
-      <span data-testid="bill-picked" className={`block text-xs ${muted}`}>
-        {t('bills.itemsFooter', { n: lines.length, pcs: pieces })}
-      </span>
-      <span className="font-semibold">
-        {t('bills.total')}: <span data-testid="bill-total" className="text-lg font-bold tabular-nums">{formatPaise(total)}</span>
-      </span>
-    </p>
-  );
 
   return (
     <form
@@ -240,85 +246,8 @@ export function BillEditor({
                 setSupplier(id ? { id, name } : null);
               }}
             />
-            <section aria-label={t('bills.items')} className="flex flex-col gap-2">
-              <p className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-semibold">{t('bills.items')}</span>
-              </p>
-              {lines.length === 0 ? (
-                <p data-testid="bill-lines-empty" className={`rounded-xl border border-dashed border-zinc-300 px-3 py-4 text-center text-sm dark:border-zinc-700 ${muted}`}>
-                  {t('bills.linesEmpty')}
-                </p>
-              ) : (
-                <ul data-testid="bill-lines" className="flex flex-col gap-2">
-                  {lines.map((l) => {
-                    const name = nameOf(l);
-                    const amount = amountOf(l);
-                    return (
-                      <li
-                        key={l.key}
-                        data-testid="bill-line"
-                        data-line-of={l.productId ?? undefined}
-                        className={`rounded-2xl border p-3 transition-colors duration-500 ${
-                          flash && flash === l.productId ? 'border-brand-500 bg-brand-50 dark:bg-brand-950' : 'border-zinc-200 dark:border-zinc-800'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="min-w-0">
-                            <span className="block truncate font-semibold">{l.name}</span>
-                            <span className={`block text-xs ${muted}`}>
-                              {sizeLabel(l, na)}
-                              {l.pack && ` · ${t('pack.sizeOf', { n: l.pack })}`}
-                              {l.stock !== null && ` · ${t('bills.inStock', { n: l.stock })}`}
-                            </span>
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={t('bills.removeItem', { name })}
-                            onClick={() => {
-                              touched();
-                              setLines((list) => list.filter((x) => x.key !== l.key));
-                            }}
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-                          <span className="flex items-center gap-1.5">
-                            <button type="button" aria-label={t('bills.itemLess', { name })} disabled={l.qty <= 1} onClick={() => change(l.key, { qty: clamp(l.qty - 1) })} className={stepper}>
-                              −
-                            </button>
-                            <input
-                              inputMode="numeric"
-                              aria-label={t('bills.itemQty', { name })}
-                              value={String(l.qty)}
-                              onChange={(e) => change(l.key, { qty: clamp(Number(e.target.value.replace(/[^\d]/g, '')) || 1) })}
-                              className={`${input} w-16 px-1 text-center text-lg font-bold tabular-nums`}
-                            />
-                            <button type="button" aria-label={t('bills.itemMore', { name })} onClick={() => change(l.key, { qty: clamp(l.qty + 1) })} className={stepper}>
-                              +
-                            </button>
-                          </span>
-                          <label className="flex items-center gap-1 text-sm font-medium">
-                            <span className={muted}>×</span>₹
-                            <input
-                              inputMode="decimal"
-                              aria-label={t('bills.lineRate', { name })}
-                              value={l.rate}
-                              placeholder={na}
-                              onChange={(e) => change(l.key, { rate: e.target.value })}
-                              className={`${input} w-24 px-2 tabular-nums`}
-                            />
-                          </label>
-                          <span data-testid="bill-line-amount" className="ml-auto text-base font-bold tabular-nums">
-                            {amount === null ? na : formatPaise(amount)}
-                          </span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+            <section aria-label={t('bills.items')}>
+              <BillLinesTable lines={lines} flash={flash} removed={undoable} onChange={change} onRemove={remove} onUndo={undo} />
             </section>
           </>
         ) : (
@@ -341,7 +270,7 @@ export function BillEditor({
               parts={itemsPart(
                 lines.map((l) => {
                   const rate = l.rate.trim() ? rupeesToPaise(l.rate) : null;
-                  return { name: l.name, size: l.size, color: l.color, pack: l.pack, qty: l.qty, ratePaise: rate, amountPaise: rate === null ? 0 : rate * l.qty };
+                  return { name: l.name, size: l.size, pack: l.pack, qty: l.qty, ratePaise: rate, amountPaise: rate === null ? 0 : rate * l.qty };
                 }),
               )}
             />
@@ -357,8 +286,11 @@ export function BillEditor({
             {error}
           </p>
         )}
-        <div className="flex items-center justify-between gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-          {totals}
+        {/* The total is the table's last row (the editor's, then the sheet's), as on the paper. */}
+        <div className={`flex items-center justify-between gap-3 ${step === 'check' ? 'border-t border-zinc-100 pt-3 dark:border-zinc-800' : ''}`}>
+          <p data-testid="bill-picked" className="min-w-0 text-sm font-semibold">
+            {t('bills.itemsFooter', { n: lines.length, pcs: pieces })}
+          </p>
           <span className="flex shrink-0 items-center gap-2">
             {step === 'check' && (
               <button type="button" onClick={() => goTo('pick')} className="min-h-12 rounded-xl border border-zinc-300 px-4 text-sm font-semibold dark:border-zinc-700">
@@ -392,17 +324,16 @@ export function BillEditor({
                     {startLine(last).ratePaise !== null && <span className="opacity-80"> · {formatPaise(startLine(last).ratePaise as number)}</span>}
                   </p>
                   <div className="flex items-center justify-center gap-2">
-                    <button type="button" aria-label={t('bills.itemLess', { name })} disabled={line.qty <= 1} onClick={() => change(line.key, { qty: clamp(line.qty - 1) })} className={`${stepper} border-white/40`}>
+                    <button type="button" aria-label={t('bills.itemLess', { name })} disabled={line.qty <= 1} onClick={() => change(line.key, { qty: clampQty(line.qty - 1) })} className={`${stepper} border-white/40`}>
                       −
                     </button>
-                    <input
-                      inputMode="numeric"
-                      aria-label={t('bills.itemQty', { name })}
-                      value={String(line.qty)}
-                      onChange={(e) => change(line.key, { qty: clamp(Number(e.target.value.replace(/[^\d]/g, '')) || 1) })}
+                    <QtyInput
+                      value={line.qty}
+                      onValue={(qty) => change(line.key, { qty })}
+                      label={t('bills.itemQty', { name })}
                       className="h-11 w-20 rounded-xl border border-white/30 bg-white/10 text-center text-xl font-bold text-white tabular-nums"
                     />
-                    <button type="button" aria-label={t('bills.itemMore', { name })} onClick={() => change(line.key, { qty: clamp(line.qty + 1) })} className={`${stepper} border-white/40`}>
+                    <button type="button" aria-label={t('bills.itemMore', { name })} onClick={() => change(line.key, { qty: clampQty(line.qty + 1) })} className={`${stepper} border-white/40`}>
                       +
                     </button>
                   </div>

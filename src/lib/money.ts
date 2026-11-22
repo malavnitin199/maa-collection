@@ -15,3 +15,10 @@ export function formatPaise(amountPaise: number): string {
 export function rupeesText(paise: number | null): string {
   return paise === null ? '' : String(paise / 100);
 }
+
+const paperFormatter = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Rupees the way a paper bill prints them, without ₹ (the column says it): 6,120.00. */
+export function paperRupees(paise: number): string {
+  return paperFormatter.format(paise / 100);
+}

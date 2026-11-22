@@ -34,7 +34,7 @@ async function NewBill({ supplier, product }: { supplier?: string; product?: str
     lines = (withStock.length ? withStock : variants).map((v) => {
       const box = v.packSize ? (v.packCostPaise ?? (v.costPaise === null ? null : v.costPaise * v.packSize)) : null;
       const start = startLine({ stock: v.stock, costPaise: v.costPaise, pack: v.packSize, boxCostPaise: box });
-      return { key: `p-${v.id}`, productId: v.id, name: v.name, size: v.size, color: v.color, stock: v.stock, pack: v.packSize, qty: start.qty, rate: rupeesText(start.ratePaise) };
+      return { key: `p-${v.id}`, productId: v.id, name: v.name, size: v.size, color: v.color, pack: v.packSize, qty: start.qty, rate: rupeesText(start.ratePaise) };
     });
     supplierId = usable.find((c) => c.id === start.supplierId && c.active)?.id ?? supplierId;
   }

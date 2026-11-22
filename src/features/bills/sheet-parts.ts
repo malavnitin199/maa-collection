@@ -40,13 +40,14 @@ export function sheetParts(companies: { id: string; name: string }[], collection
 
 /**
  * A bill made from items (ADR-060) as the paper shows it: one part with no company, one line
- * per item as added (size and colour under the name); no purchase price → rate N/A, amount 0.
+ * per item as added (its size under the name — never its colour, ADR-049); no purchase price →
+ * rate N/A, amount 0.
  */
-export function itemsPart(lines: (Pick<BillItemLine, 'name' | 'size' | 'color' | 'qty' | 'ratePaise' | 'amountPaise'> & { pack?: number | null })[]): SheetPart[] {
+export function itemsPart(lines: (Pick<BillItemLine, 'name' | 'size' | 'qty' | 'ratePaise' | 'amountPaise'> & { pack?: number | null })[]): SheetPart[] {
   if (lines.length === 0) return [];
   const sheet: BillLine[] = lines.map((l) => ({
     name: l.name,
-    sizes: [[l.size, l.color].filter(Boolean).join(' ')].filter(Boolean),
+    sizes: [l.size.trim()].filter(Boolean),
     pieces: l.qty * (l.pack ?? 1),
     qty: l.qty,
     pack: l.pack ?? null,
