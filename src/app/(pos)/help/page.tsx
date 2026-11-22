@@ -52,6 +52,13 @@ const HI = {
     <>किसी साथी के लिए बेच रहे हैं? <strong>बिक्री किसके नाम</strong> में उन्हें चुनें। यह भी दर्ज होता है कि बिक्री आपने डाली।</>,
     <><strong>बिक्री दर्ज करें</strong> दबाएँ। स्टॉक हर फ़ोन पर तुरंत घट जाता है।</>,
   ],
+  // 2026-11-23 (ADR-067): the counter's bill (ADR-040).
+  bill: [
+    <>पहला टैग स्कैन करें → <strong>और आइटम जोड़ें</strong>। आइटम बिल पर जाता है; कैमरा से स्कैन किया हो तो कैमरा फिर खुलता है।</>,
+    <>हर अगला टैग स्कैन करें (वही टैग दोबारा = एक पीस और), फिर <strong>पूरा हुआ</strong>।</>,
+    <>हर आइटम का तय दाम लिखें (या <strong>स्कैन के साथ दाम</strong> चुनें)। सारे दाम भरते ही कुल दिखता है।</>,
+    <><strong>बिक्री किसके नाम</strong> एक बार चुनें → <strong>बिल सेव करें · ₹कुल</strong>। हर आइटम अपनी अलग बिक्री बनता है; <strong>बिल हटाएँ</strong> बिना सेव वाला सब हटा देता है।</>,
+  ],
   exchange: [
     <><strong>एक्सचेंज</strong> टैब → ग्राहक जो आइटम वापस लाया उसे स्कैन करें → वह बिक्री चुनें जिससे यह आया था।</>,
     <>नया आइटम स्कैन करें → दाम जाँचें → ऐप दिखाएगा <em>ग्राहक देगा ₹…</em> या <em>ग्राहक को लौटाएँ ₹…</em>।</>,
@@ -72,16 +79,18 @@ const HI = {
     <>आखिर में: <strong>आज के लेबल प्रिंट करें</strong> → हर पीस का एक लेबल → हर पीस पर एक चिपकाएँ। स्टिकर प्रिंटर है? प्रिंट से पहले <strong>स्टिकर प्रिंटर 50×25 mm</strong> चुनें।</>,
   ],
   more: [
-    <><strong>कंपनी से आया नया माल</strong> → स्टॉक जोड़ें → <strong>नया आइटम</strong>: ऊपर नाम, कैटेगरी, किसके लिए (लड़कियाँ / लड़के, बड़े / बच्चे) और दाईं ओर फ़ोटो; फिर कंपनी, बिक्री दाम (MRP) और खरीद दाम। टैब: <strong>जानकारी</strong> (पीस, बिल), <strong>साइज़</strong> (हर साइज़ के पीस), <strong>और जानकारी</strong> (ब्रांड)। सेव के बाद <strong>+ अगला आइटम जोड़ें</strong>।</>,
-    <><strong>जो आइटम पहले से हैं, उनके और पीस</strong> → स्टॉक जोड़ें → पहले से मौजूद आइटम के और पीस (<em>स्टॉक</em> अधिकार चाहिए)। वही टैग फिर स्कैन करने पर एक पीस और जुड़ता है।</>,
-    <><strong>प्रोडक्ट या उसकी फ़ोटो बदलें</strong> → प्रोडक्ट → आइटम पर टैप करें।</>,
+    <><strong>कंपनी से आया नया माल</strong> → होम → <strong>नया स्टॉक जोड़ें</strong> (या स्टॉक जोड़ें → <strong>नया आइटम</strong>): <strong>कलेक्शन</strong> चुनें, फिर <strong>क्या है</strong>; <strong>कंपनी</strong>, <strong>प्रोडक्ट का नाम</strong>, <strong>खरीद दाम</strong> और <strong>बिक्री दाम</strong> भरें (<strong>%</strong> से निकालें); <strong>साइज़ और बाकी</strong> खोलकर साइज़ दबाएँ और उनके पीस लिखें; फिर <strong>सेव करें और टैग प्रिंट करें</strong> (या उसी बिल के लिए <strong>सेव करें और अगला जोड़ें</strong>)।</>,
+    <><strong>जो आइटम पहले से हैं, उनके और पीस</strong> → स्टॉक जोड़ें → पहले से मौजूद आइटम के और पीस (<em>स्टॉक</em> अधिकार चाहिए)। वही टैग फिर स्कैन करने पर एक पीस और जुड़ता है। या आइटम खोलें → साइज़ के पास <strong>+ जोड़ें</strong>।</>,
+    <><strong>प्रोडक्ट बदलें</strong> → प्रोडक्ट → उस पर टैप करें: साइज़ के पास <strong>+ जोड़ें</strong> से पीस, गिनती के बाद पीस ठीक करने को साइज़ पर टैप करें, और नाम, कंपनी, कैटेगरी, दाम के लिए <strong>✎ जानकारी बदलें</strong>। (फ़ोटो आइटम बनाते समय जुड़ती हैं।)</>,
     <><strong>क्या ठीक करना बाकी है?</strong> → कैटलॉग → <strong>ध्यान दें</strong>: बिना फ़ोटो, कंपनी या स्टॉक वाले आइटम।</>,
   ],
   owner: [
-    <><strong>कंपनी और कैटेगरी</strong>: मेनू → कंपनियाँ / कैटेगरी। जिन कंपनियों से माल खरीदते हैं और जिस तरह के आइटम बेचते हैं, वे जोड़ें।</>,
-    <><strong>स्टाफ़ और अधिकार</strong>: हर व्यक्ति को PIN के साथ जोड़ें। हर सेल्समैन के लिए और अधिकार टिक करें: <em>कैटलॉग</em> (प्रोडक्ट, फ़ोटो, लेबल), <em>दाम</em> (MRP/बिक्री दाम बदलना), <em>स्टॉक</em> (स्टॉक प्राप्त करना), <em>खरीद दाम</em> (कोड दाम देखना — सिर्फ़ भरोसेमंद स्टाफ़)।</>,
+    <><strong>कंपनियाँ</strong>: होम → <strong>कंपनियाँ</strong> वाली लाइन → खोजें और कंपनी खोलें: किसी भी समय के उसके बिल, खरीद, <strong>अभी बकाया</strong> और पीस। पैसे दिए? <strong>भुगतान → भुगतान दर्ज करें</strong>। <strong>यह कंपनी हटाएँ</strong> करने पर भी उसके आइटम और बिल बने रहते हैं।</>,
+    <><strong>बिल</strong>: होम → <strong>बिल</strong> → <strong>+ नया बिल</strong> (या प्रोडक्ट पर <strong>🧾 बिल बनाएँ</strong>): कंपनी ज़रूरी नहीं; हर प्रोडक्ट के साइज़ दबाएँ या उसके टैग <strong>स्कैन</strong> करें; <strong>मात्रा</strong> और <strong>खरीद ₹</strong> कागज़ के बिल से मिलाएँ → <strong>आगे: बिल जाँचें</strong> → बिल नंबर और तारीख → <strong>बिल सेव करें</strong>। पैसे देने पर <strong>चुकता करें</strong>।</>,
+    <><strong>कलेक्शन और कैटेगरी</strong>: होम → <strong>कलेक्शन</strong> से कैटेगरी खुलती है: हर कलेक्शन उसके प्रोडक्ट के साथ, उसके आँकड़े (कैटेगरी, प्रोडक्ट, पीस, स्टॉक की कीमत), और हर कैटेगरी पर <strong>✎</strong> (नाम, कोड, साइज़) और <strong>🗑</strong> (सिर्फ़ जब उसमें कोई आइटम न हो)। पुरुष, महिला, जीन्स, जैकेट और शर्ट हमेशा रहते हैं (🔒)। <strong>+ कैटेगरी जोड़ें</strong>, <strong>+ कलेक्शन जोड़ें</strong>।</>,
+    <><strong>स्टाफ़ और अधिकार</strong>: हर व्यक्ति को PIN के साथ जोड़ें। हर सेल्समैन के लिए और अधिकार टिक करें: <em>कैटलॉग</em> (प्रोडक्ट, फ़ोटो, लेबल), <em>दाम</em> (MRP/बिक्री दाम बदलना), <em>स्टॉक</em> (स्टॉक प्राप्त करना), <em>खरीद दाम</em> (कोड दाम देखना — सिर्फ़ भरोसेमंद स्टाफ़)। जो चला गया उसे <strong>हटाएँ</strong>; उसकी पुरानी बिक्री बनी रहती है।</>,
     <><strong>कोड दाम</strong>: सेटिंग → 10 अक्षरों का एक शब्द चुनें; फिर लेबल पर खरीद दाम ऐसे अक्षरों में दिखेगा जो सिर्फ़ आपका स्टाफ़ पढ़ सके।</>,
-    <><strong>रेट</strong>: कोई भी प्रोडक्ट खोलें → पूरे डिज़ाइन के रेट। बड़े साइज़ का अपना MRP, बिक्री और खरीद दाम <em>साइज़ के हिसाब से दाम</em> में रख सकते हैं। पुरानी बिक्री के दाम नहीं बदलते।</>,
+    <><strong>दाम</strong>: प्रोडक्ट खोलें → <strong>✎ जानकारी बदलें</strong> → MRP, बिक्री, खरीद: हर साइज़ के लिए एक दाम (<em>साइज़ के हिसाब से</em> लिखा बॉक्स खाली छोड़ें तो हर साइज़ का अपना दाम रहता है)। नए आइटम में बिक्री दाम के पास <strong>%</strong> दाम निकालता है। पुरानी बिक्री के दाम नहीं बदलते।</>,
     <><strong>नज़र रखें</strong>: होम पर आज की बिक्री और आपकी मंज़ूरी के लिए बाकी एंट्री दिखती हैं; रिपोर्ट में महीना, मुनाफ़ा और हर सेल्समैन; गतिविधि में हर बिक्री और एक्सचेंज की सूची है।</>,
     <><strong>रिपोर्ट</strong>: सबसे ज़्यादा बिकने वाले, जो नहीं बिक रहा, किसी भी समय की कैटेगरी / कंपनी / सेल्समैन के हिसाब से बिक्री, और अकाउंटेंट के लिए <strong>CSV डाउनलोड</strong> (बिक्री, स्टॉक)।</>,
   ],
@@ -166,6 +175,19 @@ export default async function HelpPage() {
                 ]
           }
         />
+        <h3 className="font-semibold">{t('help.sell.bill')}</h3>
+        <Steps
+          items={
+            hi
+              ? HI.bill
+              : [
+                  <>Scan the first tag → <strong>Add more items</strong>. It goes on the bill; if you used the camera, the camera opens again.</>,
+                  <>Scan each next tag (the same tag again = one more piece), then <strong>Done</strong>.</>,
+                  <>Type each item&apos;s agreed price (or choose <strong>Price as I scan</strong>). The total shows once every price is in.</>,
+                  <>Pick <strong>Credit sale to</strong> once → <strong>Save bill · ₹total</strong>. Each item is saved as its own sale; <strong>Clear bill</strong> drops everything not saved.</>,
+                ]
+          }
+        />
         <h3 className="font-semibold">{t('help.sell.exchange')}</h3>
         <Steps
           items={
@@ -220,9 +242,9 @@ export default async function HelpPage() {
             HI.more.map((item, i) => <li key={i}>{item}</li>)
           ) : (
             <>
-              <li><strong>New stock from a company</strong> → Add stock → <strong>New item</strong>: name, category, who it is for (Girls / Boys, Adult / Child) and the photo on the right; then company, sale price (MRP) and purchase price. Tabs: <strong>Details</strong> (pieces, bill), <strong>Sizes</strong> (pieces of each size), <strong>Other details</strong> (brand). After saving, tap <strong>+ Add next item</strong>.</li>
-              <li><strong>More pieces of items you already have</strong> → Add stock → More pieces of an existing item (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece.</li>
-              <li><strong>Edit a product or its photos</strong> → Products → tap the item.</li>
+              <li><strong>New stock from a company</strong> → Home → <strong>Add new stock</strong> (or Add stock → <strong>New item</strong>): pick the <strong>collection</strong>, then <strong>what it is</strong>; fill <strong>Company</strong>, <strong>Product name</strong>, <strong>Purchase price</strong> and <strong>Sale price</strong> (<strong>%</strong> works it out); open <strong>Sizes &amp; more</strong> to tap the sizes and set their pieces; then <strong>Save &amp; print tags</strong> (or <strong>Save &amp; add next</strong> for the same bill).</li>
+              <li><strong>More pieces of items you already have</strong> → Add stock → More pieces of an existing item (needs the <em>Stock</em> right). Scanning the same tag again adds one more piece. Or open the item → <strong>+ Add</strong> next to its size.</li>
+              <li><strong>Change a product</strong> → Products → tap it: <strong>+ Add</strong> pieces to a size, tap a size to correct its pieces after a count, and <strong>✎ Edit details</strong> for the name, company, category and prices. (Photos are added while making the item.)</li>
               <li><strong>What&apos;s left to fix?</strong> → Catalog → <strong>Needs attention</strong>: items without photo, company or stock.</li>
             </>
           )}
@@ -235,10 +257,12 @@ export default async function HelpPage() {
             hi
               ? HI.owner
               : [
-                  <><strong>Companies & categories</strong>: Menu → Companies / Categories. Add the companies you buy from and the kinds of items you sell.</>,
-                  <><strong>Staff & permissions</strong>: add each person with a PIN. Tick extra rights per salesman: <em>Catalog</em> (products, photos, labels), <em>Prices</em> (change MRP/selling price), <em>Stock</em> (receive stock), <em>Purchase price</em> (see the code price — trusted staff only).</>,
+                  <><strong>Companies</strong>: Home → the <strong>Companies</strong> line → search and open a company: its bills, purchases, <strong>dues now</strong> and pieces for any period. Paid them? <strong>Payments → Record a payment</strong>. <strong>Delete this company</strong> keeps its items and bills.</>,
+                  <><strong>Bills</strong>: Home → <strong>Bills</strong> → <strong>+ New bill</strong> (or <strong>🧾 Make bill</strong> on a product): the company is optional; tap each product&apos;s sizes or <strong>Scan</strong> its tags; match <strong>Qty</strong> and <strong>Purchase ₹</strong> to the paper bill → <strong>Next: check bill</strong> → bill no. and date → <strong>Save bill</strong>. <strong>Mark paid</strong> when you pay it.</>,
+                  <><strong>Collections & categories</strong>: Home → <strong>Collections</strong> opens Categories: each collection with its products, its figures (categories, products, pieces, stock value), and every category with <strong>✎</strong> (name, code, sizes) and <strong>🗑</strong> (only when it has no items). Men, Women, Jeans, Jacket and Shirt always stay (🔒). <strong>+ Add category</strong>, <strong>+ Add collection</strong>.</>,
+                  <><strong>Staff & permissions</strong>: add each person with a PIN. Tick extra rights per salesman: <em>Catalog</em> (products, photos, labels), <em>Prices</em> (change MRP/selling price), <em>Stock</em> (receive stock), <em>Purchase price</em> (see the code price — trusted staff only). <strong>Remove</strong> someone who left; their past sales stay.</>,
                   <><strong>Code price</strong>: Settings → choose a 10-letter word; labels then show the purchase price in letters only your staff can read.</>,
-                  <><strong>Rates</strong>: open any product → Rates for the whole design. A bigger size can have its own MRP, selling and purchase price under <em>Price by size</em>. Past sales keep their prices.</>,
+                  <><strong>Prices</strong>: open a product → <strong>✎ Edit details</strong> → MRP, Selling, Purchase: one price for every size (a box marked <em>By size</em> left empty keeps each size&apos;s own price). In New item, <strong>%</strong> beside the sale price works it out. Past sales keep their prices.</>,
                   <><strong>Track</strong>: Home shows today&apos;s sales and what is waiting for you; Reports has the month, profit and each salesperson; Activity lists every sale and exchange.</>,
                   <><strong>Reports</strong>: best sellers, what is not selling, sales by category / company / salesperson for any period, and <strong>CSV downloads</strong> (sales, stock) for your accountant.</>,
                 ]
@@ -263,9 +287,9 @@ export default async function HelpPage() {
                 <td className="py-2">{t('help.req.oldStock.optional')}</td>
               </tr>
               <tr className="border-t border-zinc-200 dark:border-zinc-800">
-                <td className="py-2 pr-3">{t('help.req.quick')}</td>
-                <td className="py-2 pr-3">{t('help.req.quick.required')}</td>
-                <td className="py-2">{t('help.req.quick.optional')}</td>
+                <td className="py-2 pr-3">{t('help.req.newItem')}</td>
+                <td className="py-2 pr-3">{t('help.req.newItem.required')}</td>
+                <td className="py-2">{t('help.req.newItem.optional')}</td>
               </tr>
               <tr className="border-t border-zinc-200 dark:border-zinc-800">
                 <td className="py-2 pr-3">{t('help.req.sale')}</td>

@@ -91,7 +91,7 @@ test('a lesson plays as a story: few words, the voice says more, and it moves on
   // "Got it" ticks the lesson and returns to the list.
   await story.getByRole('button', { name: 'Got it ✓' }).click();
   await expect(story).toBeHidden();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 17 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 22 learned');
   await expect(page).not.toHaveURL(/#sell$/);
 });
 
@@ -99,7 +99,8 @@ test('links open a lesson or a part; the voice speaks Hindi for a Hindi reader',
   await fakeVoice(page);
   await page.goto('/guide#for-owner');
   await expect(page.getByRole('button', { name: 'Owner', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByTestId('guide-lessons').getByRole('button', { name: /Reports/ })).toBeVisible();
+  // ADR-067: the owner's Home lines have their own lessons.
+  for (const title of ['Reports', 'Companies', 'Company bills', 'Collections and categories']) await expect(page.getByTestId('guide-lessons').getByRole('button', { name: new RegExp(title) })).toBeVisible();
 
   await page.goto('/login');
   await page.getByRole('button', { name: 'Language: English. Switch to Hindi' }).click();
@@ -111,6 +112,25 @@ test('links open a lesson or a part; the voice speaks Hindi for a Hindi reader',
   await story.getByRole('button', { name: 'आवाज़' }).click();
   await story.getByRole('button', { name: 'आवाज़' }).click();
   await expect.poll(async () => (await spoken(page)).at(-1)).toEqual({ text: 'ऊपर अ या A वाला बटन दबाकर हिन्दी और अंग्रेज़ी बदलें। आपकी पसंद याद रहती है।', lang: 'hi-IN' });
+});
+
+test('the New item lesson follows today’s steps: collection, category, four boxes, Sizes & more, save (ADR-067)', async ({ page }) => {
+  await fakeVoice(page);
+  await page.goto('/guide#new-design');
+  const story = page.getByRole('dialog', { name: 'New item' });
+  const text = story.getByTestId('story-text');
+  await expect(story.getByTestId('story-count')).toHaveText('1 of 5');
+  await expect(text).toHaveText('Add new stock → pick the collection');
+  await story.getByRole('button', { name: 'Next step' }).click();
+  await expect(text).toHaveText('What is it? Tap the category');
+  await story.getByRole('button', { name: 'Next step' }).click();
+  await expect(text).toHaveText('Company, name, purchase, sale price');
+  // The picture is the Details step: four boxes, the % button, Sizes & more closed below.
+  for (const label of ['Company', 'Product name', 'Purchase price', 'Sale price', 'Sizes & more']) await expect(story.getByText(label, { exact: true })).toBeVisible();
+  await story.getByRole('button', { name: 'Next step' }).click();
+  await expect(text).toHaveText('Sizes & more → tap each size');
+  await story.getByRole('button', { name: 'Next step' }).click();
+  await expect(text).toHaveText('Save & print tags');
 });
 
 test('practice sale at the end of the Sell lesson: above MRP is refused, then "Sale done" — nothing saved', async ({ page }) => {

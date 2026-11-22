@@ -4,23 +4,30 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  IconAddStock,
   IconBoxes,
+  IconBuilding,
   IconCamera,
+  IconEye,
   IconChart,
   IconChevron,
   IconGrid,
+  IconLayers,
   IconPalette,
+  IconPriceTag,
   IconPrinter,
+  IconRows,
   IconRupee,
   IconScan,
   IconSound,
   IconMute,
-  IconStockAdd,
   IconSwap,
   IconTag,
+  IconTick,
   IconUsers,
   IconCheckList,
   IconPhone,
+  IconWifiOff,
 } from '@/components/ui/icons';
 import { primaryButton, secondaryButton } from '@/components/ui/styles';
 import { useLocale, useT } from '@/features/i18n/i18n-provider';
@@ -38,16 +45,25 @@ const ICONS: Record<string, (p: { className?: string }) => React.ReactNode> = {
   look: IconPalette,
   tag: IconTag,
   sell: IconScan,
+  bill: IconRows,
+  offline: IconWifiOff,
   qr: IconGrid,
   exchange: IconSwap,
-  'new-design': IconStockAdd,
+  // The same shirt-with-a-plus as Home's Add new stock tile (ADR-064).
+  'new-design': IconAddStock,
   'old-stock': IconCamera,
   print: IconPrinter,
   restock: IconBoxes,
+  item: IconEye,
+  companies: IconBuilding,
+  // As on Home's Bills line.
+  bills: IconRupee,
+  collections: IconLayers,
   inventory: IconCheckList,
-  prices: IconRupee,
+  prices: IconPriceTag,
   team: IconUsers,
   'sales-team': IconChart,
+  approve: IconTick,
   reports: IconChart,
 };
 
@@ -280,7 +296,7 @@ function StoryPlayer({ story, onClose }: { story: Story; onClose: () => void }) 
           <h2 className="font-display text-xl text-brand-900 dark:text-brand-100">{title}</h2>
           <div className="flex items-center gap-1">
             {step && (
-              <span className="px-1 text-sm font-semibold text-zinc-500 tabular-nums dark:text-zinc-400" data-testid="story-count">
+              <span className="px-1 text-sm font-semibold whitespace-nowrap text-zinc-500 tabular-nums dark:text-zinc-400" data-testid="story-count">
                 {t('guide.stepOf', { n: index + 1, total })}
               </span>
             )}

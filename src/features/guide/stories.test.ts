@@ -41,6 +41,15 @@ describe('Guide stories stay short, complete and in both languages', () => {
 
   it('is far shorter than the old guide (about 1,600 words)', () => {
     const total = STORIES.reduce((n, s) => n + words(s.title.en) + words(s.goal.en) + (s.tip ? words(s.tip.en) : 0) + s.steps.reduce((m, step) => m + words(step.text.en), 0), 0);
-    expect(total).toBeLessThan(450);
+    // 450 until 2026-11-23; raised for the lessons on bills, companies, collections and the item page (ADR-067).
+    expect(total).toBeLessThan(600);
+  });
+
+  it('covers the screens that came since ADR-040 and drops the retired ones (ADR-067)', () => {
+    const ids = STORIES.map((s) => s.id);
+    for (const id of ['bill', 'item', 'companies', 'bills', 'collections']) expect(ids, id).toContain(id);
+    const all = STORIES.flatMap((s) => [s.title.en, s.goal.en, s.tip?.en ?? '', ...s.steps.flatMap((step) => [step.text.en, step.say.en])]).join(' ');
+    // Rates by size went with ADR-061, the One / Many start with ADR-064; Staff says Remove (ADR-029).
+    for (const gone of ['Rates for the whole design', 'Price by size', 'Deactivate', 'One item', 'Many items?']) expect(all, gone).not.toContain(gone);
   });
 });

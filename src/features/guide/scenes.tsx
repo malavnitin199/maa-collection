@@ -1,4 +1,4 @@
-import { IconDots, IconMenu, IconHome, IconPencil, IconRupee, IconScan, IconSwap, IconCamera } from '@/components/ui/icons';
+import { IconCamera, IconChevron, IconDots, IconHome, IconLock, IconMenu, IconPencil, IconRupee, IconScan, IconSwap, IconTrash } from '@/components/ui/icons';
 import { THEME_SWATCH, THEMES } from '@/features/appearance/appearance';
 import { HangTag } from '@/features/catalog/hang-tag';
 import { inStoreEan13 } from '@/features/scanning/ean13';
@@ -85,6 +85,10 @@ function TagScene({ part }: { part: TagPart }) {
     </div>
   );
 }
+
+/** New item's closed fold under the four boxes (ADR-065). */
+const MORE: L = { en: 'Sizes & more', hi: 'साइज़ और बाकी' };
+const TOTAL: L = { en: 'Total', hi: 'कुल' };
 
 const RIGHTS: L[] = [
   { en: 'Catalog', hi: 'कैटलॉग' },
@@ -326,26 +330,6 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
         </Phone>
       );
 
-    case 'table':
-      return (
-        <Phone>
-          <div className="mt-2 overflow-hidden rounded-xl bg-surface text-[11px] ring-1 ring-black/5 dark:ring-white/10">
-            {[
-              ['M', '₹999'],
-              ['L', '₹999'],
-              ['XL', '₹1,099'],
-            ].map(([size, price], i) => (
-              <div key={size} className={`flex items-center justify-between border-b border-zinc-100 px-3 py-2 last:border-0 dark:border-zinc-800 ${i === 2 ? 'st-target bg-brand-50 font-bold text-brand-900 dark:bg-brand-950 dark:text-brand-100' : 'text-zinc-500 dark:text-zinc-400'}`}>
-                <span>{size}</span>
-                <span className="font-mono">{price}</span>
-              </div>
-            ))}
-          </div>
-          <div className={`${row} mt-2 w-1/2`} />
-          <Tap x={70} y={31} />
-        </Phone>
-      );
-
     case 'print':
       return (
         <Phone>
@@ -480,6 +464,152 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
           <Tap x={73} y={30} />
         </Phone>
       );
+
+    case 'tiles':
+      // Two columns of tiles, like New item's "Which collection?" and the Categories page.
+      return (
+        <Phone>
+          <div className={`${row} mt-1 w-1/2`} />
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            {scene.items.map((item, i) => (
+              <span
+                key={i}
+                className={`relative flex h-14 flex-col items-start justify-center rounded-xl px-2.5 text-[11px] leading-tight font-semibold ${
+                  i === scene.tap ? 'st-target bg-brand-600 text-white' : 'bg-surface text-zinc-700 ring-1 ring-brand-200 dark:text-zinc-200 dark:ring-zinc-700'
+                }`}
+              >
+                {say(item.name)}
+                {item.note && <span className="text-[9px] font-medium opacity-75">{say(item.note)}</span>}
+                {item.lock && <IconLock className="absolute top-1.5 right-1.5 h-3 w-3 opacity-70" />}
+              </span>
+            ))}
+          </div>
+          <Tap x={scene.tap % 2 ? 86 : 40} y={30 + Math.floor(scene.tap / 2) * 22} />
+        </Phone>
+      );
+
+    case 'boxes':
+      // New item's Details step: four big boxes, the ₹ inside the price boxes, "Sizes & more" closed below.
+      return (
+        <Phone>
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            {scene.boxes.map((box, i) => (
+              <span
+                key={i}
+                className={`relative flex h-16 flex-col justify-between rounded-xl bg-surface px-2 py-1.5 ${i === scene.tap ? 'st-target ring-2 ring-brand-500' : 'ring-1 ring-brand-200 dark:ring-zinc-700'}`}
+              >
+                <span className="text-[9px] font-semibold text-brand-800 dark:text-brand-200">{say(box.label)}</span>
+                <span className="flex items-center font-mono text-[13px] text-zinc-900 dark:text-zinc-100">
+                  {box.rupee && <span className="mr-0.5 text-zinc-400">₹</span>}
+                  {i === scene.tap
+                    ? box.value.split('').map((ch, j) => (
+                        <span key={j} className="st-char" style={delay(0.3 + j * 0.3)}>
+                          {ch}
+                        </span>
+                      ))
+                    : box.value}
+                  {i === scene.tap && <span className="st-caret ml-0.5 h-4 w-0.5 bg-brand-600" />}
+                </span>
+                {scene.calc && i === scene.boxes.length - 1 && (
+                  <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-md bg-brand-600 text-[10px] font-bold text-white">%</span>
+                )}
+              </span>
+            ))}
+          </div>
+          <span className="flex items-center justify-between rounded-xl bg-surface px-3 py-2 text-[10px] font-semibold text-brand-800 ring-1 ring-brand-200 dark:text-brand-200 dark:ring-zinc-700">
+            {say(MORE)}
+            <IconChevron className="h-3 w-3" />
+          </span>
+          <Tap x={scene.tap % 2 ? 88 : 42} y={scene.tap < 2 ? 24 : 49} />
+        </Phone>
+      );
+
+    case 'figures':
+      return (
+        <Phone>
+          <div className={`${row} mt-1 w-1/2`} />
+          <div className={`mt-1 grid gap-2 ${scene.items.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {scene.items.map((figure, i) => (
+              <span key={i} className="flex flex-col rounded-xl bg-surface px-2 py-2 ring-1 ring-brand-200 dark:ring-zinc-700">
+                <span className={`st-pop origin-left font-display leading-tight text-brand-800 dark:text-brand-200 ${scene.items.length === 3 ? 'text-[13px]' : 'text-base'}`} style={delay(i * 0.2)}>
+                  {figure.value}
+                </span>
+                <span className="text-[9px] font-semibold text-zinc-500 dark:text-zinc-400">{say(figure.label)}</span>
+              </span>
+            ))}
+          </div>
+          <div className={`${row} mt-2 w-2/3`} />
+          <div className={`${row} w-1/2`} />
+        </Phone>
+      );
+
+    case 'rows':
+      // List rows with ✎ / 🗑 on the right, or a lock for the fixed ones.
+      return (
+        <Phone>
+          <div className="mt-1 flex flex-col gap-2">
+            {scene.items.map((item, i) => (
+              <span key={i} className="flex h-12 items-center gap-1.5 rounded-xl bg-surface px-2 ring-1 ring-brand-200 dark:ring-zinc-700">
+                <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-zinc-900 dark:text-zinc-100">
+                    {item.name}
+                    {item.lock && <IconLock className="h-2.5 w-2.5 text-zinc-400" />}
+                  </span>
+                  <span className="text-[8.5px] whitespace-nowrap text-zinc-500 dark:text-zinc-400">{say(item.note)}</span>
+                </span>
+                {!item.lock && (
+                  <>
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700 ${i === scene.at && scene.tap === 'edit' ? 'st-target bg-brand-600 text-white' : 'text-brand-700 dark:text-brand-300'}`}>
+                      <IconPencil className="h-3 w-3" />
+                    </span>
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700 ${i === scene.at && scene.tap === 'delete' ? 'st-target bg-red-600 text-white' : 'text-red-600 dark:text-red-400'}`}>
+                      <IconTrash className="h-3 w-3" />
+                    </span>
+                  </>
+                )}
+              </span>
+            ))}
+          </div>
+          <Tap x={scene.tap === 'edit' ? 68 : 84} y={14 + scene.at * 19.5} />
+        </Phone>
+      );
+
+    case 'bill': {
+      // A bill table: one grid, so every row shares the columns; the first (item) column takes the room,
+      // numbers on the right, the total row pops in last.
+      const wide = 0;
+      // minmax(0, 1fr): the product name wraps before the numbers are pushed out of the phone.
+      const cols = { gridTemplateColumns: scene.head.map((_, i) => (i === wide ? 'minmax(0, 1fr)' : 'auto')).join(' ') };
+      const cell = (j: number, head = false) => `px-1 py-1.5 ${j > wide ? `text-right ${head ? '' : 'font-mono'}` : ''}`;
+      const totalCell = 'st-pop border-t-2 border-brand-200 font-bold text-brand-900 dark:border-zinc-700 dark:text-brand-100';
+      return (
+        <Phone>
+          <div className="mt-1 grid overflow-hidden rounded-xl bg-surface text-[9px] ring-1 ring-brand-200 dark:ring-zinc-700" style={cols}>
+            {scene.head.map((h, j) => (
+              <span key={`h${j}`} className={`${cell(j, true)} bg-brand-50 font-semibold text-brand-900 dark:bg-brand-950 dark:text-brand-100`}>
+                {say(h)}
+              </span>
+            ))}
+            {scene.rows.flatMap((cells, i) =>
+              cells.map((c, j) => (
+                <span key={`${i}-${j}`} className={`${cell(j)} border-t border-zinc-100 text-zinc-700 dark:border-zinc-800 dark:text-zinc-200`}>
+                  {c}
+                </span>
+              )),
+            )}
+            <span className={`${cell(0)} ${totalCell}`} style={{ gridColumn: `span ${wide + 1}` }}>
+              {say(TOTAL)}
+            </span>
+            {scene.total.map((c, j) => (
+              <span key={`t${j}`} className={`${cell(j + wide + 1)} ${totalCell}`}>
+                {c}
+              </span>
+            ))}
+          </div>
+          <div className={`${row} mt-2 w-2/3`} />
+        </Phone>
+      );
+    }
 
     case 'list':
       return (

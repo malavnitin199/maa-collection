@@ -1185,7 +1185,7 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   const lessons = page.getByTestId('guide-lessons');
   for (const title of ['Log in', 'Language and colours', 'Read a tag']) await expect(lessons.getByRole('button', { name: new RegExp(title) })).toBeVisible();
   await page.getByRole('button', { name: 'Stock & tags', exact: true }).click();
-  for (const title of ['New item', 'Tag old stock', 'Print tags', 'More pieces arrived']) await expect(lessons.getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  for (const title of ['New item', 'Tag old stock', 'Print tags', 'More pieces arrived', 'The item page']) await expect(lessons.getByRole('button', { name: new RegExp(title) })).toBeVisible();
   await expect(lessons.getByRole('button', { name: /Log in/ })).toHaveCount(0);
   // The tag lesson shows the real tag with one part ringed at a time.
   await page.getByRole('button', { name: 'Everyone', exact: true }).click();
@@ -1194,14 +1194,14 @@ test('guide and help are reachable logged out; lessons can be ticked; first-time
   await expect(tagStory.getByTestId('hang-tag')).toBeVisible();
   await expect(tagStory.getByTestId('story-text')).toHaveText('QR opens the item');
   // Finishing a lesson ticks it, and that is remembered on this phone.
-  await expect(page.getByTestId('guide-progress')).toContainText('0 of 17 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('0 of 22 learned');
   for (let i = 0; i < 5; i++) await tagStory.getByRole('button', { name: 'Next step' }).click();
   await expect(tagStory.getByTestId('story-text')).toHaveText('Every part has a job.');
   await tagStory.getByRole('button', { name: 'Got it ✓' }).click();
   await expect(tagStory).toBeHidden();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 17 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 22 learned');
   await page.reload();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 17 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 22 learned');
   // Quick help & fixes is still there.
   await page.getByRole('link', { name: 'Problems & fixes' }).click();
   await expect(page).toHaveURL(/\/help#faq$/);

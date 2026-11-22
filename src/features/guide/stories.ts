@@ -26,7 +26,6 @@ export type Scene =
   | { kind: 'field'; label: L; value: string; note?: L }
   | { kind: 'done'; title: L; amount: string }
   | { kind: 'chips'; label: L; chips: string[]; swatches?: boolean }
-  | { kind: 'table' }
   | { kind: 'print' }
   | { kind: 'photo' }
   | { kind: 'edit' }
@@ -35,7 +34,18 @@ export type Scene =
   | { kind: 'toggles' }
   | { kind: 'bars' }
   | { kind: 'columns' }
-  | { kind: 'list' };
+  | { kind: 'list' }
+  // 2026-11-23 (ADR-067): the screens since ADR-040 — tiles, the four boxes, figures, rows, a bill.
+  /** Collection / category tiles; 🔒 on fixed ones (Men, Women). */
+  | { kind: 'tiles'; items: { name: L; note?: L; lock?: boolean }[]; tap: number }
+  /** New item's four boxes (Company · Product name · Purchase · Sale, ₹ inside); `tap` is typed in. */
+  | { kind: 'boxes'; boxes: { label: L; value: string; rupee?: boolean }[]; tap: number; calc?: boolean }
+  /** Figure boxes on top of a page (item, company, collection). */
+  | { kind: 'figures'; items: { label: L; value: string }[] }
+  /** List rows with ✎ / 🗑 (or a 🔒); the finger taps `tap` on row `at`. */
+  | { kind: 'rows'; items: { name: string; note: L; lock?: boolean }[]; at: number; tap: 'edit' | 'delete' }
+  /** A bill as a table, the item in the first column; the "Total" row comes last (`total` = its cells after the word Total). */
+  | { kind: 'bill'; head: L[]; rows: string[][]; total: string[] };
 
 export type StoryStep = { text: L; say: L; scene: Scene };
 export type Story = {
@@ -192,6 +202,60 @@ export const STORIES: Story[] = [
     open: { href: '/pos', label: { en: 'Open Sell', hi: 'बेचें खोलें' } },
   },
   {
+    // ADR-040: several items for one customer go on one bill at the counter.
+    id: 'bill',
+    audience: 'sellers',
+    title: { en: 'Many items, one bill', hi: 'कई आइटम, एक बिल' },
+    goal: { en: 'Scan them all, save once.', hi: 'सब स्कैन करें, एक बार सेव करें।' },
+    steps: [
+      {
+        scene: { kind: 'card', button: { en: 'Add more items', hi: 'और आइटम जोड़ें' } },
+        text: { en: 'Scan, then **Add more items**', hi: 'स्कैन करें, फिर **और आइटम जोड़ें**' },
+        say: {
+          en: 'Scan the first tag and tap Add more items. It goes on the bill, and the camera opens again.',
+          hi: 'पहला टैग स्कैन करें और और आइटम जोड़ें दबाएँ। आइटम बिल पर जाता है और कैमरा फिर खुलता है।',
+        },
+      },
+      {
+        scene: { kind: 'scan' },
+        text: { en: 'Scan **each** next tag', hi: '**हर** अगला टैग स्कैन करें' },
+        say: {
+          en: 'Scan each next tag. The same tag again adds one more piece. Tap Done when all are in.',
+          hi: 'हर अगला टैग स्कैन करें। वही टैग दोबारा एक पीस और जोड़ता है। सब हो जाएँ तो पूरा हुआ दबाएँ।',
+        },
+      },
+      {
+        scene: {
+          kind: 'bill',
+          head: [
+            { en: 'Item', hi: 'आइटम' },
+            { en: 'MRP', hi: 'MRP' },
+            { en: 'Price ₹', hi: 'दाम ₹' },
+          ],
+          rows: [
+            ['Kurta M', '1,499', '1,299'],
+            ['Jeans 32', '1,999', '1,700'],
+          ],
+          total: ['', '₹2,999'],
+        },
+        text: { en: 'Type each **price**', hi: 'हर **दाम** लिखें' },
+        say: {
+          en: 'Type the agreed price of each item, or choose Price as I scan. The total shows once every price is in.',
+          hi: 'हर आइटम का तय दाम लिखें, या स्कैन के साथ दाम चुनें। सारे दाम भरते ही कुल दिखता है।',
+        },
+      },
+      {
+        scene: { kind: 'buttons', items: [{ en: 'Save bill · ₹2,999', hi: 'बिल सेव करें · ₹2,999' }], tap: 0 },
+        text: { en: '**Save bill** ✓', hi: '**बिल सेव करें** ✓' },
+        say: {
+          en: 'Choose Credit sale to once for the whole bill, then tap Save bill. Each item is saved as its own sale.',
+          hi: 'पूरे बिल के लिए बिक्री किसके नाम एक बार चुनें, फिर बिल सेव करें दबाएँ। हर आइटम अपनी अलग बिक्री बनता है।',
+        },
+      },
+    ],
+    open: { href: '/pos', label: { en: 'Open Sell', hi: 'बेचें खोलें' } },
+  },
+  {
     // Plan v18: selling without internet.
     id: 'offline',
     audience: 'sellers',
@@ -276,30 +340,78 @@ export const STORIES: Story[] = [
     audience: 'stock',
     title: { en: 'New item', hi: 'नया आइटम' },
     goal: { en: 'Collection, prices, sizes — and its barcodes.', hi: 'कलेक्शन, दाम, साइज़ — और उसके बारकोड।' },
+    // 2026-11-23 (ADR-067): New item as it is since ADR-064 / 065 — collection, category, four boxes, Sizes & more, save.
     steps: [
       {
-        // Owner, 2026-11-22 (ADR-064): Home → Add new stock opens New item on the collection.
-        scene: { kind: 'buttons', items: [{ en: 'Men', hi: 'पुरुष' }, { en: 'Women', hi: 'महिला' }, { en: '+ Add', hi: '+ जोड़ें' }], tap: 0 },
+        scene: {
+          kind: 'tiles',
+          items: [
+            { name: { en: 'Men', hi: 'पुरुष' }, lock: true },
+            { name: { en: 'Women', hi: 'महिला' }, lock: true },
+            { name: { en: 'Kids', hi: 'बच्चे' } },
+            { name: { en: '+ Add', hi: '+ जोड़ें' } },
+          ],
+          tap: 0,
+        },
         text: { en: '**Add new stock** → pick the collection', hi: '**नया स्टॉक जोड़ें** → कलेक्शन चुनें' },
-        say: { en: 'On Home, tap Add new stock. Pick the collection, like Men or Women, then what it is. Men and Women always stay.', hi: 'होम पर नया स्टॉक जोड़ें दबाएँ। कलेक्शन चुनें, जैसे पुरुष या महिला, फिर बताएँ कि क्या है। पुरुष और महिला हमेशा रहते हैं।' },
+        say: {
+          en: 'On Home, tap Add new stock. Pick the collection, like Men or Women. Men and Women always stay.',
+          hi: 'होम पर नया स्टॉक जोड़ें दबाएँ। कलेक्शन चुनें, जैसे पुरुष या महिला। पुरुष और महिला हमेशा रहते हैं।',
+        },
       },
       {
-        scene: { kind: 'field', label: { en: 'Purchase price ₹', hi: 'खरीद दाम ₹' }, value: '700' },
-        text: { en: 'Company, **purchase price**, sale price', hi: 'कंपनी, **खरीद दाम**, बिक्री दाम' },
-        say: { en: 'Choose the company and type the purchase price. The sale price, the MRP, is worked out from it, or type your own.', hi: 'कंपनी चुनें और खरीद दाम लिखें। बिक्री दाम यानी MRP उससे अपने आप बनता है, या अपना लिखें।' },
+        scene: {
+          kind: 'tiles',
+          items: [
+            { name: { en: 'Jeans', hi: 'जीन्स' }, note: { en: '28–36', hi: '28–36' } },
+            { name: { en: 'Shirt', hi: 'शर्ट' }, note: { en: 'M–XXL', hi: 'M–XXL' } },
+            { name: { en: 'Kurta', hi: 'कुर्ता' }, note: { en: 'M–XXL', hi: 'M–XXL' } },
+            { name: { en: '+ Add', hi: '+ जोड़ें' } },
+          ],
+          tap: 2,
+        },
+        text: { en: '**What is it?** Tap the category', hi: '**क्या है?** कैटेगरी दबाएँ' },
+        say: {
+          en: 'Then tap what it is, like Jeans or Kurta. Plus Add makes a new category with its sizes.',
+          hi: 'फिर बताएँ कि क्या है, जैसे जीन्स या कुर्ता। जोड़ें से नई कैटेगरी उसके साइज़ के साथ बनती है।',
+        },
       },
       {
-        scene: { kind: 'chips', label: { en: 'Sizes', hi: 'साइज़' }, chips: ['M', 'L', 'XL', 'XXL'] },
-        text: { en: 'Many sizes? Tap **each size**', hi: 'कई साइज़? **हर साइज़** दबाएँ' },
-        say: { en: 'Comes in many sizes? Tap each size. Every size gets its own barcode.', hi: 'कई साइज़ में आया है? हर साइज़ दबाएँ। हर साइज़ को अपना बारकोड मिलता है।' },
+        scene: {
+          kind: 'boxes',
+          boxes: [
+            { label: { en: 'Company', hi: 'कंपनी' }, value: 'Laxmi' },
+            { label: { en: 'Product name', hi: 'प्रोडक्ट का नाम' }, value: 'Kurta' },
+            { label: { en: 'Purchase price', hi: 'खरीद दाम' }, value: '700', rupee: true },
+            { label: { en: 'Sale price', hi: 'बिक्री दाम' }, value: '1050', rupee: true },
+          ],
+          tap: 2,
+          calc: true,
+        },
+        text: { en: 'Company, name, **purchase**, sale price', hi: 'कंपनी, नाम, **खरीद**, बिक्री दाम' },
+        say: {
+          en: 'Fill the four boxes. Type the purchase price; an empty sale price becomes purchase plus 50 percent, or tap the percent button.',
+          hi: 'चारों बॉक्स भरें। खरीद दाम लिखें; बिक्री दाम खाली रहे तो खरीद से 50 प्रतिशत ज़्यादा बनता है, या प्रतिशत बटन दबाएँ।',
+        },
+      },
+      {
+        scene: { kind: 'chips', label: { en: 'Sizes & more', hi: 'साइज़ और बाकी' }, chips: ['M', 'L', 'XL', 'XXL'] },
+        text: { en: '**Sizes & more** → tap each size', hi: '**साइज़ और बाकी** → हर साइज़ दबाएँ' },
+        say: {
+          en: 'Open Sizes and more, tap each size that came and set its pieces. Every size gets its own barcode.',
+          hi: 'साइज़ और बाकी खोलें, जो साइज़ आए उन्हें दबाएँ और उनके पीस लिखें। हर साइज़ को अपना बारकोड मिलता है।',
+        },
       },
       {
         scene: { kind: 'print' },
-        text: { en: '**Save** → print tags', hi: '**सेव** → टैग प्रिंट' },
-        say: { en: 'Save and print the tags. Then tap Add next item: the company and category stay.', hi: 'सेव करें और टैग प्रिंट करें। फिर अगला आइटम जोड़ें दबाएँ: कंपनी और कैटेगरी वही रहती हैं।' },
+        text: { en: '**Save & print tags**', hi: '**सेव करें और टैग प्रिंट करें**' },
+        say: {
+          en: 'Check it, then tap Save and print tags. Save and add next goes on with the same bill.',
+          hi: 'जाँचें, फिर सेव करें और टैग प्रिंट करें दबाएँ। सेव करें और अगला जोड़ें उसी बिल पर आगे बढ़ता है।',
+        },
       },
     ],
-    tip: { en: 'Bigger sizes cost more? Sizes → Price by size.', hi: 'बड़े साइज़ महँगे? साइज़ → साइज़ के हिसाब से दाम।' },
+    tip: { en: 'The phone’s back button goes one step back.', hi: 'फ़ोन का बैक बटन एक कदम पीछे जाता है।' },
     open: { href: '/admin/stock/new', label: { en: 'New item', hi: 'नया आइटम' } },
   },
   {
@@ -404,8 +516,232 @@ export const STORIES: Story[] = [
     ],
     open: { href: '/admin/stock/receive', label: { en: 'Receive stock', hi: 'स्टॉक प्राप्त करें' } },
   },
+  {
+    // ADR-061: the item page — figures, sizes with + Add, ✎ Edit details.
+    id: 'item',
+    audience: 'stock',
+    title: { en: 'The item page', hi: 'आइटम का पेज' },
+    goal: { en: 'One product: stock, sizes, details.', hi: 'एक प्रोडक्ट: स्टॉक, साइज़, जानकारी।' },
+    steps: [
+      {
+        scene: {
+          kind: 'figures',
+          items: [
+            { label: { en: 'In stock', hi: 'स्टॉक में' }, value: '12' },
+            { label: { en: 'Sold', hi: 'बिके' }, value: '5' },
+            { label: { en: 'Stock value', hi: 'स्टॉक की कीमत' }, value: '₹8,400' },
+          ],
+        },
+        text: { en: '**Products** → tap a product', hi: '**प्रोडक्ट** → प्रोडक्ट पर टैप करें' },
+        say: {
+          en: 'Open Products and tap a product. On top: pieces in stock, pieces sold and what the stock is worth.',
+          hi: 'प्रोडक्ट खोलें और किसी प्रोडक्ट पर टैप करें। ऊपर: स्टॉक के पीस, बिके पीस और स्टॉक की कीमत।',
+        },
+      },
+      {
+        scene: {
+          kind: 'buttons',
+          items: [
+            { en: '+ Add', hi: '+ जोड़ें' },
+            { en: '+ Add size', hi: '+ साइज़ जोड़ें' },
+          ],
+          tap: 0,
+        },
+        text: { en: 'New pieces came? **+ Add**', hi: 'नए पीस आए? **+ जोड़ें**' },
+        say: {
+          en: 'New pieces came in? Tap Add next to the size, set how many, and tap Add pieces.',
+          hi: 'नए पीस आए? साइज़ के पास जोड़ें दबाएँ, कितने आए लिखें, और पीस जोड़ें दबाएँ।',
+        },
+      },
+      {
+        scene: { kind: 'edit' },
+        text: { en: 'Fix it: **✎ Edit details**', hi: 'ठीक करें: **✎ जानकारी बदलें**' },
+        say: {
+          en: 'Tap Edit details to change the name, company, category or prices. Tap a size to correct its pieces after a count.',
+          hi: 'नाम, कंपनी, कैटेगरी या दाम बदलने के लिए जानकारी बदलें दबाएँ। गिनती के बाद पीस ठीक करने को साइज़ पर टैप करें।',
+        },
+      },
+    ],
+    open: { href: '/admin/products', label: { en: 'Products', hi: 'प्रोडक्ट' } },
+  },
 
   // ——— Owner ———
+  {
+    // ADR-039/051/066: Home's Companies line → the Companies page and a company's page.
+    id: 'companies',
+    audience: 'owner',
+    title: { en: 'Companies', hi: 'कंपनियाँ' },
+    goal: { en: 'Who you buy from, and what you owe.', hi: 'किससे खरीदते हैं, और कितना देना है।' },
+    steps: [
+      {
+        scene: { kind: 'list' },
+        text: { en: 'Home → **Companies**', hi: 'होम → **कंपनियाँ**' },
+        say: {
+          en: 'On Home, tap the Companies line. Search by name or place, then tap a company.',
+          hi: 'होम पर कंपनियाँ वाली लाइन दबाएँ। नाम या जगह से खोजें, फिर किसी कंपनी पर टैप करें।',
+        },
+      },
+      {
+        scene: {
+          kind: 'figures',
+          items: [
+            { label: { en: 'Bills', hi: 'बिल' }, value: '6' },
+            { label: { en: 'Billed', hi: 'बिल की रकम' }, value: '₹84,200' },
+            { label: { en: 'Dues now', hi: 'अभी बकाया' }, value: '₹12,500' },
+            { label: { en: 'Pieces', hi: 'पीस' }, value: '320' },
+          ],
+        },
+        text: { en: 'Its **dues** and bills on top', hi: 'ऊपर उसका **बकाया** और बिल' },
+        say: {
+          en: 'On top: its bills, what you bought, what you still owe and the pieces, for any period you pick.',
+          hi: 'ऊपर: उसके बिल, कितना खरीदा, कितना बाकी है और पीस, जो भी समय आप चुनें।',
+        },
+      },
+      {
+        scene: { kind: 'field', label: { en: 'Amount paid ₹', hi: 'चुकाई रकम ₹' }, value: '12500' },
+        text: { en: 'Paid them? **Record a payment**', hi: 'पैसे दिए? **भुगतान दर्ज करें**' },
+        say: {
+          en: 'Paid them? Open Payments, tap Record a payment, type the amount and pick the bill it was for.',
+          hi: 'पैसे दिए? भुगतान खोलें, भुगतान दर्ज करें दबाएँ, रकम लिखें और वह बिल चुनें जिसके लिए दिए।',
+        },
+      },
+    ],
+    tip: { en: 'Deleting a company keeps its items and bills.', hi: 'कंपनी हटाने पर उसके आइटम और बिल बने रहते हैं।' },
+    open: { href: '/admin/companies', label: { en: 'Companies', hi: 'कंपनियाँ' } },
+  },
+  {
+    // ADR-061/062: a company's paper bill, made from products.
+    id: 'bills',
+    audience: 'owner',
+    title: { en: 'Company bills', hi: 'कंपनी के बिल' },
+    goal: { en: 'The paper bill, in the app.', hi: 'कागज़ का बिल, ऐप में।' },
+    steps: [
+      {
+        scene: { kind: 'buttons', items: [{ en: '+ New bill', hi: '+ नया बिल' }], tap: 0 },
+        text: { en: 'Home → Bills → **+ New bill**', hi: 'होम → बिल → **+ नया बिल**' },
+        say: {
+          en: 'On Home, tap the Bills line, then New bill. Choose the company, or leave it empty.',
+          hi: 'होम पर बिल वाली लाइन दबाएँ, फिर नया बिल। कंपनी चुनें, या खाली छोड़ें।',
+        },
+      },
+      {
+        scene: { kind: 'chips', label: { en: 'Cotton Kurta', hi: 'कॉटन कुर्ता' }, chips: ['M', 'L', 'XL', 'XXL'] },
+        text: { en: 'Tap each product’s **sizes**', hi: 'हर प्रोडक्ट के **साइज़** दबाएँ' },
+        say: {
+          en: 'Tap the sizes of each product on the bill, or Scan its tags. Each starts with its pieces and purchase price.',
+          hi: 'बिल के हर प्रोडक्ट के साइज़ दबाएँ, या उसके टैग स्कैन करें। हर लाइन उसके पीस और खरीद दाम से शुरू होती है।',
+        },
+      },
+      {
+        scene: {
+          kind: 'bill',
+          // The paper table without S.N, so it fits the small phone.
+          head: [
+            { en: 'Product', hi: 'प्रोडक्ट' },
+            { en: 'Qty', hi: 'मात्रा' },
+            { en: 'Purchase ₹', hi: 'खरीद ₹' },
+            { en: 'Total ₹', hi: 'कुल ₹' },
+          ],
+          rows: [
+            ['Kurta M', '2', '450', '900'],
+            ['Kurta L', '3', '450', '1,350'],
+          ],
+          total: ['5', '', '₹2,250'],
+        },
+        text: { en: 'Match **Qty** and **price** to paper', hi: 'कागज़ से **मात्रा** और **दाम** मिलाएँ' },
+        say: {
+          en: 'Change the quantity and purchase price to match the paper bill. The total adds up by itself.',
+          hi: 'कागज़ के बिल जैसा करने के लिए मात्रा और खरीद दाम बदलें। कुल अपने आप जुड़ता है।',
+        },
+      },
+      {
+        scene: { kind: 'done', title: { en: 'Bill saved', hi: 'बिल सेव हुआ' }, amount: '₹2,250' },
+        text: { en: 'Check it, then **Save bill**', hi: 'जाँचें, फिर **बिल सेव करें**' },
+        say: {
+          en: 'Tap Next: check bill, add the bill number and date, then Save bill. Tap Mark paid once you pay it.',
+          hi: 'आगे: बिल जाँचें दबाएँ, बिल नंबर और तारीख डालें, फिर बिल सेव करें। पैसे देने पर चुकता करें दबाएँ।',
+        },
+      },
+    ],
+    tip: { en: 'On a product, Make bill starts a bill with it.', hi: 'प्रोडक्ट पर बिल बनाएँ उसी से बिल शुरू करता है।' },
+    open: { href: '/admin/bills', label: { en: 'Bills', hi: 'बिल' } },
+  },
+  {
+    // ADR-066: Home's Collections line → Categories with figures; ✎ / 🗑 on categories.
+    id: 'collections',
+    audience: 'owner',
+    title: { en: 'Collections and categories', hi: 'कलेक्शन और कैटेगरी' },
+    goal: { en: 'What you sell, and how much.', hi: 'आप क्या बेचते हैं, और कितना।' },
+    steps: [
+      {
+        scene: {
+          kind: 'tiles',
+          items: [
+            { name: { en: 'Men', hi: 'पुरुष' }, note: { en: '24 products', hi: '24 प्रोडक्ट' }, lock: true },
+            { name: { en: 'Women', hi: 'महिला' }, note: { en: '18 products', hi: '18 प्रोडक्ट' }, lock: true },
+            { name: { en: 'Kids', hi: 'बच्चे' }, note: { en: '6 products', hi: '6 प्रोडक्ट' } },
+          ],
+          tap: 0,
+        },
+        text: { en: 'Home → **Collections**', hi: 'होम → **कलेक्शन**' },
+        say: {
+          en: 'On Home, tap the Collections line. Each collection shows its products; Men and Women always stay. Tap one to open it.',
+          hi: 'होम पर कलेक्शन वाली लाइन दबाएँ। हर कलेक्शन पर उसके प्रोडक्ट दिखते हैं; पुरुष और महिला हमेशा रहते हैं। खोलने को टैप करें।',
+        },
+      },
+      {
+        scene: {
+          kind: 'figures',
+          items: [
+            { label: { en: 'Categories', hi: 'कैटेगरी' }, value: '6' },
+            { label: { en: 'Products', hi: 'प्रोडक्ट' }, value: '24' },
+            { label: { en: 'Pieces in stock', hi: 'स्टॉक में पीस' }, value: '180' },
+            { label: { en: 'Stock value', hi: 'स्टॉक की कीमत' }, value: '₹96,400' },
+          ],
+        },
+        text: { en: 'Its **figures** at a glance', hi: 'उसके **आँकड़े** एक नज़र में' },
+        say: {
+          en: 'Under the tiles: its categories, products, pieces in stock and what that stock is worth.',
+          hi: 'टाइलों के नीचे: उसकी कैटेगरी, प्रोडक्ट, स्टॉक के पीस और उस स्टॉक की कीमत।',
+        },
+      },
+      {
+        scene: {
+          kind: 'rows',
+          items: [
+            { name: 'Jeans', note: { en: '8 products · 64 pcs', hi: '8 प्रोडक्ट · 64 पीस' }, lock: true },
+            { name: 'Kurta', note: { en: '10 products · 90 pcs', hi: '10 प्रोडक्ट · 90 पीस' } },
+            { name: 'Pajama', note: { en: '0 products · 0 pcs', hi: '0 प्रोडक्ट · 0 पीस' } },
+          ],
+          at: 1,
+          tap: 'edit',
+        },
+        text: { en: '**✎** changes a category', hi: '**✎** से कैटेगरी बदलें' },
+        say: {
+          en: 'Tap the pencil to change a category’s name, code or sizes. Jeans, Jacket and Shirt are locked and always stay.',
+          hi: 'कैटेगरी का नाम, कोड या साइज़ बदलने को पेंसिल दबाएँ। जीन्स, जैकेट और शर्ट पर ताला है, ये हमेशा रहते हैं।',
+        },
+      },
+      {
+        scene: {
+          kind: 'rows',
+          items: [
+            { name: 'Jeans', note: { en: '8 products · 64 pcs', hi: '8 प्रोडक्ट · 64 पीस' }, lock: true },
+            { name: 'Kurta', note: { en: '10 products · 90 pcs', hi: '10 प्रोडक्ट · 90 पीस' } },
+            { name: 'Pajama', note: { en: '0 products · 0 pcs', hi: '0 प्रोडक्ट · 0 पीस' } },
+          ],
+          at: 2,
+          tap: 'delete',
+        },
+        text: { en: '**🗑** deletes an empty one', hi: '**🗑** खाली कैटेगरी हटाता है' },
+        say: {
+          en: 'The bin deletes a category with no items, after asking. One that still has items stays, and the app says how many.',
+          hi: 'कूड़ेदान पूछकर बिना आइटम वाली कैटेगरी हटाता है। जिसमें आइटम हैं वह रहती है, और ऐप बताता है कितने।',
+        },
+      },
+    ],
+    open: { href: '/admin/categories', label: { en: 'Categories', hi: 'कैटेगरी' } },
+  },
   {
     id: 'inventory',
     audience: 'owner',
@@ -437,9 +773,31 @@ export const STORIES: Story[] = [
     goal: { en: 'MRP is the ceiling.', hi: 'MRP सबसे ऊपर की सीमा है।' },
     steps: [
       {
-        scene: { kind: 'table' },
-        text: { en: 'Each **size** its own price', hi: 'हर **साइज़** का अपना दाम' },
-        say: { en: 'Open a product, then Rates for the whole design. Change the default or one size, then Apply. Every colour of that size follows.', hi: 'प्रोडक्ट खोलें, फिर पूरे डिज़ाइन के रेट। डिफ़ॉल्ट या एक साइज़ बदलें, फिर लागू करें। उस साइज़ के हर रंग पर लगेगा।' },
+        // 2026-11-23 (ADR-067): rates by size are gone (ADR-061); prices change in ✎ Edit details.
+        scene: { kind: 'field', label: { en: 'MRP ₹', hi: 'MRP ₹' }, value: '1499', note: { en: 'For every size', hi: 'हर साइज़ के लिए' } },
+        text: { en: 'Product → **✎ Edit details**', hi: 'प्रोडक्ट → **✎ जानकारी बदलें**' },
+        say: {
+          en: 'Open a product and tap Edit details. Change the MRP, selling or purchase price; it is set for every size.',
+          hi: 'प्रोडक्ट खोलें और जानकारी बदलें दबाएँ। MRP, बिक्री या खरीद दाम बदलें; यह हर साइज़ पर लगता है।',
+        },
+      },
+      {
+        scene: {
+          kind: 'boxes',
+          boxes: [
+            { label: { en: 'Company', hi: 'कंपनी' }, value: 'Laxmi' },
+            { label: { en: 'Product name', hi: 'प्रोडक्ट का नाम' }, value: 'Kurta' },
+            { label: { en: 'Purchase price', hi: 'खरीद दाम' }, value: '700', rupee: true },
+            { label: { en: 'Sale price', hi: 'बिक्री दाम' }, value: '1050', rupee: true },
+          ],
+          tap: 3,
+          calc: true,
+        },
+        text: { en: 'New item: **%** works out MRP', hi: 'नया आइटम: **%** से MRP निकालें' },
+        say: {
+          en: 'In New item, the percent button beside the sale price adds 20, 30, 50 or 100 percent to the purchase price.',
+          hi: 'नए आइटम में बिक्री दाम के पास का प्रतिशत बटन खरीद दाम में 20, 30, 50 या 100 प्रतिशत जोड़ता है।',
+        },
       },
       {
         scene: { kind: 'tag', part: 'code' },
@@ -467,9 +825,13 @@ export const STORIES: Story[] = [
         say: { en: 'Tick Catalog, Prices or Stock. Give Purchase price only to trusted staff.', hi: 'कैटलॉग, दाम या स्टॉक टिक करें। खरीद दाम सिर्फ़ भरोसेमंद स्टाफ़ को दें।' },
       },
       {
-        scene: { kind: 'buttons', items: [{ en: 'Deactivate', hi: 'बंद करें' }], tap: 0 },
-        text: { en: 'Someone left? **Deactivate**', hi: 'कोई चला गया? **बंद करें**' },
-        say: { en: 'Someone left? Deactivate them. Their past sales stay.', hi: 'कोई चला गया? उसे बंद करें। उसकी पुरानी बिक्री बनी रहती है।' },
+        // ADR-029: the button is Remove (a removed person can be brought back).
+        scene: { kind: 'buttons', items: [{ en: 'Remove', hi: 'हटाएँ' }], tap: 0 },
+        text: { en: 'Someone left? **Remove**', hi: 'कोई चला गया? **हटाएँ**' },
+        say: {
+          en: 'Someone left? Tap Remove. They can no longer log in; their past sales stay. Bring back undoes it.',
+          hi: 'कोई चला गया? हटाएँ दबाएँ। वह लॉग इन नहीं कर पाएगा; उसकी पुरानी बिक्री बनी रहती है। वापस लाएँ से फिर जुड़ता है।',
+        },
       },
     ],
     open: { href: '/admin/staff', label: { en: 'Staff & permissions', hi: 'स्टाफ़ और अधिकार' } },
