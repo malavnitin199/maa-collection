@@ -4,6 +4,7 @@ import { muted, okBox, primaryButton } from '@/components/ui/styles';
 import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
 import { ProductDeleteAction } from '@/features/catalog/bulk-actions';
 import { ProductListCard } from '@/features/catalog/product-list-card';
+import { FreshAddress } from '@/features/forms/fresh-address';
 import { STORE_ID } from '@/lib/app-config';
 import { groupDesigns } from '@/lib/design-groups';
 import { can } from '@/lib/permissions';
@@ -70,7 +71,8 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
           {designs.map((d) => {
             const ids = d.items.map((p) => p.id);
             return (
-              <li key={d.key}>
+              // min-w-0: a long name is cut short with … instead of widening the page.
+              <li key={d.key} className="min-w-0">
                 <Selectable on={canSelect} ids={ids} label={d.name}>
                   <ProductListCard design={d} photo={photoOf(ids)} href={`/admin/products/${ids[0]}`} showCost={showCost} t={t} />
                 </Selectable>
@@ -91,6 +93,7 @@ export default async function ProductsPage(props: PageProps<'/admin/products'>) 
   const t = await getT();
   return (
     <main className="flex flex-col gap-4">
+      <FreshAddress drop={['deleted']} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t('nav.products')}</h1>
         <Link href="/admin/stock" className={primaryButton}>

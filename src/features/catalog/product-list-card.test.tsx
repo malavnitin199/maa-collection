@@ -46,6 +46,17 @@ describe('Products card (ADR-058)', () => {
     expect(article).not.toHaveTextContent(/Show \d|Print tags/);
   });
 
+  it('the whole card opens the product: the name link covers it and a round › says so (ADR-068)', () => {
+    card([item()]);
+    const link = screen.getByRole('link', { name: 'A-Line Dress' });
+    expect(link.className).toMatch(/after:absolute/);
+    expect(link.className).toMatch(/after:inset-0/);
+    expect(screen.getByTestId('product-card').className).toMatch(/\brelative\b/);
+    // The › is a picture for the eyes only; the link keeps the product's name.
+    expect(screen.getByTestId('card-open')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+  });
+
   it('a company and several sizes: the company by name, sizes in shop order, a range per piece, the exact total', () => {
     card([
       item({ supplierName: 'Royal Garments', size: 'L', stock: 1, costPaise: 50_000 }),
