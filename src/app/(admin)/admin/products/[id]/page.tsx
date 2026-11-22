@@ -9,6 +9,8 @@ import { HangTag } from '@/features/catalog/hang-tag';
 import { EditDetailsButton, HideDesignButton, ItemSizes } from '@/features/catalog/item-page';
 import { DesignTagsForm } from '@/features/catalog/item-parts';
 import { PrintButton } from '@/features/catalog/print-button';
+import { ProductPhoto } from '@/features/catalog/product-photo';
+import { FreshAddress } from '@/features/forms/fresh-address';
 import { STORE_ID } from '@/lib/app-config';
 import { formatDate } from '@/lib/i18n';
 import { itemLink } from '@/lib/item-link';
@@ -24,7 +26,7 @@ import { requireAnyPermission } from '@/server/auth';
 import { getLocale, getT } from '@/server/i18n';
 import { requestDb } from '@/server/request-db';
 import { listCategories, listSuppliers } from '@/server/services/catalog';
-import { imageSrc, listProductImages } from '@/server/services/images';
+import { imageSrc, mainImages } from '@/server/services/images';
 import { productReport } from '@/server/services/product-report';
 import { getProduct, listDesignVariants } from '@/server/services/products';
 import { getStoreSettings, labelPriceCode } from '@/server/services/settings';
@@ -45,7 +47,7 @@ const priceText = (values: number[]) => {
 
 /**
  * The item page (owner's feedback 2026-11-22, ADR-061): a short, readable detail page — the
- * photo, name and coloured labels; three figures (in stock, sold, and the stock's purchase
+ * photo (one for every size; tap to add, change or remove it, ADR-068), name and coloured labels; three figures (in stock, sold, and the stock's purchase
  * value — or the last sale for people without that right); the prices; Make bill at the top;
  * each size with its pieces, how many sold and + Add; then Edit details, Print label, Hide,
  * More (For / Age) and Delete. Changing anything here never changes a bill made earlier:
@@ -59,18 +61,17 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const db = await requestDb();
   const product = await getProduct(db, STORE_ID, id);
   if (!product) notFound();
-  const [variants, categoryRows, supplierRows, settings, photos, origin] = await Promise.all([
+  const [variants, categoryRows, supplierRows, settings, origin] = await Promise.all([
     listDesignVariants(db, STORE_ID, id),
     listCategories(db, STORE_ID),
     listSuppliers(db, STORE_ID),
     getStoreSettings(db, STORE_ID),
-    listProductImages(db, STORE_ID, id),
     appOrigin(),
   ]);
   const na = t('common.na');
   const rights = { catalog: can(me, 'catalog'), prices: can(me, 'prices'), costs: can(me, 'costs'), stock: can(me, 'stock') };
   const ids = variants.map((v) => v.id);
-  const report = await productReport(db, STORE_ID, ids, { amounts: rights.costs });
+  const [report, photos] = await Promise.all([productReport(db, STORE_ID, ids, { amounts: rights.costs }), mainImages(db, STORE_ID, ids)]);
   const supplier = supplierRows.find((s) => s.id === product.supplierId);
   // Sizes in shop order, then colour; each with the pieces sold (approved sales).
   const order = sortSizes([...new Set(variants.map((v) => v.size))]);
@@ -93,7 +94,8 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   const hidden = variants.filter((v) => !v.active).length;
   const forGender = asForGender(product.forGender);
   const ageGroup = asAgeGroup(product.ageGroup);
-  const mainPhoto = photos[0];
+  // The product's one photo (ADR-068): this item's, else the first size that has one.
+  const mainPhoto = [id, ...ids].map((pid) => photos.get(pid)).find(Boolean);
   const day = (value: string) => formatDate(locale, `${value}T00:00:00+05:30`, 'date');
   const figure = (testId: string, big: string, small: string) => (
     <div className="flex flex-col items-center rounded-xl bg-brand-50/70 px-2 py-2.5 text-center dark:bg-brand-950/50">
@@ -131,14 +133,7 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
 
       <section data-testid="item-head" className={`${card} flex flex-col gap-3 print:hidden`}>
         <div className="flex items-start gap-3">
-          {mainPhoto ? (
-            // eslint-disable-next-line @next/next/no-img-element -- our own resized photos
-            <img src={imageSrc(mainPhoto)} alt={product.name} className="h-16 w-16 shrink-0 rounded-xl object-cover" />
-          ) : (
-            <span data-testid="item-photo-na" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-sm font-semibold text-zinc-400 dark:bg-zinc-800">
-              {na}
-            </span>
-          )}
+          <ProductPhoto productId={product.id} src={mainPhoto ? imageSrc(mainPhoto) : null} name={product.name} sizes={variants.length} canEdit={rights.catalog} />
           <div className="min-w-0 flex-1">
             <h1 className="text-xl leading-tight font-semibold">{product.name}</h1>
             <p data-testid="item-chips" className="mt-1.5 flex flex-wrap gap-1.5">
@@ -246,8 +241,11 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
 export default async function ProductPage(props: PageProps<'/admin/products/[id]'>) {
   const t = await getT();
   return (
-    <Suspense fallback={<p className="text-sm text-zinc-500">{t('cat.product.loading')}</p>}>
-      <ProductDetail params={props.params} searchParams={props.searchParams as Promise<Search>} />
-    </Suspense>
+    <>
+      <FreshAddress drop={['created']} />
+      <Suspense fallback={<p className="text-sm text-zinc-500">{t('cat.product.loading')}</p>}>
+        <ProductDetail params={props.params} searchParams={props.searchParams as Promise<Search>} />
+      </Suspense>
+    </>
   );
 }

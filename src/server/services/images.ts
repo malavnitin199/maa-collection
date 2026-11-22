@@ -26,15 +26,21 @@ export function sniffImageType(bytes: Uint8Array): string | null {
   return null;
 }
 
+/** A photo's bytes are fine to keep: not empty, not too big, really a JPEG / PNG / WebP. Returns its type. */
+function checkPhoto(bytes: Uint8Array): string {
+  if (bytes.length === 0) throw new DomainError('The photo is empty.', { key: 'stk.err.photoEmpty' });
+  if (bytes.length > MAX_IMAGE_BYTES) throw new DomainError('That photo is too large. Try again (it is resized automatically).', { key: 'stk.err.photoTooLarge' });
+  const contentType = sniffImageType(bytes);
+  if (!contentType || !ALLOWED_TYPES.includes(contentType)) throw new DomainError('Only JPEG, PNG or WebP photos can be added.', { key: 'stk.err.photoType' });
+  return contentType;
+}
+
 export async function addProductImage(
   db: Db,
   storeId: string,
   input: { productId: string; bytes: Uint8Array; width?: number | null; height?: number | null; staffId: string },
 ): Promise<ImageMeta> {
-  if (input.bytes.length === 0) throw new DomainError('The photo is empty.', { key: 'stk.err.photoEmpty' });
-  if (input.bytes.length > MAX_IMAGE_BYTES) throw new DomainError('That photo is too large. Try again (it is resized automatically).', { key: 'stk.err.photoTooLarge' });
-  const contentType = sniffImageType(input.bytes);
-  if (!contentType || !ALLOWED_TYPES.includes(contentType)) throw new DomainError('Only JPEG, PNG or WebP photos can be added.', { key: 'stk.err.photoType' });
+  const contentType = checkPhoto(input.bytes);
 
   const [product] = await db
     .select({ id: products.id })
@@ -229,4 +235,80 @@ export async function dropImagesOf(db: Db, storeId: string, productIds: string[]
     if (rest.length) await db.update(productImages).set({ url: ownSrc(heir.id) }).where(inArray(productImages.id, rest.map((r) => r.id)));
   }
   await db.delete(productImages).where(and(eq(productImages.storeId, storeId), inArray(productImages.productId, productIds)));
+}
+
+/**
+ * The product page's photo (owner, 2026-11-23, ADR-068): a product has many sizes but one
+ * picture. Every photo these items had goes (one that other products share is handed on to
+ * them first), then the new one is stored once, on the first item; the other sizes point to
+ * it. All or nothing.
+ */
+export async function setDesignPhoto(
+  db: Db,
+  storeId: string,
+  input: { productIds: string[]; bytes: Uint8Array; width?: number | null; height?: number | null; staffId: string },
+): Promise<ImageMeta> {
+  const ids = [...new Set(input.productIds)];
+  if (ids.length === 0) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  const contentType = checkPhoto(input.bytes);
+  return db.transaction(async (raw) => {
+    const tx = raw as unknown as Db;
+    const owned = await tx.select({ id: products.id }).from(products).where(and(eq(products.storeId, storeId), inArray(products.id, ids)));
+    if (owned.length !== ids.length) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+    await dropImagesOf(tx, storeId, ids);
+    const common = { storeId, contentType, width: input.width ?? null, height: input.height ?? null, sortOrder: 0, createdBy: input.staffId };
+    const [holder] = await tx
+      .insert(productImages)
+      .values({ ...common, productId: ids[0], data: input.bytes, byteSize: input.bytes.length })
+      .returning();
+    if (ids.length > 1) {
+      await tx.insert(productImages).values(ids.slice(1).map((productId) => ({ ...common, productId, data: null, url: ownSrc(holder.id), byteSize: 0 })));
+    }
+    return { id: holder.id, productId: holder.productId, sortOrder: holder.sortOrder, width: holder.width, height: holder.height, url: holder.url };
+  });
+}
+
+/** The product page's Remove photo (ADR-068): no photo on any of these sizes; products that shared it keep theirs. */
+export async function removeDesignPhoto(db: Db, storeId: string, productIds: string[]): Promise<void> {
+  const ids = [...new Set(productIds)];
+  if (ids.length === 0) return;
+  await db.transaction(async (raw) => dropImagesOf(raw as unknown as Db, storeId, ids));
+}
+
+/**
+ * A new size of a product shows the product's photo too (ADR-068): a row pointing to the
+ * stored photo, never a copy of the bytes. Items that already have a photo keep theirs, so a
+ * repeated save adds nothing. Returns how many items got it.
+ */
+export async function shareDesignPhoto(db: Db, storeId: string, input: { fromIds: string[]; toIds: string[]; staffId?: string | null }): Promise<number> {
+  if (input.fromIds.length === 0 || input.toIds.length === 0) return 0;
+  const [main] = await db
+    .select({ id: productImages.id, url: productImages.url, contentType: productImages.contentType, width: productImages.width, height: productImages.height })
+    .from(productImages)
+    .where(and(eq(productImages.storeId, storeId), inArray(productImages.productId, input.fromIds)))
+    .orderBy(asc(productImages.sortOrder), asc(productImages.createdAt))
+    .limit(1);
+  if (!main) return 0;
+  const have = await db
+    .select({ productId: productImages.productId })
+    .from(productImages)
+    .where(and(eq(productImages.storeId, storeId), inArray(productImages.productId, input.toIds)));
+  const taken = new Set(have.map((h) => h.productId));
+  const missing = [...new Set(input.toIds)].filter((id) => !taken.has(id));
+  if (missing.length === 0) return 0;
+  await db.insert(productImages).values(
+    missing.map((productId) => ({
+      storeId,
+      productId,
+      contentType: main.contentType,
+      data: null,
+      url: main.url ?? ownSrc(main.id),
+      byteSize: 0,
+      width: main.width,
+      height: main.height,
+      sortOrder: 0,
+      createdBy: input.staffId ?? null,
+    })),
+  );
+  return missing.length;
 }

@@ -10,6 +10,7 @@ import { packOf, perPiecePaise } from '@/lib/packs';
 import { designSizesById, findSizeRates, ratesForSize, sameSize, type Rates, type SizeRates } from '@/lib/size-prices';
 import { STORE_TIMEZONE } from '@/lib/app-config';
 import { DomainError, isUniqueViolation } from './errors';
+import { shareDesignPhoto } from './images';
 
 /** What salesman screens may see about a product: never the cost price. */
 export type CounterProduct = {
@@ -1304,7 +1305,7 @@ export async function addDesignSizes(
       .limit(1);
     supplierId = company?.id ?? null;
   }
-  return createDesign(db, storeId, {
+  const result = await createDesign(db, storeId, {
     operationId: input.operationId,
     supplierId,
     categoryId: product.categoryId,
@@ -1322,6 +1323,11 @@ export async function addDesignSizes(
     ageGroup: product.ageGroup,
     staffId: input.staffId,
   });
+  // The new sizes show the product's one photo too (ADR-068).
+  const added = new Set(result.products.map((p) => p.id));
+  const siblings = await listDesignVariants(db, storeId, productId);
+  await shareDesignPhoto(db, storeId, { fromIds: siblings.map((v) => v.id).filter((id) => !added.has(id)), toIds: [...added], staffId: input.staffId });
+  return result;
 }
 
 /**

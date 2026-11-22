@@ -46,11 +46,12 @@ import {
   saveDesign,
   type DesignEdit,
   getProduct,
+  listDesignVariants,
   stockIn,
   setDesignTags,
   type ProductInput,
 } from '@/server/services/products';
-import { addPhotoToProducts, addProductImage } from '@/server/services/images';
+import { addPhotoToProducts, addProductImage, removeDesignPhoto, setDesignPhoto } from '@/server/services/images';
 import { updatePriceCode } from '@/server/services/settings';
 import { createStaff, setStaffActive, setStaffPermissions, setStaffPin, verifyLogin } from '@/server/services/staff';
 
@@ -861,6 +862,48 @@ export async function addPhotoToItemsAction(productIds: string[], formData: Form
     return { message: (await getT())('act.photoAdded') };
   } catch (error) {
     return failure(error);
+  }
+}
+
+/** The sizes of the product this item belongs to — the server works them out, never the phone. */
+async function designIds(productId: string): Promise<string[]> {
+  if (!/^[0-9a-f-]{36}$/i.test(String(productId))) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  const variants = await listDesignVariants(await getDb(), STORE_ID, productId);
+  if (variants.length === 0) throw new DomainError('Product not found.', { key: 'error.productNotFound' });
+  // The opened item first: it keeps the photo itself, the other sizes point to it.
+  return [productId, ...variants.map((v) => v.id).filter((id) => id !== productId)];
+}
+
+/**
+ * Product page → photo (owner, 2026-11-23, ADR-068): one photo for every size of the product;
+ * a new one replaces the old. Catalog right.
+ */
+export async function setProductPhotoAction(productId: string, formData: FormData): Promise<{ ok: true; sizes: number } | { ok: false; error: string }> {
+  const me = await requirePermission('catalog');
+  try {
+    const bytes = await readPhoto(formData.get('photo'));
+    if (!bytes) throw new DomainError('Choose a photo first.', { key: 'act.err.choosePhoto' });
+    const ids = await designIds(productId);
+    const size = (key: string) => (/^\d+$/.test(text(formData, key)) ? Number(text(formData, key)) : null);
+    await setDesignPhoto(await getDb(), STORE_ID, { productIds: ids, bytes, width: size('width'), height: size('height'), staffId: me.id });
+    revalidatePath('/admin', 'layout');
+    revalidatePath('/pos');
+    return { ok: true, sizes: ids.length };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/** Product page → Remove photo (ADR-068): no photo on any size of the product. Catalog right. */
+export async function removeProductPhotoAction(productId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requirePermission('catalog');
+  try {
+    await removeDesignPhoto(await getDb(), STORE_ID, await designIds(productId));
+    revalidatePath('/admin', 'layout');
+    revalidatePath('/pos');
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
 }
 
