@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { link, muted } from '@/components/ui/styles';
+import { IconBack } from '@/components/ui/icons';
+import { backButton, muted } from '@/components/ui/styles';
 import { requestDb } from '@/server/request-db';
 import { ProductForm } from '@/features/catalog/product-form';
 import { STORE_ID } from '@/lib/app-config';
@@ -30,13 +31,13 @@ export default async function NewProductPage() {
   const t = await getT();
   return (
     <main className="flex flex-col gap-4">
-      <Link href="/admin/products" className={`text-sm ${link}`}>
-        {t('cat.backProducts')}
-      </Link>
-      <div>
+      <div className="flex items-center gap-3">
+        <Link href="/admin/products" aria-label={t('cat.backProductsAria')} className={backButton}>
+          <IconBack className="h-5 w-5" />
+        </Link>
         <h1 className="text-2xl font-semibold">{t('cat.new.title')}</h1>
-        <p className={`text-sm ${muted}`}>{t('cat.new.intro')}</p>
       </div>
+      <p className={`-mt-2 text-sm ${muted}`}>{t('cat.new.intro')}</p>
       <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <NewProduct />
       </Suspense>

@@ -10,7 +10,7 @@ import { StartOver } from '@/features/forms/start-over';
 import { LangText } from '@/features/i18n/lang-text';
 import { IconBack, IconChevron } from '@/components/ui/icons';
 import { ActionSheet, sheetPrimary, sheetSecondary } from '@/components/ui/selection';
-import { card, errorBox, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
+import { backButton, card, errorBox, input, muted, primaryButton, secondaryButton } from '@/components/ui/styles';
 import { haptic } from '@/features/feedback/sounds';
 import { useT } from '@/features/i18n/i18n-provider';
 import { rupeesToPaise } from '@/features/inventory/inventory';
@@ -404,9 +404,9 @@ export function NewItemWizard({
       {/* A compact top (owner's feedback 2026-11-21): one row with back · New item · Start again,
           a thin progress bar, then the step's title — so the fields get the screen. */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3">
           {step === 'start' ? (
-            <Link href="/admin/stock" aria-label={t('stk.item.back')} className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950">
+            <Link href="/admin/stock" aria-label={t('stk.item.back')} className={backButton}>
               <IconBack className="h-5 w-5" />
             </Link>
           ) : (
@@ -414,7 +414,7 @@ export function NewItemWizard({
               type="button"
               onClick={stepBack}
               aria-label={t('ni.back')}
-              className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-brand-700 transition hover:bg-brand-50 active:scale-90 dark:text-brand-300 dark:hover:bg-brand-950"
+              className={backButton}
             >
               <IconBack className="h-5 w-5" />
             </button>

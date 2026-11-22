@@ -4,7 +4,9 @@ import { expect, test } from '@playwright/test';
 test('theme and day/night apply at once and stay after a reload', async ({ page }) => {
   await page.goto('/login');
   const html = page.locator('html');
-  await expect(html).toHaveAttribute('data-theme', 'bahi'); // default since plan v16
+  await expect(html).toHaveAttribute('data-theme', 'hara'); // the owner's look, default since ADR-063
+  // The green, white-header look: the brand scale is Hara's green.
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--b-600').trim())).toBe('#1b873b');
 
   await page.getByRole('button', { name: 'Theme and day/night' }).click();
   const panel = page.getByRole('dialog', { name: 'Look' });
@@ -28,8 +30,8 @@ test('theme and day/night apply at once and stay after a reload', async ({ page 
   await expect(html).toHaveAttribute('data-mode', 'light');
 
   // The three themes added on 2026-11-19 (Sindoor, Jamun, Aasmani) are in the picker and apply too.
-  await expect(panel.getByRole('radiogroup', { name: 'Colour theme' }).getByRole('radio')).toHaveText(['Peacock', 'Marigold', 'Rani', 'Neel', 'Mehendi', 'Sindoor', 'Jamun', 'Aasmani', 'Bahi']);
-  for (const [name, id, main] of [['Sindoor', 'sindoor', '#b91c1c'], ['Jamun', 'jamun', '#7e22ce'], ['Aasmani', 'aasmani', '#0369a1']] as const) {
+  await expect(panel.getByRole('radiogroup', { name: 'Colour theme' }).getByRole('radio')).toHaveText(['Hara', 'Peacock', 'Marigold', 'Rani', 'Neel', 'Mehendi', 'Sindoor', 'Jamun', 'Aasmani', 'Bahi']);
+  for (const [name, id, main] of [['Sindoor', 'sindoor', '#b91c1c'], ['Jamun', 'jamun', '#7e22ce'], ['Hara', 'hara', '#1b873b'], ['Aasmani', 'aasmani', '#0369a1']] as const) {
     await panel.getByRole('radio', { name }).click();
     await expect(html).toHaveAttribute('data-theme', id);
     // The brand scale really changes (the 600 step the header and buttons use).

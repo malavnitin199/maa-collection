@@ -127,7 +127,7 @@ export function ItemSizes({ productId, rows, can }: { productId: string; rows: I
                     setAddQty(1);
                     setAdding(r);
                   }}
-                  className="min-h-11 shrink-0 rounded-full bg-brand-600 px-4 text-sm font-bold text-white shadow-sm transition active:scale-95"
+                  className="ui-primary min-h-11 shrink-0 rounded-full bg-brand-600 px-4 text-sm font-bold text-white shadow-sm transition active:scale-95"
                 >
                   {t('ied.add')}
                 </button>

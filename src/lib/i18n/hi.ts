@@ -281,6 +281,7 @@ const base = {
   'look.dark': 'रात',
   'look.system': 'फ़ोन जैसा',
   'look.close': 'बंद करें',
+  'theme.hara': 'हरा',
   'theme.peacock': 'मोर',
   'theme.marigold': 'गेंदा',
   'theme.rani': 'रानी',

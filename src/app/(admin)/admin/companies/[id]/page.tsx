@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { card, link, muted, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
+import { IconBack } from '@/components/ui/icons';
+import { backButton, card, link, muted, primaryButton, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { MarkPaidForm, PaymentForm } from '@/features/catalog/company-parts';
 import { DeleteCompanyButton } from '@/features/catalog/bulk-actions';
 import { ItemTabs } from '@/features/catalog/item-parts';
@@ -311,10 +312,11 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
 
   return (
     <main className="flex flex-col gap-4">
-      <Link href="/admin/companies" className={`text-sm ${link}`}>
-        {t('cat.backSuppliers')}
-      </Link>
-      <div>
+      <div className="flex items-start gap-3">
+        <Link href="/admin/companies" aria-label={t('cat.backSuppliersAria')} className={backButton}>
+          <IconBack className="h-5 w-5" />
+        </Link>
+        <div className="min-w-0">
         <h1 className="text-2xl font-semibold">{supplier.name}</h1>
         <p className={`text-sm ${muted}`}>
           {contactBits}
@@ -328,6 +330,7 @@ async function CompanyDetail({ params, searchParams }: { params: Promise<{ id: s
           )}
           {!contactBits && !supplier.phone && t('cat.productsInStock', { products: items.length, pcs: stock })}
         </p>
+        </div>
       </div>
 
       <nav aria-label={t('own.period')} className="flex flex-wrap gap-2 text-sm">

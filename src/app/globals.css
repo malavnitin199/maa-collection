@@ -5,7 +5,7 @@
  * more on 2026-11-19: Sindoor, Jamun, Aasmani; plus Bahi), each a full brand
  * scale (the 600 step keeps white text ≥ 4.5:1) plus a zari accent, and a
  * day/night mode. Both are attributes on <html>, set before the first paint by
- * the script in the root layout: data-theme="peacock|marigold|rani|neel|mehendi|sindoor|jamun|aasmani|bahi",
+ * the script in the root layout: data-theme="hara|peacock|marigold|rani|neel|mehendi|sindoor|jamun|aasmani|bahi",
  * data-mode="light|dark". Tailwind's `dark:` follows data-mode, not the OS
  * directly (the script maps "follow the phone" to light/dark).
  */
@@ -91,6 +91,17 @@
   --zari: #db631a;
 }
 
+/* Hara / हरा — the owner's look (2026-11-22, ADR-063, from screenshots of a clean green app; the
+   pattern only, never its branding): a white page and header, one fresh green, light-green bordered
+   cards and boxes, rounded-square green buttons and back button, a green page title. The default
+   theme. The 600 step keeps white text at 4.59:1. `--line` is the light-green edge of cards and boxes. */
+[data-theme="hara"] {
+  --b-50: #effaf1; --b-100: #d9f2de; --b-200: #b5e4bf; --b-300: #85d095; --b-400: #52b867;
+  --b-500: #2f9e48; --b-600: #1b873b; --b-700: #176c31; --b-800: #16562a; --b-900: #134624; --b-950: #072814;
+  --zari: #e8890c;
+  --line: #d6e8d9;
+}
+
 /* Surfaces: the page wears a whisper of the theme; cards stay white (day) or deep (night). */
 :root {
   --background: color-mix(in oklab, var(--b-50) 60%, #ffffff);
@@ -116,6 +127,15 @@
 [data-mode="dark"][data-theme="bahi"] {
   --zari: #f08a4b;
 }
+/* Hara by day: an almost white page, near-black text. By night: a warmer amber, darker edges. */
+[data-theme="hara"]:not([data-mode="dark"]) {
+  --background: #fbfdfb;
+  --foreground: #1f2723;
+}
+[data-mode="dark"][data-theme="hara"] {
+  --zari: #f4a340;
+  --line: #2b3a2f;
+}
 
 /* Base styles sit in the base layer so utility classes (text-white, …) win. */
 @layer base {
@@ -133,6 +153,15 @@
   }
   [data-mode="dark"] h1 {
     color: var(--b-100);
+  }
+  [data-theme="hara"] h1 {
+    color: var(--b-600);
+  }
+  [data-mode="dark"][data-theme="hara"] h1 {
+    color: var(--b-300);
+  }
+  :root {
+    accent-color: var(--b-600);
   }
 
   ::selection {
@@ -164,28 +193,105 @@
 }
 
 /* Bahi: Poppins for text and headings (no print display face), and a plain accent line. */
-[data-theme="bahi"] body {
+:is([data-theme="bahi"], [data-theme="hara"]) body {
   font-family: var(--font-poppins), var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
 }
-[data-theme="bahi"] h1,
-[data-theme="bahi"] .font-display {
+:is([data-theme="bahi"], [data-theme="hara"]) h1,
+:is([data-theme="bahi"], [data-theme="hara"]) .font-display {
   font-family: var(--font-poppins), var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: -0.015em;
 }
 /* Poppins is wider than the print face: a smaller shop name so the header's symbols fit. */
-[data-theme="bahi"] .header-brand {
+:is([data-theme="bahi"], [data-theme="hara"]) .header-brand {
   font-size: 1rem;
   letter-spacing: -0.02em;
 }
 @media (min-width: 390px) {
-  [data-theme="bahi"] .header-brand { font-size: 1.12rem; }
+  :is([data-theme="bahi"], [data-theme="hara"]) .header-brand { font-size: 1.12rem; }
 }
 [data-theme="bahi"] .zari {
   height: 3px;
   -webkit-mask: none;
   mask: none;
 }
+
+/* Hara (ADR-063): a white header with a light-green edge — no zari strip — the shop's name in green,
+   a green MC square, light-green round buttons; white cards and boxes with light-green edges and a
+   soft green shadow; rounded-square buttons; section titles in plain dark grey. */
+[data-theme="hara"] .zari { display: none; }
+[data-theme="hara"] .header-band {
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 1px 0 var(--line), 0 6px 20px rgb(16 40 24 / 0.06);
+}
+[data-theme="hara"] .header-brand { color: var(--b-600); }
+[data-theme="hara"] .header-user { color: #5f6b64; }
+[data-theme="hara"] .header-badge {
+  background: var(--b-600);
+  color: #fff;
+  border-radius: 0.9rem;
+  box-shadow: 0 4px 12px rgb(27 135 59 / 0.3);
+}
+[data-theme="hara"] .ui-head-btn {
+  background: var(--b-50);
+  color: var(--b-700);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+[data-theme="hara"] .ui-head-btn:hover { background: var(--b-100); }
+[data-theme="hara"] .ui-head-btn:focus-visible { outline-color: var(--b-500); }
+[data-theme="hara"] .ui-head-btn-on { background: var(--b-600); color: #fff; box-shadow: none; }
+[data-theme="hara"] .header-nav-link { color: #4b5550; }
+[data-theme="hara"] .header-nav-link:hover { background: var(--b-50); color: var(--b-700); }
+[data-theme="hara"] .login-band { background: var(--b-600); }
+[data-theme="hara"] .ui-card {
+  border-color: var(--line);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(16 40 24 / 0.04), 0 6px 18px rgb(27 135 59 / 0.06);
+}
+[data-theme="hara"] .ui-input {
+  border-color: #cfe2d3;
+  border-radius: 0.8rem;
+  box-shadow: 0 1px 2px rgb(16 40 24 / 0.05), 0 3px 10px rgb(27 135 59 / 0.05);
+}
+[data-theme="hara"] .ui-input:focus {
+  border-color: var(--b-500);
+  box-shadow: 0 0 0 4px rgb(47 158 72 / 0.16);
+}
+[data-theme="hara"] .ui-primary {
+  border-radius: 0.8rem;
+  box-shadow: 0 6px 16px rgb(27 135 59 / 0.28);
+}
+[data-theme="hara"] .ui-secondary { border-radius: 0.8rem; }
+/* Red (taking off, clearing) buttons keep their red. */
+[data-theme="hara"] .ui-secondary:not([class*="red-"]) {
+  border-color: #cfe2d3;
+  color: var(--b-700);
+}
+[data-theme="hara"] .ui-section-title {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #3a433e;
+}
+/* Also beats the night gradient further down (same weight, later in the file). */
+[data-mode="dark"][data-theme="hara"] .header-band { background: var(--surface); box-shadow: 0 1px 0 var(--line); }
+[data-mode="dark"][data-theme="hara"] .header-brand { color: var(--b-300); }
+[data-mode="dark"][data-theme="hara"] .header-user { color: #a1aaa5; }
+[data-mode="dark"][data-theme="hara"] .header-badge { box-shadow: none; }
+[data-mode="dark"][data-theme="hara"] .ui-head-btn { background: rgb(47 158 72 / 0.14); color: var(--b-200); }
+[data-mode="dark"][data-theme="hara"] .ui-head-btn:hover { background: rgb(47 158 72 / 0.24); }
+[data-mode="dark"][data-theme="hara"] .ui-head-btn-on { background: var(--b-500); color: #fff; }
+[data-mode="dark"][data-theme="hara"] .header-nav-link { color: #b8c2bc; }
+[data-mode="dark"][data-theme="hara"] .header-nav-link:hover { background: rgb(47 158 72 / 0.14); color: var(--b-200); }
+[data-mode="dark"][data-theme="hara"] .login-band { background: var(--b-900); }
+[data-mode="dark"][data-theme="hara"] .ui-card { box-shadow: none; }
+[data-mode="dark"][data-theme="hara"] .ui-input { border-color: #3a4a3f; box-shadow: none; }
+[data-mode="dark"][data-theme="hara"] .ui-input:focus { border-color: var(--b-400); box-shadow: 0 0 0 4px rgb(82 184 103 / 0.18); }
+[data-mode="dark"][data-theme="hara"] .ui-primary { box-shadow: none; }
+[data-mode="dark"][data-theme="hara"] .ui-secondary:not([class*="red-"]) { border-color: #3a4a3f; color: var(--b-300); }
+[data-mode="dark"][data-theme="hara"] .ui-section-title { color: #c4cec8; }
 
 /* Hang-tag shape for the big action tiles: notched top corners and a punch hole. */
 .tag-shape {

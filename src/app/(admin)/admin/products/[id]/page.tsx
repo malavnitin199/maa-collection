@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Fragment, Suspense } from 'react';
-import { card, link, muted, okBox, sectionTitle } from '@/components/ui/styles';
+import { IconBack } from '@/components/ui/icons';
+import { backButton, card, muted, okBox, sectionTitle } from '@/components/ui/styles';
 import { chip, chipTone } from '@/features/catalog/chips';
 import { DeleteItemButton } from '@/features/catalog/delete-products';
 import { HangTag } from '@/features/catalog/hang-tag';
@@ -106,14 +107,14 @@ async function ProductDetail({ params, searchParams }: { params: Promise<{ id: s
   return (
     <main className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2 print:hidden">
-        <Link href="/admin/products" className={`text-sm ${link}`}>
-          {t('cat.backProducts')}
+        <Link href="/admin/products" aria-label={t('cat.backProductsAria')} className={backButton}>
+          <IconBack className="h-5 w-5" />
         </Link>
         {rights.costs && (
           <Link
             href={`/admin/bills/new?product=${product.id}`}
             data-testid="make-bill"
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-bold text-white shadow-md shadow-brand-700/25 transition active:scale-95"
+            className="ui-primary inline-flex min-h-10 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-bold text-white shadow-md shadow-brand-700/25 transition active:scale-95"
           >
             <span aria-hidden>🧾</span>
             {t('ied.makeBill')}

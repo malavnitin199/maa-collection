@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { IconBack } from '@/components/ui/icons';
-import { card, link, muted, secondaryButton, sectionTitle } from '@/components/ui/styles';
+import { backButton, card, link, muted, secondaryButton, sectionTitle } from '@/components/ui/styles';
 import { BillForm } from '@/features/bills/bill-form';
 import { BillSheet } from '@/features/bills/bill-sheet';
 import { itemsPart, sheetParts } from '@/features/bills/sheet-parts';
@@ -186,9 +186,8 @@ export default async function BillPage(props: PageProps<'/admin/bills/[id]'>) {
   const { id } = await props.params;
   return (
     <main className="flex flex-col gap-3">
-      <Link href="/admin/bills" className={`flex items-center gap-1 text-sm ${link}`}>
-        <IconBack className="h-4 w-4" />
-        {t('bills.back')}
+      <Link href="/admin/bills" aria-label={t('bills.back')} className={backButton}>
+        <IconBack className="h-5 w-5" />
       </Link>
       <Suspense fallback={<p className="text-sm text-zinc-500">{t('common.loading')}</p>}>
         <BillDetail id={id} />

@@ -46,14 +46,14 @@ async function HeaderContent() {
         <Link href={me?.role === 'admin' ? '/admin/dashboard' : '/pos'} className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 font-display text-lg font-bold tracking-wide text-white shadow-inner ring-1 ring-white/30 min-[390px]:h-[3.25rem] min-[390px]:w-[3.25rem]"
+            className="header-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 font-display text-lg font-bold tracking-wide text-white shadow-inner ring-1 ring-white/30 min-[390px]:h-[3.25rem] min-[390px]:w-[3.25rem]"
           >
             MC
           </span>
           <span className="flex min-w-0 flex-col">
             <span className="header-brand truncate font-display text-[1.4rem] leading-tight whitespace-nowrap text-white min-[390px]:text-[1.55rem]">Maa Collection</span>
             {me && (
-              <span data-testid="current-user" className="mt-1 truncate text-sm leading-none font-medium text-white/85">
+              <span data-testid="current-user" className="header-user mt-1 truncate text-sm leading-none font-medium text-white/85">
                 {me.name} · {t(me.role === 'admin' ? 'role.admin' : 'role.salesman')}
               </span>
             )}
@@ -85,7 +85,7 @@ async function HeaderContent() {
           <Link
             key={item.href}
             href={item.href}
-            className="rounded-full px-2.5 py-1 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+            className="header-nav-link rounded-full px-2.5 py-1 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
           >
             {t(item.label)}
           </Link>
@@ -103,10 +103,11 @@ async function BottomNavForUser() {
 export function RoleHeader() {
   return (
     <>
-    {/* Plan v17: a soft gradient in the theme's dye with a faint glow, finished with the zari border. */}
+    {/* Plan v17: a soft gradient in the theme's dye with a faint glow, finished with the zari border.
+        Hara (ADR-063): white with a light-green edge — globals.css restyles it through the class hooks. */}
     <header className="header-band sticky top-0 z-10 text-white shadow-lg shadow-brand-950/25 print:hidden">
       <div className="mx-auto flex min-h-[5rem] max-w-5xl flex-col justify-center gap-3 px-4 pt-4 pb-4">
-        <Suspense fallback={<span className="font-display text-[1.55rem] leading-none text-white">Maa Collection</span>}>
+        <Suspense fallback={<span className="header-brand font-display text-[1.55rem] leading-none text-white">Maa Collection</span>}>
           <HeaderContent />
         </Suspense>
       </div>

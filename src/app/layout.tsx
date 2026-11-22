@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { LocaleRoot } from "@/features/i18n/locale-root";
-import { BRAND_GREEN } from "@/lib/app-icon";
 import { Geist_Mono, Mukta, Poppins, Rozha_One } from "next/font/google";
 import { AppearanceSync } from "@/features/appearance/appearance-sync";
 import { APPEARANCE_SCRIPT } from "@/features/appearance/appearance";
@@ -38,14 +37,20 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Maa Collection", statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = { themeColor: BRAND_GREEN };
+// The phone's status bar matches the header: white by day (Hara, ADR-063), the night surface by night.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#18181b' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+  ],
+};
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       // Theme and day/night are set by the script below before the first paint (per phone).
-      data-theme="bahi"
+      data-theme="hara"
       data-mode="light"
       suppressHydrationWarning
       className={`${mukta.variable} ${rozha.variable} ${poppins.variable} ${geistMono.variable} h-full antialiased`}

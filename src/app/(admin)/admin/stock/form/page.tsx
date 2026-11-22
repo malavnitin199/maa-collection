@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { IconBack } from '@/components/ui/icons';
+import { backButton } from '@/components/ui/styles';
 import { NewItemForm } from '@/features/catalog/new-item-form';
 import { STORE_ID } from '@/lib/app-config';
 import { can } from '@/lib/permissions';
@@ -35,8 +36,8 @@ export default async function OldNewItemFormPage(props: PageProps<'/admin/stock/
   return (
     <main className="flex flex-col gap-4">
       {/* Minimal title bar (plan v17): back arrow and the name of the screen only. */}
-      <div className="flex items-center gap-2">
-        <Link href="/admin/stock" aria-label={t('stk.item.back')} className="-ml-2 rounded-full p-2 text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950">
+      <div className="flex items-center gap-3">
+        <Link href="/admin/stock" aria-label={t('stk.item.back')} className={backButton}>
           <IconBack className="h-5 w-5" />
         </Link>
         <h1 className="text-xl font-semibold">{t('ni.hub.form.title')}</h1>

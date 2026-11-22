@@ -34,7 +34,10 @@ test('many items: who → what → details & sizes (one card) → check → save
   await expect(page.getByText('Step 1 of 4')).toBeVisible();
   const who = page.getByRole('group', { name: 'Which collection?' }).getByRole('button');
   await expect(who.nth(0)).toHaveText('Men'); // then Women, Boys, Girls, any the owner added, and Add last
-  await expect(who.nth(3)).toHaveText('Girls');
+  // Girls follows Boys, but the collections test may be moving its own collection up past it at this
+  // very moment (parallel workers share the database): just check Girls is offered.
+  await expect(who.nth(2)).toHaveText('Boys');
+  await expect(who.filter({ hasText: /^Girls$/ })).toHaveCount(1);
   await expect(who.last()).toHaveText('+Add');
   await page.getByRole('button', { name: 'Men', exact: true }).click();
 

@@ -3,19 +3,21 @@
  * localStorage; applied as data-theme / data-mode on <html> before the first
  * paint by APPEARANCE_SCRIPT, so there is no flash of the wrong colours.
  */
-// Bahi (plan v16) is last in the picker but the default for a phone that never picked a theme.
-// Sindoor, Jamun and Aasmani were added on the owner's request (2026-11-19).
-export const THEMES = ['peacock', 'marigold', 'rani', 'neel', 'mehendi', 'sindoor', 'jamun', 'aasmani', 'bahi'] as const;
+// Hara (owner's look, 2026-11-22, ADR-063) is first in the picker and the default; Bahi (plan v16)
+// was the default before. Sindoor, Jamun and Aasmani were added on the owner's request (2026-11-19).
+export const THEMES = ['hara', 'peacock', 'marigold', 'rani', 'neel', 'mehendi', 'sindoor', 'jamun', 'aasmani', 'bahi'] as const;
 export type Theme = (typeof THEMES)[number];
 export const MODES = ['light', 'dark', 'system'] as const;
 export type Mode = (typeof MODES)[number];
 
-export const THEME_KEY = 'maa-theme';
+/** `-2` since Hara became the default (ADR-063): every phone starts on the new look once; any colour can be picked again. */
+export const THEME_KEY = 'maa-theme-2';
 export const MODE_KEY = 'maa-mode';
-export const DEFAULT_THEME: Theme = 'bahi';
+export const DEFAULT_THEME: Theme = 'hara';
 
 /** Swatch colours for the picker (main colour + zari accent), same as globals.css. */
 export const THEME_SWATCH: Record<Theme, { main: string; accent: string }> = {
+  hara: { main: '#1b873b', accent: '#e8890c' },
   peacock: { main: '#0f766e', accent: '#d4a017' },
   marigold: { main: '#c2410c', accent: '#7a1f2b' },
   rani: { main: '#be185d', accent: '#e0a800' },

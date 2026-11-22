@@ -293,6 +293,7 @@ const base = {
   'look.dark': 'Night',
   'look.system': 'Same as phone',
   'look.close': 'Close',
+  'theme.hara': 'Hara',
   'theme.peacock': 'Peacock',
   'theme.marigold': 'Marigold',
   'theme.rani': 'Rani',

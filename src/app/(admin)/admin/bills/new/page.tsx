@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { IconBack } from '@/components/ui/icons';
+import { backButton } from '@/components/ui/styles';
 import { BillEditor, type EditorLine } from '@/features/bills/bill-editor';
 import { startLine } from '@/features/bills/sheet-parts';
 import { rupeesText } from '@/lib/money';
@@ -55,8 +56,8 @@ export default async function NewBillPage(props: PageProps<'/admin/bills/new'>) 
   const params = (await props.searchParams) as { supplier?: string; product?: string };
   return (
     <main className="flex flex-col gap-3">
-      <div className="flex items-center gap-1">
-        <Link href="/admin/bills" aria-label={t('bills.back')} className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950">
+      <div className="flex items-center gap-3">
+        <Link href="/admin/bills" aria-label={t('bills.back')} className={backButton}>
           <IconBack className="h-5 w-5" />
         </Link>
         <h1 className="text-xl font-semibold">{t('bills.newTitle')}</h1>
