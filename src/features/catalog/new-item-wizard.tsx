@@ -25,17 +25,19 @@ import {
   addTypeAction,
   addTypeSizeAction,
   createDesignAction,
+  deleteCategoryAction,
   deleteCollectionAction,
   editCollectionAction,
+  editTypeAction,
   openFixedCollectionAction,
   type SectionResult,
 } from '@/server/actions/admin';
-import type { PickSection } from '@/server/services/sections';
+import type { PickSection, PickType } from '@/server/services/sections';
 import { CompanyPicker } from './company-picker';
 import { SectionArt, TypeArt } from './section-art';
 
 type Option = { id: string; name: string };
-export type WizardType = { id: string; name: string; code: string; sizes: string[] };
+export type WizardType = PickType;
 /** Names arrive in the person's language (the page picks English / Hindi); Men and Women are always there (ADR-064). */
 export type WizardSection = PickSection;
 
@@ -57,9 +59,8 @@ const artCircle = 'flex h-20 w-20 items-center justify-center rounded-full bg-br
 const cornerButton =
   'absolute top-2 flex h-9 w-9 items-center justify-center rounded-full bg-surface shadow-sm ring-1 ring-zinc-200 transition active:scale-90 dark:ring-zinc-700';
 const field = 'flex flex-col gap-1 text-sm font-medium';
-/** Details: the four must-have boxes (owner, 2026-11-22) — big, like the tiles on the steps before. */
-const fieldTile = 'flex min-h-28 min-w-0 flex-col justify-between gap-2 rounded-3xl bg-surface p-3 shadow-sm ring-1 ring-brand-100 dark:ring-brand-900';
 const tileLabel = 'text-sm leading-tight font-semibold';
+const stepperButton = 'flex h-12 w-11 shrink-0 items-center justify-center text-xl font-bold text-brand-700 transition active:scale-90 dark:text-brand-300';
 /** Quick % on the purchase price in the sale price calculator. */
 const MARKUP_CHOICES = [20, 30, 50, 100] as const;
 /** The first row's ← (owner, 2026-11-22: a smaller, higher top). */
@@ -150,7 +151,7 @@ export function NewItemWizard({
   const [packText, setPackText] = useState('12');
   const [packMrp, setPackMrp] = useState('');
   const [costAs, setCostAs] = useState<'piece' | 'box'>('piece');
-  // Owner, 2026-11-22: the % calculator beside the sale price, and "Sizes & more" — both folded at first.
+  // The % calculator under the sale price row, and "More details" — both folded at first.
   const [calcOpen, setCalcOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [reached, setReached] = useState(startSection ? 1 : 0);
@@ -158,6 +159,9 @@ export function NewItemWizard({
   // The owner's ✎ / 🗑 on a collection tile (ADR-064).
   const [editing, setEditing] = useState<WizardSection | null>(null);
   const [removing, setRemoving] = useState<WizardSection | null>(null);
+  // The owner's ✎ / 🗑 on a category tile (ADR-071).
+  const [editingType, setEditingType] = useState<WizardType | null>(null);
+  const [removingType, setRemovingType] = useState<WizardType | null>(null);
   // Men / Women the shop lacked, being made by the tap that picked it.
   const [opening, startOpening] = useTransition();
   // Just added on this step (a section or a category): shown chosen with a glow; tap it to go on.
@@ -203,7 +207,7 @@ export function NewItemWizard({
   const boxesText = (n: number) => t(n === 1 ? 'pack.boxes.one' : 'pack.boxes.other', { n });
   const pcs = (n: number) => t(n === 1 ? 'stk.item.pcs.one' : 'stk.item.pcs.other', { n });
   const sizesOk = totalPieces > 0;
-  // The four boxes (company and name are optional): a sale price, worked out or typed, and a readable purchase price.
+  // The must-haves on the card (name and company are optional): a sale price, worked out or typed, and a readable purchase price.
   const basicsOk = mrpPaise !== null && (!cost.trim() || typedCost !== null);
   const sizesText = noSize
     ? t('ni.noSize.summary', { pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces) })
@@ -211,6 +215,10 @@ export function NewItemWizard({
         sizes: t(ordered.length === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: ordered.length }),
         pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces),
       });
+  // "More details" names what is filled in under it (a box, counter price, bill no., date, brand).
+  const moreText = [pack ? t('pack.label', { n: pack }) : '', pricePaise !== null ? t('ni.review.price', { amount: formatPaise(pricePaise) }) : '', billNumber.trim() ? t('ni.review.bill', { bill: billNumber.trim() }) : '', stockDate, brand.trim()]
+    .filter(Boolean)
+    .join(' · ');
   const shownName = name.trim() || (type ? t('ni.name.auto', { type: type.name }) : '');
   const sizeLine = [
     pack ? t('pack.label', { n: pack }) : '',
@@ -302,7 +310,9 @@ export function NewItemWizard({
       setTypeId(next.id);
       // A category with one size (e.g. Free) has it chosen already.
       setSizes(next.sizes.length === 1 ? [next.sizes[0]] : []);
-      setPieces({});
+      // The Quantity typed with no size is a main field now (ADR-071): it stays, like the name and prices —
+      // on the one size when the new category has just one. Per-size counts go with their sizes.
+      setPieces((p) => (!noSize || p[''] === undefined ? {} : next.sizes.length === 1 ? { [next.sizes[0]]: p[''] } : { '': p[''] }));
     }
   };
   const pickType = (next: WizardType) => {
@@ -345,6 +355,8 @@ export function NewItemWizard({
     setSheet(null);
     setEditing(null);
     setRemoving(null);
+    setEditingType(null);
+    setRemovingType(null);
     setCalcOpen(false);
     setMoreOpen(false);
     setSectionId(startSection);
@@ -357,9 +369,13 @@ export function NewItemWizard({
     setStep(startSection ? 'what' : 'who');
     window.scrollTo({ top: 0 });
   };
-  const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || typeId);
+  const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || cost.trim() || typeId);
   // Coming back to this page later starts a fresh entry — or asks, once three or more steps are filled (owner's rule, 2026-11-20).
-  const resume = useFreshOnReturn(startOver, { ask: () => reached >= 2 && Boolean(name.trim() || mrp.trim() || sizes.length) });
+  // The purchase price and the quantity are the card's main fields since ADR-071, so they count too (pre-release review);
+  // bill no., date and company can come from the address, so they don't.
+  const resume = useFreshOnReturn(startOver, {
+    ask: () => reached >= 2 && Boolean(name.trim() || mrp.trim() || cost.trim() || price.trim() || brand.trim() || sizes.length || Object.keys(pieces).length || boxed),
+  });
   /**
    * Save (plan v19 04a): `print` → the tags page; `next` → the next item of the same bill
    * ("What is it?", section / company / bill no. / date kept); `done` → the first step, everything cleared.
@@ -396,8 +412,11 @@ export function NewItemWizard({
         done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
         return setError(result.error);
       }
-      // The collection has these items now: its 🗑 knows (ADR-064).
-      setList((current) => current.map((x) => (x.id === section.id ? { ...x, items: x.items + result.items.length } : x)));
+      // The collection and the category have these items now: their 🗑 knows (ADR-064, ADR-071).
+      const made = result.items.length;
+      setList((current) =>
+        current.map((x) => (x.id === section.id ? { ...x, items: x.items + made, types: x.types.map((ty) => (ty.id === type.id ? { ...ty, items: ty.items + made } : ty)) } : x)),
+      );
       const skus = result.items.map((item) => item.sku);
       const finalName = result.items[0]?.name ?? savedName;
       const range = skus.length === 1 ? skus[0] : `${skus[0]} – ${skus[skus.length - 1]}`;
@@ -450,15 +469,19 @@ export function NewItemWizard({
     details: t('ni.step.detailsSizes'),
     review: t('ni.step.review'),
   };
-  /** Next on the Details & sizes step: everything must be in; else it shows what is missing (opening Sizes & more when it is there). */
+  /** Next on Details & sizes: everything must be in; else it shows what is missing (the top of the card; "More details" for a wrong box or counter price; the Quantity box when there are no pieces). */
   const finishDetails = () => {
     if (!basicsOk) {
       document.getElementById('ni-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    if (!detailsOk || !sizesOk) {
+    if (!detailsOk) {
       setMoreOpen(true);
       requestAnimationFrame(() => document.getElementById('ni-more')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      return;
+    }
+    if (!sizesOk) {
+      document.getElementById('ni-qty')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     toReview();
@@ -570,22 +593,41 @@ export function NewItemWizard({
             {section.types.length === 0 && <p className={`text-sm ${muted}`}>{t('ni.noTypes')}</p>}
             <div role="group" aria-label={t('ni.step.what')} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {section.types.map((x) => (
-                <button
-                  key={x.id}
-                  type="button"
-                  aria-pressed={x.id === typeId}
-                  data-new={x.id === fresh || undefined}
-                  ref={x.id === fresh ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
-                  onClick={() => pickType(x)}
-                  className={`${tile} min-h-32 ${x.id === typeId ? tileOn : ''} ${x.id === fresh ? 'new-glow' : ''}`}
-                >
-                  {x.id === fresh && <NewBadge />}
-                  <span className={`${artCircle} h-16 w-16`}>
-                    <TypeArt name={x.name} className="h-11 w-11" />
-                  </span>
-                  <span className="text-base leading-tight font-bold">{x.name}</span>
-                  {x.sizes.length > 0 && <span className={`text-xs ${muted}`}>{sizeRange(x.sizes)}</span>}
-                </button>
+                // Owner, 2026-11-23 (ADR-071): like the collections — ✎ (name and sizes) and 🗑 on each
+                // category for the owner; Jeans, Jacket and Shirt carry a lock (their name stays) but keep ✎ for sizes.
+                <div key={x.id} data-testid="type-tile" data-fixed={x.fixed || undefined} className="relative">
+                  <button
+                    type="button"
+                    aria-pressed={x.id === typeId}
+                    data-new={x.id === fresh || undefined}
+                    ref={x.id === fresh ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
+                    onClick={() => pickType(x)}
+                    className={`${tile} h-full min-h-32 w-full ${isOwner ? 'pt-11' : ''} ${x.id === typeId ? tileOn : ''} ${x.id === fresh ? 'new-glow' : ''}`}
+                  >
+                    {x.id === fresh && <NewBadge className={isOwner ? 'top-2.5 left-1/2 -translate-x-1/2' : undefined} />}
+                    <span className={`${artCircle} h-16 w-16`}>
+                      <TypeArt name={x.name} className="h-11 w-11" />
+                    </span>
+                    <span className="text-base leading-tight font-bold break-words">{x.name}</span>
+                    {x.sizes.length > 0 && <span className={`text-xs ${muted}`}>{sizeRange(x.sizes)}</span>}
+                  </button>
+                  {isOwner && (
+                    <button type="button" aria-label={t('ni.section.edit', { name: x.name })} onClick={() => setEditingType(x)} className={`${cornerButton} left-2 text-brand-700 dark:text-brand-300`}>
+                      <IconPencil className="h-4 w-4" />
+                    </button>
+                  )}
+                  {x.fixed ? (
+                    <span title={t('sec.fixed')} className="pointer-events-none absolute top-3 right-3 text-zinc-400 dark:text-zinc-500">
+                      <IconLock className="h-4 w-4" />
+                    </span>
+                  ) : (
+                    isOwner && (
+                      <button type="button" aria-label={t('col.delete', { name: x.name })} onClick={() => setRemovingType(x)} className={`${cornerButton} right-2 text-red-600 dark:text-red-400`}>
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    )
+                  )}
+                </div>
               ))}
               <AddTile label={t('ni.add')} onClick={() => setSheet('type')} />
             </div>
@@ -654,10 +696,8 @@ export function NewItemWizard({
         )}
       </div>
 
-      {/* Details & sizes (owner's feedback 2026-11-21; 2026-11-22, ADR-065): the four must-haves as big boxes —
-          company, product name, purchase price, sale price (₹ inside, % calculator beside it) — then everything
-          else (sizes first, box, counter price, bill no., date, brand) folded under "Sizes & more", then Next.
-          Stays mounted once reached (the company list it may grow lives inside it). */}
+      {/* Details & sizes (ADR-065, ADR-071): the one details card below, then "More details" (box, counter price,
+          bill no., date, brand) folded, then Next. Stays mounted once reached (the company list it may grow lives inside it). */}
       {reached >= 2 && (
         <div hidden={step !== 'details'} data-testid="details-step" className={step === 'details' ? (direction === 'next' ? 'step-next' : 'step-back') : ''}>
           <form
@@ -670,22 +710,11 @@ export function NewItemWizard({
               finishDetails();
             }}
           >
-            <div data-testid="details-tiles" className="grid grid-cols-2 gap-2.5">
-              {/* A new company being typed takes the whole row. */}
-              <div className={`${fieldTile} has-[[data-adding]]:col-span-2`}>
-                <CompanyPicker
-                  label={t('stk.item.company')}
-                  companies={suppliers}
-                  previous={previousSuppliers}
-                  value={supplierId}
-                  emptyLabel={t('ni.chooseCompany')}
-                  onChange={(id, companyName) => {
-                    setSupplierId(id);
-                    setSupplierName(companyName);
-                  }}
-                />
-              </div>
-              <div className={fieldTile}>
+            {/* Owner, 2026-11-23 (ADR-071): one card in the order things matter — the product name; the purchase
+                price beside the quantity (the main things); the sale price worked out in a small row (type only to
+                change it); the sizes with their pieces; the company last, a slim row that opens ready to type. */}
+            <div data-testid="details-main" className="flex flex-col gap-3 rounded-3xl bg-surface p-3.5 shadow-sm ring-1 ring-brand-100 dark:ring-brand-900">
+              <div className="flex flex-col gap-1.5">
                 <label htmlFor="ni-name" className={tileLabel}>
                   {t('ni.name.optional')}
                 </label>
@@ -696,49 +725,68 @@ export function NewItemWizard({
                   maxLength={120}
                   autoComplete="off"
                   placeholder={type ? t('ni.name.auto', { type: type.name }) : undefined}
-                  inputClassName={`${input} w-full min-w-0 basis-full text-base font-semibold`}
+                  inputClassName={`${input} min-w-0 flex-1 text-base font-semibold`}
+                />
+              </div>
+              <div className="grid grid-cols-2 items-start gap-3">
+                {showCost ? (
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <label htmlFor="ni-cost" className={tileLabel}>
+                      {boxed && costAs === 'box' ? t('pack.costBox') : t('ni.cost')}
+                    </label>
+                    <RupeeBox id="ni-cost" value={cost} onChange={setCost} />
+                    {boxed && costAs === 'box' && costPaise !== null && (
+                      <span data-testid="pack-cost-each" className={`text-xs ${muted}`}>
+                        {t('pack.costEach', { amount: formatPaise(costPaise) })}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  // Without the purchase price right nothing is worked out: the sale price is typed here.
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <label htmlFor="ni-mrp" className={tileLabel}>
+                      {boxed ? t('pack.mrpPiece') : t('ni.mrp')}
+                    </label>
+                    <RupeeBox id="ni-mrp" value={mrp} onChange={setMrp} />
+                  </div>
+                )}
+                <QuantityBox
+                  boxes={pack}
+                  noSize={noSize}
+                  value={count('')}
+                  total={pack ? totalBoxes : totalPieces}
+                  sizesCount={ordered.length}
+                  onChange={(value) => setPieces({ ...pieces, '': Math.max(0, Math.min(999, value)) })}
                 />
               </div>
               {showCost && (
-                <div className={fieldTile}>
-                  <label htmlFor="ni-cost" className={tileLabel}>
-                    {boxed && costAs === 'box' ? t('pack.costBox') : t('ni.cost')}
-                  </label>
-                  <RupeeBox id="ni-cost" value={cost} onChange={setCost} />
-                  {boxed && costAs === 'box' && costPaise !== null && (
-                    <span data-testid="pack-cost-each" className={`text-xs ${muted}`}>
-                      {t('pack.costEach', { amount: formatPaise(costPaise) })}
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className={fieldTile}>
-                <div className="flex items-start justify-between gap-1">
-                  <label htmlFor="ni-mrp" className={tileLabel}>
+                // flex-wrap: with a box, "Sale price of one piece" is long — the rest wraps below, never past the card.
+                <div data-testid="sale-row" className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <label htmlFor="ni-mrp" className="shrink-0 text-sm font-medium">
                     {boxed ? t('pack.mrpPiece') : t('ni.mrp')}
                   </label>
-                  {/* The % calculator (owner, 2026-11-22): opens under the boxes. */}
-                  {showCost && (
-                    <button
-                      type="button"
-                      aria-expanded={calcOpen}
-                      aria-controls="ni-calc"
-                      aria-label={t('ni.calc.open')}
-                      title={t('ni.calc.open')}
-                      onClick={() => setCalcOpen((open) => !open)}
-                      className={`-mt-1 -mr-1 inline-flex h-8 shrink-0 items-center gap-0.5 rounded-lg px-2 text-xs font-bold transition active:scale-95 ${
-                        calcOpen ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950 dark:text-brand-300 dark:ring-brand-800'
-                      }`}
-                    >
-                      %
-                      <IconChevron className={`h-3.5 w-3.5 transition ${calcOpen ? '-rotate-90' : 'rotate-90'}`} />
-                    </button>
-                  )}
+                  {/* Left empty, it is purchase + the % (shown in grey) — ADR-053. */}
+                  <span className="w-28 shrink-0">
+                    <RupeeBox id="ni-mrp" value={mrp} onChange={setMrp} placeholder={derivedMrp !== null ? String(derivedMrp / 100) : undefined} small />
+                  </span>
+                  {!mrp.trim() && derivedMrp !== null && <span className={`min-w-0 truncate text-xs ${muted}`}>{t('ni.sale.auto', { n: markup })}</span>}
+                  {/* The % calculator (owner, 2026-11-22): opens under this row. */}
+                  <button
+                    type="button"
+                    aria-expanded={calcOpen}
+                    aria-controls="ni-calc"
+                    aria-label={t('ni.calc.open')}
+                    title={t('ni.calc.open')}
+                    onClick={() => setCalcOpen((open) => !open)}
+                    className={`ml-auto inline-flex h-9 shrink-0 items-center gap-0.5 rounded-lg px-2 text-xs font-bold transition active:scale-95 ${
+                      calcOpen ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950 dark:text-brand-300 dark:ring-brand-800'
+                    }`}
+                  >
+                    %
+                    <IconChevron className={`h-3.5 w-3.5 transition ${calcOpen ? '-rotate-90' : 'rotate-90'}`} />
+                  </button>
                 </div>
-                {/* Left empty, it is purchase + the % (shown in grey) — ADR-053. */}
-                <RupeeBox id="ni-mrp" value={mrp} onChange={setMrp} placeholder={derivedMrp !== null ? String(derivedMrp / 100) : undefined} />
-              </div>
-            </div>
+              )}
 
             {showCost && calcOpen && (
               <div id="ni-calc" data-testid="markup-calc" className="rise-in flex flex-col gap-2.5 rounded-2xl bg-brand-50 p-3 ring-1 ring-brand-100 dark:bg-brand-950 dark:ring-brand-900">
@@ -792,7 +840,40 @@ export function NewItemWizard({
               </div>
             )}
 
-            {/* Everything else, folded (owner, 2026-11-22): the sizes first. */}
+              {type && (
+                <div id="ni-sizes" className="flex scroll-mt-28 flex-col gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                  <SizeStep
+                    type={type}
+                    boxes={pack}
+                    offered={offered}
+                    sizes={sizes}
+                    pieces={pieces}
+                    onToggle={toggleSize}
+                    onAll={(all) => setSizes(all ? offered : [])}
+                    onPieces={(size, value) => setPieces({ ...pieces, [size]: Math.max(0, Math.min(999, value)) })}
+                    onTypeSizes={(next) => addToList(sectionId, (s) => ({ ...s, types: s.types.map((x) => (x.id === type.id ? { ...x, sizes: next } : x)) }))}
+                  />
+                </div>
+              )}
+              {/* Not a must-have (owner, 2026-11-23): a slim row; its list opens with the search line ready to type. */}
+              <div data-testid="company-row" className="border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                <CompanyPicker
+                  label={t('stk.item.company')}
+                  companies={suppliers}
+                  previous={previousSuppliers}
+                  value={supplierId}
+                  emptyLabel={t('ni.chooseCompany')}
+                  inline
+                  search
+                  onChange={(id, companyName) => {
+                    setSupplierId(id);
+                    setSupplierName(companyName);
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Everything else, folded (owner, 2026-11-22; sizes left it on 2026-11-23, ADR-071). */}
             <details
               id="ni-more"
               data-testid="more-details"
@@ -802,27 +883,13 @@ export function NewItemWizard({
             >
               <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 py-2 [&::-webkit-details-marker]:hidden">
                 <span className="flex-1 text-sm font-semibold text-brand-700 dark:text-brand-300">{t('ni.more')}</span>
-                <span className={`truncate text-xs font-semibold ${muted}`}>{sizesText}</span>
+                {/* What is filled in under it, so nothing hides there unseen. */}
+                {moreText && <span data-testid="more-summary" className={`truncate text-xs font-semibold ${muted}`}>{moreText}</span>}
                 <IconChevron className="h-4 w-4 shrink-0 rotate-90 text-brand-700 transition group-open/more:-rotate-90 dark:text-brand-300" />
               </summary>
               <div className="flex flex-col gap-4 border-t border-zinc-100 px-4 pt-3 pb-4 dark:border-zinc-800">
-                {type && (
-                  <div id="ni-sizes" className="flex scroll-mt-28 flex-col gap-2">
-                    <SizeStep
-                      type={type}
-                      boxes={pack}
-                      offered={offered}
-                      sizes={sizes}
-                      pieces={pieces}
-                      onToggle={toggleSize}
-                      onAll={(all) => setSizes(all ? offered : [])}
-                      onPieces={(size, value) => setPieces({ ...pieces, [size]: Math.max(0, Math.min(999, value)) })}
-                      onTypeSizes={(next) => addToList(sectionId, (s) => ({ ...s, types: s.types.map((x) => (x.id === type.id ? { ...x, sizes: next } : x)) }))}
-                    />
-                  </div>
-                )}
                 {/* Box packs (owner, 2026-11-21): loose pieces, or boxes of N (sandos: 10 or 12 a box). */}
-                <div data-testid="pack-choice" className="flex flex-col gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                <div data-testid="pack-choice" className="flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium">{t('pack.soldAs')}</span>
                     <Segmented
@@ -988,7 +1055,136 @@ export function NewItemWizard({
           }}
         />
       )}
+      {editingType && section && (
+        <EditTypeSheet
+          type={editingType}
+          onClose={() => setEditingType(null)}
+          onSaved={(saved) => {
+            addToList(section.id, (s) => ({ ...s, types: s.types.map((x) => (x.id === saved.id ? saved : x)) }));
+            // The chosen category's sizes may have changed: keep only the picked sizes it still offers.
+            if (saved.id === typeId) setSizes((picked) => picked.filter((p) => saved.sizes.some((s) => sameSize(s, p))));
+            setEditingType(null);
+            done.show({ title: t('done.saved'), lines: [{ label: t('done.line.name'), value: saved.name }, { label: t('done.line.sizes'), value: saved.sizes.join(', ') }].filter((line) => line.value) });
+          }}
+        />
+      )}
+      {removingType && section && (
+        <DeleteTypeSheet
+          type={removingType}
+          onClose={() => setRemovingType(null)}
+          onDeleted={(message) => {
+            addToList(section.id, (s) => ({ ...s, types: s.types.filter((x) => x.id !== removingType.id) }));
+            if (typeId === removingType.id) {
+              setTypeId('');
+              setSizes([]);
+              setPieces({});
+              setReached(1);
+            }
+            setRemovingType(null);
+            done.show({ title: message });
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** ✎ on a category (owner, ADR-071): its name and its sizes; Jeans, Jacket and Shirt keep their name. */
+function EditTypeSheet({ type, onClose, onSaved }: { type: WizardType; onClose: () => void; onSaved: (type: WizardType) => void }) {
+  const t = useT();
+  const [name, setName] = useState(type.name);
+  const [sizes, setSizes] = useState<string[]>(type.sizes);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, startBusy] = useTransition();
+  return (
+    <ActionSheet title={t('ni.type.editTitle', { name: type.name })} onClose={onClose}>
+      <form
+        data-testid="edit-type"
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          startBusy(async () => {
+            // What the tile showed goes along: the server applies only what this sheet changed (ADR-071).
+            const result = await editTypeAction({ id: type.id, name: type.fixed ? '' : name, sizes: sizes.join(', '), was: { name: type.name, sizes: type.sizes }, hindi: type.hindi });
+            if (!result.ok) return setError(result.error);
+            onSaved(result.type);
+          });
+        }}
+      >
+        <label className="flex flex-col gap-1.5 text-sm font-semibold">
+          {t('ni.addType.name')}
+          {type.fixed ? (
+            <span className="flex items-center gap-2">
+              <input value={type.name} disabled className={`${input} min-w-0 flex-1 text-lg opacity-70`} />
+              <IconLock className="h-4 w-4 shrink-0 text-zinc-400" />
+            </span>
+          ) : (
+            <LangText required maxLength={40} value={name} onValueChange={setName} inputClassName={`${input} min-w-0 flex-1 text-lg`} />
+          )}
+        </label>
+        {type.fixed && <p className={`-mt-2 text-xs ${muted}`}>{t('ni.type.fixedName', { name: type.name })}</p>}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-semibold">{t('ni.addType.sizes')}</span>
+          <SizeChips picked={sizes} onChange={setSizes} />
+        </div>
+        {error && (
+          <p role="alert" className={errorBox}>
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={busy || (!type.fixed && !name.trim())} className={sheetPrimary}>
+          {busy ? t('common.saving') : t('ni.type.save')}
+        </button>
+        <button type="button" onClick={onClose} className={sheetSecondary}>
+          {t('common.cancel')}
+        </button>
+      </form>
+    </ActionSheet>
+  );
+}
+
+/** 🗑 on a category (owner, ADR-071): asks first; one that still has items stays (every item needs its category). */
+function DeleteTypeSheet({ type, onClose, onDeleted }: { type: WizardType; onClose: () => void; onDeleted: (message: string) => void }) {
+  const t = useT();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, startBusy] = useTransition();
+  return (
+    <ActionSheet title={t('col.deleteAsk', { name: type.name })} onClose={onClose}>
+      {type.items > 0 ? (
+        <p role="alert" className={errorBox}>
+          {t('sec.err.hasItems', { name: type.name, n: type.items })}
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('ni.type.deleteNote')}</p>
+          {error && (
+            <p role="alert" className={errorBox}>
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            data-testid="confirm-delete-type"
+            disabled={busy}
+            onClick={() =>
+              startBusy(async () => {
+                const result = await deleteCategoryAction(type.id);
+                if (!result.ok) return setError(result.error);
+                onDeleted(result.message);
+              })
+            }
+            className={sheetDanger}
+          >
+            <IconTrash className="h-5 w-5" />
+            {busy ? t('common.saving') : t('col.deleteYes')}
+          </button>
+        </>
+      )}
+      <button type="button" onClick={onClose} className={sheetSecondary}>
+        {t('common.cancel')}
+      </button>
+    </ActionSheet>
   );
 }
 
@@ -1052,6 +1248,59 @@ function AddTile({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
+/**
+ * Quantity (owner, 2026-11-23, ADR-071): a must-have on the main card, beside the purchase price. With no
+ * size picked it is the − n + of the pieces (or boxes); once sizes are picked, each size has its own count
+ * below and this shows their total.
+ */
+function QuantityBox({
+  boxes,
+  noSize,
+  value,
+  total,
+  sizesCount,
+  onChange,
+}: {
+  boxes: number | null;
+  noSize: boolean;
+  value: number;
+  total: number;
+  sizesCount: number;
+  onChange: (value: number) => void;
+}) {
+  const t = useT();
+  return (
+    <div id="ni-qty" data-testid="qty-box" className="flex min-w-0 scroll-mt-28 flex-col gap-1.5">
+      <span className={tileLabel}>{boxes ? t('ni.qty.boxes') : t('ni.qty')}</span>
+      {noSize ? (
+        <div data-testid="no-size-pieces" className="flex h-12 items-center rounded-2xl bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-950 dark:ring-brand-800">
+          <button type="button" aria-label={t('ni.noSize.less')} onClick={() => onChange(value - 1)} className={stepperButton}>
+            −
+          </button>
+          <input
+            inputMode="numeric"
+            aria-label={boxes ? t('ni.noSize.boxesAria') : t('ni.noSize.piecesAria')}
+            value={String(value)}
+            onFocus={(e) => e.currentTarget.select()}
+            onChange={(e) => onChange(/^\d+$/.test(e.target.value) ? Number(e.target.value) : 0)}
+            className="w-full min-w-0 bg-transparent text-center text-xl font-bold tabular-nums outline-none"
+          />
+          <button type="button" aria-label={t('ni.noSize.more')} onClick={() => onChange(value + 1)} className={stepperButton}>
+            +
+          </button>
+        </div>
+      ) : (
+        <p data-testid="qty-total" className="flex h-12 items-center gap-1.5 rounded-2xl bg-brand-50 px-3 ring-1 ring-brand-200 dark:bg-brand-950 dark:ring-brand-800">
+          <b className="text-xl tabular-nums">{total}</b>
+          <span className={`min-w-0 truncate text-xs font-semibold ${muted}`}>
+            {t('ni.qty.inSizes', { sizes: t(sizesCount === 1 ? 'ni.sizes.count.one' : 'ni.sizes.count.other', { n: sizesCount }) })}
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Sizes & pieces: tap the sizes that came; each gets − pieces +; "+ Add size" keeps a new size on the category. */
 function SizeStep({
   type,
@@ -1077,6 +1326,7 @@ function SizeStep({
 }) {
   const t = useT();
   const [newSize, setNewSize] = useState('');
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, startBusy] = useTransition();
   const chosen = (size: string) => sizes.some((s) => sameSize(s, size));
@@ -1092,6 +1342,7 @@ function SizeStep({
       onTypeSizes(result.sizes);
       if (!chosen(size)) onToggle(size);
       setNewSize('');
+      setAdding(false);
     });
   };
 
@@ -1126,28 +1377,16 @@ function SizeStep({
             </button>
           );
         })}
+        <button
+          type="button"
+          aria-expanded={adding}
+          onClick={() => setAdding((open) => !open)}
+          className="min-h-10 rounded-xl border border-dashed border-brand-300 px-3 text-sm font-bold text-brand-700 transition hover:bg-brand-50 active:scale-95 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-950"
+        >
+          {t('ni.sizes.addSize')}
+        </button>
       </div>
-      {/* No size picked (owner, 2026-11-22, ADR-052): just the pieces (or boxes), saved as one item with no size. */}
-      {chosenList.length === 0 && (
-        <div data-testid="no-size-pieces" className="flex items-center justify-between gap-2 rounded-xl bg-brand-50 py-0.5 pr-0.5 pl-3 dark:bg-brand-950">
-          <span className="text-sm font-medium">{boxes ? t('ni.noSize.boxesHint') : t('ni.noSize.hint')}</span>
-          <span className="flex items-center">
-            <button type="button" aria-label={t('ni.noSize.less')} onClick={() => onPieces('', (pieces[''] ?? 1) - 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
-              −
-            </button>
-            <input
-              inputMode="numeric"
-              aria-label={boxes ? t('ni.noSize.boxesAria') : t('ni.noSize.piecesAria')}
-              value={String(pieces[''] ?? 1)}
-              onChange={(e) => onPieces('', /^\d+$/.test(e.target.value) ? Number(e.target.value) : 0)}
-              className="w-10 bg-transparent text-center text-base font-bold tabular-nums outline-none"
-            />
-            <button type="button" aria-label={t('ni.noSize.more')} onClick={() => onPieces('', (pieces[''] ?? 1) + 1)} className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold text-brand-700 active:scale-90 dark:text-brand-300">
-              +
-            </button>
-          </span>
-        </div>
-      )}
+      {/* No size picked (owner, 2026-11-22, ADR-052): the Quantity box beside the purchase price takes the pieces. */}
       {chosenList.length > 0 && boxes && <p className={`text-xs font-semibold ${muted}`}>{t('pack.boxesTitle')} · {t('pack.label', { n: boxes })}</p>}
       {chosenList.length > 0 && (
         <ul data-testid="size-pieces" className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -1176,25 +1415,29 @@ function SizeStep({
           })}
         </ul>
       )}
-      <div className="flex gap-2">
-        <input
-          value={newSize}
-          onChange={(e) => setNewSize(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              addSize();
-            }
-          }}
-          maxLength={12}
-          placeholder={t('stk.design.otherSizePlaceholder')}
-          aria-label={t('ni.sizes.newSize')}
-          className={`w-full ${input} py-2 text-sm`}
-        />
-        <button type="button" disabled={busy || !newSize.trim()} onClick={addSize} className="min-h-10 shrink-0 rounded-xl border border-brand-300 px-3 text-sm font-bold text-brand-700 transition hover:bg-brand-50 active:scale-95 disabled:opacity-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-950">
-          {t('ni.sizes.addSize')}
-        </button>
-      </div>
+      {/* A size the category lacks: opened by its chip, so the card stays short (ADR-071). */}
+      {adding && (
+        <div className="flex gap-2">
+          <input
+            autoFocus
+            value={newSize}
+            onChange={(e) => setNewSize(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addSize();
+              }
+            }}
+            maxLength={12}
+            placeholder={t('stk.design.otherSizePlaceholder')}
+            aria-label={t('ni.sizes.newSize')}
+            className={`w-full ${input} py-2 text-sm`}
+          />
+          <button type="button" disabled={busy || !newSize.trim()} onClick={addSize} className="min-h-10 shrink-0 rounded-xl bg-brand-600 px-4 text-sm font-bold text-white transition hover:bg-brand-700 active:scale-95 disabled:opacity-50">
+            {t('ni.add')}
+          </button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="text-sm font-medium text-red-600">
           {error}

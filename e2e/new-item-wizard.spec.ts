@@ -50,33 +50,48 @@ test('Home → Add new stock → which collection → what → details & sizes (
   await expect(page.getByRole('button', { name: /^Kurta/ })).toContainText('M–XXL');
   await page.getByRole('button', { name: /^Kurta/ }).click();
 
-  // Owner's feedback 2026-11-21: details and sizes on one step. 2026-11-22 (ADR-065): the four must-haves are big
-  // boxes — company, product name, purchase price, sale price (₹ inside) — and the sizes wait under "Sizes & more".
+  // Owner's feedback 2026-11-23 (ADR-071): one card — the product name; the purchase price beside the QUANTITY
+  // (the main things); the sale price worked out in a small row; the sizes right there; the company as a slim row.
   await heading(page, 'Details & sizes');
   await expect(page.getByTestId('wizard-path')).toHaveText(/Men.*Kurta/);
   const card = page.getByTestId('details-form');
-  const tiles = page.getByTestId('details-tiles');
-  await expect(tiles.getByRole('combobox', { name: /^Company/ })).toBeVisible();
-  for (const label of ['Product name', 'Purchase price', 'Sale price']) await expect(tiles.getByLabel(label, { exact: true })).toBeVisible();
-  await expect(card.getByTestId('size-cards')).toBeHidden();
+  const main = page.getByTestId('details-main');
+  for (const label of ['Product name', 'Purchase price', 'Sale price']) await expect(main.getByLabel(label, { exact: true })).toBeVisible();
+  await expect(main.getByTestId('qty-box')).toContainText('Quantity');
+  await expect(main.getByLabel('Pieces with no size')).toHaveValue('1');
+  await expect(main.getByTestId('size-cards')).toBeVisible(); // not folded away any more
+  await expect(main.getByTestId('company-row').getByRole('combobox', { name: /^Company/ })).toBeVisible();
+  // The purchase price and the quantity share one row, above the sale price row; the company comes last.
+  const costAt = (await main.getByLabel('Purchase price', { exact: true }).boundingBox())!;
+  const qtyAt = (await main.getByTestId('no-size-pieces').boundingBox())!;
+  expect(Math.abs(costAt.y + costAt.height / 2 - (qtyAt.y + qtyAt.height / 2))).toBeLessThan(8);
+  expect(qtyAt.x).toBeGreaterThan(costAt.x + costAt.width - 1);
+  expect((await main.getByTestId('sale-row').boundingBox())!.y).toBeGreaterThan(costAt.y + costAt.height);
+  expect((await main.getByTestId('company-row').boundingBox())!.y).toBeGreaterThan((await main.getByTestId('size-cards').boundingBox())!.y);
   const next = page.getByRole('button', { name: 'Next' });
   await expect(next).toBeDisabled();
   await expect(page.getByTestId('size-summary')).toHaveText('Type the purchase or sale price');
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
-  await page.getByLabel('Sale price', { exact: true }).fill('1299');
   await page.getByLabel('Purchase price', { exact: true }).fill('700');
-  // No size yet: the pieces box stands in (owner, 2026-11-22) — Next works with 1 piece, no size.
+  // The sale price works itself out (purchase + 50%, in grey with "+ 50%" beside it); typing one replaces it.
+  await expect(page.getByLabel('Sale price', { exact: true })).toHaveAttribute('placeholder', '1050');
+  await expect(page.getByTestId('sale-row')).toContainText('+ 50%');
+  await page.getByLabel('Sale price', { exact: true }).fill('1299');
+  await expect(page.getByTestId('sale-row')).not.toContainText('+ 50%');
+  // No size yet: the quantity box takes the pieces (owner, 2026-11-22) — Next works with 1 piece, no size.
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 1 pc');
-  await expect(page.getByTestId('more-details').locator('summary')).toContainText('No size · 1 pc');
+  await expect(page.getByTestId('more-summary')).toHaveCount(0); // nothing filled under More details
   await expect(next).toBeEnabled();
-  await openMore(page);
   await expect(page.getByTestId('size-cards').getByRole('button', { name: /^Size / })).toHaveText(['M', 'L', 'XL', 'XXL']);
   await page.getByRole('button', { name: 'Size M', exact: true }).click();
   await page.getByRole('button', { name: 'Size L', exact: true }).click();
   await page.getByRole('button', { name: 'One more of size L' }).click();
   await expect(page.getByLabel('Pieces of size L')).toHaveValue('2');
   await expect(page.getByTestId('size-summary')).toHaveText('2 sizes · 3 pcs');
+  // With sizes picked, each size has its count and the quantity box shows their total.
+  await expect(main.getByTestId('no-size-pieces')).toHaveCount(0);
+  await expect(main.getByTestId('qty-total')).toHaveText(/^3\s*in 2 sizes$/);
 
   // Size buttons are small chips (owner, 2026-11-21).
   const chip = await card.getByRole('button', { name: 'Size XL', exact: true }).boundingBox();
@@ -155,7 +170,6 @@ test('a new category and a new size on the spot; every item may have many sizes 
   // No product name: it gets "Shorts … + number" on save.
   await expect(page.getByLabel('Product name', { exact: true })).toHaveAttribute('placeholder', `Shorts ${run} + number`);
   await page.getByLabel('Sale price', { exact: true }).fill('899');
-  await openMore(page);
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 1 pc');
   await expect(page.getByRole('button', { name: 'All sizes' })).toBeVisible();
   // Sizes are tapped on and off; more than one may be chosen.
@@ -164,9 +178,12 @@ test('a new category and a new size on the spot; every item may have many sizes 
   await page.getByRole('button', { name: 'Size 30', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Size 30', exact: true })).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('button', { name: 'Size 32', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  // A size the category lacks: kept on the category for next time, and chosen now, with the others.
-  await page.getByLabel('New size').fill('34');
+  // A size the category lacks: "+ Add size" opens its box (ADR-071); kept on the category for next time, and chosen now.
+  await expect(page.getByLabel('New size')).toHaveCount(0);
   await page.getByRole('button', { name: '+ Add size' }).click();
+  await page.getByLabel('New size').fill('34');
+  await page.getByLabel('New size').press('Enter');
+  await expect(page.getByLabel('New size')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Size 34', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Size 32', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'One more of size 34' }).click();
@@ -353,6 +370,59 @@ test('which collection: Men and Women always stay; the owner adds, edits and del
   await expect(group.getByRole('button', { name: `Spare ${tag}`, exact: true })).toHaveCount(0);
 });
 
+test('what is it: the owner changes a category’s name and sizes and deletes an empty one on its tile; Jeans keeps its name (ADR-071)', async ({ page }, info) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  const tag = `${run}${info.project.name[0]}`;
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await heading(page, 'What is it?');
+  const group = page.getByRole('group', { name: 'What is it?' });
+  const sheet = page.getByRole('dialog');
+  const tileOf = (name: string) => group.getByTestId('type-tile').filter({ hasText: name });
+
+  // A category of this run, to change and delete.
+  await group.getByRole('button', { name: 'Add' }).click();
+  await sheet.getByLabel('Category name').fill(`Capri ${tag}`);
+  await sheet.getByRole('button', { name: 'S–M', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Add category' }).click();
+  await expect(page.getByTestId('done-overlay')).toBeVisible();
+  await page.keyboard.press('Escape'); // the done card
+  await expect(tileOf(`Capri ${tag}`)).toContainText('S–M');
+
+  // ✎: a new name and one more size.
+  await group.getByRole('button', { name: `Edit Capri ${tag}`, exact: true }).click();
+  await expect(sheet.getByRole('heading', { name: `Change Capri ${tag}` })).toBeVisible();
+  await sheet.getByLabel('Category name').fill(`Capris ${tag}`);
+  await sheet.getByRole('button', { name: 'Size L', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Save category' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('Saved');
+  await page.keyboard.press('Escape');
+  await expect(tileOf(`Capris ${tag}`)).toContainText('S–L');
+
+  // 🗑: asks first; an empty category goes.
+  await group.getByRole('button', { name: `Delete Capris ${tag}`, exact: true }).click();
+  await expect(sheet.getByRole('heading', { name: `Delete Capris ${tag}?` })).toBeVisible();
+  await sheet.getByTestId('confirm-delete-type').click();
+  await expect(page.getByTestId('done-overlay')).toContainText(`Capris ${tag} deleted.`);
+  await page.keyboard.press('Escape');
+  await expect(tileOf(`Capris ${tag}`)).toHaveCount(0);
+
+  // One that still has items stays: the sheet says so and offers no Delete.
+  await group.getByRole('button', { name: 'Delete Kurta', exact: true }).click();
+  await expect(sheet).toContainText(/Kurta still has \d+ items/);
+  await expect(sheet.getByTestId('confirm-delete-type')).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+
+  // Jeans always stays (ADR-066): a lock, no 🗑; ✎ changes its sizes only.
+  await expect(group.locator('[data-testid="type-tile"][data-fixed]').filter({ hasText: /^Jeans/ })).toHaveCount(1);
+  await expect(group.getByRole('button', { name: 'Delete Jeans', exact: true })).toHaveCount(0);
+  await group.getByRole('button', { name: 'Edit Jeans', exact: true }).click();
+  await expect(sheet.getByLabel('Category name')).toBeDisabled();
+  await expect(sheet).toContainText('Jeans always keeps its name');
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  await expect(sheet).toHaveCount(0);
+});
+
 test('no size picked: just the pieces; saved as one item with no size (owner, 2026-11-22)', async ({ page }, info) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   const name = `Plain Dupatta ${run}${info.project.name[0]}`;
@@ -361,14 +431,18 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await page.getByRole('button', { name: /^Kurta/ }).click();
   await page.getByLabel('Product name').fill(name);
   await page.getByLabel('Sale price', { exact: true }).fill('499');
-  await openMore(page);
-  // No size tapped: a pieces box shows instead; Next works.
+  // No size tapped: the Quantity box on the card takes the pieces (ADR-071); Next works.
   const plain = page.getByTestId('no-size-pieces');
-  await expect(plain).toContainText('No size? Just the pieces:');
+  await expect(page.getByTestId('qty-box')).toContainText('Quantity');
   await plain.getByRole('button', { name: 'One more' }).click();
   await plain.getByRole('button', { name: 'One more' }).click();
   await expect(plain.getByLabel('Pieces with no size')).toHaveValue('3');
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 3 pcs');
+  // "More details" names what is filled in under it, so nothing hides there unseen.
+  await expect(page.getByTestId('more-summary')).toHaveCount(0);
+  await openMore(page);
+  await page.getByLabel('Counter price, if lower', { exact: true }).fill('450');
+  await expect(page.getByTestId('more-summary')).toHaveText('Counter price ₹450.00');
   await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
   await expect(page.getByTestId('review-sizes')).toHaveText('No size × 3');
   await page.getByRole('button', { name: 'Save', exact: true }).click();

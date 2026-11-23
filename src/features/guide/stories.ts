@@ -35,11 +35,14 @@ export type Scene =
   | { kind: 'bars' }
   | { kind: 'columns' }
   | { kind: 'list' }
-  // 2026-11-23 (ADR-067): the screens since ADR-040 — tiles, the four boxes, figures, rows, a bill.
+  // 2026-11-23 (ADR-067, ADR-071): the screens since ADR-040 — tiles, the details card, figures, rows, a bill.
   /** Collection / category tiles; 🔒 on fixed ones (Men, Women). */
   | { kind: 'tiles'; items: { name: L; note?: L; lock?: boolean }[]; tap: number }
-  /** New item's four boxes (Company · Product name · Purchase · Sale, ₹ inside); `tap` is typed in. */
-  | { kind: 'boxes'; boxes: { label: L; value: string; rupee?: boolean }[]; tap: number; calc?: boolean }
+  /**
+   * New item's details card (ADR-071): name; purchase price beside the quantity; the sale price worked out in a
+   * small row with the % button; sizes; company in a slim row. `tap`: the purchase price typed in, or the % button.
+   */
+  | { kind: 'details'; tap: 'cost' | 'calc' }
   /** Figure boxes on top of a page (item, company, collection). */
   | { kind: 'figures'; items: { label: L; value: string }[] }
   /** List rows with ✎ / 🗑 (or a 🔒); the finger taps `tap` on row `at`. */
@@ -351,7 +354,7 @@ export const STORIES: Story[] = [
     audience: 'stock',
     title: { en: 'New item', hi: 'नया आइटम' },
     goal: { en: 'Collection, prices, sizes — and its barcodes.', hi: 'कलेक्शन, दाम, साइज़ — और उसके बारकोड।' },
-    // 2026-11-23 (ADR-067): New item as it is since ADR-064 / 065 — collection, category, four boxes, Sizes & more, save.
+    // 2026-11-23 (ADR-067, ADR-071): New item today — collection, category (✎ / 🗑 on it), the details card with the quantity, sizes, save.
     steps: [
       {
         scene: {
@@ -374,8 +377,8 @@ export const STORIES: Story[] = [
         scene: {
           kind: 'tiles',
           items: [
-            { name: { en: 'Jeans', hi: 'जीन्स' }, note: { en: '28–36', hi: '28–36' } },
-            { name: { en: 'Shirt', hi: 'शर्ट' }, note: { en: 'M–XXL', hi: 'M–XXL' } },
+            { name: { en: 'Jeans', hi: 'जीन्स' }, note: { en: '28–36', hi: '28–36' }, lock: true },
+            { name: { en: 'Shirt', hi: 'शर्ट' }, note: { en: 'M–XXL', hi: 'M–XXL' }, lock: true },
             { name: { en: 'Kurta', hi: 'कुर्ता' }, note: { en: 'M–XXL', hi: 'M–XXL' } },
             { name: { en: '+ Add', hi: '+ जोड़ें' } },
           ],
@@ -383,34 +386,25 @@ export const STORIES: Story[] = [
         },
         text: { en: '**What is it?** Tap the category', hi: '**क्या है?** कैटेगरी दबाएँ' },
         say: {
-          en: 'Then tap what it is, like Jeans or Kurta. Plus Add makes a new category with its sizes.',
-          hi: 'फिर बताएँ कि क्या है, जैसे जीन्स या कुर्ता। जोड़ें से नई कैटेगरी उसके साइज़ के साथ बनती है।',
+          en: 'Then tap what it is, like Jeans or Kurta. Plus Add makes a new one; the owner’s pencil changes its name and sizes.',
+          hi: 'फिर बताएँ कि क्या है, जैसे जीन्स या कुर्ता। जोड़ें से नई कैटेगरी बनती है; मालिक पेंसिल से उसका नाम और साइज़ बदल सकते हैं।',
         },
       },
       {
-        scene: {
-          kind: 'boxes',
-          boxes: [
-            { label: { en: 'Company', hi: 'कंपनी' }, value: 'Laxmi' },
-            { label: { en: 'Product name', hi: 'प्रोडक्ट का नाम' }, value: 'Kurta' },
-            { label: { en: 'Purchase price', hi: 'खरीद दाम' }, value: '700', rupee: true },
-            { label: { en: 'Sale price', hi: 'बिक्री दाम' }, value: '1050', rupee: true },
-          ],
-          tap: 2,
-          calc: true,
-        },
-        text: { en: 'Company, name, **purchase**, sale price', hi: 'कंपनी, नाम, **खरीद**, बिक्री दाम' },
+        // 2026-11-23 (ADR-071): one card — name, purchase price beside the quantity, sale price worked out.
+        scene: { kind: 'details', tap: 'cost' },
+        text: { en: 'Name, **purchase price**, quantity', hi: 'नाम, **खरीद दाम**, मात्रा' },
         say: {
-          en: 'Fill the four boxes. Type the purchase price; an empty sale price becomes purchase plus 50 percent, or tap the percent button.',
-          hi: 'चारों बॉक्स भरें। खरीद दाम लिखें; बिक्री दाम खाली रहे तो खरीद से 50 प्रतिशत ज़्यादा बनता है, या प्रतिशत बटन दबाएँ।',
+          en: 'Type the name, the purchase price and how many came. The sale price fills itself: purchase plus 50 percent.',
+          hi: 'नाम, खरीद दाम और कितने आए, लिखें। बिक्री दाम अपने आप बनता है: खरीद से 50 प्रतिशत ज़्यादा।',
         },
       },
       {
-        scene: { kind: 'chips', label: { en: 'Sizes & more', hi: 'साइज़ और बाकी' }, chips: ['M', 'L', 'XL', 'XXL'] },
-        text: { en: '**Sizes & more** → tap each size', hi: '**साइज़ और बाकी** → हर साइज़ दबाएँ' },
+        scene: { kind: 'chips', label: { en: 'Which sizes?', hi: 'कौन से साइज़?' }, chips: ['M', 'L', 'XL', 'XXL'] },
+        text: { en: 'Tap each **size**, set its pieces', hi: 'हर **साइज़** दबाएँ, पीस लिखें' },
         say: {
-          en: 'Open Sizes and more, tap each size that came and set its pieces. Every size gets its own barcode.',
-          hi: 'साइज़ और बाकी खोलें, जो साइज़ आए उन्हें दबाएँ और उनके पीस लिखें। हर साइज़ को अपना बारकोड मिलता है।',
+          en: 'The sizes are on the same card: tap each size that came and set its pieces. Every size gets its own barcode.',
+          hi: 'साइज़ उसी कार्ड पर हैं: जो साइज़ आए उन्हें दबाएँ और उनके पीस लिखें। हर साइज़ को अपना बारकोड मिलता है।',
         },
       },
       {
@@ -814,17 +808,7 @@ export const STORIES: Story[] = [
         },
       },
       {
-        scene: {
-          kind: 'boxes',
-          boxes: [
-            { label: { en: 'Company', hi: 'कंपनी' }, value: 'Laxmi' },
-            { label: { en: 'Product name', hi: 'प्रोडक्ट का नाम' }, value: 'Kurta' },
-            { label: { en: 'Purchase price', hi: 'खरीद दाम' }, value: '700', rupee: true },
-            { label: { en: 'Sale price', hi: 'बिक्री दाम' }, value: '1050', rupee: true },
-          ],
-          tap: 3,
-          calc: true,
-        },
+        scene: { kind: 'details', tap: 'calc' },
         text: { en: 'New item: **%** works out MRP', hi: 'नया आइटम: **%** से MRP निकालें' },
         say: {
           en: 'In New item, the percent button beside the sale price adds 20, 30, 50 or 100 percent to the purchase price.',

@@ -86,8 +86,14 @@ function TagScene({ part }: { part: TagPart }) {
   );
 }
 
-/** New item's closed fold under the four boxes (ADR-065). */
-const MORE: L = { en: 'Sizes & more', hi: 'साइज़ और बाकी' };
+/** New item's details card (ADR-071), in the app's own words; "More details" closed below it. */
+const MORE: L = { en: 'More details', hi: 'और जानकारी' };
+const DETAIL_NAME: L = { en: 'Product name', hi: 'प्रोडक्ट का नाम' };
+const DETAIL_COST: L = { en: 'Purchase price', hi: 'खरीद दाम' };
+const DETAIL_QTY: L = { en: 'Quantity', hi: 'मात्रा' };
+const DETAIL_SALE: L = { en: 'Sale price', hi: 'बिक्री दाम' };
+const DETAIL_AUTO: L = { en: '+ 50%', hi: '+ 50%' };
+const DETAIL_COMPANY: L = { en: 'Company', hi: 'कंपनी' };
 const TOTAL: L = { en: 'Total', hi: 'कुल' };
 
 /** The product page's photo box and sheet (ADR-068), in the app's own words. */
@@ -500,41 +506,75 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
         </Phone>
       );
 
-    case 'boxes':
-      // New item's Details step: four big boxes, the ₹ inside the price boxes, "Sizes & more" closed below.
+    case 'details': {
+      // New item's details card (ADR-071): the name; the purchase price beside the quantity; the sale price worked
+      // out in a small row (grey) with the % button; the size chips; the company in a slim row; "More details" closed.
+      const typing = scene.tap === 'cost';
+      const label = 'text-[9px] font-semibold text-brand-800 dark:text-brand-200';
+      const box = 'rounded-md px-1.5 py-1 ring-1 ring-zinc-200 dark:ring-zinc-700';
       return (
         <Phone>
-          <div className="mt-1 grid grid-cols-2 gap-2">
-            {scene.boxes.map((box, i) => (
-              <span
-                key={i}
-                className={`relative flex h-16 flex-col justify-between rounded-xl bg-surface px-2 py-1.5 ${i === scene.tap ? 'st-target ring-2 ring-brand-500' : 'ring-1 ring-brand-200 dark:ring-zinc-700'}`}
-              >
-                <span className="text-[9px] font-semibold text-brand-800 dark:text-brand-200">{say(box.label)}</span>
-                <span className="flex items-center font-mono text-[13px] text-zinc-900 dark:text-zinc-100">
-                  {box.rupee && <span className="mr-0.5 text-zinc-400">₹</span>}
-                  {i === scene.tap
-                    ? box.value.split('').map((ch, j) => (
+          <div className="mt-1 flex flex-col gap-1.5 rounded-xl bg-surface p-2 ring-1 ring-brand-200 dark:ring-zinc-700">
+            <span className={label}>{say(DETAIL_NAME)}</span>
+            <span className={`${box} text-[11px] font-semibold`}>Kurta</span>
+            <span className="grid grid-cols-2 gap-1.5">
+              <span className="flex flex-col gap-0.5">
+                <span className={label}>{say(DETAIL_COST)}</span>
+                <span className={`flex items-center rounded-md px-1.5 py-1 font-mono text-[12px] ${typing ? 'st-target ring-2 ring-brand-500' : 'ring-1 ring-zinc-200 dark:ring-zinc-700'}`}>
+                  <span className="mr-0.5 text-zinc-400">₹</span>
+                  {typing
+                    ? '700'.split('').map((ch, j) => (
                         <span key={j} className="st-char" style={delay(0.3 + j * 0.3)}>
                           {ch}
                         </span>
                       ))
-                    : box.value}
-                  {i === scene.tap && <span className="st-caret ml-0.5 h-4 w-0.5 bg-brand-600" />}
+                    : '700'}
+                  {typing && <span className="st-caret ml-0.5 h-3.5 w-0.5 bg-brand-600" />}
                 </span>
-                {scene.calc && i === scene.boxes.length - 1 && (
-                  <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-md bg-brand-600 text-[10px] font-bold text-white">%</span>
-                )}
               </span>
-            ))}
+              <span className="flex flex-col gap-0.5">
+                <span className={label}>{say(DETAIL_QTY)}</span>
+                <span className="flex items-center justify-between rounded-md bg-brand-50 px-1.5 py-1 text-[12px] font-bold text-brand-800 ring-1 ring-brand-200 dark:bg-brand-950 dark:text-brand-200 dark:ring-brand-800">
+                  <span>−</span>
+                  <span>3</span>
+                  <span>+</span>
+                </span>
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5 text-[9px]">
+              <span className="font-semibold">{say(DETAIL_SALE)}</span>
+              <span className={`${box} py-0.5 font-mono text-[11px] text-zinc-400`}>₹1050</span>
+              <span className="text-zinc-500 dark:text-zinc-400">{say(DETAIL_AUTO)}</span>
+              <span
+                className={`ml-auto flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold ${
+                  scene.tap === 'calc' ? 'st-target bg-brand-600 text-white' : 'bg-brand-50 text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950 dark:text-brand-300 dark:ring-brand-800'
+                }`}
+              >
+                %
+              </span>
+            </span>
+            <span className="flex gap-1">
+              {/* No size picked yet: that is when the Quantity box is the − 3 + stepper (as in the app). */}
+              {['M', 'L', 'XL'].map((size) => (
+                <span key={size} className="rounded-md px-1.5 py-0.5 text-[9px] font-bold ring-1 ring-zinc-300 dark:ring-zinc-600">
+                  {size}
+                </span>
+              ))}
+            </span>
+            <span className="flex items-center gap-1.5 text-[9px]">
+              <span className="font-semibold">{say(DETAIL_COMPANY)}</span>
+              <span className={`${box} flex-1 py-0.5`}>Laxmi</span>
+            </span>
           </div>
-          <span className="flex items-center justify-between rounded-xl bg-surface px-3 py-2 text-[10px] font-semibold text-brand-800 ring-1 ring-brand-200 dark:text-brand-200 dark:ring-zinc-700">
+          <span className="flex items-center justify-between rounded-xl bg-surface px-3 py-1.5 text-[10px] font-semibold text-brand-800 ring-1 ring-brand-200 dark:text-brand-200 dark:ring-zinc-700">
             {say(MORE)}
             <IconChevron className="h-3 w-3" />
           </span>
-          <Tap x={scene.tap % 2 ? 88 : 42} y={scene.tap < 2 ? 24 : 49} />
+          {/* On the box's lower right (or the % button's), so the typed price stays in sight. */}
+          <Tap x={typing ? 44 : 87} y={typing ? 37 : 49} />
         </Phone>
       );
+    }
 
     case 'figures':
       return (

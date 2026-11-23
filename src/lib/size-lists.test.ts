@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { cleanSizeList, DEFAULT_CATEGORY_SIZES, tagSizeRange } from './size-lists';
+import { cleanSizeList, DEFAULT_CATEGORY_SIZES, mergeSizeEdit, tagSizeRange } from './size-lists';
+
+describe('✎ on a category: only what the sheet changed (ADR-071)', () => {
+  it('nothing changed: null (the list stays as it is today)', () => {
+    expect(mergeSizeEdit(['S', 'M', 'L'], ['S', 'M'], ['M', 'S'])).toBeNull();
+  });
+  it('a size added elsewhere meanwhile stays; the sheet’s own add and remove apply', () => {
+    // The sheet started from S, M, L (an old tile); today the list also has XL (someone's "+ Add size").
+    expect(mergeSizeEdit(['S', 'M', 'L', 'XL'], ['S', 'M', 'L'], ['M', 'L', 'XXL'])).toEqual(['M', 'L', 'XL', 'XXL']);
+  });
+  it('letter case and spaces do not count as a change; shop order is kept', () => {
+    expect(mergeSizeEdit(['28', '30'], ['28', '30'], [' 30', '28 '])).toBeNull();
+    // Known sizes come back in shop order and the shop's spelling, as the size chips write them.
+    expect(mergeSizeEdit(['m', 'l'], ['m', 'l'], ['M', 'L', 'S'])).toEqual(['S', 'M', 'L']);
+  });
+  it('removing every size empties the list', () => {
+    expect(mergeSizeEdit(['Free'], ['Free'], [])).toEqual([]);
+  });
+});
 
 describe('category size lists', () => {
   it('cleans a typed list: order kept, blanks and repeats (any case) dropped', () => {

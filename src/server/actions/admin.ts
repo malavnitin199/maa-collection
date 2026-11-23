@@ -14,7 +14,8 @@ import { deleteCompanies } from '@/server/services/delete-companies';
 import { deleteProducts } from '@/server/services/delete-products';
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getLocale, getT } from '@/server/i18n';
-import { asSectionIcon, fixedSectionKey, localName, type SectionIcon } from '@/lib/sections';
+import { asSectionIcon, fixedSectionKey, localName, typeNameEdit, type SectionIcon } from '@/lib/sections';
+import { cleanSizeList, mergeSizeEdit } from '@/lib/size-lists';
 import {
   addTypeSize,
   backfillSections,
@@ -25,8 +26,10 @@ import {
   listSections,
   moveType,
   toPickSection,
+  toPickType,
   updateSection,
   type PickSection,
+  type PickType,
 } from '@/server/services/sections';
 import { addPayment } from '@/server/services/company';
 import { DomainError } from '@/server/services/errors';
@@ -416,7 +419,7 @@ export async function moveTypeAction(categoryId: string, _prev: FormState, formD
 // ------------------------------- plan v19 (03a): "+ Add" on the New item steps
 
 export type SectionResult = { ok: true; section: PickSection } | { ok: false; error: string };
-export type TypeResult = { ok: true; type: { id: string; name: string; code: string; sizes: string[] } } | { ok: false; error: string };
+export type TypeResult = { ok: true; type: PickType } | { ok: false; error: string };
 export type SizesResult = { ok: true; sizes: string[] } | { ok: false; error: string };
 
 /** A collection as New item draws it (names in the person's language, its shown categories). */
@@ -497,7 +500,40 @@ export async function addTypeAction(input: { sectionId: string; name: string; si
   try {
     const type = await createType(await getDb(), STORE_ID, { sectionId: String(input.sectionId ?? ''), name: String(input.name ?? ''), sizes: String(input.sizes ?? '') });
     revalidatePath('/admin', 'layout');
-    return { ok: true, type: { id: type.id, name: type.name, code: type.code, sizes: type.sizes } };
+    return { ok: true, type: toPickType(type, await getLocale()) };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/**
+ * New item → ✎ on a category tile (owner, 2026-11-23, ADR-071): its name and its sizes. The sheet may
+ * hold an old copy of the tile (a page kept alive, अ/A switched later, another phone), so only what it
+ * changed is applied (pre-release review): the name only when edited — the one its tile showed (Hindi when
+ * `hindi`), never for Jeans / Jacket / Shirt, a new English name dropping the old Hindi one (`typeNameEdit`) —
+ * and only the sizes it added or removed, on top of today's list (`mergeSizeEdit`). The collection is passed
+ * so the same duplicate-name check as the Categories page runs (letter case ignored). Code and collection stay.
+ */
+export async function editTypeAction(input: { id: string; name: string; sizes: string; was: { name: string; sizes: string[] }; hindi: boolean }): Promise<TypeResult> {
+  await requireAdmin();
+  try {
+    const db = await getDb();
+    const id = String(input.id ?? '');
+    const section = (await listSections(db, STORE_ID)).sections.find((s) => s.types.some((x) => x.id === id));
+    const current = section?.types.find((x) => x.id === id);
+    if (!section || !current) throw new DomainError('Category not found.', { key: 'cat.err.categoryNotFound' });
+    const names = typeNameEdit(current, { typed: String(input.name ?? ''), was: String(input.was?.name ?? ''), hindi: input.hindi === true });
+    const was = Array.isArray(input.was?.sizes) ? input.was.sizes.map(String) : current.sizes;
+    const sizes = mergeSizeEdit(current.sizes, was, cleanSizeList(String(input.sizes ?? '')));
+    const updated = await updateCategory(db, STORE_ID, current.id, {
+      ...names,
+      code: current.code,
+      active: current.active,
+      sizes: sizes ?? undefined,
+      sectionId: section.id,
+    });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, type: toPickType({ ...updated, productCount: current.productCount }, await getLocale()) };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }

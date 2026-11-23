@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { fixedSectionKey, fixedSectionPlace, isFixedType, withFixedSections, type FixedSectionKey } from './sections';
+import { fixedSectionKey, fixedSectionPlace, isFixedType, typeNameEdit, withFixedSections, type FixedSectionKey } from './sections';
+
+describe('✎ on a category: which name changes (ADR-071, pre-release review)', () => {
+  const kurta = { name: 'Kurta', nameHi: 'कुर्ता' };
+  it('unchanged name (also when the tile was drawn in the other language): no name is written', () => {
+    expect(typeNameEdit(kurta, { typed: 'Kurta', was: 'Kurta', hindi: false })).toEqual({ name: 'Kurta' });
+    expect(typeNameEdit(kurta, { typed: ' कुर्ता ', was: 'कुर्ता', hindi: true })).toEqual({ name: 'Kurta' });
+  });
+  it('renamed on a Hindi tile: the Hindi name changes; on an English tile: the name, and the old Hindi name goes', () => {
+    expect(typeNameEdit(kurta, { typed: 'पठानी', was: 'कुर्ता', hindi: true })).toEqual({ name: 'Kurta', nameHi: 'पठानी' });
+    expect(typeNameEdit(kurta, { typed: 'Pathani Suit', was: 'Kurta', hindi: false })).toEqual({ name: 'Pathani Suit', nameHi: null });
+    // Only the letter case: the Hindi name still fits and stays.
+    expect(typeNameEdit(kurta, { typed: 'KURTA', was: 'Kurta', hindi: false })).toEqual({ name: 'KURTA' });
+  });
+  it('Jeans, Jacket and Shirt never change their names, whatever is sent', () => {
+    expect(typeNameEdit({ name: 'Jeans', nameHi: 'जीन्स' }, { typed: 'Jeans', was: 'Jeans', hindi: false })).toEqual({ name: 'Jeans' });
+    expect(typeNameEdit({ name: 'Jeans', nameHi: 'जीन्स' }, { typed: 'Denim', was: 'Jeans', hindi: true })).toEqual({ name: 'Jeans' });
+  });
+  it('an empty name is no rename', () => {
+    expect(typeNameEdit(kurta, { typed: '  ', was: 'Kurta', hindi: false })).toEqual({ name: 'Kurta' });
+  });
+});
 
 /** Owner, 2026-11-22 (ADR-064): Men and Women are fixed collections, always in the list. */
 const row = (name: string) => ({ name, fixed: fixedSectionKey(name) });

@@ -122,6 +122,24 @@ export function isFixedType(name: string): boolean {
   return FIXED_TYPE_KEYS.has(typeKey(name));
 }
 
+/**
+ * ✎ on a category (ADR-071): which stored name a save changes. The sheet sends what its tile showed (`was`,
+ * drawn in Hindi when `hindi`) and what is typed now — the tile may be older than the person's language
+ * (अ/A switched later, another phone), so the request's language is not used. Nothing changes unless the
+ * name was edited, and never for Jeans / Jacket / Shirt. A new English name drops the old Hindi one (like ✎
+ * on a collection); `nameHi` left out = kept.
+ */
+export function typeNameEdit(
+  current: { name: string; nameHi: string | null },
+  edit: { typed: string; was: string; hindi: boolean },
+): { name: string; nameHi?: string | null } {
+  const clean = (s: string) => s.trim().replace(/\s+/g, ' ');
+  const typed = clean(edit.typed);
+  if (isFixedType(current.name) || !typed || typed === clean(edit.was)) return { name: current.name };
+  if (edit.hindi && current.nameHi?.trim()) return { name: current.name, nameHi: typed };
+  return typed.toLowerCase() === current.name.toLowerCase() ? { name: typed } : { name: typed, nameHi: null };
+}
+
 /** Every spelling a starter type answers to, as keys. */
 export function starterKeys(type: StarterType): string[] {
   return [typeKey(type.name), ...(type.also ?? [])];

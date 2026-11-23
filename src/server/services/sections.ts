@@ -2,7 +2,7 @@ import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from '@/db/client';
 import { categories, products, sections, type Category, type Section } from '@/db/schema';
 import type { Locale } from '@/lib/i18n';
-import { asSectionIcon, DEFAULT_SECTIONS, FIXED_SECTIONS, fixedSectionKey, fixedSectionPlace, localName, STARTER_TYPES, starterKeys, typeKey, withFixedSections, type FixedSectionKey, type SectionIcon } from '@/lib/sections';
+import { asSectionIcon, DEFAULT_SECTIONS, FIXED_SECTIONS, fixedSectionKey, fixedSectionPlace, isFixedType, localName, STARTER_TYPES, starterKeys, typeKey, withFixedSections, type FixedSectionKey, type SectionIcon } from '@/lib/sections';
 import { designKey } from '@/lib/design-groups';
 import { MAX_SIZES } from '@/lib/size-lists';
 import { stockValue } from '@/lib/stock-value';
@@ -155,8 +155,20 @@ export type PickSection = {
   /** Items in it (every category, hidden ones too): a collection with items is not deleted. */
   items: number;
   standIn?: true;
-  types: { id: string; name: string; code: string; sizes: string[] }[];
+  types: PickType[];
 };
+/**
+ * A category on New item's "What is it?" (ADR-071): `items` (hidden ones too) tells its 🗑 whether
+ * it can go; `fixed` = Jeans / Jacket / Shirt, which keep their name (ADR-066); `hindi` = the name
+ * shown is the Hindi one (✎ then changes that one, whatever the language is when it is saved).
+ */
+export type PickType = { id: string; name: string; code: string; sizes: string[]; items: number; fixed: boolean; hindi: boolean };
+
+/** A category as New item shows it, in the person's language. */
+export function toPickType(x: { id: string; name: string; nameHi?: string | null; code: string; sizes: string[]; productCount?: number }, locale: Locale): PickType {
+  const hindi = locale === 'hi' && Boolean(x.nameHi?.trim());
+  return { id: x.id, name: localName(x, locale), code: x.code, sizes: x.sizes, items: x.productCount ?? 0, fixed: isFixedType(x.name), hindi };
+}
 
 export function toPickSection(s: SectionWithTypes, locale: Locale): PickSection {
   return {
@@ -165,7 +177,7 @@ export function toPickSection(s: SectionWithTypes, locale: Locale): PickSection 
     icon: s.icon,
     fixed: s.fixed,
     items: s.types.reduce((n, x) => n + x.productCount, 0),
-    types: s.types.filter((x) => x.active).map((x) => ({ id: x.id, name: localName(x, locale), code: x.code, sizes: x.sizes })),
+    types: s.types.filter((x) => x.active).map((x) => toPickType(x, locale)),
   };
 }
 
