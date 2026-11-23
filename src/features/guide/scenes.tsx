@@ -554,8 +554,9 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
               </span>
             </span>
             <span className="flex gap-1">
-              {['M', 'L', 'XL'].map((size, i) => (
-                <span key={size} className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${i < 2 ? 'bg-brand-600 text-white' : 'ring-1 ring-zinc-300 dark:ring-zinc-600'}`}>
+              {/* No size picked yet: that is when the Quantity box is the − 3 + stepper (as in the app). */}
+              {['M', 'L', 'XL'].map((size) => (
+                <span key={size} className="rounded-md px-1.5 py-0.5 text-[9px] font-bold ring-1 ring-zinc-300 dark:ring-zinc-600">
                   {size}
                 </span>
               ))}

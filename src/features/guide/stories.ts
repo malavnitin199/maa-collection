@@ -35,7 +35,7 @@ export type Scene =
   | { kind: 'bars' }
   | { kind: 'columns' }
   | { kind: 'list' }
-  // 2026-11-23 (ADR-067): the screens since ADR-040 — tiles, the four boxes, figures, rows, a bill.
+  // 2026-11-23 (ADR-067, ADR-071): the screens since ADR-040 — tiles, the details card, figures, rows, a bill.
   /** Collection / category tiles; 🔒 on fixed ones (Men, Women). */
   | { kind: 'tiles'; items: { name: L; note?: L; lock?: boolean }[]; tap: number }
   /**
@@ -377,8 +377,8 @@ export const STORIES: Story[] = [
         scene: {
           kind: 'tiles',
           items: [
-            { name: { en: 'Jeans', hi: 'जीन्स' }, note: { en: '28–36', hi: '28–36' } },
-            { name: { en: 'Shirt', hi: 'शर्ट' }, note: { en: 'M–XXL', hi: 'M–XXL' } },
+            { name: { en: 'Jeans', hi: 'जीन्स' }, note: { en: '28–36', hi: '28–36' }, lock: true },
+            { name: { en: 'Shirt', hi: 'शर्ट' }, note: { en: 'M–XXL', hi: 'M–XXL' }, lock: true },
             { name: { en: 'Kurta', hi: 'कुर्ता' }, note: { en: 'M–XXL', hi: 'M–XXL' } },
             { name: { en: '+ Add', hi: '+ जोड़ें' } },
           ],
@@ -386,8 +386,8 @@ export const STORIES: Story[] = [
         },
         text: { en: '**What is it?** Tap the category', hi: '**क्या है?** कैटेगरी दबाएँ' },
         say: {
-          en: 'Then tap what it is, like Jeans or Kurta. Plus Add makes a new one; the pencil changes its name and sizes.',
-          hi: 'फिर बताएँ कि क्या है, जैसे जीन्स या कुर्ता। जोड़ें से नई कैटेगरी बनती है; पेंसिल से उसका नाम और साइज़ बदलें।',
+          en: 'Then tap what it is, like Jeans or Kurta. Plus Add makes a new one; the owner’s pencil changes its name and sizes.',
+          hi: 'फिर बताएँ कि क्या है, जैसे जीन्स या कुर्ता। जोड़ें से नई कैटेगरी बनती है; मालिक पेंसिल से उसका नाम और साइज़ बदल सकते हैं।',
         },
       },
       {
