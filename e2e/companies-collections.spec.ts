@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { addToBill, billEditor, chooseBillCompany, openMore, productCard } from './products';
+import { addToBill, billEditor, chooseBillCompany, openMore, openProduct, productCard } from './products';
 
 // Owner's feedback 2026-11-22 (ADR-051): "Companies" everywhere; any company can be deleted after a
 // confirmation (its items stay, with no company); the company is optional on items; Home → Collections.
@@ -81,7 +81,8 @@ test('a company with an item is deleted from its page; the item stays with no co
   // Both items are still there; the kept one has no company now (N/A).
   await page.goto('/admin/products');
   for (const name of [`Kept Kurta ${tag}`, `Free Kurta ${tag}`]) await expect(productCard(page, name)).toHaveCount(1);
-  await expect(productCard(page, `Kept Kurta ${tag}`).getByTestId('card-company')).toHaveText('N/A');
+  await openProduct(page, `Kept Kurta ${tag}`); // the company is on the product page (ADR-070)
+  await expect(page.getByTestId('item-company').filter({ visible: true })).toHaveText('N/A');
 });
 
 test('Home → Collections opens Categories: figures, products per collection, Jeans and Shirt locked, the others edited and deleted (ADR-066)', async ({ page }, info) => {

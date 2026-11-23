@@ -3,6 +3,7 @@ import { Suspense, type ReactNode } from 'react';
 import { muted, okBox, primaryButton } from '@/components/ui/styles';
 import { SelectableItem, SelectionBar, SelectionProvider, SelectToggle } from '@/components/ui/selection';
 import { ProductDeleteAction } from '@/features/catalog/bulk-actions';
+import { LabelButton } from '@/features/catalog/label-button';
 import { ProductListCard } from '@/features/catalog/product-list-card';
 import { FreshAddress } from '@/features/forms/fresh-address';
 import { STORE_ID } from '@/lib/app-config';
@@ -29,9 +30,10 @@ function Selectable({ on, ids, label, children }: { on: boolean; ids: readonly s
 }
 
 /**
- * Products (ADR-058, owner's feedback): every product in one list — one compact card per
- * design (same name, company and MRP), hidden items included and marked. No search,
- * filters or view switch for now. The owner can select cards to delete them (ADR-057).
+ * Stocks (called Products until ADR-070; the address stays /admin/products): every product in
+ * one list — one short card per design (same name, company and MRP), hidden items included and
+ * marked. No search, filters or view switch for now (ADR-058). The owner can select cards to
+ * delete them (ADR-057); a card's QR button shows its label (ADR-070).
  */
 async function ProductList({ searchParams }: { searchParams: Promise<Search> }) {
   const [me, t] = await Promise.all([requireAnyPermission(['catalog', 'prices', 'stock']), getT()]);
@@ -48,6 +50,8 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
     return undefined;
   };
   const showCost = can(me, 'costs');
+  // The QR button's label sheet: for the people who may print tags (catalog or stock), ADR-070.
+  const showLabel = can(me, 'catalog') || can(me, 'stock');
   // Select's only action is Delete (ADR-057), which is the owner's (ADR-050).
   const canSelect = me.role === 'admin';
   const designs = groupDesigns(items);
@@ -67,14 +71,21 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
           </p>
           <SelectToggle testId="select-products" />
         </div>
-        <ul data-testid="design-list" className="rise-in grid gap-2.5 sm:grid-cols-2">
+        <ul data-testid="design-list" className="rise-in grid gap-2 sm:grid-cols-2">
           {designs.map((d) => {
             const ids = d.items.map((p) => p.id);
             return (
               // min-w-0: a long name is cut short with … instead of widening the page.
               <li key={d.key} className="min-w-0">
                 <Selectable on={canSelect} ids={ids} label={d.name}>
-                  <ProductListCard design={d} photo={photoOf(ids)} href={`/admin/products/${ids[0]}`} showCost={showCost} t={t} />
+                  <ProductListCard
+                    design={d}
+                    photo={photoOf(ids)}
+                    href={`/admin/products/${ids[0]}`}
+                    showCost={showCost}
+                    label={showLabel ? <LabelButton ids={ids} name={d.name} /> : null}
+                    t={t}
+                  />
                 </Selectable>
               </li>
             );
@@ -92,7 +103,7 @@ async function ProductList({ searchParams }: { searchParams: Promise<Search> }) 
 export default async function ProductsPage(props: PageProps<'/admin/products'>) {
   const t = await getT();
   return (
-    <main className="flex flex-col gap-4">
+    <main className="flex flex-col gap-3">
       <FreshAddress drop={['deleted']} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t('nav.products')}</h1>

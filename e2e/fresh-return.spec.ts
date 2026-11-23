@@ -52,12 +52,12 @@ test('Products: a tap anywhere on a card opens it; ticked cards are plain again 
   await toProducts();
   await expect(page).toHaveURL(/\/admin\/products$/);
 
-  // The card says it opens (a round ›), and a tap on its sizes — not the name — opens it.
+  // The card says it opens (a round ›), and a tap on its figures — not the name — opens it.
   const card = productCard(page, first).filter({ visible: true });
   await expect(card.getByTestId('card-open')).toBeVisible();
   await card.scrollIntoViewIfNeeded();
-  const sizes = await card.getByTestId('design-sizes').boundingBox();
-  await page.mouse.click(sizes!.x + 4, sizes!.y + sizes!.height / 2);
+  const figures = await card.getByTestId('card-figures').boundingBox();
+  await page.mouse.click(figures!.x + 4, figures!.y + figures!.height / 2);
   await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(first);
   await page.goBack();
@@ -98,6 +98,55 @@ test('Products: a tap anywhere on a card opens it; ticked cards are plain again 
   await page.goForward();
   await expect(page).toHaveURL(/\/admin\/products$/);
   await expect(page.getByTestId('selection-bar')).toHaveCount(0);
+});
+
+test('Stocks: a card is one short row; its QR button shows the label in a sheet, one tag per size (ADR-070)', async ({ page }) => {
+  await loginOwner(page);
+  const name = `Label Kurta ${run}`;
+  await makeDesign(page, name);
+  await page.goto('/admin/dashboard');
+  await page.locator('a[href="/admin/products"]').filter({ visible: true }).first().click();
+  await expect(page).toHaveURL(/\/admin\/products$/);
+  const card = productCard(page, name).filter({ visible: true });
+  // Pieces, purchase price per piece and MRP — once each; the row is about the photo's height.
+  await expect(card.getByTestId('card-figures')).toHaveText(/^\d+ pcs?₹400\/pcMRP ₹999$/);
+  expect((await card.boundingBox())!.height).toBeLessThan(80);
+
+  // The QR button opens the sheet, not the product.
+  await card.getByTestId('card-label').click();
+  const sheet = page.getByTestId('action-sheet');
+  await expect(sheet.getByRole('heading', { name })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/products$/);
+  const tag = sheet.getByTestId('hang-tag');
+  await expect(tag).toHaveCount(1);
+  const qr = tag.getByRole('img', { name: /^QR code for / });
+  await expect(qr).toBeVisible();
+  await expect(tag.getByRole('img', { name: /^Barcode \d{13} for / })).toBeVisible();
+  await expect(tag).toContainText(name);
+  // Bigger than the printed 40 mm (≈ 151 px), so the QR code scans from the screen.
+  expect((await tag.boundingBox())!.width).toBeGreaterThan(200);
+  // One chip per size: the first shows, a tap shows the other size's own tag.
+  const sizes = sheet.getByTestId('label-sizes').getByRole('button');
+  await expect(sizes).toHaveText(['M', 'L']);
+  await expect(sizes.first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(tag.getByTestId('tag-size')).toHaveText('M');
+  const firstQr = (await qr.getAttribute('aria-label'))!;
+  await sizes.nth(1).click();
+  await expect(tag.getByTestId('tag-size')).toHaveText('L');
+  await expect(qr).not.toHaveAttribute('aria-label', firstQr);
+  await sheet.getByRole('button', { name: 'Close' }).click();
+  await expect(sheet).toHaveCount(0);
+
+  // Open, then the phone's back button and forward again: the sheet is closed.
+  await card.getByTestId('card-label').click();
+  await expect(sheet.getByTestId('hang-tag')).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
+  await expect(sheet).toHaveCount(0);
+  await page.goForward();
+  await expect(page).toHaveURL(/\/admin\/products$/);
+  await expect(card).toBeVisible();
+  await expect(sheet).toHaveCount(0);
 });
 
 test('Companies: the search and place are empty again after opening a company and coming back', async ({ page }) => {

@@ -13,6 +13,10 @@ const base = (path: React.ReactNode, className = 'h-6 w-6') => (
 export const IconHome = ({ className }: IconProps) => base(<><path d="M3.5 10.5 12 4l8.5 6.5" /><path d="M5.5 9.5V20h13V9.5" /><path d="M10 20v-5.5h4V20" /></>, className);
 /** A hang tag: the app's own tag, with its thread hole. */
 export const IconTag = ({ className }: IconProps) => base(<><path d="M7 3.5h10l2.5 2.5v14.5h-15V6L7 3.5Z" /><circle cx="12" cy="7.5" r="1.3" /><path d="M8.5 12h7M8.5 15.5h4.5" /></>, className);
+/** A QR code (three finder squares and a few modules): Stocks card → the product's label (ADR-070). */
+export const IconQr = ({ className }: IconProps) => base(<><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 20h1M20 14v1" /></>, className);
+/** A paper bill with a torn bottom edge: the dock's Bills (ADR-070). */
+export const IconBill = ({ className }: IconProps) => base(<><path d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3v-17Z" /><path d="M9 8h6M9 11.5h6M9 15h3.5" /></>, className);
 export const IconStockAdd = ({ className }: IconProps) => base(<><path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5v-7Z" /><path d="M12 9.5v6M9 12.5h6" /></>, className);
 /** Home → Add new stock (owner, 2026-11-22, ADR-064): a shirt with a plus. */
 export const IconAddStock = ({ className }: IconProps) => base(<><path d="M9 4.5 4.5 6.8 3 10.3l3.2 1.3V20h11.6v-8.4l3.2-1.3-1.5-3.5L15 4.5c-.5 1.4-1.6 2.2-3 2.2s-2.5-.8-3-2.2Z" /><path d="M12 11.5v5M9.5 14h5" /></>, className);

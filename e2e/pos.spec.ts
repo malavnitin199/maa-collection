@@ -59,7 +59,7 @@ test('logged-out visitors go to login; salesmen cannot open admin pages; wrong P
   await expect(page.getByTestId('current-user')).toContainText('Pradeep · Salesman');
   await page.goto('/admin/dashboard');
   await expect(page).toHaveURL(/\/pos$/);
-  await expect(page.getByRole('link', { name: 'Products' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Stocks' })).toHaveCount(0);
 });
 
 test('camera scanner opens on the whole screen without moving the scan form', async ({ page }) => {

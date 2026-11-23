@@ -239,7 +239,8 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   // Both items exist, under their own receipts (each save has its own operation id).
   await page.goto('/admin/products');
   await expect(productCard(page, `Banarasi ${run}`)).not.toHaveCount(0);
-  await expect(productCard(page, `Anarkali ${run}`).getByTestId('card-items')).toHaveText(['Items: 4']);
+  await expect(productCard(page, `Anarkali ${run}`)).toHaveCount(1);
+  await expect(productCard(page, `Anarkali ${run}`)).toHaveAttribute('data-items', '4');
 });
 
 test('a salesman without the catalog right cannot open it', async ({ page, isMobile }) => {
@@ -374,9 +375,8 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await page.keyboard.press('Escape');
   await page.goto('/admin/products');
   const card = productCard(page, name);
-  await expect(card.getByTestId('card-items')).toHaveText('Items: 1');
+  await expect(card).toHaveAttribute('data-items', '1');
   await expect(card.getByTestId('card-pieces')).toHaveText('3 pcs');
-  await expect(card.getByTestId('design-sizes')).toHaveText('N/A · 3'); // no size → N/A (ADR-058)
   // Tapping a size hides the pieces box again.
   await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: 'Men', exact: true }).click();
@@ -418,7 +418,8 @@ test('purchase price first; an empty sale price is purchase + 50%; the % calcula
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.keyboard.press('Escape');
   await page.goto('/admin/products');
-  await expect(productCard(page, name).getByTestId('value-per-piece')).toHaveText('₹700.00'); // purchase per piece (ADR-057)
+  await expect(productCard(page, name).getByTestId('card-cost')).toHaveText('₹700/pc'); // purchase per piece (ADR-057/070)
+  await expect(productCard(page, name).getByTestId('card-mrp')).toHaveText('MRP ₹980');
   await productCard(page, name).getByRole('link', { name, exact: true }).click();
   await expect(page.getByTestId('item-prices')).toContainText('MRP ₹980.00');
   // The % is remembered on this phone for the next item.

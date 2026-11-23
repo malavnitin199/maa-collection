@@ -76,6 +76,8 @@ Empty folders hold `.gitkeep`; they are the agreed blueprint skeleton — fill t
 
 ## Status
 
+**Stocks list + label sheet + Bills in the dock (2026-11-23, ADR-070):** *Products* is called **Stocks** on screen (address still `/admin/products`); each card is one ~70 px row — photo, name, `card-figures` (pieces chip · `₹…/pc` for `costs` only · MRP) — with no company, item count, × total or sizes row (`data-items` on the card is for tests; sizes / company are checked on the product page). A small QR button (`LabelButton`, catalog or stock right) opens `LabelSheet` with the design's real `HangTag` at 1.5× and size chips, fed by `productLabelsAction` (`src/server/actions/labels.ts`; `productsByIds(…, { hidden: true })`). Owner's dock: Home · Stocks · Sell · **Bills** · More (no *+ Stock* tab). No DB change.
+
 **Guide + Help after ADR-068 (2026-11-23, ADR-069):** audited lesson by lesson; new scenes `photobox` (item page photo box → sheet) and `select` (ticks + bottom bar) in *The item page*, *Print tags* and *Approve sales*; spoken lines and Help (Approvals, Many at once, FAQ: torn tag, no internet, ticks gone) brought up to today's app; Hara-style top band in the Guide's phone; 571 words.
 
 **Fresh screens, clickable cards, product photo (2026-11-23, ADR-068):** leaving a screen clears its ticks, searches, pages and address filters (`useScreenVisits` / `useClearOnLeave` / `FreshAddress`); the whole Products card opens the product (›); the item page's photo box adds / changes / removes one photo for every size (`ProductPhoto`, `setDesignPhoto`; no DB change).

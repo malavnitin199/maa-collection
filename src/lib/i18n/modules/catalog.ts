@@ -9,8 +9,8 @@ export const catalogEn = {
   'cat.purchase': 'purchase {amount}',
   'cat.bill': 'bill {number}',
   'cat.byName': 'by {name}',
-  'cat.backProducts': '← Products',
-  'cat.backProductsAria': 'Back to Products',
+  'cat.backProducts': '← Stocks',
+  'cat.backProductsAria': 'Back to Stocks',
   'cat.backSuppliersAria': 'Back to Companies',
   'cat.productsInStock': '{products} products · {pcs} pcs in stock',
   'cat.saveChanges': 'Save changes',
@@ -30,10 +30,16 @@ export const catalogEn = {
   'cat.design.mrp': 'MRP {mrp}',
   'cat.design.selling': 'selling {price}',
   'cat.design.sellingRange': 'selling {min}–{max}',
-  // Products (ADR-057): pieces × purchase price per piece = total, in place of the MRP
-  'cat.design.items': 'Items: {items}',
   'cat.value.pcs': '{pcs} pcs',
-  'cat.value.missing': '{pcs} pcs have no purchase price',
+  // Stocks cards (ADR-070): pieces, the purchase price per piece (Costs right only), the MRP
+  'cat.card.perPiece': '{price}/pc',
+  'cat.card.noCost': 'Cost N/A',
+  // The card's QR button opens the product's label in a sheet (ADR-070)
+  'cat.card.label': 'Label of {name}',
+  'cat.label.loading': 'Loading the label…',
+  'cat.label.failed': 'Could not load the label. Try again.',
+  'cat.label.none': 'No label to show.',
+  'cat.label.close': 'Close',
   // Products cards (ADR-058): a hidden design (or some of its items) stays in the list, marked
   'cat.card.hidden': 'Hidden',
   'cat.card.hiddenN': '{n} hidden',
@@ -41,7 +47,7 @@ export const catalogEn = {
   'cat.design.showTags.other': 'Show {n} tags',
   'cat.design.printTags': 'Print tags',
   'cat.design.qr': 'Design QR for {name}',
-  'cat.products.loading': 'Loading products…',
+  'cat.products.loading': 'Loading stocks…',
 
   // Product page
   'cat.product.added': 'Product added. SKU {sku}, barcode {barcode}. Print the label below and stick it on the item.',
@@ -99,7 +105,7 @@ export const catalogEn = {
 
   // Add product page and product form
   'cat.new.title': 'Add product',
-  'cat.new.intro': 'One size, e.g. an item with the manufacturer’s barcode already on its tag. For a design in several sizes use “+ Stock”.',
+  'cat.new.intro': 'One size, e.g. an item with the manufacturer’s barcode already on its tag. For a design in several sizes use “+ Add stock”.',
   'cat.form.name': 'Product name',
   'cat.form.chooseCategory': 'Choose category…',
   'cat.form.supplierOptional': 'Company (optional)',
@@ -355,8 +361,8 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.purchase': 'खरीद दाम {amount}',
   'cat.bill': 'बिल {number}',
   'cat.byName': '{name} द्वारा',
-  'cat.backProducts': '← प्रोडक्ट',
-  'cat.backProductsAria': 'प्रोडक्ट पर वापस',
+  'cat.backProducts': '← स्टॉक',
+  'cat.backProductsAria': 'स्टॉक पर वापस',
   'cat.backSuppliersAria': 'कंपनियों पर वापस',
   'cat.productsInStock': '{products} प्रोडक्ट · स्टॉक में {pcs} पीस',
   'cat.saveChanges': 'बदलाव सेव करें',
@@ -376,10 +382,16 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.design.mrp': 'MRP {mrp}',
   'cat.design.selling': 'बिक्री दाम {price}',
   'cat.design.sellingRange': 'बिक्री दाम {min}–{max}',
-  // प्रोडक्ट (ADR-057): पीस × प्रति पीस खरीद दाम = कुल, MRP की जगह
-  'cat.design.items': 'आइटम: {items}',
   'cat.value.pcs': '{pcs} पीस',
-  'cat.value.missing': '{pcs} पीस का खरीद दाम नहीं',
+  // स्टॉक कार्ड (ADR-070): पीस, प्रति पीस खरीद दाम (सिर्फ़ खरीद दाम के अधिकार के साथ), MRP
+  'cat.card.perPiece': '{price}/पीस',
+  'cat.card.noCost': 'खरीद N/A',
+  // कार्ड का QR बटन प्रोडक्ट का लेबल शीट में खोलता है (ADR-070)
+  'cat.card.label': '{name} का लेबल',
+  'cat.label.loading': 'लेबल लोड हो रहा है…',
+  'cat.label.failed': 'लेबल लोड नहीं हुआ। फिर से कोशिश करें।',
+  'cat.label.none': 'दिखाने को कोई लेबल नहीं।',
+  'cat.label.close': 'बंद करें',
   // प्रोडक्ट कार्ड (ADR-058): छिपा डिज़ाइन (या उसके कुछ आइटम) सूची में रहता है, निशान के साथ
   'cat.card.hidden': 'छिपा',
   'cat.card.hiddenN': '{n} छिपे',
@@ -387,7 +399,7 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
   'cat.design.showTags.other': '{n} टैग दिखाएँ',
   'cat.design.printTags': 'टैग प्रिंट करें',
   'cat.design.qr': '{name} का डिज़ाइन QR',
-  'cat.products.loading': 'प्रोडक्ट लोड हो रहे हैं…',
+  'cat.products.loading': 'स्टॉक लोड हो रहा है…',
 
   // Product page
   'cat.product.added': 'प्रोडक्ट जुड़ गया। SKU {sku}, बारकोड {barcode}। नीचे से लेबल प्रिंट करें और आइटम पर लगाएँ।',
@@ -443,7 +455,7 @@ export const catalogHi: Record<keyof typeof catalogEn, string> = {
 
   // Add product page and product form
   'cat.new.title': 'प्रोडक्ट जोड़ें',
-  'cat.new.intro': 'एक साइज़, जैसे ऐसा आइटम जिसके टैग पर कंपनी का बारकोड पहले से लगा है। कई साइज़ वाले डिज़ाइन के लिए “+ स्टॉक” इस्तेमाल करें।',
+  'cat.new.intro': 'एक साइज़, जैसे ऐसा आइटम जिसके टैग पर कंपनी का बारकोड पहले से लगा है। कई साइज़ वाले डिज़ाइन के लिए “+ स्टॉक जोड़ें” इस्तेमाल करें।',
   'cat.form.name': 'प्रोडक्ट का नाम',
   'cat.form.chooseCategory': 'कैटेगरी चुनें…',
   'cat.form.supplierOptional': 'कंपनी (ज़रूरी नहीं)',

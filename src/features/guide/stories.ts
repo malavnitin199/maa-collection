@@ -555,10 +555,10 @@ export const STORIES: Story[] = [
             { label: { en: 'Stock value', hi: 'स्टॉक की कीमत' }, value: '₹8,400' },
           ],
         },
-        text: { en: '**Products** → tap a product', hi: '**प्रोडक्ट** → प्रोडक्ट पर टैप करें' },
+        text: { en: '**Stocks** → tap a product', hi: '**स्टॉक** → प्रोडक्ट पर टैप करें' },
         say: {
-          en: 'Open Products and tap a product. On top: pieces in stock, pieces sold, and the stock’s worth or the last sale.',
-          hi: 'प्रोडक्ट खोलें और किसी प्रोडक्ट पर टैप करें। ऊपर: स्टॉक के पीस, बिके पीस, और स्टॉक की कीमत या आख़िरी बिक्री।',
+          en: 'Open Stocks and tap a product. On top: pieces in stock, pieces sold, and the stock’s worth or the last sale.',
+          hi: 'स्टॉक खोलें और किसी प्रोडक्ट पर टैप करें। ऊपर: स्टॉक के पीस, बिके पीस, और स्टॉक की कीमत या आख़िरी बिक्री।',
         },
       },
       {
@@ -594,7 +594,7 @@ export const STORIES: Story[] = [
         },
       },
     ],
-    open: { href: '/admin/products', label: { en: 'Products', hi: 'प्रोडक्ट' } },
+    open: { href: '/admin/products', label: { en: 'Stocks', hi: 'स्टॉक' } },
   },
 
   // ——— Owner ———
@@ -838,7 +838,7 @@ export const STORIES: Story[] = [
       },
     ],
     tip: { en: 'Past sales keep the price they were sold at.', hi: 'पुरानी बिक्री का दाम नहीं बदलता।' },
-    open: { href: '/admin/products', label: { en: 'Products', hi: 'प्रोडक्ट' } },
+    open: { href: '/admin/products', label: { en: 'Stocks', hi: 'स्टॉक' } },
   },
   {
     id: 'team',
