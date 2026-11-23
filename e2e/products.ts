@@ -8,7 +8,10 @@ export function productCard(page: Page, name: string) {
   return page.getByTestId('design-list').getByTestId('product-card').filter({ has: page.getByRole('link', { name, exact: true }) });
 }
 
-/** New item's "Sizes & more" fold (owner, 2026-11-22, ADR-065): opened before sizes, boxes, bill no. … */
+/**
+ * New item's "More details" fold (ADR-065; since ADR-071 only the box, counter price, bill no., date and brand —
+ * the sizes are on the card): opened before those. Harmless when not needed.
+ */
 export async function openMore(page: Page) {
   const more = page.getByTestId('more-details').filter({ visible: true });
   if (!(await more.evaluate((d) => (d as HTMLDetailsElement).open))) await more.locator('summary').click();

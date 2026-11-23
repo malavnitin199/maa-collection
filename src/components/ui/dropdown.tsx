@@ -22,6 +22,8 @@ export function Dropdown({
   required = false,
   searchPlaceholder,
   testId,
+  search,
+  inline = false,
 }: {
   label: string;
   value: string;
@@ -32,6 +34,10 @@ export function Dropdown({
   required?: boolean;
   searchPlaceholder?: string;
   testId?: string;
+  /** Always show the search line (ready to type when the list opens); by default only for long lists. */
+  search?: boolean;
+  /** The label beside the box on one slim row instead of above it (New item's company, ADR-071). */
+  inline?: boolean;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -41,7 +47,7 @@ export function Dropdown({
   const button = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const chosen = options.find((o) => o.value === value);
-  const searchable = options.length > 8;
+  const searchable = search ?? options.length > 8;
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return q ? options.filter((o) => o.tone === 'action' || o.label.toLowerCase().includes(q)) : options;
@@ -88,8 +94,10 @@ export function Dropdown({
   };
 
   return (
-    <div ref={box} className="relative flex min-w-0 flex-col gap-1 text-sm font-medium" onKeyDown={keys}>
-      <span id={`${id}-label`}>{label}</span>
+    <div ref={box} className={`relative flex min-w-0 text-sm font-medium ${inline ? 'items-center gap-3' : 'flex-col gap-1'}`} onKeyDown={keys}>
+      <span id={`${id}-label`} className={inline ? 'shrink-0' : undefined}>
+        {label}
+      </span>
       <button
         ref={button}
         type="button"
@@ -101,7 +109,7 @@ export function Dropdown({
         disabled={disabled}
         data-testid={testId}
         onClick={() => toggle(!open)}
-        className={`${input} flex items-center justify-between gap-2 text-left disabled:opacity-60`}
+        className={`${input} flex items-center justify-between gap-2 text-left disabled:opacity-60 ${inline ? 'min-w-0 flex-1' : ''}`}
       >
         <span id={`${id}-value`} className={`truncate ${chosen ? '' : muted}`}>
           {chosen?.label ?? placeholder}

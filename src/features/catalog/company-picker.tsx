@@ -33,6 +33,8 @@ export function CompanyPicker({
   name,
   disabled = false,
   exclude = [],
+  inline = false,
+  search,
 }: {
   label: string;
   companies: Company[];
@@ -44,6 +46,10 @@ export function CompanyPicker({
   name?: string;
   disabled?: boolean;
   exclude?: string[];
+  /** One slim row: the label beside the box (New item, ADR-071). */
+  inline?: boolean;
+  /** The search line every time the list opens, ready to type (by default only for long lists). */
+  search?: boolean;
 }) {
   const t = useT();
   const [companies, setCompanies] = useState(initialCompanies);
@@ -85,6 +91,8 @@ export function CompanyPicker({
         disabled={disabled || busy}
         placeholder={emptyLabel}
         searchPlaceholder={t('cat.company.search')}
+        inline={inline}
+        search={search}
         options={[
           // Optional box (ADR-051): a chosen company can be cleared again.
           ...(!required && value ? [{ value: NONE, label: t('cat.form.noSupplier') }] : []),
