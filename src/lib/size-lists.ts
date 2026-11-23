@@ -72,6 +72,21 @@ export function cleanSizeList(input: string | readonly string[]): string[] {
 }
 
 /**
+ * ✎ on a category (ADR-071): the sheet may hold an old copy of the list (a page kept alive, another phone),
+ * so only what it changed is applied — the sizes it removed from or added to `was` (what it started from) —
+ * on top of today's list `current`; a size someone else added meanwhile stays. Null when nothing changed.
+ */
+export function mergeSizeEdit(current: readonly string[], was: readonly string[], picked: readonly string[]): string[] | null {
+  const before = cleanSizeList(was);
+  const after = cleanSizeList(picked);
+  const removed = before.filter((s) => !after.some((p) => sameSize(p, s)));
+  const added = after.filter((p) => !before.some((s) => sameSize(s, p)));
+  if (removed.length === 0 && added.length === 0) return null;
+  const kept = current.filter((s) => !removed.some((r) => sameSize(r, s)));
+  return orderSizes([...kept, ...added.filter((a) => !kept.some((k) => sameSize(k, a)))]);
+}
+
+/**
  * The size row on a tag: the category's whole list (shop order), else the
  * sizes this design is made in; the piece's own size is added if missing.
  */

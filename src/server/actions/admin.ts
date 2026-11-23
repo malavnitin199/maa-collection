@@ -14,7 +14,8 @@ import { deleteCompanies } from '@/server/services/delete-companies';
 import { deleteProducts } from '@/server/services/delete-products';
 import type { MessageKey } from '@/lib/i18n';
 import { errorText, getLocale, getT } from '@/server/i18n';
-import { asSectionIcon, fixedSectionKey, localName, type SectionIcon } from '@/lib/sections';
+import { asSectionIcon, fixedSectionKey, localName, typeNameEdit, type SectionIcon } from '@/lib/sections';
+import { cleanSizeList, mergeSizeEdit } from '@/lib/size-lists';
 import {
   addTypeSize,
   backfillSections,
@@ -506,28 +507,33 @@ export async function addTypeAction(input: { sectionId: string; name: string; si
 }
 
 /**
- * New item → ✎ on a category tile (owner, 2026-11-23, ADR-071): its name and its sizes. The name
- * changed is the one the person sees (the Hindi name when Hindi is shown, like ✎ on a collection);
- * code, Hindi / English other name and collection stay. Jeans, Jacket and Shirt keep their name.
+ * New item → ✎ on a category tile (owner, 2026-11-23, ADR-071): its name and its sizes. The sheet may
+ * hold an old copy of the tile (a page kept alive, अ/A switched later, another phone), so only what it
+ * changed is applied (pre-release review): the name only when edited — the one its tile showed (Hindi when
+ * `hindi`), never for Jeans / Jacket / Shirt, a new English name dropping the old Hindi one (`typeNameEdit`) —
+ * and only the sizes it added or removed, on top of today's list (`mergeSizeEdit`). The collection is passed
+ * so the same duplicate-name check as the Categories page runs (letter case ignored). Code and collection stay.
  */
-export async function editTypeAction(input: { id: string; name: string; sizes: string }): Promise<TypeResult> {
+export async function editTypeAction(input: { id: string; name: string; sizes: string; was: { name: string; sizes: string[] }; hindi: boolean }): Promise<TypeResult> {
   await requireAdmin();
   try {
     const db = await getDb();
-    const locale = await getLocale();
-    const current = (await listSections(db, STORE_ID)).sections.flatMap((s) => s.types).find((x) => x.id === String(input.id ?? ''));
-    if (!current) throw new DomainError('Category not found.', { key: 'cat.err.categoryNotFound' });
-    const typed = String(input.name ?? '').trim().replace(/\s+/g, ' ');
-    const hindiShown = locale === 'hi' && Boolean(current.nameHi?.trim());
+    const id = String(input.id ?? '');
+    const section = (await listSections(db, STORE_ID)).sections.find((s) => s.types.some((x) => x.id === id));
+    const current = section?.types.find((x) => x.id === id);
+    if (!section || !current) throw new DomainError('Category not found.', { key: 'cat.err.categoryNotFound' });
+    const names = typeNameEdit(current, { typed: String(input.name ?? ''), was: String(input.was?.name ?? ''), hindi: input.hindi === true });
+    const was = Array.isArray(input.was?.sizes) ? input.was.sizes.map(String) : current.sizes;
+    const sizes = mergeSizeEdit(current.sizes, was, cleanSizeList(String(input.sizes ?? '')));
     const updated = await updateCategory(db, STORE_ID, current.id, {
-      name: hindiShown ? current.name : typed,
-      nameHi: hindiShown ? typed : undefined,
+      ...names,
       code: current.code,
       active: current.active,
-      sizes: String(input.sizes ?? ''),
+      sizes: sizes ?? undefined,
+      sectionId: section.id,
     });
     revalidatePath('/admin', 'layout');
-    return { ok: true, type: toPickType({ ...updated, productCount: current.productCount }, locale) };
+    return { ok: true, type: toPickType({ ...updated, productCount: current.productCount }, await getLocale()) };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }

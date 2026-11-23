@@ -26,13 +26,13 @@ export const newItemEn = {
   'ni.short.detailsSizes': 'Details',
   'ni.step.detailsSizes': 'Details & sizes',
   'ni.panel.needDetails': 'Type the purchase or sale price',
-  // Owner, 2026-11-22 (ADR-065): four boxes, a % calculator beside the sale price, the rest under "Sizes & more".
+  // Owner, 2026-11-23 (ADR-071): the box, counter price, bill no., date and brand sit under "More details".
   'ni.panel.checkMore': 'Check More details',
-  // Owner, 2026-11-23 (ADR-071): the quantity beside the purchase price; the sale price worked out in a small row.
+  // ADR-071: the quantity beside the purchase price; the sale price worked out in a small row ("+ 50%": short, so it shows on every phone).
   'ni.qty': 'Quantity',
   'ni.qty.boxes': 'Boxes',
   'ni.qty.inSizes': 'in {sizes}',
-  'ni.sale.auto': 'purchase + {n}%',
+  'ni.sale.auto': '+ {n}%',
   // ✎ / 🗑 on a category tile (owner, ADR-071).
   'ni.type.editTitle': 'Change {name}',
   'ni.type.fixedName': '{name} always keeps its name. Its sizes can change.',
@@ -137,7 +137,7 @@ export const newItemHi: Record<keyof typeof newItemEn, string> = {
   'ni.qty': 'मात्रा',
   'ni.qty.boxes': 'डिब्बे',
   'ni.qty.inSizes': '{sizes} में',
-  'ni.sale.auto': 'खरीद + {n}%',
+  'ni.sale.auto': '+ {n}%',
   'ni.type.editTitle': '{name} बदलें',
   'ni.type.fixedName': '{name} का नाम हमेशा यही रहेगा। इसके साइज़ बदल सकते हैं।',
   'ni.type.save': 'कैटेगरी सेव करें',

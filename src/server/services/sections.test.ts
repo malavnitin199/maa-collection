@@ -239,8 +239,10 @@ describe('Categories → Move under… (moveType)', () => {
 describe('New item category tiles (ADR-071)', () => {
   it('a category as the tile shows it: the name in the person’s language, its items, and Jeans / Jacket / Shirt marked fixed', () => {
     const kurta = { id: 'k', name: 'Kurta', nameHi: 'कुर्ता', code: 'KU', sizes: ['M', 'L'], productCount: 4 };
-    expect(toPickType(kurta, 'en')).toEqual({ id: 'k', name: 'Kurta', code: 'KU', sizes: ['M', 'L'], items: 4, fixed: false });
-    expect(toPickType(kurta, 'hi').name).toBe('कुर्ता');
+    expect(toPickType(kurta, 'en')).toEqual({ id: 'k', name: 'Kurta', code: 'KU', sizes: ['M', 'L'], items: 4, fixed: false, hindi: false });
+    // `hindi`: the tile shows the Hindi name, so ✎ changes that one (also if the language changes later).
+    expect(toPickType(kurta, 'hi')).toMatchObject({ name: 'कुर्ता', hindi: true });
+    expect(toPickType({ ...kurta, nameHi: null }, 'hi')).toMatchObject({ name: 'Kurta', hindi: false });
     // Fixed by the stored English name, also when Hindi is shown; a new category has no items yet.
     expect(toPickType({ id: 'j', name: 'Jeans', nameHi: 'जीन्स', code: 'JN', sizes: [] }, 'hi')).toMatchObject({ name: 'जीन्स', items: 0, fixed: true });
     expect(toPickType({ id: 's', name: 'shirt', code: 'SH', sizes: [] }, 'en').fixed).toBe(true);

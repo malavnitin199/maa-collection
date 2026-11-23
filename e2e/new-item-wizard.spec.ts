@@ -74,11 +74,11 @@ test('Home → Add new stock → which collection → what → details & sizes (
   await choose(page.getByRole('combobox', { name: /^Company/ }), 'Shree Ganesh Textiles');
   await page.getByLabel('Product name').fill(`Chikan Kurta ${run}`);
   await page.getByLabel('Purchase price', { exact: true }).fill('700');
-  // The sale price works itself out (purchase + 50%, in grey); typing one replaces it.
+  // The sale price works itself out (purchase + 50%, in grey with "+ 50%" beside it); typing one replaces it.
   await expect(page.getByLabel('Sale price', { exact: true })).toHaveAttribute('placeholder', '1050');
-  await expect(page.getByTestId('sale-row')).toContainText('purchase + 50%');
+  await expect(page.getByTestId('sale-row')).toContainText('+ 50%');
   await page.getByLabel('Sale price', { exact: true }).fill('1299');
-  await expect(page.getByTestId('sale-row')).not.toContainText('purchase + 50%');
+  await expect(page.getByTestId('sale-row')).not.toContainText('+ 50%');
   // No size yet: the quantity box takes the pieces (owner, 2026-11-22) — Next works with 1 piece, no size.
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 1 pc');
   await expect(page.getByTestId('more-summary')).toHaveCount(0); // nothing filled under More details
@@ -385,6 +385,7 @@ test('what is it: the owner changes a category’s name and sizes and deletes an
   await sheet.getByLabel('Category name').fill(`Capri ${tag}`);
   await sheet.getByRole('button', { name: 'S–M', exact: true }).click();
   await sheet.getByRole('button', { name: 'Add category' }).click();
+  await expect(page.getByTestId('done-overlay')).toBeVisible();
   await page.keyboard.press('Escape'); // the done card
   await expect(tileOf(`Capri ${tag}`)).toContainText('S–M');
 
@@ -437,6 +438,11 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await plain.getByRole('button', { name: 'One more' }).click();
   await expect(plain.getByLabel('Pieces with no size')).toHaveValue('3');
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 3 pcs');
+  // "More details" names what is filled in under it, so nothing hides there unseen.
+  await expect(page.getByTestId('more-summary')).toHaveCount(0);
+  await openMore(page);
+  await page.getByLabel('Counter price, if lower', { exact: true }).fill('450');
+  await expect(page.getByTestId('more-summary')).toHaveText('Counter price ₹450.00');
   await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
   await expect(page.getByTestId('review-sizes')).toHaveText('No size × 3');
   await page.getByRole('button', { name: 'Save', exact: true }).click();

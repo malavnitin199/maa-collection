@@ -159,13 +159,15 @@ export type PickSection = {
 };
 /**
  * A category on New item's "What is it?" (ADR-071): `items` (hidden ones too) tells its 🗑 whether
- * it can go; `fixed` = Jeans / Jacket / Shirt, which keep their name (ADR-066).
+ * it can go; `fixed` = Jeans / Jacket / Shirt, which keep their name (ADR-066); `hindi` = the name
+ * shown is the Hindi one (✎ then changes that one, whatever the language is when it is saved).
  */
-export type PickType = { id: string; name: string; code: string; sizes: string[]; items: number; fixed: boolean };
+export type PickType = { id: string; name: string; code: string; sizes: string[]; items: number; fixed: boolean; hindi: boolean };
 
 /** A category as New item shows it, in the person's language. */
 export function toPickType(x: { id: string; name: string; nameHi?: string | null; code: string; sizes: string[]; productCount?: number }, locale: Locale): PickType {
-  return { id: x.id, name: localName(x, locale), code: x.code, sizes: x.sizes, items: x.productCount ?? 0, fixed: isFixedType(x.name) };
+  const hindi = locale === 'hi' && Boolean(x.nameHi?.trim());
+  return { id: x.id, name: localName(x, locale), code: x.code, sizes: x.sizes, items: x.productCount ?? 0, fixed: isFixedType(x.name), hindi };
 }
 
 export function toPickSection(s: SectionWithTypes, locale: Locale): PickSection {

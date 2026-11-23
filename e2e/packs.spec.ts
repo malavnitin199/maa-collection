@@ -40,7 +40,7 @@ test('a box of 12: New item by the box, one tag per box, sell 2 pieces and a who
   await expect(page.getByText('Company added')).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByLabel('Product name').fill(name);
-  // Box packs and sizes sit under "Sizes & more" (owner, 2026-11-22).
+  // Box packs sit under "More details" (owner, 2026-11-22); the sizes are on the card since ADR-071.
   await openMore(page);
   await page.getByRole('radiogroup', { name: 'Comes as' }).getByRole('radio', { name: 'Box' }).click();
   await page.getByRole('button', { name: '12 in a box' }).click();

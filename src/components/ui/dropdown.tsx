@@ -132,7 +132,8 @@ export function Dropdown({
               }}
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
-              className="border-b border-zinc-200 bg-transparent px-3 py-2.5 text-sm outline-none dark:border-zinc-700"
+              // 16 px: a smaller box that takes focus makes iPhone Safari zoom the page in (pre-release review, ADR-071).
+              className="border-b border-zinc-200 bg-transparent px-3 py-2.5 text-base outline-none dark:border-zinc-700"
             />
           )}
           <ul ref={list} id={`${id}-list`} role="listbox" aria-labelledby={`${id}-label`} className="max-h-[min(45vh,18rem)] overflow-y-auto overscroll-contain py-1">

@@ -151,7 +151,7 @@ export function NewItemWizard({
   const [packText, setPackText] = useState('12');
   const [packMrp, setPackMrp] = useState('');
   const [costAs, setCostAs] = useState<'piece' | 'box'>('piece');
-  // Owner, 2026-11-22: the % calculator beside the sale price, and "Sizes & more" — both folded at first.
+  // The % calculator under the sale price row, and "More details" — both folded at first.
   const [calcOpen, setCalcOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [reached, setReached] = useState(startSection ? 1 : 0);
@@ -207,7 +207,7 @@ export function NewItemWizard({
   const boxesText = (n: number) => t(n === 1 ? 'pack.boxes.one' : 'pack.boxes.other', { n });
   const pcs = (n: number) => t(n === 1 ? 'stk.item.pcs.one' : 'stk.item.pcs.other', { n });
   const sizesOk = totalPieces > 0;
-  // The four boxes (company and name are optional): a sale price, worked out or typed, and a readable purchase price.
+  // The must-haves on the card (name and company are optional): a sale price, worked out or typed, and a readable purchase price.
   const basicsOk = mrpPaise !== null && (!cost.trim() || typedCost !== null);
   const sizesText = noSize
     ? t('ni.noSize.summary', { pieces: pack ? `${boxesText(totalBoxes)} · ${pcs(totalPieces)}` : pcs(totalPieces) })
@@ -310,7 +310,9 @@ export function NewItemWizard({
       setTypeId(next.id);
       // A category with one size (e.g. Free) has it chosen already.
       setSizes(next.sizes.length === 1 ? [next.sizes[0]] : []);
-      setPieces({});
+      // The Quantity typed with no size is a main field now (ADR-071): it stays, like the name and prices —
+      // on the one size when the new category has just one. Per-size counts go with their sizes.
+      setPieces((p) => (!noSize || p[''] === undefined ? {} : next.sizes.length === 1 ? { [next.sizes[0]]: p[''] } : { '': p[''] }));
     }
   };
   const pickType = (next: WizardType) => {
@@ -353,6 +355,8 @@ export function NewItemWizard({
     setSheet(null);
     setEditing(null);
     setRemoving(null);
+    setEditingType(null);
+    setRemovingType(null);
     setCalcOpen(false);
     setMoreOpen(false);
     setSectionId(startSection);
@@ -365,9 +369,13 @@ export function NewItemWizard({
     setStep(startSection ? 'what' : 'who');
     window.scrollTo({ top: 0 });
   };
-  const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || typeId);
+  const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || cost.trim() || typeId);
   // Coming back to this page later starts a fresh entry — or asks, once three or more steps are filled (owner's rule, 2026-11-20).
-  const resume = useFreshOnReturn(startOver, { ask: () => reached >= 2 && Boolean(name.trim() || mrp.trim() || sizes.length) });
+  // The purchase price and the quantity are the card's main fields since ADR-071, so they count too (pre-release review);
+  // bill no., date and company can come from the address, so they don't.
+  const resume = useFreshOnReturn(startOver, {
+    ask: () => reached >= 2 && Boolean(name.trim() || mrp.trim() || cost.trim() || price.trim() || brand.trim() || sizes.length || Object.keys(pieces).length || boxed),
+  });
   /**
    * Save (plan v19 04a): `print` → the tags page; `next` → the next item of the same bill
    * ("What is it?", section / company / bill no. / date kept); `done` → the first step, everything cleared.
@@ -404,8 +412,11 @@ export function NewItemWizard({
         done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
         return setError(result.error);
       }
-      // The collection has these items now: its 🗑 knows (ADR-064).
-      setList((current) => current.map((x) => (x.id === section.id ? { ...x, items: x.items + result.items.length } : x)));
+      // The collection and the category have these items now: their 🗑 knows (ADR-064, ADR-071).
+      const made = result.items.length;
+      setList((current) =>
+        current.map((x) => (x.id === section.id ? { ...x, items: x.items + made, types: x.types.map((ty) => (ty.id === type.id ? { ...ty, items: ty.items + made } : ty)) } : x)),
+      );
       const skus = result.items.map((item) => item.sku);
       const finalName = result.items[0]?.name ?? savedName;
       const range = skus.length === 1 ? skus[0] : `${skus[0]} – ${skus[skus.length - 1]}`;
@@ -458,7 +469,7 @@ export function NewItemWizard({
     details: t('ni.step.detailsSizes'),
     review: t('ni.step.review'),
   };
-  /** Next on the Details & sizes step: everything must be in; else it shows what is missing (opening Sizes & more when it is there). */
+  /** Next on Details & sizes: everything must be in; else it shows what is missing (the top of the card; "More details" for a wrong box or counter price; the Quantity box when there are no pieces). */
   const finishDetails = () => {
     if (!basicsOk) {
       document.getElementById('ni-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -685,10 +696,8 @@ export function NewItemWizard({
         )}
       </div>
 
-      {/* Details & sizes (owner's feedback 2026-11-21; 2026-11-22, ADR-065): the four must-haves as big boxes —
-          company, product name, purchase price, sale price (₹ inside, % calculator beside it) — then everything
-          else (sizes first, box, counter price, bill no., date, brand) folded under "Sizes & more", then Next.
-          Stays mounted once reached (the company list it may grow lives inside it). */}
+      {/* Details & sizes (ADR-065, ADR-071): the one details card below, then "More details" (box, counter price,
+          bill no., date, brand) folded, then Next. Stays mounted once reached (the company list it may grow lives inside it). */}
       {reached >= 2 && (
         <div hidden={step !== 'details'} data-testid="details-step" className={step === 'details' ? (direction === 'next' ? 'step-next' : 'step-back') : ''}>
           <form
@@ -751,7 +760,8 @@ export function NewItemWizard({
                 />
               </div>
               {showCost && (
-                <div data-testid="sale-row" className="flex items-center gap-2">
+                // flex-wrap: with a box, "Sale price of one piece" is long — the rest wraps below, never past the card.
+                <div data-testid="sale-row" className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <label htmlFor="ni-mrp" className="shrink-0 text-sm font-medium">
                     {boxed ? t('pack.mrpPiece') : t('ni.mrp')}
                   </label>
@@ -1095,7 +1105,8 @@ function EditTypeSheet({ type, onClose, onSaved }: { type: WizardType; onClose: 
           e.preventDefault();
           setError(null);
           startBusy(async () => {
-            const result = await editTypeAction({ id: type.id, name: type.fixed ? type.name : name, sizes: sizes.join(', ') });
+            // What the tile showed goes along: the server applies only what this sheet changed (ADR-071).
+            const result = await editTypeAction({ id: type.id, name: type.fixed ? '' : name, sizes: sizes.join(', '), was: { name: type.name, sizes: type.sizes }, hindi: type.hindi });
             if (!result.ok) return setError(result.error);
             onSaved(result.type);
           });
