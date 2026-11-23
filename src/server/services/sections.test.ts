@@ -5,7 +5,7 @@ import { categories, sections } from '@/db/schema';
 import { STORE_ID } from '@/lib/app-config';
 import { createCategory, createSupplier, listCategories, suggestSectionCode, updateCategory } from './catalog';
 import { bulkUpdateProducts, createDesign, createProduct, createProductsBatch, listProducts, receiveStock } from './products';
-import { addTypeSize, backfillSections, createSection, createType, listSections, moveSection, moveType, unsortedCount, updateSection } from './sections';
+import { addTypeSize, backfillSections, createSection, createType, listSections, moveSection, moveType, toPickType, unsortedCount, updateSection } from './sections';
 import { listStaff } from './staff';
 
 /** Plan v19, V19-02a (ADR-033): sections, the one-time set-up, and "a new item needs both levels". */
@@ -233,5 +233,16 @@ describe('Categories → Move under… (moveType)', () => {
     await expect(moveType(db, STORE_ID, material.id, boys.id)).rejects.toThrow(/hidden/);
     await expect(moveType(db, STORE_ID, material.id, '00000000-0000-0000-0000-000000000000')).rejects.toThrow(/Choose Men/);
     await expect(moveType(db, STORE_ID, '00000000-0000-0000-0000-000000000000', women.id)).rejects.toThrow(/not found/);
+  });
+});
+
+describe('New item category tiles (ADR-071)', () => {
+  it('a category as the tile shows it: the name in the person’s language, its items, and Jeans / Jacket / Shirt marked fixed', () => {
+    const kurta = { id: 'k', name: 'Kurta', nameHi: 'कुर्ता', code: 'KU', sizes: ['M', 'L'], productCount: 4 };
+    expect(toPickType(kurta, 'en')).toEqual({ id: 'k', name: 'Kurta', code: 'KU', sizes: ['M', 'L'], items: 4, fixed: false });
+    expect(toPickType(kurta, 'hi').name).toBe('कुर्ता');
+    // Fixed by the stored English name, also when Hindi is shown; a new category has no items yet.
+    expect(toPickType({ id: 'j', name: 'Jeans', nameHi: 'जीन्स', code: 'JN', sizes: [] }, 'hi')).toMatchObject({ name: 'जीन्स', items: 0, fixed: true });
+    expect(toPickType({ id: 's', name: 'shirt', code: 'SH', sizes: [] }, 'en').fixed).toBe(true);
   });
 });

@@ -25,17 +25,19 @@ import {
   addTypeAction,
   addTypeSizeAction,
   createDesignAction,
+  deleteCategoryAction,
   deleteCollectionAction,
   editCollectionAction,
+  editTypeAction,
   openFixedCollectionAction,
   type SectionResult,
 } from '@/server/actions/admin';
-import type { PickSection } from '@/server/services/sections';
+import type { PickSection, PickType } from '@/server/services/sections';
 import { CompanyPicker } from './company-picker';
 import { SectionArt, TypeArt } from './section-art';
 
 type Option = { id: string; name: string };
-export type WizardType = { id: string; name: string; code: string; sizes: string[] };
+export type WizardType = PickType;
 /** Names arrive in the person's language (the page picks English / Hindi); Men and Women are always there (ADR-064). */
 export type WizardSection = PickSection;
 
@@ -157,6 +159,9 @@ export function NewItemWizard({
   const [sheet, setSheet] = useState<'section' | 'type' | null>(null);
   // The owner's ✎ / 🗑 on a collection tile (ADR-064).
   const [editing, setEditing] = useState<WizardSection | null>(null);
+  // The owner's ✎ / 🗑 on a category tile (ADR-071).
+  const [editingType, setEditingType] = useState<WizardType | null>(null);
+  const [removingType, setRemovingType] = useState<WizardType | null>(null);
   const [removing, setRemoving] = useState<WizardSection | null>(null);
   // Men / Women the shop lacked, being made by the tap that picked it.
   const [opening, startOpening] = useTransition();
@@ -570,22 +575,41 @@ export function NewItemWizard({
             {section.types.length === 0 && <p className={`text-sm ${muted}`}>{t('ni.noTypes')}</p>}
             <div role="group" aria-label={t('ni.step.what')} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {section.types.map((x) => (
-                <button
-                  key={x.id}
-                  type="button"
-                  aria-pressed={x.id === typeId}
-                  data-new={x.id === fresh || undefined}
-                  ref={x.id === fresh ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
-                  onClick={() => pickType(x)}
-                  className={`${tile} min-h-32 ${x.id === typeId ? tileOn : ''} ${x.id === fresh ? 'new-glow' : ''}`}
-                >
-                  {x.id === fresh && <NewBadge />}
-                  <span className={`${artCircle} h-16 w-16`}>
-                    <TypeArt name={x.name} className="h-11 w-11" />
-                  </span>
-                  <span className="text-base leading-tight font-bold">{x.name}</span>
-                  {x.sizes.length > 0 && <span className={`text-xs ${muted}`}>{sizeRange(x.sizes)}</span>}
-                </button>
+                // Owner, 2026-11-23 (ADR-071): like the collections — ✎ (name and sizes) and 🗑 on each
+                // category for the owner; Jeans, Jacket and Shirt carry a lock (their name stays) but keep ✎ for sizes.
+                <div key={x.id} data-testid="type-tile" data-fixed={x.fixed || undefined} className="relative">
+                  <button
+                    type="button"
+                    aria-pressed={x.id === typeId}
+                    data-new={x.id === fresh || undefined}
+                    ref={x.id === fresh ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
+                    onClick={() => pickType(x)}
+                    className={`${tile} h-full min-h-32 w-full ${isOwner ? 'pt-11' : ''} ${x.id === typeId ? tileOn : ''} ${x.id === fresh ? 'new-glow' : ''}`}
+                  >
+                    {x.id === fresh && <NewBadge className={isOwner ? 'top-2.5 left-1/2 -translate-x-1/2' : undefined} />}
+                    <span className={`${artCircle} h-16 w-16`}>
+                      <TypeArt name={x.name} className="h-11 w-11" />
+                    </span>
+                    <span className="text-base leading-tight font-bold break-words">{x.name}</span>
+                    {x.sizes.length > 0 && <span className={`text-xs ${muted}`}>{sizeRange(x.sizes)}</span>}
+                  </button>
+                  {isOwner && (
+                    <button type="button" aria-label={t('ni.section.edit', { name: x.name })} onClick={() => setEditingType(x)} className={`${cornerButton} left-2 text-brand-700 dark:text-brand-300`}>
+                      <IconPencil className="h-4 w-4" />
+                    </button>
+                  )}
+                  {x.fixed ? (
+                    <span title={t('sec.fixed')} className="pointer-events-none absolute top-3 right-3 text-zinc-400 dark:text-zinc-500">
+                      <IconLock className="h-4 w-4" />
+                    </span>
+                  ) : (
+                    isOwner && (
+                      <button type="button" aria-label={t('col.delete', { name: x.name })} onClick={() => setRemovingType(x)} className={`${cornerButton} right-2 text-red-600 dark:text-red-400`}>
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    )
+                  )}
+                </div>
               ))}
               <AddTile label={t('ni.add')} onClick={() => setSheet('type')} />
             </div>
@@ -1021,10 +1045,138 @@ function Segmented({ label, value, options, onChange, small = false }: { label: 
           key={o.value}
           type="button"
           role="radio"
+      {editingType && section && (
+        <EditTypeSheet
+          type={editingType}
+          onClose={() => setEditingType(null)}
+          onSaved={(saved) => {
+            addToList(section.id, (s) => ({ ...s, types: s.types.map((x) => (x.id === saved.id ? saved : x)) }));
+            // The chosen category's sizes may have changed: keep only the picked sizes it still offers.
+            if (saved.id === typeId) setSizes((picked) => picked.filter((p) => saved.sizes.some((s) => sameSize(s, p))));
+            setEditingType(null);
+            done.show({ title: t('done.saved'), lines: [{ label: t('done.line.name'), value: saved.name }, { label: t('done.line.sizes'), value: saved.sizes.join(', ') }].filter((line) => line.value) });
+          }}
+        />
+      )}
+      {removingType && section && (
+        <DeleteTypeSheet
+          type={removingType}
+          onClose={() => setRemovingType(null)}
+          onDeleted={(message) => {
+            addToList(section.id, (s) => ({ ...s, types: s.types.filter((x) => x.id !== removingType.id) }));
+            if (typeId === removingType.id) {
+              setTypeId('');
+              setSizes([]);
+              setPieces({});
+              setReached(1);
+            }
+            setRemovingType(null);
+            done.show({ title: message });
+          }}
+        />
+      )}
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={`rounded-full whitespace-nowrap transition ${small ? 'px-2.5 py-1' : 'px-3.5 py-1.5 text-sm'} ${value === o.value ? 'bg-brand-600 text-white shadow' : 'text-zinc-600 dark:text-zinc-300'}`}
         >
+/** ✎ on a category (owner, ADR-071): its name and its sizes; Jeans, Jacket and Shirt keep their name. */
+function EditTypeSheet({ type, onClose, onSaved }: { type: WizardType; onClose: () => void; onSaved: (type: WizardType) => void }) {
+  const t = useT();
+  const [name, setName] = useState(type.name);
+  const [sizes, setSizes] = useState<string[]>(type.sizes);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, startBusy] = useTransition();
+  return (
+    <ActionSheet title={t('ni.type.editTitle', { name: type.name })} onClose={onClose}>
+      <form
+        data-testid="edit-type"
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          startBusy(async () => {
+            const result = await editTypeAction({ id: type.id, name: type.fixed ? type.name : name, sizes: sizes.join(', ') });
+            if (!result.ok) return setError(result.error);
+            onSaved(result.type);
+          });
+        }}
+      >
+        <label className="flex flex-col gap-1.5 text-sm font-semibold">
+          {t('ni.addType.name')}
+          {type.fixed ? (
+            <span className="flex items-center gap-2">
+              <input value={type.name} disabled className={`${input} min-w-0 flex-1 text-lg opacity-70`} />
+              <IconLock className="h-4 w-4 shrink-0 text-zinc-400" />
+            </span>
+          ) : (
+            <LangText required maxLength={40} value={name} onValueChange={setName} inputClassName={`${input} min-w-0 flex-1 text-lg`} />
+          )}
+        </label>
+        {type.fixed && <p className={`-mt-2 text-xs ${muted}`}>{t('ni.type.fixedName', { name: type.name })}</p>}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-semibold">{t('ni.addType.sizes')}</span>
+          <SizeChips picked={sizes} onChange={setSizes} />
+        </div>
+        {error && (
+          <p role="alert" className={errorBox}>
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={busy || (!type.fixed && !name.trim())} className={sheetPrimary}>
+          {busy ? t('common.saving') : t('ni.type.save')}
+        </button>
+        <button type="button" onClick={onClose} className={sheetSecondary}>
+          {t('common.cancel')}
+        </button>
+      </form>
+    </ActionSheet>
+  );
+}
+
+/** 🗑 on a category (owner, ADR-071): asks first; one that still has items stays (every item needs its category). */
+function DeleteTypeSheet({ type, onClose, onDeleted }: { type: WizardType; onClose: () => void; onDeleted: (message: string) => void }) {
+  const t = useT();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, startBusy] = useTransition();
+  return (
+    <ActionSheet title={t('col.deleteAsk', { name: type.name })} onClose={onClose}>
+      {type.items > 0 ? (
+        <p role="alert" className={errorBox}>
+          {t('sec.err.hasItems', { name: type.name, n: type.items })}
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('ni.type.deleteNote')}</p>
+          {error && (
+            <p role="alert" className={errorBox}>
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            data-testid="confirm-delete-type"
+            disabled={busy}
+            onClick={() =>
+              startBusy(async () => {
+                const result = await deleteCategoryAction(type.id);
+                if (!result.ok) return setError(result.error);
+                onDeleted(result.message);
+              })
+            }
+            className={sheetDanger}
+          >
+            <IconTrash className="h-5 w-5" />
+            {busy ? t('common.saving') : t('col.deleteYes')}
+          </button>
+        </>
+      )}
+      <button type="button" onClick={onClose} className={sheetSecondary}>
+        {t('common.cancel')}
+      </button>
+    </ActionSheet>
+  );
+}
+
           {o.label}
         </button>
       ))}

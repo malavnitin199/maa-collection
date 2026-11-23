@@ -370,6 +370,58 @@ test('no size picked: just the pieces; saved as one item with no size (owner, 20
   await expect(plain.getByLabel('Pieces with no size')).toHaveValue('3');
   await expect(page.getByTestId('size-summary')).toHaveText('No size · 3 pcs');
   await page.getByTestId('details-form').getByRole('button', { name: 'Next' }).click();
+test('what is it: the owner changes a category’s name and sizes and deletes an empty one on its tile; Jeans keeps its name (ADR-071)', async ({ page }, info) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  const tag = `${run}${info.project.name[0]}`;
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: 'Men', exact: true }).click();
+  await heading(page, 'What is it?');
+  const group = page.getByRole('group', { name: 'What is it?' });
+  const sheet = page.getByRole('dialog');
+  const tileOf = (name: string) => group.getByTestId('type-tile').filter({ hasText: name });
+
+  // A category of this run, to change and delete.
+  await group.getByRole('button', { name: 'Add' }).click();
+  await sheet.getByLabel('Category name').fill(`Capri ${tag}`);
+  await sheet.getByRole('button', { name: 'S–M', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Add category' }).click();
+  await page.keyboard.press('Escape'); // the done card
+  await expect(tileOf(`Capri ${tag}`)).toContainText('S–M');
+
+  // ✎: a new name and one more size.
+  await group.getByRole('button', { name: `Edit Capri ${tag}`, exact: true }).click();
+  await expect(sheet.getByRole('heading', { name: `Change Capri ${tag}` })).toBeVisible();
+  await sheet.getByLabel('Category name').fill(`Capris ${tag}`);
+  await sheet.getByRole('button', { name: 'Size L', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Save category' }).click();
+  await expect(page.getByTestId('done-overlay')).toContainText('Saved');
+  await page.keyboard.press('Escape');
+  await expect(tileOf(`Capris ${tag}`)).toContainText('S–L');
+
+  // 🗑: asks first; an empty category goes.
+  await group.getByRole('button', { name: `Delete Capris ${tag}`, exact: true }).click();
+  await expect(sheet.getByRole('heading', { name: `Delete Capris ${tag}?` })).toBeVisible();
+  await sheet.getByTestId('confirm-delete-type').click();
+  await expect(page.getByTestId('done-overlay')).toContainText(`Capris ${tag} deleted.`);
+  await page.keyboard.press('Escape');
+  await expect(tileOf(`Capris ${tag}`)).toHaveCount(0);
+
+  // One that still has items stays: the sheet says so and offers no Delete.
+  await group.getByRole('button', { name: 'Delete Kurta', exact: true }).click();
+  await expect(sheet).toContainText(/Kurta still has \d+ items/);
+  await expect(sheet.getByTestId('confirm-delete-type')).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+
+  // Jeans always stays (ADR-066): a lock, no 🗑; ✎ changes its sizes only.
+  await expect(group.locator('[data-testid="type-tile"][data-fixed]').filter({ hasText: /^Jeans/ })).toHaveCount(1);
+  await expect(group.getByRole('button', { name: 'Delete Jeans', exact: true })).toHaveCount(0);
+  await group.getByRole('button', { name: 'Edit Jeans', exact: true }).click();
+  await expect(sheet.getByLabel('Category name')).toBeDisabled();
+  await expect(sheet).toContainText('Jeans always keeps its name');
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  await expect(sheet).toHaveCount(0);
+});
+
   await expect(page.getByTestId('review-sizes')).toHaveText('No size × 3');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.keyboard.press('Escape');

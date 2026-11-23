@@ -25,8 +25,10 @@ import {
   listSections,
   moveType,
   toPickSection,
+  toPickType,
   updateSection,
   type PickSection,
+  type PickType,
 } from '@/server/services/sections';
 import { addPayment } from '@/server/services/company';
 import { DomainError } from '@/server/services/errors';
@@ -416,7 +418,7 @@ export async function moveTypeAction(categoryId: string, _prev: FormState, formD
 // ------------------------------- plan v19 (03a): "+ Add" on the New item steps
 
 export type SectionResult = { ok: true; section: PickSection } | { ok: false; error: string };
-export type TypeResult = { ok: true; type: { id: string; name: string; code: string; sizes: string[] } } | { ok: false; error: string };
+export type TypeResult = { ok: true; type: PickType } | { ok: false; error: string };
 export type SizesResult = { ok: true; sizes: string[] } | { ok: false; error: string };
 
 /** A collection as New item draws it (names in the person's language, its shown categories). */
@@ -497,7 +499,35 @@ export async function addTypeAction(input: { sectionId: string; name: string; si
   try {
     const type = await createType(await getDb(), STORE_ID, { sectionId: String(input.sectionId ?? ''), name: String(input.name ?? ''), sizes: String(input.sizes ?? '') });
     revalidatePath('/admin', 'layout');
-    return { ok: true, type: { id: type.id, name: type.name, code: type.code, sizes: type.sizes } };
+    return { ok: true, type: toPickType(type, await getLocale()) };
+  } catch (error) {
+    return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
+  }
+}
+
+/**
+ * New item → ✎ on a category tile (owner, 2026-11-23, ADR-071): its name and its sizes. The name
+ * changed is the one the person sees (the Hindi name when Hindi is shown, like ✎ on a collection);
+ * code, Hindi / English other name and collection stay. Jeans, Jacket and Shirt keep their name.
+ */
+export async function editTypeAction(input: { id: string; name: string; sizes: string }): Promise<TypeResult> {
+  await requireAdmin();
+  try {
+    const db = await getDb();
+    const locale = await getLocale();
+    const current = (await listSections(db, STORE_ID)).sections.flatMap((s) => s.types).find((x) => x.id === String(input.id ?? ''));
+    if (!current) throw new DomainError('Category not found.', { key: 'cat.err.categoryNotFound' });
+    const typed = String(input.name ?? '').trim().replace(/\s+/g, ' ');
+    const hindiShown = locale === 'hi' && Boolean(current.nameHi?.trim());
+    const updated = await updateCategory(db, STORE_ID, current.id, {
+      name: hindiShown ? current.name : typed,
+      nameHi: hindiShown ? typed : undefined,
+      code: current.code,
+      active: current.active,
+      sizes: String(input.sizes ?? ''),
+    });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, type: toPickType({ ...updated, productCount: current.productCount }, locale) };
   } catch (error) {
     return { ok: false, error: (await failure(error)).error ?? 'Something went wrong.' };
   }
