@@ -114,7 +114,7 @@ test('links open a lesson or a part; the voice speaks Hindi for a Hindi reader',
   await expect.poll(async () => (await spoken(page)).at(-1)).toEqual({ text: 'ऊपर अ या A वाला बटन दबाकर हिन्दी और अंग्रेज़ी बदलें। आपकी पसंद याद रहती है।', lang: 'hi-IN' });
 });
 
-test('the New item lesson follows today’s steps: collection, category, four boxes, Sizes & more, save (ADR-067)', async ({ page }) => {
+test('the New item lesson follows today’s steps: collection, category, the details card with the quantity, sizes, save (ADR-067 / 071)', async ({ page }) => {
   await fakeVoice(page);
   await page.goto('/guide#new-design');
   const story = page.getByRole('dialog', { name: 'New item' });
@@ -124,11 +124,12 @@ test('the New item lesson follows today’s steps: collection, category, four bo
   await story.getByRole('button', { name: 'Next step' }).click();
   await expect(text).toHaveText('What is it? Tap the category');
   await story.getByRole('button', { name: 'Next step' }).click();
-  await expect(text).toHaveText('Company, name, purchase, sale price');
-  // The picture is the Details step: four boxes, the % button, Sizes & more closed below.
-  for (const label of ['Company', 'Product name', 'Purchase price', 'Sale price', 'Sizes & more']) await expect(story.getByText(label, { exact: true })).toBeVisible();
+  await expect(text).toHaveText('Name, purchase price, quantity');
+  // The picture is the Details card (ADR-071): name, purchase price beside the quantity, the sale price row,
+  // the company row, More details closed below.
+  for (const label of ['Product name', 'Purchase price', 'Quantity', 'Sale price', 'Company', 'More details']) await expect(story.getByText(label, { exact: true })).toBeVisible();
   await story.getByRole('button', { name: 'Next step' }).click();
-  await expect(text).toHaveText('Sizes & more → tap each size');
+  await expect(text).toHaveText('Tap each size, set its pieces');
   await story.getByRole('button', { name: 'Next step' }).click();
   await expect(text).toHaveText('Save & print tags');
 });
