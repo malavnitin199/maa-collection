@@ -126,7 +126,7 @@ Good to know:
 
 ### New stock from a company (Home → Add new stock)
 
-**Home → Add new stock** (the green tile with a shirt) opens **New item** straight away (owner, 2026-11-22). **Add stock** (the Stock tab) still has the big **New item** button and, under **Other ways**: *Old form* (the earlier New item screen: sizes grid, prices by size, photos), *More pieces of an existing item* and *Tag old stock*.
+**Home → Add new stock** (the green tile with a shirt) opens **New item** straight away (owner, 2026-11-22). **Add stock** (the Stock tab) still has the big **New item** button and, under **Other ways**: *Bulk addition* (many products of one category in one table, see below), *Old form* (the earlier New item screen: sizes grid, prices by size, photos), *More pieces of an existing item* and *Tag old stock*.
 
 **New item** (plan v19) asks one thing at a time — there is no *One item / Many items* choice any more: every item can have many sizes. The top is one short row (← · New item · step n of 4 · Start again), a thin bar of the steps, and the step's title with your choices beside it. The ← arrow, and the **phone's back button**, go back **one step at a time** without losing anything (back from the first step leaves New item — to Home for the owner); the choice chips jump straight to a step:
 
@@ -135,6 +135,7 @@ Good to know:
 3. **Details & sizes** (since 2026-11-23) — one card, in the order things matter; the top row is small (← · New item · step 3 of 4 · Start again):
    - **Product name** (left empty, the item is named after its category and number, e.g. *Pajama 013*, the same number as its item code MAA-PJ-013).
    - **Purchase price** (only with the *Purchase price* right) and, beside it, the **Quantity**: **− 1 +** (or type the number). Once sizes are tapped, each size has its own count below and *Quantity* shows the total, e.g. *3 in 2 sizes*.
+   - **Add photo** — the small green button beside *Product name* (since 2026-11-24). Tap it → **📷 Take photo** or **🖼 Gallery**; the button then shows the picture (tap again to change or remove it). It becomes the product's one photo, on every size, when you save. Optional — a photo can also be added later on the product's page.
    - **Sale price** — a small row: it works itself out as purchase **+ 50%** (₹700 → ₹1,050, shown in grey with *+ 50%* beside it); type a price to change it. With a box the row wraps onto two lines. **%** opens a small calculator: tap **20 % / 30 % / 50 % / 100 %** or type your own %, it shows *₹700.00 + 50% = ₹1,050.00*; **Use it** puts that price in the box. Without the purchase-price right the sale price is typed where the purchase price would be.
    - **Which sizes?** — small size buttons from the category's sizes; tap the ones that came. Each chosen size gets a **− pieces +** row just below: 2 × M, 2 × L, 5 × XL. **All sizes** takes every size; **+ Add size** opens a box for a size the category lacks (Enter adds it and keeps it for next time).
    - **Company** — a slim row at the end, *Optional*. Tap it and the list opens with the **search line ready to type**: type a few letters and pick, or **+ New company…**.
@@ -144,7 +145,7 @@ Good to know:
    **Company box**: the list opens just under it (about half the screen at most, scrolls inside). *Previous companies* are listed under their own heading; **+ New company…** is last. The same box is used on the old form, Tag old stock and Add product (with a search line when there are many companies).
 4. **Check and save** — name, section › category, company, size × pieces, total pieces and items, MRP, purchase per piece and total. Three ways to finish, each saving one item per size (its own barcode each):
    - **Save & print tags** opens the tags page. There, **+ Add next item** starts the next product of the same bill (company, section, bill no., stock date kept) at *What is it?*.
-   - **Save & add next** shows *Saved <name>: first – last item code · pieces* and goes straight to *What is it?* of the same bill — the fastest way through a bill.
+   - **Save & add more <category>** (e.g. *Save & add more Jacket*; since 2026-11-24, it replaced *Save & add next*) shows *Saved <name>: first – last item code · pieces* and opens a **fresh details card of the same category** — no need to pick the collection and category again; company, bill no. and stock date are kept. For another category of the same bill tap **←** once (*What is it?*). The fastest way through a bill.
    - **Save** shows the same message and returns to *Which collection?* with everything cleared — done with this bill.
 
 **Colour appears only on the product page** (owner, 2026-11-22): no screen asks for it or shows it — not the counter, bills, tags, lists or messages. Add or change an item's colour on its product page (*Edit*, *Colours* tab).
@@ -230,6 +231,21 @@ The figures on top, for the period you pick (**All time · This month · Last 30
 
 The Companies list shows each company's bills and dues too.
 
+### Bulk addition (Home → Bulk addition; since 2026-11-24)
+
+For a delivery of **many different products of one category** (ten kinds of jackets, say). **Home → Bulk addition** (the fourth tile, where Approvals was) or **Add stock → Other ways → Bulk addition**.
+
+1. **Which collection?** and 2. **What is it?** — the same two steps as New item.
+3. **Products** — one table, one row per product: **Product name · Purchase ₹ · Qty**. Five empty rows wait; a **new empty row is always ready** under the last one you typed (up to 50 products at once). There is nothing else to fill in.
+   - **Product name** may stay empty: it becomes the category and a number (*Jacket 014*, matching its item code). **अ / A** in the table's head switches Hindi / English typing for every name box.
+   - **Purchase ₹** is needed for every row. The **sale price** is worked out: purchase + 50% (or the % your phone used last in New item) — the line under the table says so. Without the *Purchase price* right the column is **Sale ₹** and you type the sale price itself.
+   - **Qty** left empty means **1**.
+   - **✕** at the end of a row clears it. The line under the table counts what will be saved: *4 products · 10 pcs · ₹5,200*.
+   - **Save** saves every product together (all or none) and shows *n products saved*; the table empties and stays on the same category for the next lot. **Save & print tags** opens the tags page with every product's tags (one per piece); **+ Add more <category>** there comes back to the table.
+   - A row with no price is marked red (*Row 4: type the purchase price.*); the same name twice, or a product that already exists with no size, is refused with its name.
+
+Each product is saved **with no size, no company and no photo** — like a New item with no size. Open it on **Stocks** later to add sizes (**+ Add sizes**), the photo, the company or a different sale price (**✎ Edit details**).
+
 ### Other ways to add stock
 
 - **More pieces of an existing item** (needs *Stock*): scan each piece. Scanning the same tag again adds one more.
@@ -286,7 +302,7 @@ For a fresh count or a new season: **More → Clear stock**. It shows what is in
 
 ## 5c. Approvals (owner)
 
-Every sale and exchange a salesman records **waits for you**. Home shows **"n entries waiting"**; tap it (or **More → Approvals**).
+Every sale and exchange a salesman records **waits for you**. While entries wait, Home shows a red **Approvals** line under the four tiles (**"n entries waiting"**, and *n at a loss*); tap it. With nothing waiting the line is not there: **More → Approvals** (since 2026-11-24 the fourth tile is *Bulk addition*).
 
 - Entries are grouped by day, newest first. Each card shows what was sold, quantity, the price per piece next to the **MRP and usual price** (and "x% below MRP"), who sold and who recorded it. Hand-entered sales carry a **By hand** mark with the name and size the salesman typed.
 - **Profit or loss** (owner only): each scanned sale shows its purchase price and a tag — green edge and **▲ Profit ₹…** when it sold above the purchase price, red card and **▼ Loss ₹…** when it sold below it (hand-entered sales: *No purchase price*). Each day shows its profit (or loss), and Home's Approvals tile says **n at a loss** in red. Salesmen never see any of this.
@@ -309,7 +325,8 @@ Every sale and exchange a salesman records **waits for you**. Home shows **"n en
 | When | Required | Optional |
 |---|---|---|
 | Tag old stock | Category, name, MRP, pieces | Photo (recommended), For / Age, size (= Free), company, selling price (= MRP), purchase price |
-| New item (steps) | Collection, what it is, the purchase or the sale price | Company, product name (= category + number), sizes (= no size), pieces per size (= 1), counter price (= MRP), bill no., stock date (= today), brand (= none) |
+| New item (steps) | Collection, what it is, the purchase or the sale price | Photo, company, product name (= category + number), sizes (= no size), pieces per size (= 1), counter price (= MRP), bill no., stock date (= today), brand (= none) |
+| Bulk addition | Collection, what it is; for each product its purchase price (its sale price without the *Purchase price* right) | Product name (= category + number), quantity (= 1) |
 | Old form | Company, product name, category, sale price (MRP), purchase price (with the *Purchase price* right) | Photo, For / Age, pieces (= 1), counter price (= MRP), bill no., sizes (= Free), brand (= company) |
 | Sale | Scan, quantity, price | Credit to a colleague |
 | Company | Name | Contact, phone, GSTIN, location, working since, notes |
