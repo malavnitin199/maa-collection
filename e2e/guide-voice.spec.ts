@@ -91,7 +91,7 @@ test('a lesson plays as a story: few words, the voice says more, and it moves on
   // "Got it" ticks the lesson and returns to the list.
   await story.getByRole('button', { name: 'Got it ✓' }).click();
   await expect(story).toBeHidden();
-  await expect(page.getByTestId('guide-progress')).toContainText('1 of 22 learned');
+  await expect(page.getByTestId('guide-progress')).toContainText('1 of 23 learned');
   await expect(page).not.toHaveURL(/#sell$/);
 });
 
