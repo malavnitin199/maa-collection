@@ -94,6 +94,8 @@ const DETAIL_QTY: L = { en: 'Quantity', hi: 'मात्रा' };
 const DETAIL_SALE: L = { en: 'Sale price', hi: 'बिक्री दाम' };
 const DETAIL_AUTO: L = { en: '+ 50%', hi: '+ 50%' };
 const DETAIL_COMPANY: L = { en: 'Company', hi: 'कंपनी' };
+/** The details card's photo button (ADR-072). */
+const DETAIL_PHOTO: L = { en: 'Add photo', hi: 'फ़ोटो जोड़ें' };
 const TOTAL: L = { en: 'Total', hi: 'कुल' };
 
 /** The product page's photo box and sheet (ADR-068), in the app's own words. */
@@ -515,7 +517,14 @@ export function PhoneScene({ scene, locale }: { scene: Scene; locale: Locale }) 
       return (
         <Phone>
           <div className="mt-1 flex flex-col gap-1.5 rounded-xl bg-surface p-2 ring-1 ring-brand-200 dark:ring-zinc-700">
-            <span className={label}>{say(DETAIL_NAME)}</span>
+            <span className="flex items-center justify-between gap-1">
+              <span className={label}>{say(DETAIL_NAME)}</span>
+              {/* ADR-072: the product's photo is taken here. */}
+              <span className="flex items-center gap-0.5 rounded-full bg-brand-50 py-px pr-1.5 pl-0.5 text-[7px] leading-none font-bold text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950 dark:text-brand-200 dark:ring-brand-800">
+                <IconCamera className="h-2.5 w-2.5 rounded-full bg-brand-600 p-px text-white" />
+                {say(DETAIL_PHOTO)}
+              </span>
+            </span>
             <span className={`${box} text-[11px] font-semibold`}>Kurta</span>
             <span className="grid grid-cols-2 gap-1.5">
               <span className="flex flex-col gap-0.5">

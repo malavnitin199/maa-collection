@@ -52,7 +52,10 @@ export const helpEn = {
   // 2026-11-23 (ADR-067): New item replaced Quick add (ADR-027); company, name and size are optional (ADR-051/052).
   'help.req.newItem': 'New item',
   'help.req.newItem.required': 'Collection, category, purchase or sale price',
-  'help.req.newItem.optional': 'Company, product name (= category + number), sizes (= no size), pieces (= 1), counter price, bill no., stock date (= today), brand',
+  'help.req.newItem.optional': 'Photo, company, product name (= category + number), sizes (= no size), pieces (= 1), counter price, bill no., stock date (= today), brand',
+  // Bulk addition (ADR-072): its row of the table.
+  'help.req.bulk.required': 'Collection, category; for each product its purchase price',
+  'help.req.bulk.optional': 'Product name (= category + number), quantity (= 1)',
   'help.req.sale': 'Sale',
   'help.req.sale.required': 'Scan, quantity, price',
   'help.req.sale.optional': 'Credit to a colleague',
@@ -143,7 +146,9 @@ export const helpHi: Record<keyof typeof helpEn, string> = {
   'help.req.oldStock.optional': 'फ़ोटो (लेना अच्छा है), साइज़ (= Free), कंपनी, बिक्री दाम (= MRP), खरीद दाम',
   'help.req.newItem': 'नया आइटम',
   'help.req.newItem.required': 'कलेक्शन, कैटेगरी, खरीद या बिक्री दाम',
-  'help.req.newItem.optional': 'कंपनी, प्रोडक्ट का नाम (= कैटेगरी + नंबर), साइज़ (= बिना साइज़), पीस (= 1), काउंटर दाम, बिल नंबर, स्टॉक की तारीख (= आज), ब्रांड',
+  'help.req.newItem.optional': 'फ़ोटो, कंपनी, प्रोडक्ट का नाम (= कैटेगरी + नंबर), साइज़ (= बिना साइज़), पीस (= 1), काउंटर दाम, बिल नंबर, स्टॉक की तारीख (= आज), ब्रांड',
+  'help.req.bulk.required': 'कलेक्शन, कैटेगरी; हर प्रोडक्ट का खरीद दाम',
+  'help.req.bulk.optional': 'प्रोडक्ट का नाम (= कैटेगरी + नंबर), मात्रा (= 1)',
   'help.req.sale': 'बिक्री',
   'help.req.sale.required': 'स्कैन, मात्रा, दाम',
   'help.req.sale.optional': 'किसी साथी के नाम बिक्री',

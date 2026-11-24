@@ -106,9 +106,13 @@ export const newItemEn = {
   'ni.review.bill': 'Bill {bill}',
   'ni.review.change': 'Change',
   'ni.save.print': 'Save & print tags',
-  'ni.save.next': 'Save & add next',
+  // Owner, 2026-11-24 (ADR-072): the same category again, straight to its details (it replaced "Save & add next").
+  'ni.save.more': 'Save & add more {type}',
   'ni.save.only': 'Save',
   'ni.saved': 'Saved {name}: {skus} · {pieces}',
+  // The photo taken on the details card (ADR-072), on the Done card.
+  'ni.photo.saved': 'Added',
+  'ni.photo.failed': 'Not saved. Add it on the product’s page.',
   'ni.err.stockDate': 'Enter a valid stock date.',
   'ni.err.stockDateFuture': 'The stock date cannot be after today.',
 } as const;
@@ -209,9 +213,11 @@ export const newItemHi: Record<keyof typeof newItemEn, string> = {
   'ni.review.bill': 'बिल {bill}',
   'ni.review.change': 'बदलें',
   'ni.save.print': 'सेव करें और टैग प्रिंट करें',
-  'ni.save.next': 'सेव करें और अगला जोड़ें',
+  'ni.save.more': 'सेव करें और {type} और जोड़ें',
   'ni.save.only': 'सेव करें',
   'ni.saved': '{name} सेव हुआ: {skus} · {pieces}',
+  'ni.photo.saved': 'जुड़ गई',
+  'ni.photo.failed': 'सेव नहीं हुई। प्रोडक्ट के पेज पर जोड़ें।',
   'ni.err.stockDate': 'स्टॉक की सही तारीख डालें।',
   'ni.err.stockDateFuture': 'स्टॉक की तारीख आज के बाद की नहीं हो सकती।',
 };

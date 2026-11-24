@@ -395,8 +395,8 @@ export const STORIES: Story[] = [
         scene: { kind: 'details', tap: 'cost' },
         text: { en: 'Name, **purchase price**, quantity', hi: 'नाम, **खरीद दाम**, मात्रा' },
         say: {
-          en: 'Type the name, the purchase price and how many came. The sale price fills itself: purchase plus 50 percent.',
-          hi: 'नाम, खरीद दाम और कितने आए, लिखें। बिक्री दाम अपने आप बनता है: खरीद से 50 प्रतिशत ज़्यादा।',
+          en: 'Type the name, the purchase price and how many came. The sale price fills itself: purchase plus 50 percent. Add photo takes its picture.',
+          hi: 'नाम, खरीद दाम और कितने आए, लिखें। बिक्री दाम अपने आप बनता है: खरीद से 50 प्रतिशत ज़्यादा। फ़ोटो जोड़ें से उसकी फ़ोटो लें।',
         },
       },
       {
@@ -411,13 +411,69 @@ export const STORIES: Story[] = [
         scene: { kind: 'print' },
         text: { en: '**Save & print tags**', hi: '**सेव करें और टैग प्रिंट करें**' },
         say: {
-          en: 'Check it, then tap Save and print tags. Save and add next goes on with the same bill.',
-          hi: 'जाँचें, फिर सेव करें और टैग प्रिंट करें दबाएँ। सेव करें और अगला जोड़ें उसी बिल पर आगे बढ़ता है।',
+          en: 'Check it, then tap Save and print tags. Save and add more opens the same category again, for the next one.',
+          hi: 'जाँचें, फिर सेव करें और टैग प्रिंट करें दबाएँ। सेव करें और और जोड़ें से वही कैटेगरी अगले आइटम के लिए फिर खुलती है।',
         },
       },
     ],
     tip: { en: 'The phone’s back button goes one step back.', hi: 'फ़ोन का बैक बटन एक कदम पीछे जाता है।' },
     open: { href: '/admin/stock/new', label: { en: 'New item', hi: 'नया आइटम' } },
+  },
+  {
+    // 2026-11-24 (ADR-072): many products of one category in one table, one Save.
+    id: 'bulk',
+    audience: 'stock',
+    title: { en: 'Bulk addition', hi: 'एक साथ कई जोड़ें' },
+    goal: { en: 'Many products of one category, one save.', hi: 'एक कैटेगरी के कई प्रोडक्ट, एक बार में सेव।' },
+    steps: [
+      {
+        scene: {
+          kind: 'tiles',
+          items: [
+            { name: { en: 'Jeans', hi: 'जीन्स' }, note: { en: '28–36', hi: '28–36' }, lock: true },
+            { name: { en: 'Jacket', hi: 'जैकेट' }, note: { en: 'M–XXL', hi: 'M–XXL' }, lock: true },
+            { name: { en: 'Kurta', hi: 'कुर्ता' }, note: { en: 'M–XXL', hi: 'M–XXL' } },
+            { name: { en: '+ Add', hi: '+ जोड़ें' } },
+          ],
+          tap: 1,
+        },
+        text: { en: '**Bulk addition** → collection, category', hi: '**एक साथ कई जोड़ें** → कलेक्शन, कैटेगरी' },
+        say: {
+          en: 'On Home tap Bulk addition; it is also under Add stock. Pick the collection, then the category, just as in New item.',
+          hi: 'होम पर एक साथ कई जोड़ें दबाएँ; यह स्टॉक जोड़ें में भी है। कलेक्शन चुनें, फिर कैटेगरी, जैसे नया आइटम में।',
+        },
+      },
+      {
+        scene: {
+          kind: 'bill',
+          head: [
+            { en: 'Product name', hi: 'प्रोडक्ट का नाम' },
+            { en: 'Purchase ₹', hi: 'खरीद ₹' },
+            { en: 'Qty', hi: 'मात्रा' },
+          ],
+          rows: [
+            ['Denim Jacket', '700', '3'],
+            ['Bomber Jacket', '950', '2'],
+            ['Jacket 014', '1,200', '1'],
+          ],
+          total: ['₹5,200', '6'],
+        },
+        text: { en: 'Type name, **purchase price**, quantity', hi: 'नाम, **खरीद दाम**, मात्रा लिखें' },
+        say: {
+          en: 'Each row is one product: its name, purchase price and how many came. A new empty row is always ready. No name becomes category plus number.',
+          hi: 'हर लाइन एक प्रोडक्ट: नाम, खरीद दाम और कितने आए। नीचे खाली लाइन हमेशा तैयार रहती है। बिना नाम के कैटेगरी और नंबर बनता है।',
+        },
+      },
+      {
+        scene: { kind: 'buttons', items: [{ en: 'Save', hi: 'सेव करें' }, { en: 'Save & print tags', hi: 'सेव करें और टैग प्रिंट करें' }], tap: 0 },
+        text: { en: '**Save** — all products at once', hi: '**सेव करें** — सब प्रोडक्ट एक साथ' },
+        say: {
+          en: 'Tap Save: every product is saved together. Sizes, company and photo are added later, on each product’s page.',
+          hi: 'सेव करें दबाएँ: सब प्रोडक्ट एक साथ सेव होते हैं। साइज़, कंपनी और फ़ोटो बाद में हर प्रोडक्ट के पेज पर जोड़ें।',
+        },
+      },
+    ],
+    open: { href: '/admin/stock/bulk', label: { en: 'Bulk addition', hi: 'एक साथ कई जोड़ें' } },
   },
   {
     id: 'old-stock',

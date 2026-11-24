@@ -14,6 +14,7 @@ import { catalogHi } from './modules/catalog.ts';
 import { helpHi } from './modules/help.ts';
 import { ownerHi } from './modules/owner.ts';
 import { stockHi } from './modules/stock.ts';
+import { bulkHi } from './modules/bulk.ts';
 
 /**
  * हिन्दी — every key of `en.ts`, in simple shop Hindi (common English shop words
@@ -298,4 +299,4 @@ const base = {
   'login.backspace': 'आखिरी अंक मिटाएँ',
 };
 
-export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi, ...offlineHi, ...sectionsHi, ...newItemHi, ...typingHi, ...doneHi, ...billHi, ...billsHi, ...packsHi, ...itemEditHi };
+export const hi: Messages = { ...base, ...stockHi, ...catalogHi, ...ownerHi, ...helpHi, ...actionsHi, ...approvalsHi, ...offlineHi, ...sectionsHi, ...newItemHi, ...typingHi, ...doneHi, ...billHi, ...billsHi, ...packsHi, ...itemEditHi, ...bulkHi };

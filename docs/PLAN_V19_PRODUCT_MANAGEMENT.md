@@ -204,6 +204,7 @@ Remaining checks on real data before V19-02: count categories, products with `ca
 
 ### V19-03 Category-first New item UX
 - **03a** ✅ done 2026-11-19 (see PROGRESS): new screen `/admin/stock/add` (hub tile *Add stock step by step*; the old form stays at `/admin/stock/new` until V19-04): start *One item / Many items* (D-V19-6), section → type → details → sizes & pieces → check and save (*Save & print tags*), names via `name_hi`, selection kept on back, progress bar + path chips, sticky Next, slide animation off under reduced motion, `aria-current`, 44 px targets. Server: pieces per size, stock date, empty colour / brand. Not yet: photo, 360 px / Hindi / dark browser tests (03e), review buttons (04a).
+- **Done outside the numbering (owner, 2026-11-24, ADR-072):** the photo on the details card (what 03a left out), *Save & add more <category>*, and **Bulk addition** (`/admin/stock/bulk`: many products of one category in one table).
 - **03b** Step 4 speed: pieces per size (2 × M, 2 × L, 5 × XL), *All sizes*, tap a number pad for pieces, *Same for all*, long-press − / + repeat; total pieces and purchase total always visible.
 - **03c** No colour step in the wizard (owner, 2026-11-19); empty colour per D-V19-3 (`colourLabel()` helper used by tags, counter card, lists, approvals, CSV); brand per D-V19-5.
 - **03d** Inline **+ Add** for section / type / size / company (a new size is saved on the type's size list): permission checks on the server (exist), error states, duplicate names.

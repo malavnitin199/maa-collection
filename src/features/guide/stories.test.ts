@@ -62,4 +62,15 @@ describe('Guide stories stay short, complete and in both languages', () => {
     // Record a payment is a heading, the button is Save payment.
     for (const gone of ['colour, MRP', 'yellow strip', 'Tap a day', 'tap Record a payment']) expect(all, gone).not.toContain(gone);
   });
+
+  it('follows ADR-072: the Bulk addition lesson; the photo and "add more" in New item', () => {
+    const lesson = (id: string) => STORIES.find((s) => s.id === id)!;
+    expect(lesson('bulk').steps.map((s) => s.scene.kind)).toEqual(['tiles', 'bill', 'buttons']);
+    expect(lesson('bulk').open?.href).toBe('/admin/stock/bulk');
+    const newItem = lesson('new-design').steps.map((s) => s.say.en).join(' ');
+    expect(newItem).toContain('Add photo');
+    expect(newItem).toContain('Save and add more');
+    const all = STORIES.flatMap((s) => s.steps.flatMap((step) => [step.text.en, step.say.en])).join(' ');
+    expect(all).not.toContain('add next'); // "Save & add next" became "Save & add more <category>"
+  });
 });

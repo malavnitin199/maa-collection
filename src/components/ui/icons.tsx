@@ -44,6 +44,8 @@ export const IconCheckList = ({ className }: IconProps) => base(<><path d="m4.5 
 export const IconTruck = ({ className }: IconProps) => base(<><path d="M3.5 6.5h10v9h-10z" /><path d="M13.5 9.5h3.5l3 3v3h-6.5" /><circle cx="7" cy="17.5" r="1.7" /><circle cx="16.5" cy="17.5" r="1.7" /></>, className);
 export const IconGrid = ({ className }: IconProps) => base(<><rect x="4" y="4" width="6.5" height="6.5" rx="1.2" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2" /></>, className);
 export const IconHelp = ({ className }: IconProps) => base(<><circle cx="12" cy="12" r="8" /><path d="M9.8 9.5a2.3 2.3 0 0 1 4.4.9c0 1.6-2.2 2-2.2 3.4" /><path d="M12 16.8v.2" /></>, className);
+/** Bulk addition (ADR-072): a list of rows and a plus. */
+export const IconBulkAdd = ({ className }: IconProps) => base(<><path d="M4 6.5h11M4 11.5h11M4 16.5h6" /><path d="M17.5 13.5v6M14.5 16.5h6" /></>, className);
 export const IconBoxes = ({ className }: IconProps) => base(<><path d="M4 9.5 12 5l8 4.5-8 4.5-8-4.5Z" /><path d="M4 9.5v5L12 19l8-4.5v-5" /></>, className);
 /** A fixed collection (Men / Women, ADR-064): always there. */
 export const IconLock = ({ className }: IconProps) => base(<><rect x="5.5" y="10.5" width="13" height="9.5" rx="2" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></>, className);

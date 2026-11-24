@@ -204,7 +204,7 @@ test('a new category and a new size on the spot; every item may have many sizes 
   await expect(page.getByTestId('category-list').getByRole('listitem').filter({ hasText: `Shorts ${run}` }).getByTestId('category-sizes')).toHaveText('Sizes: 30 · 32 · 34');
 });
 
-test('save & add next keeps the bill (section, company, bill no.) and shows the SKUs; save clears everything; two saves = two receipts', async ({ page }) => {
+test('save & add more keeps the category and the bill (company, bill no.) and shows the SKUs; save clears everything; two saves = two receipts', async ({ page }) => {
   await login(page, 'Owner', /\/admin\/dashboard$/);
   await page.goto('/admin/stock/new');
   await page.getByRole('button', { name: 'Women', exact: true }).click();
@@ -218,24 +218,36 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await expect(page.getByTestId('size-summary')).toHaveText('4 sizes · 4 pcs');
   await page.getByRole('button', { name: 'Next' }).click();
   await heading(page, 'Check and save');
-  await page.getByRole('button', { name: 'Save & add next' }).click();
+  // Owner, 2026-11-24 (ADR-072): "Save & add more <category>" (it replaced "Save & add next").
+  await expect(page.getByRole('button', { name: 'Save & add next' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save & add more Kurti' }).click();
 
-  // Saved, with the SKU range; the next item of the same bill starts at "What is it?".
+  // Saved, with the SKU range; the next item is the same category again, straight on its details (the first steps skipped).
   const toast = page.getByTestId('done-overlay'); // the done card (owner's feedback 2026-11-20): title, the summary line, the details
   await expect(toast).toContainText('4 items saved');
   await expect(toast).toContainText(new RegExp(`Saved Anarkali ${run}: MAA-KR-\\d{3} – MAA-KR-\\d{3} · 4 pcs`));
   await expect(toast.getByTestId('done-lines')).toContainText('Pieces4 pcs');
   await page.keyboard.press('Escape'); // any key or tap closes it
   await expect(toast).toBeHidden();
-  await heading(page, 'What is it?');
-  await expect(page.getByTestId('wizard-path')).toHaveText('Women');
+  await heading(page, 'Details & sizes');
+  await expect(page.getByText('Step 3 of 4')).toBeVisible();
+  await expect(page.getByTestId('wizard-path')).toHaveText(/Women.*Kurti/);
   await expect(page).toHaveURL(/\/admin\/stock\/new$/);
-  await page.getByRole('button', { name: /^Saree/ }).click();
   const details = page.getByTestId('details-form');
+  // A fresh card: the bill's company and number stay, the item's own things are empty.
   await expect(details.getByRole('combobox', { name: /^Company/ })).toHaveText('Laxmi Fashion House');
   await expect(details.getByLabel('Bill no.')).toHaveValue(`LF-${run}`);
   await expect(details.getByLabel('Product name')).toHaveValue('');
   await expect(details.getByLabel('Sale price', { exact: true })).toHaveValue('');
+  await expect(details.getByRole('button', { name: /^Size /, pressed: true })).toHaveCount(0);
+  await expect(details.getByRole('button', { name: /^Size /, pressed: false })).toHaveCount(4);
+  // Another category of the same bill is one step back.
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await heading(page, 'What is it?');
+  await expect(page.getByTestId('wizard-path')).toHaveText('Women');
+  await page.getByRole('button', { name: /^Saree/ }).click();
+  await expect(details.getByRole('combobox', { name: /^Company/ })).toHaveText('Laxmi Fashion House');
+  await expect(details.getByLabel('Bill no.')).toHaveValue(`LF-${run}`);
   await details.getByLabel('Product name').fill(`Banarasi ${run}`);
   await details.getByLabel('Sale price', { exact: true }).fill('4500');
   await expect(page.getByTestId('size-summary')).toHaveText('1 size · 1 pc'); // Saree: Free
@@ -258,6 +270,82 @@ test('save & add next keeps the bill (section, company, bill no.) and shows the 
   await expect(productCard(page, `Banarasi ${run}`)).not.toHaveCount(0);
   await expect(productCard(page, `Anarkali ${run}`)).toHaveCount(1);
   await expect(productCard(page, `Anarkali ${run}`)).toHaveAttribute('data-items', '4');
+});
+
+/** A plain JPEG of one colour, drawn in the browser. */
+async function jpeg(page: Page, colour: string) {
+  const data = await page.evaluate((fill) => {
+    const c = document.createElement('canvas');
+    c.width = 400;
+    c.height = 500;
+    const g = c.getContext('2d')!;
+    g.fillStyle = fill;
+    g.fillRect(0, 0, 400, 500);
+    return c.toDataURL('image/jpeg', 0.9).split(',')[1];
+  }, colour);
+  return { name: 'photo.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(data, 'base64') };
+}
+
+test('a photo taken on the details card becomes the product’s photo on every size; the next item starts without one', async ({ page }) => {
+  await login(page, 'Owner', /\/admin\/dashboard$/);
+  await page.goto('/admin/stock/new');
+  await page.getByRole('button', { name: 'Women', exact: true }).click();
+  await page.getByRole('button', { name: /^Kurti/ }).click();
+  const name = `Photo Kurti ${run}`;
+  // Owner, 2026-11-24 (ADR-072): Add photo sits on the details card, beside the product name.
+  const main = page.getByTestId('details-main');
+  const button = main.getByTestId('ni-photo-button');
+  await expect(button).toHaveText('Add photo');
+  await button.click();
+  const sheet = page.getByTestId('ni-photo-sheet');
+  await expect(sheet.getByRole('button', { name: '📷 Take photo' })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: '🖼 Gallery' })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Remove photo' })).toHaveCount(0);
+  const gallery = main.getByTestId('ni-photo').getByLabel('Gallery for this product');
+  await gallery.setInputFiles(await jpeg(page, '#1d4ed8'));
+  // Picked: the sheet closes and the button shows it.
+  await expect(sheet).toBeHidden();
+  await expect(button).toHaveText('Change photo');
+  await expect(button.locator('img')).toBeVisible();
+  // Tap again: the big photo, change it or remove it.
+  await button.click();
+  await expect(sheet.getByRole('img')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Remove photo' }).click();
+  await expect(button).toHaveText('Add photo');
+  await button.click();
+  await gallery.setInputFiles(await jpeg(page, '#b91c1c'));
+  await expect(button).toHaveText('Change photo');
+
+  await page.getByLabel('Product name').fill(name);
+  await page.getByLabel('Purchase price', { exact: true }).fill('600');
+  await page.getByRole('button', { name: 'Size M', exact: true }).click();
+  await page.getByRole('button', { name: 'Size L', exact: true }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await heading(page, 'Check and save');
+  await expect(page.getByTestId('review-card').getByTestId('review-photo')).toBeVisible();
+  await page.getByRole('button', { name: 'Save & add more Kurti' }).click();
+  const done = page.getByTestId('done-overlay');
+  await expect(done).toContainText('2 items saved');
+  await expect(done.getByTestId('done-lines')).toContainText('Product photoAdded');
+  await page.keyboard.press('Escape');
+  await expect(done).toBeHidden();
+  // The next Kurti starts with no photo.
+  await heading(page, 'Details & sizes');
+  await expect(page.getByTestId('details-main').getByTestId('ni-photo-button')).toHaveText('Add photo');
+
+  // Stocks and the product's page show the photo; both sizes share it.
+  await page.goto('/admin/products');
+  const cardPhoto = productCard(page, name).locator('img');
+  await cardPhoto.scrollIntoViewIfNeeded(); // the card's photo loads when it comes on screen
+  await expect(cardPhoto).toBeVisible();
+  await expect.poll(() => cardPhoto.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  const src = await cardPhoto.getAttribute('src');
+  await productCard(page, name).getByRole('link', { name, exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}$/);
+  await expect(page.getByTestId('item-head').getByRole('img', { name })).toHaveAttribute('src', src!);
+  await page.getByTestId('item-head').getByRole('button', { name: 'Change photo' }).click();
+  await page.getByTestId('photo-sheet').getByRole('button', { name: 'Remove photo' }).click();
+  await expect(page.getByTestId('photo-sheet')).toContainText('Remove the photo from all 2 sizes?');
 });
 
 test('a salesman without the catalog right cannot open it', async ({ page, isMobile }) => {
