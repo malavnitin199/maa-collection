@@ -18,6 +18,7 @@ import { catalogEn } from './modules/catalog.ts';
 import { helpEn } from './modules/help.ts';
 import { ownerEn } from './modules/owner.ts';
 import { stockEn } from './modules/stock.ts';
+import { bulkEn } from './modules/bulk.ts';
 
 const base = {
   // Language and sound
@@ -311,7 +312,7 @@ const base = {
 } as const;
 
 /** All English text: the salesman screens above, plus the owner/catalog areas (one module each). */
-export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn, ...approvalsEn, ...offlineEn, ...sectionsEn, ...newItemEn, ...typingEn, ...doneEn, ...billEn, ...billsEn, ...packsEn, ...itemEditEn } as const;
+export const en = { ...base, ...stockEn, ...catalogEn, ...ownerEn, ...helpEn, ...actionsEn, ...approvalsEn, ...offlineEn, ...sectionsEn, ...newItemEn, ...typingEn, ...doneEn, ...billEn, ...billsEn, ...packsEn, ...itemEditEn, ...bulkEn } as const;
 
 export type MessageKey = keyof typeof en;
 export type Messages = Record<MessageKey, string>;

@@ -40,6 +40,8 @@ import {
   correctTaggedItem,
   createDesign,
   createProductsBatch,
+  createDesignsBulk,
+  BULK_MAX_ROWS,
   findProductByCode,
   createProduct,
   listProducts,
@@ -632,6 +634,52 @@ export async function createDesignAction(input: DesignActionInput): Promise<Desi
           }
         : null,
       noSize: input.noSize === true,
+      staffId: admin.id,
+    });
+    revalidatePath('/admin', 'layout');
+    return { ok: true, receiptId: result.receipt.id, created: result.products.length, items: result.products.map((p) => ({ id: p.id, name: p.name, color: p.color, sku: p.sku, size: p.size })) };
+  } catch (error) {
+    const state = await failure(error);
+    return { ok: false, error: state.error ?? 'Something went wrong.' };
+  }
+}
+
+// ------------------------------------------------------------ bulk addition
+
+/** One row of Bulk addition as typed: rupees as text; `mrp` is the sale price (worked out on the phone from the purchase price). */
+export type BulkActionRow = { name: string; mrp: string; cost: string; quantity: string | number };
+
+/**
+ * Bulk addition (owner, 2026-11-24, ADR-072): many products of one category saved together —
+ * each row a product with no size yet. Catalog right; purchase prices only with the costs right.
+ */
+export async function createBulkAction(input: { operationId: string; categoryId: string; rows: BulkActionRow[] }): Promise<DesignActionResult> {
+  const admin = await requirePermission('catalog');
+  try {
+    const typed = Array.isArray(input.rows) ? input.rows : [];
+    if (typed.length > BULK_MAX_ROWS) throw new DomainError('Up to 50 products at once. Split the entry.', { key: 'stk.err.tooManyProducts' });
+    const canCosts = can(admin, 'costs');
+    const rows = typed.map((row, i) => {
+      const name = String(row?.name ?? '');
+      const vars = { row: i + 1, name: name.trim() || '—' };
+      const paise = (raw: unknown, problem: 'mrp' | 'cost') => {
+        const result = rupeesToPaise(String(raw ?? ''));
+        if (result === null) throw new DomainError(`Row ${i + 1}: enter a valid price in rupees.`, { key: `stk.err.row.${problem}`, vars });
+        return result;
+      };
+      const quantity = String(row?.quantity ?? '').trim();
+      if (!/^\d{1,5}$/.test(quantity)) throw new DomainError(`Row ${i + 1}: pieces must be 0 or more.`, { key: 'stk.err.row.pieces', vars });
+      return {
+        name,
+        mrpPaise: paise(row?.mrp, 'mrp'),
+        costPaise: canCosts && String(row?.cost ?? '').trim() ? paise(row?.cost, 'cost') : null,
+        quantity: Number(quantity),
+      };
+    });
+    const result = await createDesignsBulk(await getDb(), STORE_ID, {
+      operationId: String(input.operationId).slice(0, 100),
+      categoryId: String(input.categoryId),
+      rows,
       staffId: admin.id,
     });
     revalidatePath('/admin', 'layout');

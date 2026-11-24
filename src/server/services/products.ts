@@ -801,6 +801,88 @@ export async function createProductsBatch(
   });
 }
 
+export type BulkRowInput = {
+  /** Optional: a blank one becomes "<category> <number>", the number of its own item code. */
+  name: string;
+  mrpPaise: number;
+  costPaise: number | null;
+  quantity: number;
+};
+/** The most products one bulk addition takes. */
+export const BULK_MAX_ROWS = 50;
+
+/**
+ * Bulk addition (owner, 2026-11-24, ADR-072): many products of one category in one go. Each row
+ * is its own product — a name (optional), its prices and its pieces — saved like a New item with
+ * no size: one item, size / colour / brand empty, no company. Those are filled in later on the
+ * product's page. One stock entry and one transaction for the whole list (all rows or none);
+ * retrying the same operationId returns the first result.
+ */
+export async function createDesignsBulk(
+  db: Db,
+  storeId: string,
+  input: { operationId: string; categoryId: string; rows: BulkRowInput[]; staffId: string },
+): Promise<DesignResult> {
+  if (!input.operationId || input.operationId.length > 100) throw new DomainError('Missing operation id.', { key: 'stk.err.operationId' });
+  const existing = await findReceiptByOperation(db, storeId, input.operationId);
+  if (existing) return { ...(await receiptWithProducts(db, storeId, existing)), duplicate: true };
+
+  const category = await resolveCategoryForNewItem(db, storeId, input.categoryId);
+  if (input.rows.length === 0) throw new DomainError('Add at least one product.', { key: 'bulk.err.empty' });
+  if (input.rows.length > BULK_MAX_ROWS) throw new DomainError('Up to 50 products at once. Split the entry.', { key: 'stk.err.tooManyProducts' });
+
+  // Item codes are given in row order, so a blank name's number is known here ("Jacket 013" ↔ MAA-JK-013).
+  const firstNumber = (await highestSkuNumber(db, storeId, skuPrefix(category.code))) + 1;
+  const cleaned = input.rows.map((row, i) => {
+    const typed = row.name.trim().replace(/\s+/g, ' ');
+    if (typed.length > 120) throw new DomainError('Enter the design / product name.', { key: 'stk.err.designName' });
+    const name = typed || `${category.name} ${String(firstNumber + i).padStart(3, '0')}`;
+    const vars = { row: i + 1, name };
+    const rates = { mrpPaise: row.mrpPaise, pricePaise: row.mrpPaise, costPaise: row.costPaise };
+    try {
+      validatePrices(rates);
+    } catch (error) {
+      const problem = priceProblem(error);
+      throw new DomainError(`Row ${i + 1} (${name}): ${(error as Error).message}`, problem ? { key: `stk.err.row.${problem}`, vars } : undefined);
+    }
+    if (!Number.isInteger(row.quantity) || row.quantity < 0 || row.quantity > 10_000) {
+      throw new DomainError(`Row ${i + 1} (${name}): pieces must be 0 or more.`, { key: 'stk.err.row.pieces', vars });
+    }
+    return { name, brand: '', size: '', color: '', ...rates, quantity: row.quantity };
+  });
+  const names = cleaned.map((r) => r.name.toLowerCase());
+  const repeated = cleaned.find((r, i) => names.indexOf(r.name.toLowerCase()) !== i);
+  if (repeated) throw new DomainError(`The same product is entered twice: ${repeated.name}.`, { key: 'stk.err.sameProductTwice', vars: { item: repeated.name } });
+
+  // The same rule as New item: a product of this name with no size is in the catalogue already.
+  const clash = await db
+    .select({ name: products.name, sku: products.sku })
+    .from(products)
+    .where(
+      and(
+        eq(products.storeId, storeId),
+        eq(products.categoryId, category.id),
+        eq(products.brand, ''),
+        eq(products.size, ''),
+        eq(products.color, ''),
+        inArray(sql`lower(${products.name})`, names),
+      ),
+    );
+  if (clash.length > 0) {
+    const list = clash.map((c) => `${c.name} (${c.sku})`).join(', ');
+    throw new DomainError(`Already in the catalogue: ${list}. Use "Receive stock" for those instead.`, { key: 'stk.err.alreadyInCatalogue', vars: { list } });
+  }
+
+  return insertNewProducts(db, storeId, {
+    operationId: input.operationId,
+    supplierId: null,
+    category,
+    note: `Bulk addition: ${cleaned.length} products`,
+    staffId: input.staffId,
+    rows: cleaned,
+  });
+}
+
 /**
  * Fix an item right after tagging it (Tag old stock → Edit): name, size, colour,
  * category, company and prices. Same item, barcode and SKU; the piece count is
