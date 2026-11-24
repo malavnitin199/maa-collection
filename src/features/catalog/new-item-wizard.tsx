@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from 'react';
+import { unstable_rethrow, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useFreshOnReturn } from '@/features/forms/fresh-on-return';
 import { ResumeSheet } from '@/features/forms/resume-sheet';
 import { useDone } from '@/features/feedback/effects';
@@ -30,10 +30,15 @@ import {
   editCollectionAction,
   editTypeAction,
   openFixedCollectionAction,
+  setProductPhotoAction,
   type SectionResult,
 } from '@/server/actions/admin';
 import type { PickSection, PickType } from '@/server/services/sections';
+import { BulkRows } from './bulk-rows';
 import { CompanyPicker } from './company-picker';
+import { markupOf, saleFromCost, saveMarkup, useSavedMarkup } from './markup';
+import { NewItemPhoto } from './new-item-photo';
+import { photoForm, type PickedPhoto } from './photo-slot';
 import { SectionArt, TypeArt } from './section-art';
 
 type Option = { id: string; name: string };
@@ -49,6 +54,8 @@ export type WizardSection = PickSection;
 type Step = 'who' | 'what' | 'details' | 'review';
 /** The four steps (the progress bar). */
 const FLOW: Step[] = ['who', 'what', 'details', 'review'];
+/** Bulk addition (ADR-072): collection → category → the table of products (it has its own Save). */
+const BULK_FLOW: Step[] = ['who', 'what', 'details'];
 const SHORT: Record<Step, MessageKey> = { who: 'ni.short.who', what: 'ni.short.what', details: 'ni.short.detailsSizes', review: 'ni.short.review' };
 
 const tile =
@@ -66,19 +73,6 @@ const MARKUP_CHOICES = [20, 30, 50, 100] as const;
 /** The first row's ← (owner, 2026-11-22: a smaller, higher top). */
 const smallBack = backButton.replace('h-10 w-10', 'h-8 w-8').replace('rounded-xl', 'rounded-lg');
 
-/** The markup % this phone used last (ADR-053), or null. Storage may be blocked: then nothing. */
-function readMarkup(): string | null {
-  try {
-    const saved = window.localStorage.getItem('maa-markup');
-    return saved && /^\d{1,3}$/.test(saved) ? saved : null;
-  } catch {
-    return null;
-  }
-}
-function subscribeMarkup(onChange: () => void) {
-  window.addEventListener('storage', onChange);
-  return () => window.removeEventListener('storage', onChange);
-}
 const nextButton = 'inline-flex min-h-12 items-center gap-1.5 rounded-2xl bg-brand-600 px-6 text-base font-bold text-white shadow-md shadow-brand-700/25 transition hover:bg-brand-700 active:scale-[0.97] disabled:opacity-40';
 
 /** "28–36" or "M–XXL": a category's size range at a glance. */
@@ -94,9 +88,14 @@ function sizeRange(sizes: string[]): string {
  * one item with its own barcode. Big picture tiles, a progress bar whose chips go
  * back to a step without losing anything, "+ Add" for a new collection, category
  * or size on the spot; the owner edits and deletes collections right on their tiles
- * (Men and Women always stay).
+ * (Men and Women always stay). A photo can be taken on the details card (ADR-072): it
+ * becomes the product's one photo once the item is saved.
+ *
+ * `mode="bulk"` is Bulk addition (owner, 2026-11-24, ADR-072): the same collection and
+ * category steps, then a table of many products (`BulkRows`) instead of the details card.
  */
 export function NewItemWizard({
+  mode = 'item',
   sections,
   suppliers,
   previousSuppliers,
@@ -104,47 +103,49 @@ export function NewItemWizard({
   isOwner,
   initial,
 }: {
+  mode?: 'item' | 'bulk';
   sections: WizardSection[];
   suppliers: Option[];
   previousSuppliers: Option[];
   showCost: boolean;
   /** The owner edits and deletes collections here (ADR-064). */
   isOwner: boolean;
-  initial: { sectionId?: string; supplierId?: string; billNumber?: string; stockDate?: string };
+  /** `typeId` (with its section): "Add more <category>" from the tags page opens on that category. */
+  initial: { sectionId?: string; typeId?: string; supplierId?: string; billNumber?: string; stockDate?: string };
 }) {
   const t = useT();
   const router = useRouter();
   const [list, setList] = useState(sections);
   const startSection = list.some((s) => s.id === initial.sectionId && !s.standIn) ? initial.sectionId! : '';
-  // "Add next item" of the same bill: straight to "What is it?" of the same section.
-  const [step, setStep] = useState<Step>(startSection ? 'what' : 'who');
+  const startType = list.find((s) => s.id === startSection)?.types.find((x) => x.id === initial.typeId) ?? null;
+  const bulk = mode === 'bulk';
+  const flow = bulk ? BULK_FLOW : FLOW;
+  // "Add next item" of the same bill: straight to "What is it?" of the same section — or, with the
+  // category too ("Add more Jacket"), to its details.
+  const [step, setStep] = useState<Step>(startType ? 'details' : startSection ? 'what' : 'who');
   const [direction, setDirection] = useState<'next' | 'back'>('next');
   const [sectionId, setSectionId] = useState(startSection);
-  const [typeId, setTypeId] = useState('');
+  const [typeId, setTypeId] = useState(startType?.id ?? '');
   // Details (controlled, so going back and forth keeps every value).
   const [name, setName] = useState('');
   const [supplierId, setSupplierId] = useState(initial.supplierId ?? '');
   const [supplierName, setSupplierName] = useState(suppliers.find((s) => s.id === initial.supplierId)?.name ?? '');
   const [mrp, setMrp] = useState('');
   // Sale price from the purchase price (owner, 2026-11-22, ADR-053): purchase + this %, 50 unless changed (remembered on the phone).
-  const savedMarkup = useSyncExternalStore(subscribeMarkup, readMarkup, () => null);
+  const savedMarkup = useSavedMarkup();
   const [typedMarkup, setMarkupText] = useState<string | null>(null);
   const markupText = typedMarkup ?? savedMarkup ?? '50';
   const changeMarkup = (text: string) => {
     const clean = text.replace(/\D/g, '').slice(0, 3);
     setMarkupText(clean);
-    try {
-      if (clean) window.localStorage.setItem('maa-markup', clean);
-    } catch {
-      // Not remembered; it still works for this entry.
-    }
+    saveMarkup(clean);
   };
   const [cost, setCost] = useState('');
   const [price, setPrice] = useState('');
   const [billNumber, setBillNumber] = useState(initial.billNumber ?? '');
   const [stockDate, setStockDate] = useState(initial.stockDate ?? '');
   const [brand, setBrand] = useState('');
-  const [sizes, setSizes] = useState<string[]>([]);
+  const [sizes, setSizes] = useState<string[]>(startType?.sizes.length === 1 ? [startType.sizes[0]] : []);
   const [pieces, setPieces] = useState<Record<string, number>>({});
   // Box packs (owner, 2026-11-21, ADR-047): the item comes in boxes of N pieces; counts below are boxes then.
   const [boxed, setBoxed] = useState(false);
@@ -154,7 +155,12 @@ export function NewItemWizard({
   // The % calculator under the sale price row, and "More details" — both folded at first.
   const [calcOpen, setCalcOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [reached, setReached] = useState(startSection ? 1 : 0);
+  // The product's photo, taken on the details card (owner, 2026-11-24, ADR-072); saved right after the item.
+  const [photo, setPhoto] = useState<PickedPhoto | null>(null);
+  // Bulk addition: its table keeps its own rows; this screen only knows whether something is typed, and can empty it.
+  const [bulkDirty, setBulkDirty] = useState(false);
+  const [bulkKey, setBulkKey] = useState(0);
+  const [reached, setReached] = useState(startType ? 2 : startSection ? 1 : 0);
   const [sheet, setSheet] = useState<'section' | 'type' | null>(null);
   // The owner's ✎ / 🗑 on a collection tile (ADR-064).
   const [editing, setEditing] = useState<WizardSection | null>(null);
@@ -175,7 +181,7 @@ export function NewItemWizard({
 
   const section = list.find((s) => s.id === sectionId);
   const type = section?.types.find((x) => x.id === typeId);
-  const stepIndex = FLOW.indexOf(step);
+  const stepIndex = flow.indexOf(step);
   // The chosen sizes in the category's order, then any the owner typed.
   const offered = type ? [...type.sizes, ...sizes.filter((s) => !type.sizes.some((x) => sameSize(x, s)))] : [];
   const ordered = offered.filter((size) => sizes.some((s) => sameSize(s, size)));
@@ -192,8 +198,8 @@ export function NewItemWizard({
   // Always per piece (a box price ÷ pieces in the box, to the paisa).
   const costPaise = boxCost !== null && pack ? perPiecePaise(boxCost, pack) : boxed && costAs === 'box' ? null : typedCost;
   // The sale price (MRP) is optional: empty = purchase + markup %, to whole rupees.
-  const markup = /^\d{1,3}$/.test(markupText) ? Math.min(Number(markupText), 500) : 50;
-  const derivedMrp = costPaise !== null && costPaise > 0 ? Math.round((costPaise * (100 + markup)) / 10000) * 100 : null;
+  const markup = markupOf(markupText);
+  const derivedMrp = saleFromCost(costPaise, markup);
   const mrpPaise = mrp.trim() ? rupeesToPaise(mrp) : derivedMrp;
   const packMrpPaise = boxed && packMrp.trim() ? rupeesToPaise(packMrp) : null;
   const pricePaise = price.trim() ? rupeesToPaise(price) : null;
@@ -228,7 +234,7 @@ export function NewItemWizard({
     .join(' · ');
 
   const go = (next: Step) => {
-    const index = FLOW.indexOf(next);
+    const index = flow.indexOf(next);
     setDirection(index < stepIndex ? 'back' : 'next');
     setReached((r) => Math.max(r, index));
     setStep(next);
@@ -237,7 +243,7 @@ export function NewItemWizard({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   /** One step back (the arrow, and the phone's back button): Check → Details → What → Which collection. */
-  const stepBack = () => go(FLOW[Math.max(0, stepIndex - 1)]);
+  const stepBack = () => go(flow[Math.max(0, stepIndex - 1)]);
   const stepBackRef = useRef(stepBack);
   useEffect(() => {
     stepBackRef.current = stepBack;
@@ -331,12 +337,18 @@ export function NewItemWizard({
     operationId.current = crypto.randomUUID();
     go('review');
   };
-  /** Clears what belongs to this item; the bill's section, company, number and date stay for the next one. */
-  const clearItem = () => {
+  /**
+   * Clears what belongs to this item; the bill's section, company, number and date stay for the next one.
+   * `keepType`: the next item is of the same category ("Save & add more Jacket").
+   */
+  const clearItem = (keepType = false) => {
     operationId.current = null;
-    setTypeId('');
-    setSizes([]);
+    if (!keepType) setTypeId('');
+    // A category with one size has it chosen already (as when it is first picked).
+    setSizes(keepType && type?.sizes.length === 1 ? [type.sizes[0]] : []);
     setPieces({});
+    if (photo) URL.revokeObjectURL(photo.url);
+    setPhoto(null);
     setName('');
     setMrp('');
     setCost('');
@@ -359,6 +371,8 @@ export function NewItemWizard({
     setRemovingType(null);
     setCalcOpen(false);
     setMoreOpen(false);
+    setBulkKey((k) => k + 1);
+    setBulkDirty(false);
     setSectionId(startSection);
     setSupplierId(initial.supplierId ?? '');
     setSupplierName(suppliers.find((s) => s.id === initial.supplierId)?.name ?? '');
@@ -369,23 +383,26 @@ export function NewItemWizard({
     setStep(startSection ? 'what' : 'who');
     window.scrollTo({ top: 0 });
   };
-  const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || cost.trim() || typeId);
+  const dirty = Boolean(name.trim() || sizes.length || mrp.trim() || cost.trim() || typeId || photo || bulkDirty);
   // Coming back to this page later starts a fresh entry — or asks, once three or more steps are filled (owner's rule, 2026-11-20).
   // The purchase price and the quantity are the card's main fields since ADR-071, so they count too (pre-release review);
   // bill no., date and company can come from the address, so they don't.
   const resume = useFreshOnReturn(startOver, {
-    ask: () => reached >= 2 && Boolean(name.trim() || mrp.trim() || cost.trim() || price.trim() || brand.trim() || sizes.length || Object.keys(pieces).length || boxed),
+    ask: () => reached >= 2 && Boolean(name.trim() || mrp.trim() || cost.trim() || price.trim() || brand.trim() || sizes.length || Object.keys(pieces).length || boxed || photo || bulkDirty),
   });
   /**
-   * Save (plan v19 04a): `print` → the tags page; `next` → the next item of the same bill
-   * ("What is it?", section / company / bill no. / date kept); `done` → the first step, everything cleared.
-   * Next 16 keeps this screen alive, so the form clears itself (Activity rule).
+   * Save (plan v19 04a): `print` → the tags page; `more` → the next item of the same category and bill
+   * (owner, 2026-11-24, ADR-072: straight to a fresh details card — collection, category, company, bill no.
+   * and date kept; ← goes to "What is it?" for another category); `done` → the first step, everything cleared.
+   * The photo, when one was taken, is saved right after the item, for every size (a failed photo never
+   * loses the item). Next 16 keeps this screen alive, so the form clears itself (Activity rule).
    */
-  const save = (after: 'print' | 'next' | 'done') => {
+  const save = (after: 'print' | 'more' | 'done') => {
     if (!type || !section) return;
     operationId.current ??= crypto.randomUUID();
     const opId = operationId.current;
     const savedName = name.trim();
+    const picked = photo;
     setError(null);
     startSaving(async () => {
       const result = await createDesignAction({
@@ -412,6 +429,15 @@ export function NewItemWizard({
         done.show({ kind: 'error', title: t('done.notSaved'), detail: result.error });
         return setError(result.error);
       }
+      let photoFailed = false;
+      if (picked && result.items[0]) {
+        try {
+          photoFailed = !(await setProductPhotoAction(result.items[0].id, photoForm(picked))).ok;
+        } catch (error) {
+          unstable_rethrow(error); // Next's own moves (e.g. to Log in) are not a lost photo
+          photoFailed = true; // weak signal: the item is saved, the photo can be added on its page
+        }
+      }
       // The collection and the category have these items now: their 🗑 knows (ADR-064, ADR-071).
       const made = result.items.length;
       setList((current) =>
@@ -428,13 +454,14 @@ export function NewItemWizard({
         { label: t('done.line.pieces'), value: pcs(totalPieces) },
         { label: t('pack.box'), value: pack ? t('pack.review', { n: pack, boxes: boxesText(totalBoxes), pieces: pcs(totalPieces) }) : '' },
         { label: t('done.line.purchase'), value: boxCost !== null ? formatPaise(boxCost * totalBoxes) : costPaise !== null ? formatPaise(costPaise * totalPieces) : '' },
+        { label: t('ied.photo.title'), value: picked ? t(photoFailed ? 'ni.photo.failed' : 'ni.photo.saved') : '' },
       ].filter((line) => line.value);
-      clearItem();
+      clearItem(after === 'more');
       setDirection('next');
       if (after === 'print') {
         setReached(1);
         setStep('what');
-        router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}`);
+        router.push(`/admin/labels/print?receipt=${result.receiptId}&created=${result.created}${photoFailed ? '&photos=failed' : ''}`);
         return;
       }
       done.show({
@@ -442,9 +469,9 @@ export function NewItemWizard({
         detail: t('ni.saved', { name: finalName, skus: range, pieces: pcs(totalPieces) }),
         lines: savedLines,
       });
-      if (after === 'next') {
-        setReached(1);
-        setStep('what');
+      if (after === 'more') {
+        setReached(2);
+        setStep('details');
       } else {
         setSectionId('');
         setSupplierId('');
@@ -466,7 +493,7 @@ export function NewItemWizard({
   const title: Record<Step, string> = {
     who: t('ni.step.who'),
     what: t('ni.step.what'),
-    details: t('ni.step.detailsSizes'),
+    details: t(bulk ? 'bulk.step.rows' : 'ni.step.detailsSizes'),
     review: t('ni.step.review'),
   };
   /** Next on Details & sizes: everything must be in; else it shows what is missing (the top of the card; "More details" for a wrong box or counter price; the Quantity box when there are no pieces). */
@@ -511,16 +538,16 @@ export function NewItemWizard({
             </button>
           )}
           <h1 className="min-w-0 flex-1 truncate text-base leading-tight font-semibold">
-            {t('stk.item.title')}
-            <span className={`ml-1.5 text-[10px] font-semibold tracking-wide uppercase ${muted}`}>{t('ni.progress', { n: stepIndex + 1 })}</span>
+            {t(bulk ? 'bulk.title' : 'stk.item.title')}
+            <span className={`ml-1.5 text-[10px] font-semibold tracking-wide uppercase ${muted}`}>{t(bulk ? 'bulk.progress' : 'ni.progress', { n: stepIndex + 1 })}</span>
           </h1>
           {(stepIndex > 0 || dirty) && <StartOver onStartOver={startOver} dirty={dirty} small />}
         </div>
-        <ol aria-label={t('ni.steps')} className="grid grid-cols-4 gap-1">
-          {FLOW.map((s, i) => (
+        <ol aria-label={t('ni.steps')} className={`grid gap-1 ${bulk ? 'grid-cols-3' : 'grid-cols-4'}`}>
+          {flow.map((s, i) => (
             <li key={s} aria-current={s === step ? 'step' : undefined} className="flex flex-col gap-0.5">
               <span className={`h-1 rounded-full transition-colors duration-300 ${i <= stepIndex ? 'bg-brand-600' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
-              <span className={`text-[10px] leading-tight font-semibold ${i === stepIndex ? 'text-brand-700 dark:text-brand-300' : muted}`}>{t(SHORT[s])}</span>
+              <span className={`text-[10px] leading-tight font-semibold ${i === stepIndex ? 'text-brand-700 dark:text-brand-300' : muted}`}>{t(bulk && s === 'details' ? 'bulk.short.rows' : SHORT[s])}</span>
             </li>
           ))}
         </ol>
@@ -637,12 +664,18 @@ export function NewItemWizard({
         {step === 'review' && type && section && (
           <div className="flex flex-col gap-4">
             <div data-testid="review-card" className={`${card} flex flex-col gap-3`}>
-              <div>
-                <p className="text-xl font-bold">{shownName}</p>
-                <p className={`text-sm ${muted}`}>
-                  {section.name} › {type.name}
-                  {supplierName && ` · ${supplierName}`}
-                </p>
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xl font-bold">{shownName}</p>
+                  <p className={`text-sm ${muted}`}>
+                    {section.name} › {type.name}
+                    {supplierName && ` · ${supplierName}`}
+                  </p>
+                </div>
+                {photo && (
+                  // eslint-disable-next-line @next/next/no-img-element -- local preview of the photo just taken
+                  <img data-testid="review-photo" src={photo.url} alt={t('ied.photo.title')} className="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-zinc-200 dark:ring-zinc-800" />
+                )}
               </div>
               <ul data-testid="review-sizes" className="flex flex-wrap gap-2">
                 {noSize && (
@@ -684,11 +717,12 @@ export function NewItemWizard({
             <button type="button" onClick={() => save('print')} disabled={saving} className={`${primaryButton} min-h-12 w-full text-base`}>
               {saving ? t('common.saving') : t('ni.save.print')}
             </button>
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => save('next')} disabled={saving} className={`${secondaryButton} min-h-12 text-base`}>
-                {t('ni.save.next')}
+            {/* Owner, 2026-11-24 (ADR-072): the same category again without the first steps; plain Save beside it. */}
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+              <button type="button" data-testid="save-more" onClick={() => save('more')} disabled={saving} className={`${secondaryButton} min-h-12 text-base leading-tight`}>
+                {t('ni.save.more', { type: type.name })}
               </button>
-              <button type="button" onClick={() => save('done')} disabled={saving} className={`${secondaryButton} min-h-12 text-base`}>
+              <button type="button" onClick={() => save('done')} disabled={saving} className={`${secondaryButton} min-h-12 px-6 text-base`}>
                 {t('ni.save.only')}
               </button>
             </div>
@@ -698,7 +732,25 @@ export function NewItemWizard({
 
       {/* Details & sizes (ADR-065, ADR-071): the one details card below, then "More details" (box, counter price,
           bill no., date, brand) folded, then Next. Stays mounted once reached (the company list it may grow lives inside it). */}
-      {reached >= 2 && (
+      {bulk && reached >= 2 && section && type && (
+        // Bulk addition (ADR-072): the third step is a table — many products of this category, one Save.
+        // Stays mounted like the details card, so stepping back keeps what is typed.
+        <div hidden={step !== 'details'} className={step === 'details' ? (direction === 'next' ? 'step-next' : 'step-back') : ''}>
+          <BulkRows
+            key={bulkKey}
+            section={section}
+            type={type}
+            showCost={showCost}
+            onDirty={setBulkDirty}
+            onSaved={(made) =>
+              setList((current) =>
+                current.map((x) => (x.id === section.id ? { ...x, items: x.items + made, types: x.types.map((ty) => (ty.id === type.id ? { ...ty, items: ty.items + made } : ty)) } : x)),
+              )
+            }
+          />
+        </div>
+      )}
+      {!bulk && reached >= 2 && (
         <div hidden={step !== 'details'} data-testid="details-step" className={step === 'details' ? (direction === 'next' ? 'step-next' : 'step-back') : ''}>
           <form
             id="ni-details"
@@ -715,9 +767,13 @@ export function NewItemWizard({
                 change it); the sizes with their pieces; the company last, a slim row that opens ready to type. */}
             <div data-testid="details-main" className="flex flex-col gap-3 rounded-3xl bg-surface p-3.5 shadow-sm ring-1 ring-brand-100 dark:ring-brand-900">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="ni-name" className={tileLabel}>
-                  {t('ni.name.optional')}
-                </label>
+                {/* Owner, 2026-11-24 (ADR-072): the product's photo is taken here (optional). */}
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="ni-name" className={tileLabel}>
+                    {t('ni.name.optional')}
+                  </label>
+                  <NewItemPhoto photo={photo} onChange={setPhoto} disabled={saving} />
+                </div>
                 <LangText
                   id="ni-name"
                   value={name}

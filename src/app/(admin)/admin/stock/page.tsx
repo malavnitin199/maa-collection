@@ -5,7 +5,7 @@ import { can, type Permission } from '@/lib/permissions';
 import { requireAnyPermission } from '@/server/auth';
 import { getT } from '@/server/i18n';
 import { TagTile } from '@/components/ui/tag-tile';
-import { IconGrid, IconScan, IconStockAdd, IconTag } from '@/components/ui/icons';
+import { IconBulkAdd, IconGrid, IconScan, IconStockAdd, IconTag } from '@/components/ui/icons';
 
 type Option = { href: string; Icon: (p: { className?: string }) => React.ReactNode; title: MessageKey; hint: MessageKey; needs: Permission };
 
@@ -13,6 +13,8 @@ type Option = { href: string; Icon: (p: { className?: string }) => React.ReactNo
 const NEW_ITEM: Option = { href: '/admin/stock/new', Icon: IconStockAdd, title: 'stk.hub.item.title', hint: 'ni.hub.hint', needs: 'catalog' };
 
 const OTHER_WAYS: Option[] = [
+  // Owner, 2026-11-24 (ADR-072): many products of one category typed into one table.
+  { href: '/admin/stock/bulk', Icon: IconBulkAdd, title: 'bulk.title', hint: 'bulk.hub.hint', needs: 'catalog' },
   // Plan v19: the earlier form (sizes × colours, prices by size, photos) stays here for now.
   { href: '/admin/stock/form', Icon: IconGrid, title: 'ni.hub.form.title', hint: 'ni.hub.form.hint', needs: 'catalog' },
   { href: '/admin/stock/receive', Icon: IconScan, title: 'stk.hub.receive.title', hint: 'stk.hub.receive.hint', needs: 'stock' },

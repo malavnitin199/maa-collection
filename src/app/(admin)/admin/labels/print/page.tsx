@@ -29,6 +29,8 @@ type Search = {
   receipt?: string;
   each?: string;
   created?: string;
+  /** `bulk=1`: the entry came from Bulk addition (ADR-072). */
+  bulk?: string;
   mine?: string;
   format?: string;
   photos?: string;
@@ -68,6 +70,11 @@ function nextItemHref(receipt: { id: string; supplierId: string | null; billNumb
   if (receipt.stockDate) next.set('date', receipt.stockDate);
   next.set('n', receipt.id);
   return `/admin/stock/new?${next.toString()}`;
+}
+
+/** Bulk addition again, on the same category's table (ADR-072). */
+function moreBulkHref(receiptId: string, sectionId: string, categoryId: string) {
+  return `/admin/stock/bulk?${new URLSearchParams({ section: sectionId, type: categoryId, n: receiptId }).toString()}`;
 }
 
 type SheetData = { settings: StoreSettings; origin: string; sizes: Map<string, string[]> };
@@ -272,9 +279,15 @@ async function ReceiptLabels({ searchParams }: { searchParams: Promise<Search> }
               {t(params.created === '1' ? 'stk.labels.created.one' : 'stk.labels.created.other', { n: params.created })}
             </p>
             {/* Plan v19: straight on to the next item of the same bill (company, section, bill no., date kept). */}
-            <Link href={nextItemHref(receipt, nextSection)} className={`${secondaryButton} w-fit`}>
-              {t('stk.labels.addNext')}
-            </Link>
+            {params.bulk === '1' && nextSection && receipt.lines[0]?.categoryId ? (
+              <Link href={moreBulkHref(receipt.id, nextSection, receipt.lines[0].categoryId)} className={`${secondaryButton} w-fit`}>
+                {t('bulk.addMore', { type: receipt.lines[0].category })}
+              </Link>
+            ) : (
+              <Link href={nextItemHref(receipt, nextSection)} className={`${secondaryButton} w-fit`}>
+                {t('stk.labels.addNext')}
+              </Link>
+            )}
           </div>
         )}
         <div>

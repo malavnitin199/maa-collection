@@ -1,9 +1,10 @@
+import Link from 'next/link';
 import { Suspense } from 'react';
-import { sectionTitle } from '@/components/ui/styles';
+import { card, sectionTitle } from '@/components/ui/styles';
 import { requestDb } from '@/server/request-db';
 import { HeroStat } from '@/features/reports/widgets';
 import { TagTile } from '@/components/ui/tag-tile';
-import { IconAddStock, IconCheckList, IconRupee, IconSun, IconTag } from '@/components/ui/icons';
+import { IconAddStock, IconBulkAdd, IconCheckList, IconRupee, IconSun, IconTag } from '@/components/ui/icons';
 import { FirstTimeTip } from '@/components/layout/first-time-tip';
 import { STORE_ID } from '@/lib/app-config';
 import { formatPaise } from '@/lib/money';
@@ -18,6 +19,10 @@ import { BillsLine, CollectionsLine, CompaniesOverview } from './companies';
  * Month, profit, exchanges and sales per person are on Reports; every entry on
  * Activity; out-of-stock items on Needs attention. Under Today, the companies
  * overview (owner's feedback 2026-11-20).
+ *
+ * Owner, 2026-11-24 (ADR-072): the fourth action is Bulk addition, where Approvals was.
+ * Sales waiting for the owner still show here — one slim line under the actions, only
+ * while something waits (Approvals itself is under More).
  */
 async function Dashboard() {
   const me = await requireAdmin();
@@ -34,23 +39,32 @@ async function Dashboard() {
           <TagTile href="/admin/stock/new" primary icon={<IconAddStock />} title={t('own.dash.newStock')} />
           <TagTile href="/admin/companies" icon={<IconTag />} title={t('nav.suppliers')} />
           <TagTile href="/admin/reports" icon={<IconRupee />} title={t('nav.reports')} />
-          <TagTile
-            href="/admin/approvals"
-            icon={<IconCheckList />}
-            title={t('nav.approvals')}
-            hint={
-              <span data-testid="approvals-waiting" className={pending.total > 0 ? 'font-semibold text-red-700 dark:text-red-300' : undefined}>
-                {pending.total > 0 ? t('appr.home.tile', { n: pending.total }) : t('appr.home.tileNone')}
+          <TagTile href="/admin/stock/bulk" icon={<IconBulkAdd />} title={t('bulk.title')} />
+        </div>
+        {pending.total > 0 && (
+          <Link href="/admin/approvals" data-testid="home-approvals" className={`${card} rise-in flex items-center gap-3 py-3 active:bg-zinc-50 dark:active:bg-zinc-900`}>
+            <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-300 [&>svg]:h-4.5 [&>svg]:w-4.5">
+              <IconCheckList />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">{t('nav.approvals')}</span>
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                <span data-testid="approvals-waiting" className="font-semibold text-red-700 dark:text-red-300">
+                  {t('appr.home.tile', { n: pending.total })}
+                </span>
                 {/* Plan v17: sales sold below their purchase price stand out. */}
                 {pending.losses > 0 && (
-                  <span data-testid="approvals-losses" className="mt-1 block w-fit rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
+                  <span data-testid="approvals-losses" className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
                     {t('appr.home.losses', { n: pending.losses })}
                   </span>
                 )}
               </span>
-            }
-          />
-        </div>
+            </span>
+            <span aria-hidden className="text-zinc-500 dark:text-zinc-400">
+              ›
+            </span>
+          </Link>
+        )}
       </div>
 
       <section className="flex flex-col gap-2">
